@@ -1,11 +1,11 @@
 [Setup]
-AppCopyright=2019
+AppCopyright=2020
 AppName=ResidualVM
 AppVerName=ResidualVM
 AppPublisher=The ResidualVM Team
-AppPublisherURL=http://www.residualvm.org/
-AppSupportURL=http://www.residualvm.org/
-AppUpdatesURL=http://www.residualvm.org/
+AppPublisherURL=https://www.residualvm.org/
+AppSupportURL=https://www.residualvm.org/
+AppUpdatesURL=https://www.residualvm.org/
 DefaultDirName={pf}\ResidualVM
 DefaultGroupName=ResidualVM
 AllowNoIcons=true

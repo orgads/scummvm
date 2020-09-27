@@ -29,6 +29,7 @@
 
 namespace Common {
 
+class ReadStream;
 class SeekableReadStream;
 
 /**
@@ -229,6 +230,13 @@ public:
 	}
 
 	/**
+	 * Write data from another stream to this one.
+	 */
+	uint32 writeStream(ReadStream *stream, uint32 dataSize);
+
+	uint32 writeStream(SeekableReadStream *stream);
+
+	/**
 	 * Write the given string to the stream.
 	 * This writes str.size() characters, but no terminating zero byte.
 	 */
@@ -271,6 +279,8 @@ public:
  */
 class ReadStream : virtual public Stream {
 public:
+	ReadStream() {}
+
 	/**
 	 * Returns true if a read failed because the stream end has been reached.
 	 * This flag is cleared by clearErr().
@@ -621,9 +631,10 @@ public:
 	 *
 	 * @param s	the buffer to store into
 	 * @param bufSize	the size of the buffer
+	 * @param handleCR	if set (default), then CR and CR/LF are handled as well as LF
 	 * @return a pointer to the read string, or NULL if an error occurred
 	 */
-	virtual char *readLine(char *s, size_t bufSize);
+	virtual char *readLine(char *s, size_t bufSize, bool handleCR = true);
 
 
 	/**
@@ -635,8 +646,10 @@ public:
 	 * of the line, *without* the end of a line marker. This method
 	 * does not indicate whether an error occurred. Callers must use
 	 * err() or eos() to determine whether an exception occurred.
+	 *
+	 * @param handleCR	if set (default), then CR and CR/LF are handled as well as LF
 	 */
-	virtual String readLine();
+	virtual String readLine(bool handleCR = true);
 
 	/**
 	 * Print a hexdump of the stream while maintaing position. The number
@@ -696,7 +709,7 @@ public:
  * This is a SeekableReadStream subclass which adds non-endian read
  * methods whose endianness is set during the stream creation.
  */
-class SeekableReadStreamEndian : public SeekableReadStream, public ReadStreamEndian {
+class SeekableReadStreamEndian : virtual public SeekableReadStream, virtual public ReadStreamEndian {
 public:
 	SeekableReadStreamEndian(bool bigEndian) : ReadStreamEndian(bigEndian) {}
 };

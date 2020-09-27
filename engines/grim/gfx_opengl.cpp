@@ -110,6 +110,7 @@ GfxOpenGL::GfxOpenGL() : _smushNumTex(0),
 }
 
 GfxOpenGL::~GfxOpenGL() {
+	releaseMovieFrame();
 	delete[] _storedDisplay;
 
 	if (_emergFont && glIsList(_emergFont))
@@ -229,7 +230,7 @@ void GfxOpenGL::setupCameraFrustum(float fov, float nclip, float fclip) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	float right = nclip * tan(fov / 2 * (LOCAL_PI / 180));
+	float right = nclip * tan(fov / 2 * ((float)M_PI / 180));
 	glFrustum(-right, right, -right * 0.75, right * 0.75, nclip, fclip);
 
 	glMatrixMode(GL_MODELVIEW);
@@ -1716,7 +1717,7 @@ void GfxOpenGL::loadEmergFont() {
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // 8 bit font bitmaps
 
 	_emergFont = glGenLists(128);
-	for (int i = 32; i < 127; i++) {
+	for (int i = 32; i < 128; i++) {
 		glNewList(_emergFont + i, GL_COMPILE);
 		glBitmap(8, 13, 0, 2, 10, 0, Font::emerFont[i - 32]);
 		glEndList();

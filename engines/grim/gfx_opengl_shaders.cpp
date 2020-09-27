@@ -219,7 +219,7 @@ GfxOpenGLS::GfxOpenGLS() {
 	_selectedTexture = NULL;
 	_emergTexture = 0;
 	_maxLights = 8;
-	_lights = new Light[_maxLights];
+	_lights = new GLSLight[_maxLights];
 	_lightsEnabled = false;
 	_hasAmbientLight = false;
 	_backgroundProgram = nullptr;
@@ -240,6 +240,7 @@ GfxOpenGLS::GfxOpenGLS() {
 }
 
 GfxOpenGLS::~GfxOpenGLS() {
+	releaseMovieFrame();
 	for (unsigned int i = 0; i < _numSpecialtyTextures; i++) {
 		destroyTexture(&_specialtyTextures[i]);
 	}
@@ -445,7 +446,7 @@ void GfxOpenGLS::setupCameraFrustum(float fov, float nclip, float fclip) {
 
 	_fov = fov; _nclip = nclip; _fclip = fclip;
 
-	float right = nclip * tan(fov / 2 * (LOCAL_PI / 180));
+	float right = nclip * tan(fov / 2 * ((float)M_PI / 180));
 	float top = right * 0.75;
 
 	_projMatrix = makeFrustumMatrix(-right, right, -top, top, nclip, fclip);
@@ -735,6 +736,7 @@ void GfxOpenGLS::startActorDraw(const Actor *actor) {
 		Math::Matrix4 modelMatrix = quat.toMatrix();
 		bool hasZBuffer = g_grim->getCurrSet()->getCurrSetup()->_bkgndZBm;
 		Math::Matrix4 extraMatrix;
+		_matrixStack.top() = extraMatrix;
 
 		modelMatrix.transpose();
 		modelMatrix.setPosition(pos);
@@ -782,7 +784,7 @@ void GfxOpenGLS::startActorDraw(const Actor *actor) {
 	_actorProgram->setUniform("hasAmbient", _hasAmbientLight);
 	if (_lightsEnabled) {
 		for (int i = 0; i < _maxLights; ++i) {
-			const Light &l = _lights[i];
+			const GLSLight &l = _lights[i];
 			Common::String uniform;
 			uniform = Common::String::format("lights[%u]._position", i);
 

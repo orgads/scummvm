@@ -11,6 +11,7 @@ MODULE_OBJS := \
 	fonts/newfont.o \
 	fonts/ttf.o \
 	fonts/winfont.o \
+	larryScale.o \
 	maccursor.o \
 	managed_surface.o \
 	nine_patch.o \
@@ -28,7 +29,6 @@ MODULE_OBJS := \
 	VectorRendererSpec.o \
 	wincursor.o \
 	yuv_to_rgb.o \
-	yuva_to_rgba.o \
 	pixelbuffer.o \
 	opengl/context.o \
 	opengl/framebuffer.o \

@@ -30,8 +30,49 @@
 #include "common/textconsole.h"
 #include "common/translation.h"
 #include "gui/EventRecorder.h"
+#include "gui/gui-manager.h"
+#include "gui/message.h"
 #include "engines/advancedDetector.h"
 #include "engines/obsolete.h"
+
+/**
+ * Adapter to be able to use Common::Archive based code from the AD.
+ */
+class FileMapArchive : public Common::Archive {
+public:
+	FileMapArchive(const AdvancedMetaEngine::FileMap &fileMap) : _fileMap(fileMap) {}
+
+	bool hasFile(const Common::String &name) const override {
+		return _fileMap.contains(name);
+	}
+
+	int listMembers(Common::ArchiveMemberList &list) const override {
+		int files = 0;
+		for (AdvancedMetaEngine::FileMap::const_iterator it = _fileMap.begin(); it != _fileMap.end(); ++it) {
+			list.push_back(Common::ArchiveMemberPtr(new Common::FSNode(it->_value)));
+			++files;
+		}
+
+		return files;
+	}
+
+	const Common::ArchiveMemberPtr getMember(const Common::String &name) const override {
+		AdvancedMetaEngine::FileMap::const_iterator it = _fileMap.find(name);
+		if (it == _fileMap.end()) {
+			return Common::ArchiveMemberPtr();
+		}
+
+		return Common::ArchiveMemberPtr(new Common::FSNode(it->_value));
+	}
+
+	Common::SeekableReadStream *createReadStreamForMember(const Common::String &name) const override {
+		Common::FSNode fsNode = _fileMap[name];
+		return fsNode.createReadStream();
+	}
+
+private:
+	const AdvancedMetaEngine::FileMap &_fileMap;
+};
 
 static Common::String sanitizeName(const char *name) {
 	Common::String res;
@@ -133,6 +174,10 @@ bool cleanupPirated(ADDetectedGames &matched) {
 		// We ruled out all variants and now have nothing
 		if (matched.empty()) {
 			warning("Illegitimate game copy detected. We provide no support in such cases");
+			if (GUI::GuiManager::hasInstance()) {
+				GUI::MessageDialog dialog(_("Illegitimate game copy detected. We provide no support in such cases"));
+				dialog.runModal();
+			};
 			return true;
 		}
 	}
@@ -283,15 +328,11 @@ Common::Error AdvancedMetaEngine::createInstance(OSystem *syst, Engine **engine)
 	if (!agdDesc.desc)
 		return Common::kNoGameDataFoundError;
 
+	DetectedGame gameDescriptor = toDetectedGame(agdDesc);
+
 	// If the GUI options were updated, we catch this here and update them in the users config
 	// file transparently.
-	Common::String lang = getGameGUIOptionsDescriptionLanguage(agdDesc.desc->language);
-	if (agdDesc.desc->flags & ADGF_ADDENGLISH)
-		lang += " " + getGameGUIOptionsDescriptionLanguage(Common::EN_ANY);
-
-	Common::updateGameGUIOptions(agdDesc.desc->guiOptions + _guiOptions, lang);
-
-	DetectedGame gameDescriptor = toDetectedGame(agdDesc);
+	ConfMan.setAndFlush("guioptions", gameDescriptor.getGUIOptions());
 
 	bool showTestingWarning = false;
 
@@ -353,14 +394,16 @@ void AdvancedMetaEngine::composeFileHashMap(FileMap &allFiles, const Common::FSL
 	}
 }
 
-bool AdvancedMetaEngine::getFileProperties(const Common::FSNode &parent, const FileMap &allFiles, const ADGameDescription &game, const Common::String fname, FileProperties &fileProps) const {
+bool AdvancedMetaEngine::getFileProperties(const FileMap &allFiles, const ADGameDescription &game, const Common::String fname, FileProperties &fileProps) const {
 	// FIXME/TODO: We don't handle the case that a file is listed as a regular
 	// file and as one with resource fork.
 
 	if (game.flags & ADGF_MACRESFORK) {
+		FileMapArchive fileMapArchive(allFiles);
+
 		Common::MacResManager macResMan;
 
-		if (!macResMan.open(parent, fname))
+		if (!macResMan.open(fname, fileMapArchive))
 			return false;
 
 		fileProps.md5 = macResMan.computeResForkMD5AsString(_md5Bytes);
@@ -393,22 +436,25 @@ ADDetectedGames AdvancedMetaEngine::detectGame(const Common::FSNode &parent, con
 
 	debug(3, "Starting detection in dir '%s'", parent.getPath().c_str());
 
-	// Check which files are included in some ADGameDescription *and* are present.
-	// Compute MD5s and file sizes for these files.
+	// Check which files are included in some ADGameDescription *and* whether
+	// they are present. Compute MD5s and file sizes for the available files.
 	for (descPtr = _gameDescriptors; ((const ADGameDescription *)descPtr)->gameId != nullptr; descPtr += _descItemSize) {
 		g = (const ADGameDescription *)descPtr;
 
 		for (fileDesc = g->filesDescriptions; fileDesc->fileName; fileDesc++) {
 			Common::String fname = fileDesc->fileName;
-			FileProperties tmp;
 
 			if (filesProps.contains(fname))
 				continue;
 
-			if (getFileProperties(parent, allFiles, *g, fname, tmp)) {
+			FileProperties tmp;
+			if (getFileProperties(allFiles, *g, fname, tmp)) {
 				debug(3, "> '%s': '%s'", fname.c_str(), tmp.md5.c_str());
-				filesProps[fname] = tmp;
 			}
+
+			// Both positive and negative results are cached to avoid
+			// repeatedly checking for files.
+			filesProps[fname] = tmp;
 		}
 	}
 
@@ -439,7 +485,7 @@ ADDetectedGames AdvancedMetaEngine::detectGame(const Common::FSNode &parent, con
 		for (fileDesc = game.desc->filesDescriptions; fileDesc->fileName; fileDesc++) {
 			Common::String tstr = fileDesc->fileName;
 
-			if (!filesProps.contains(tstr)) {
+			if (!filesProps.contains(tstr) || filesProps[tstr].size == -1) {
 				allFilesPresent = false;
 				break;
 			}
@@ -505,7 +551,7 @@ ADDetectedGames AdvancedMetaEngine::detectGame(const Common::FSNode &parent, con
 	return matched;
 }
 
-ADDetectedGame AdvancedMetaEngine::detectGameFilebased(const FileMap &allFiles, const Common::FSList &fslist, const ADFileBasedFallback *fileBasedFallback) const {
+ADDetectedGame AdvancedMetaEngine::detectGameFilebased(const FileMap &allFiles, const ADFileBasedFallback *fileBasedFallback) const {
 	const ADFileBasedFallback *ptr;
 	const char* const* filenames;
 
@@ -541,7 +587,7 @@ ADDetectedGame AdvancedMetaEngine::detectGameFilebased(const FileMap &allFiles, 
 				for (filenames = ptr->filenames; *filenames; ++filenames) {
 					FileProperties tmp;
 
-					if (getFileProperties(fslist.begin()->getParent(), allFiles, *agdesc, *filenames, tmp))
+					if (getFileProperties(allFiles, *agdesc, *filenames, tmp))
 						game.matchedFiles[*filenames] = tmp;
 				}
 

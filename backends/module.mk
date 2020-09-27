@@ -8,6 +8,14 @@ MODULE_OBJS := \
 	events/default/default-events.o \
 	fs/abstract-fs.o \
 	fs/stdiostream.o \
+	keymapper/action.o \
+	keymapper/hardware-input.o \
+	keymapper/input-watcher.o \
+	keymapper/keymap.o \
+	keymapper/keymapper.o \
+	keymapper/remap-widget.o \
+	keymapper/standard-actions.o \
+	keymapper/virtual-mouse.o \
 	log/log.o \
 	saves/savefile.o \
 	saves/default/default-saves.o \
@@ -60,6 +68,7 @@ MODULE_OBJS += \
 	networking/curl/curlrequest.o \
 	networking/curl/curljsonrequest.o \
 	networking/curl/postrequest.o \
+	networking/curl/sessionrequest.o \
 	networking/curl/request.o
 endif
 
@@ -94,15 +103,6 @@ MODULE_OBJS += \
 	plugins/elf/version.o
 endif
 
-ifdef ENABLE_KEYMAPPER
-MODULE_OBJS += \
-	keymapper/action.o \
-	keymapper/hardware-input.o \
-	keymapper/keymap.o \
-	keymapper/keymapper.o \
-	keymapper/remap-dialog.o
-endif
-
 ifdef ENABLE_VKEYBD
 MODULE_OBJS += \
 	vkeybd/image-map.o \
@@ -119,9 +119,8 @@ ifdef SDL_BACKEND
 MODULE_OBJS += \
 	events/sdl/sdl-events.o \
 	events/sdl/resvm-sdl-events.o \
-	graphics/sdl/sdl-graphics.o \
-	graphics/sdl/resvm-sdl-graphics.o \
-	graphics/surfacesdl/surfacesdl-graphics.o \
+	graphics/resvm-sdl/resvm-sdl-graphics.o \
+	graphics/resvm-surfacesdl/resvm-surfacesdl-graphics.o \
 	mixer/sdl/sdl-mixer.o \
 	mutex/sdl/sdl-mutex.o \
 	plugins/sdl/sdl-provider.o \
@@ -135,7 +134,12 @@ endif
 
 ifdef USE_OPENGL
 MODULE_OBJS += \
-	graphics/openglsdl/openglsdl-graphics.o
+	graphics/resvm-openglsdl/resvm-openglsdl-graphics.o
+endif
+
+ifdef USE_DISCORD
+MODULE_OBJS += \
+	presence/discord/discord.o
 endif
 endif
 
@@ -144,11 +148,22 @@ MODULE_OBJS += \
 	fs/posix/posix-fs.o \
 	fs/posix/posix-fs-factory.o \
 	fs/posix/posix-iostream.o \
+	fs/posix-drives/posix-drives-fs.o \
+	fs/posix-drives/posix-drives-fs-factory.o \
 	fs/chroot/chroot-fs-factory.o \
 	fs/chroot/chroot-fs.o \
 	plugins/posix/posix-provider.o \
 	saves/posix/posix-saves.o \
-	taskbar/unity/unity-taskbar.o
+	taskbar/unity/unity-taskbar.o \
+	dialogs/gtk/gtk-dialogs.o
+
+ifdef USE_SPEECH_DISPATCHER
+ifdef USE_TTS
+MODULE_OBJS += \
+	text-to-speech/linux/linux-text-to-speech.o
+endif
+endif
+
 endif
 
 ifdef MACOSX
@@ -157,6 +172,12 @@ MODULE_OBJS += \
 	dialogs/macosx/macosx-dialogs.o \
 	updates/macosx/macosx-updates.o \
 	taskbar/macosx/macosx-taskbar.o
+
+ifdef USE_TTS
+MODULE_OBJS += \
+	text-to-speech/macosx/macosx-text-to-speech.o
+endif
+
 endif
 
 ifdef WIN32
@@ -169,6 +190,12 @@ MODULE_OBJS += \
 	saves/windows/windows-saves.o \
 	updates/win32/win32-updates.o \
 	taskbar/win32/win32-taskbar.o
+
+ifdef USE_TTS
+MODULE_OBJS += \
+	text-to-speech/windows/windows-text-to-speech.o
+endif
+
 endif
 
 ifeq ($(BACKEND),android)
@@ -176,10 +203,21 @@ MODULE_OBJS += \
 	mutex/pthread/pthread-mutex.o
 endif
 
+ifeq ($(BACKEND),androidsdl)
+MODULE_OBJS += \
+	events/androidsdl/androidsdl-events.o
+endif
+
 ifdef AMIGAOS
 MODULE_OBJS += \
 	fs/amigaos4/amigaos4-fs.o \
 	fs/amigaos4/amigaos4-fs-factory.o
+endif
+
+ifdef MORPHOS
+MODULE_OBJS += \
+	fs/morphos/morphos-fs.o \
+	fs/morphos/morphos-fs-factory.o
 endif
 
 ifdef RISCOS
@@ -204,9 +242,9 @@ MODULE_OBJS += \
 	audiocd/linux/linux-audiocd.o
 endif
 
-ifeq ($(BACKEND),tizen)
+ifeq ($(BACKEND),3ds)
 MODULE_OBJS += \
-	timer/tizen/timer.o
+	plugins/3ds/3ds-provider.o
 endif
 
 ifeq ($(BACKEND),ds)
@@ -219,19 +257,14 @@ endif
 ifeq ($(BACKEND),dingux)
 MODULE_OBJS += \
 	events/dinguxsdl/dinguxsdl-events.o \
-	graphics/dinguxsdl/dinguxsdl-graphics.o
+	graphics/downscalesdl/downscalesdl-graphics.o
 endif
 
 ifeq ($(BACKEND),gph)
 MODULE_OBJS += \
 	events/gph/gph-events.o \
-	graphics/gph/gph-graphics.o
-endif
-
-ifeq ($(BACKEND),linuxmoto)
-MODULE_OBJS += \
-	events/linuxmotosdl/linuxmotosdl-events.o \
-	graphics/linuxmotosdl/linuxmotosdl-graphics.o
+	graphics/gph/gph-graphics.o \
+	graphics/downscalesdl/downscalesdl-graphics.o
 endif
 
 ifeq ($(BACKEND),maemo)
@@ -247,17 +280,15 @@ MODULE_OBJS += \
 	fs/n64/romfsstream.o
 endif
 
+ifeq ($(BACKEND),null)
+MODULE_OBJS += \
+	mixer/null/null-mixer.o
+endif
+
 ifeq ($(BACKEND),openpandora)
 MODULE_OBJS += \
 	events/openpandora/op-events.o \
 	graphics/openpandora/op-graphics.o
-endif
-
-ifeq ($(BACKEND),ps2)
-MODULE_OBJS += \
-	fs/ps2/ps2-fs.o \
-	fs/ps2/ps2-fs-factory.o \
-	plugins/ps2/ps2-provider.o
 endif
 
 ifeq ($(BACKEND),psp)
@@ -266,7 +297,6 @@ MODULE_OBJS += \
 	fs/psp/psp-fs-factory.o \
 	fs/psp/psp-stream.o \
 	plugins/psp/psp-provider.o \
-	saves/psp/psp-saves.o \
 	timer/psp/timer.o
 endif
 
@@ -274,31 +304,15 @@ ifeq ($(BACKEND),psp2)
 MODULE_OBJS += \
 	fs/posix/posix-fs.o \
 	fs/posix/posix-iostream.o \
-	fs/psp2/psp2-fs-factory.o \
-	fs/psp2/psp2-dirent.o \
+	fs/posix-drives/posix-drives-fs.o \
+	fs/posix-drives/posix-drives-fs-factory.o \
 	events/psp2sdl/psp2sdl-events.o \
 	graphics/psp2sdl/psp2sdl-graphics.o
 endif
 
 ifeq ($(BACKEND),samsungtv)
 MODULE_OBJS += \
-	events/samsungtvsdl/samsungtvsdl-events.o \
-	graphics/samsungtvsdl/samsungtvsdl-graphics.o
-endif
-
-ifeq ($(BACKEND),webos)
-MODULE_OBJS += \
-	events/webossdl/webossdl-events.o
-endif
-
-ifeq ($(BACKEND),wince)
-MODULE_OBJS += \
-	events/wincesdl/wincesdl-events.o \
-	fs/windows/windows-fs.o \
-	fs/windows/windows-fs-factory.o \
-	graphics/wincesdl/wincesdl-graphics.o \
-	mixer/wincesdl/wincesdl-mixer.o \
-	plugins/win32/win32-provider.o
+	events/samsungtvsdl/samsungtvsdl-events.o
 endif
 
 ifeq ($(BACKEND),wii)
@@ -315,7 +329,7 @@ endif
 
 ifdef ENABLE_EVENTRECORDER
 MODULE_OBJS += \
-	mixer/nullmixer/nullsdl-mixer.o \
+	mixer/null/null-mixer.o \
 	saves/recorder/recorder-saves.o
 endif
 

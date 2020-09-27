@@ -33,7 +33,7 @@ namespace Common {
  * Simple memory based 'stream', which implements the ReadStream interface for
  * a plain memory block.
  */
-class MemoryReadStream : public SeekableReadStream {
+class MemoryReadStream : virtual public SeekableReadStream {
 private:
 	const byte * const _ptrOrig;
 	const byte *_ptr;
@@ -78,10 +78,17 @@ public:
  * This is a MemoryReadStream subclass which adds non-endian
  * read methods whose endianness is set on the stream creation.
  */
-class MemoryReadStreamEndian : public MemoryReadStream, public ReadStreamEndian {
+class MemoryReadStreamEndian : public MemoryReadStream, public SeekableReadStreamEndian {
 public:
-	MemoryReadStreamEndian(const byte *buf, uint32 len, bool bigEndian)
-		: MemoryReadStream(buf, len), ReadStreamEndian(bigEndian) {}
+	MemoryReadStreamEndian(const byte *buf, uint32 len, bool bigEndian, DisposeAfterUse::Flag disposeMemory = DisposeAfterUse::NO)
+		: MemoryReadStream(buf, len, disposeMemory), SeekableReadStreamEndian(bigEndian), ReadStreamEndian(bigEndian) {}
+
+	int32 pos() const { return MemoryReadStream::pos(); }
+	int32 size() const { return MemoryReadStream::size(); }
+
+	bool seek(int32 offs, int whence = SEEK_SET) { return MemoryReadStream::seek(offs, whence); }
+
+	bool skip(uint32 offset) { return MemoryReadStream::seek(offset, SEEK_CUR); }
 };
 
 /**
@@ -98,7 +105,7 @@ protected:
 public:
 	MemoryWriteStream(byte *buf, uint32 len) : _ptr(buf), _bufSize(len), _pos(0), _err(false) {}
 
-	uint32 write(const void *dataPtr, uint32 dataSize) {
+	uint32 write(const void *dataPtr, uint32 dataSize) override {
 		// Write at most as many bytes as are still available...
 		if (dataSize > _bufSize - _pos) {
 			dataSize = _bufSize - _pos;
@@ -137,6 +144,8 @@ public:
 			offset = size() + offset;
 			// Fall through
 		case SEEK_SET:
+			// Fall through
+		default:
 			_ptr = _ptrOrig + offset;
 			_pos = offset;
 			break;
@@ -195,7 +204,7 @@ public:
 			free(_data);
 	}
 
-	uint32 write(const void *dataPtr, uint32 dataSize) {
+	uint32 write(const void *dataPtr, uint32 dataSize) override {
 		ensureCapacity(_pos + dataSize);
 		memcpy(_ptr, dataPtr, dataSize);
 		_ptr += dataSize;
@@ -219,6 +228,8 @@ public:
 			offs = _size + offs;
 			// Fall through
 		case SEEK_SET:
+			// Fall through
+		default:
 			_ptr = _data + offs;
 			_pos = offs;
 			break;
@@ -279,7 +290,7 @@ public:
 			free(_data);
 	}
 
-	uint32 write(const void *dataPtr, uint32 dataSize) {
+	uint32 write(const void *dataPtr, uint32 dataSize) override {
 		ensureCapacity(_length + dataSize);
 		if (_writePos + dataSize < _capacity) {
 			memcpy(_data + _writePos, dataPtr, dataSize);

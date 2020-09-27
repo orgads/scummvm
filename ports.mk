@@ -97,8 +97,13 @@ ScummVMDockTilePlugin64.o:
 ScummVMDockTilePlugin64: ScummVMDockTilePlugin64.o
 	$(CXX) -mmacosx-version-min=10.6 -arch x86_64 -bundle -framework Foundation -framework AppKit -fobjc-link-runtime ScummVMDockTilePlugin64.o -o ScummVMDockTilePlugin64
 
-ResidualVMDockTilePlugin: ScummVMDockTilePlugin32 ScummVMDockTilePlugin64
+ifdef MACOSX_64_BITS_ONLY
+ScummVMDockTilePlugin: ScummVMDockTilePlugin64
+	cp ScummVMDockTilePlugin64 ScummVMDockTilePlugin
+else
+ScummVMDockTilePlugin: ScummVMDockTilePlugin32 ScummVMDockTilePlugin64
 	lipo -create ScummVMDockTilePlugin32 ScummVMDockTilePlugin64 -output ResidualVMDockTilePlugin
+endif
 
 residualvm.docktileplugin: ResidualVMDockTilePlugin
 	mkdir -p residualvm.docktileplugin/Contents
@@ -110,11 +115,8 @@ residualvm.docktileplugin: ResidualVMDockTilePlugin
 endif
 
 bundle_name = ResidualVM.app
-ifdef USE_DOCKTILEPLUGIN
-bundle: residualvm-static residualvm.docktileplugin
-else
-bundle: residualvm-static
-endif
+
+bundle-pack:
 	mkdir -p $(bundle_name)/Contents/MacOS
 	mkdir -p $(bundle_name)/Contents/Resources
 	echo "APPL????" > $(bundle_name)/Contents/PkgInfo
@@ -125,7 +127,11 @@ ifdef USE_SPARKLE
 	rm -rf $(bundle_name)/Contents/Frameworks/Sparkle.framework
 	cp -R $(SPARKLEPATH)/Sparkle.framework $(bundle_name)/Contents/Frameworks/
 endif
+ifdef MACOSX_USE_LEGACY_ICONS
 	cp $(srcdir)/icons/residualvm.icns $(bundle_name)/Contents/Resources/
+else
+	cp $(srcdir)/icons/residualvm.icns $(bundle_name)/Contents/Resources/
+endif
 	cp $(DIST_FILES_DOCS) $(bundle_name)/Contents/Resources/
 	cp $(DIST_FILES_THEMES) $(bundle_name)/Contents/Resources/
 ifdef DIST_FILES_NETWORKING
@@ -133,6 +139,9 @@ ifdef DIST_FILES_NETWORKING
 endif
 ifdef DIST_FILES_ENGINEDATA
 	cp $(DIST_FILES_ENGINEDATA) $(bundle_name)/Contents/Resources/
+endif
+ifdef DIST_FILES_VKEYBD
+	cp $(DIST_FILES_VKEYBD) $(bundle_name)/Contents/Resources/
 endif
 ifdef USE_OPENGL_SHADERS
 	mkdir -p $(bundle_name)/Contents/Resources/shaders
@@ -155,6 +164,12 @@ endif
 ifdef USE_DOCKTILEPLUGIN
 	mkdir -p $(bundle_name)/Contents/PlugIns
 	cp -r residualvm.docktileplugin $(bundle_name)/Contents/PlugIns/
+endif
+
+ifdef USE_DOCKTILEPLUGIN
+bundle: residualvm-static residualvm.docktileplugin bundle-pack
+else
+bundle: residualvm-static bundle-pack
 endif
 
 iphonebundle: iphone
@@ -204,6 +219,14 @@ ifdef USE_FREETYPE2
 OSX_STATIC_LIBS += $(STATICLIBPATH)/lib/libfreetype.a $(STATICLIBPATH)/lib/libbz2.a
 endif
 
+ifdef USE_FRIBIDI
+OSX_STATIC_LIBS += $(STATICLIBPATH)/lib/libfribidi.a
+endif
+
+ifdef USE_ICONV
+OSX_STATIC_LIBS += -liconv
+endif
+
 ifdef USE_VORBIS
 OSX_STATIC_LIBS += \
 		$(STATICLIBPATH)/lib/libvorbisfile.a \
@@ -223,8 +246,12 @@ OSX_STATIC_LIBS += $(STATICLIBPATH)/lib/libogg.a
 endif
 
 ifdef USE_FLUIDSYNTH
+# If iconv was not yet added, add it now as we need it for libfluidsynth
+ifndef USE_ICONV
+OSX_STATIC_LIBS += -liconv
+endif
 OSX_STATIC_LIBS += \
-                -liconv -framework CoreMIDI -framework CoreAudio\
+                -framework CoreMIDI -framework CoreAudio\
                 $(STATICLIBPATH)/lib/libfluidsynth.a \
                 $(STATICLIBPATH)/lib/libglib-2.0.a \
                 $(STATICLIBPATH)/lib/libintl.a
@@ -268,6 +295,10 @@ ifdef USE_ZLIB
 OSX_ZLIB ?= $(STATICLIBPATH)/lib/libz.a
 endif
 
+ifdef USE_DISCORD
+OSX_STATIC_LIBS += $(STATICLIBPATH)/lib/libdiscord-rpc.a
+endif
+
 ifdef USE_SPARKLE
 ifdef MACOSX
 ifneq ($(SPARKLEPATH),)
@@ -281,12 +312,6 @@ endif
 ifdef USE_GLEW
 OSX_STATIC_LIBS += $(STATICLIBPATH)/lib/libglew.a
 endif
-
-# ResidualVM specific:
-ifdef USE_ICONV
-OSX_STATIC_LIBS += $(STATICLIBPATH)/lib/libiconv.a
-endif
-
 # Special target to create a static linked binary for Mac OS X.
 # We use -force_cpusubtype_ALL to ensure the binary runs on every
 # PowerPC machine.
@@ -301,7 +326,7 @@ iphone: $(OBJS)
 		$(OSX_STATIC_LIBS) \
 		-framework UIKit -framework CoreGraphics -framework OpenGLES \
 		-framework CoreFoundation -framework QuartzCore -framework Foundation \
-		-framework AudioToolbox -framework CoreAudio -lobjc -lz
+		-framework AudioToolbox -framework CoreAudio -framework SystemConfiguration -lobjc -lz
 
 # Special target to create a snapshot disk image for Mac OS X
 # TODO: Replace AUTHORS by Credits.rtf
@@ -321,7 +346,8 @@ osxsnap: bundle
 	mkdir ResidualVM-snapshot/doc
 	cp $(srcdir)/doc/QuickStart ./ResidualVM-snapshot/doc/QuickStart
 	$(XCODETOOLSPATH)/SetFile -t ttro -c ttxt ./ResidualVM-snapshot/doc/QuickStart
-	$(XCODETOOLSPATH)/CpMac -r $(bundle_name) ./ResidualVM-snapshot/
+# ResidualVM: missing CpMac in some cases
+	cp -R $(bundle_name) ./ResidualVM-snapshot/
 # ResidualVM missing background file:
 #	cp $(srcdir)/dists/macosx/DS_Store ./ResidualVM-snapshot/.DS_Store
 #	cp $(srcdir)/dists/macosx/background.jpg ./ResidualVM-snapshot/background.jpg
@@ -334,7 +360,7 @@ osxsnap: bundle
 	rm -rf ResidualVM-snapshot
 
 publish-appcast:
-	scp dists/macosx/residualvm_appcast.xml www.residualvm.org:/var/www/appcasts/macosx/release.xml
+	cp dists/macosx/residualvm_appcast.xml www.residualvm.org:/var/www/appcasts/macosx/release.xml
 
 
 #
@@ -358,12 +384,19 @@ endif
 	@echo Creating Code::Blocks project files...
 	@cd $(srcdir)/dists/codeblocks && ../../devtools/create_project/create_project ../.. --codeblocks >/dev/null && git add -f engines/plugins_table.h *.workspace *.cbp
 	@echo Creating MSVC project files...
-	@cd $(srcdir)/dists/msvc && ../../devtools/create_project/create_project ../.. --msvc-version 12 --msvc >/dev/null && git add -f engines/plugins_table.h *.sln *.vcxproj *.vcxproj.filters *.props
+	@cd $(srcdir)/dists/msvc && ../../devtools/create_project/create_project ../.. --use-canonical-lib-names --msvc-version 12 --msvc >/dev/null && git add -f engines/plugins_table.h *.sln *.vcxproj *.vcxproj.filters *.props
 	@echo
 	@echo All is done.
 	@echo Now run
 	@echo "\tgit commit -m 'DISTS: Generated Code::Blocks and MSVC project files'"
 
+# Target to create Raspberry Pi zip containig binary and specific README
+raspberrypi_dist:
+	mkdir -p $(srcdir)/residulvm-rpi
+	cp $(srcdir)/backends/platform/sdl/raspberrypi/README.RASPBERRYPI $(srcdir)/residualvm-rpi/README
+	cp $(srcdir)/residualvm $(srcdir)/residualvm-rpi
+	zip -r residualvm-rpi.zip residualvm-rpi
+	rm -f -R residualvm-rpi
 
 # Mark special targets as phony
 .PHONY: deb bundle osxsnap install uninstall

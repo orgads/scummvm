@@ -118,7 +118,15 @@
                 android:contentDescription="@string/right"
                 android:src="@drawable/ic_right" />
 
-        </LinearLayout>
+			<ImageView
+				android:id="@+id/show_keyboard"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="10dp"
+				android:layout_marginRight="10dp"
+				android:src="@drawable/ic_action_keyboard" />
+
+		</LinearLayout>
     </ScrollView>
 
 </RelativeLayout>

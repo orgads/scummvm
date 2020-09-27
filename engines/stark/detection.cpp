@@ -47,7 +47,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::EN_ANY,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -61,7 +61,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::EN_ANY,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -75,7 +75,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::EN_ANY,
 		Common::kPlatformWindows,
-		ADGF_DEMO | ADGF_TESTING,
+		ADGF_DEMO,
 		GUIO_NONE
 	},
 
@@ -89,7 +89,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::EN_ANY,
 		Common::kPlatformWindows,
-		ADGF_DEMO | ADGF_TESTING,
+		ADGF_DEMO,
 		GUIO_NONE
 	},
 
@@ -103,7 +103,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::FR_FRA,
 		Common::kPlatformWindows,
-		ADGF_DEMO | ADGF_TESTING,
+		ADGF_DEMO,
 		GUIO_NONE
 	},
 
@@ -117,7 +117,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::NB_NOR,
 		Common::kPlatformWindows,
-		ADGF_DEMO | ADGF_TESTING,
+		ADGF_DEMO,
 		GUIO_NONE
 	},
 
@@ -131,7 +131,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::NB_NOR,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -145,7 +145,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::NB_NOR,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -159,7 +159,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::DE_DEU,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -173,7 +173,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::DE_DEU,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 	
@@ -187,7 +187,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::IT_ITA,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -201,7 +201,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::IT_ITA,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -215,7 +215,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::NL_NLD,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -229,7 +229,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::ES_ESP,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -243,7 +243,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::FR_FRA,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -257,7 +257,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::FR_FRA,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -271,7 +271,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::SE_SWE,
 		Common::kPlatformWindows,
-		ADGF_DEMO | ADGF_TESTING,
+		ADGF_DEMO,
 		GUIO_NONE
 	},
 
@@ -285,7 +285,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::SE_SWE,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -299,7 +299,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::SE_SWE,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -313,7 +313,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::PL_POL,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -327,7 +327,7 @@ static const ADGameDescription gameDescriptions[] = {
 		},
 		Common::RU_RUS,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO_NONE
 	},
 
@@ -426,17 +426,14 @@ public:
 	}
 
 	SaveStateDescriptor querySaveMetaInfos(const char *target, int slot) const override {
-		SaveStateDescriptor descriptor;
-		if (slot == 0) {
-			descriptor.setWriteProtectedFlag(true);
-			descriptor.setDeletableFlag(false);
-		}
-
 		Common::String filename = StarkEngine::formatSaveName(target, slot);
 		Common::InSaveFile *save = g_system->getSavefileManager()->openForLoading(filename);
 		if (!save) {
-			return descriptor;
+			return SaveStateDescriptor();
 		}
+
+		SaveStateDescriptor descriptor;
+		descriptor.setSaveSlot(slot);
 
 		SaveMetadata metadata;
 		Common::ErrorCode readError = metadata.read(save, filename);
@@ -453,6 +450,10 @@ public:
 			descriptor.setPlayTime(metadata.totalPlayTime);
 			descriptor.setSaveDate(metadata.saveYear, metadata.saveMonth, metadata.saveDay);
 			descriptor.setSaveTime(metadata.saveHour, metadata.saveMinute);
+		}
+
+		if (metadata.version >= 13) {
+			descriptor.setAutosave(metadata.isAutoSave);
 		}
 
 		delete save;

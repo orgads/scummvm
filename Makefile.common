@@ -13,7 +13,7 @@ all: $(EXECUTABLE).dwp
 endif
 
 ifdef USE_PANDOC
-all: readme
+all: PANDOC_CONVERT
 endif
 
 ######################################################################
@@ -28,9 +28,9 @@ MODULES := test devtools base $(MODULES)
 
 # After the game specific modules follow the shared modules
 MODULES += \
+	engines \
 	gui \
 	backends \
-	engines \
 	video \
 	image \
 	graphics \
@@ -207,6 +207,11 @@ ifdef AMIGAOS
 AMIGA_DATE = $(shell gdate '+%d.%m.%Y')
 VERFLAGS += -DAMIGA_DATE=\"$(AMIGA_DATE)\"
 endif
+ifdef MORPHOS
+# MorphOS needs date in specific format for the version cookie
+AMIGA_DATE = $(shell date +"%-d.%-m.%Y")
+VERFLAGS += -DAMIGA_DATE=\"$(AMIGA_DATE)\"
+endif
 
 ######################################################################
 # Get git's working copy information
@@ -250,9 +255,14 @@ DISTDIR := dist
 VERFILE := $(DISTDIR)/$(DISTNAME)/base/internal_version.h
 
 ifdef USE_PANDOC
-# Convert README.md to plain text for any platform that might require it
-readme: README.md
-	$(QUIET_PANDOC)$(PANDOC) -f gfm -t $(PANDOCFORMAT) -o $(PANDOCOUTPUT) README.md
+# Convert README.md and NEWS.md to plain text for any platform that might require it
+PANDOC_CONVERT: README$(PANDOCEXT) CONTRIBUTING$(PANDOCEXT) NEWS$(PANDOCEXT)
+	@sed -i'' -e "s/NEWS.md/NEWS$(PANDOCEXT)/g" README$(PANDOCEXT)
+	@sed -i'' -e "s/CONTRIBUTING.md/CONTRIBUTING$(PANDOCEXT)/g" README$(PANDOCEXT)
+
+%$(PANDOCEXT): %.md
+	$(QUIET)$(MKDIR) $(*D)
+	$(QUIET_PANDOC)$(PANDOC) -f gfm -t $(PANDOCFORMAT) --metadata pagetitle=$(basename $(notdir $@)) -s -o $@ $<
 endif
 
 # TODO git via $(GITROOT)
@@ -284,13 +294,13 @@ dist-src: \
 	@#DEB-src?
 
 # Common files
-DIST_FILES_DOCS:=$(addprefix $(srcdir)/,AUTHORS COPYING COPYING.BSD COPYING.LGPL COPYING.FREEFONT COPYING.OFL COPYING.ISC COPYING.LUA COPYING.MIT COPYING.TINYGL COPYRIGHT KNOWN_BUGS NEWS README.md)
+DIST_FILES_DOCS:=$(addprefix $(srcdir)/,AUTHORS COPYING COPYING.BSD COPYING.LGPL COPYING.FREEFONT COPYING.OFL COPYING.ISC COPYING.LUA COPYING.MIT COPYING.TINYGL COPYRIGHT KNOWN_BUGS NEWS.md README.md CONTRIBUTING.md)
 ifdef USE_PANDOC
-DIST_FILES_DOCS+=$(PANDOCOUTPUT)
+DIST_FILES_DOCS+=README$(PANDOCEXT) NEWS$(PANDOCEXT)
 endif
 
 # Themes files
-DIST_FILES_THEMES=modern.zip
+DIST_FILES_THEMES=residualvm.zip
 ifdef USE_TRANSLATION
 DIST_FILES_THEMES+=translations.dat
 endif
@@ -302,8 +312,78 @@ ifdef USE_SDL_NET
 DIST_FILES_NETWORKING:=$(addprefix $(srcdir)/dists/networking/,wwwroot.zip)
 endif
 
+# Virtual keyboard files
+DIST_FILES_VKEYBD=
+ifdef ENABLE_VKEYBD
+DIST_FILES_VKEYBD:=$(addprefix $(srcdir)/backends/vkeybd/packs/,vkeybd_default.zip vkeybd_small.zip)
+endif
+
 # Engine data files
 DIST_FILES_ENGINEDATA=
+ifdef ENABLE_ACCESS
+DIST_FILES_ENGINEDATA+=access.dat
+endif
+ifdef ENABLE_CRYO
+DIST_FILES_ENGINEDATA+=cryo.dat
+endif
+ifdef ENABLE_CRYOMNI3D
+DIST_FILES_ENGINEDATA+=cryomni3d.dat
+endif
+ifdef ENABLE_DRASCULA
+DIST_FILES_ENGINEDATA+=drascula.dat
+endif
+ifdef ENABLE_HUGO
+DIST_FILES_ENGINEDATA+=hugo.dat
+endif
+ifdef ENABLE_KYRA
+DIST_FILES_ENGINEDATA+=kyra.dat
+endif
+ifdef ENABLE_LURE
+DIST_FILES_ENGINEDATA+=lure.dat
+endif
+ifdef ENABLE_MACVENTURE
+DIST_FILES_ENGINEDATA+=macventure.dat
+endif
+ifdef ENABLE_MORTEVIELLE
+DIST_FILES_ENGINEDATA+=mort.dat
+endif
+ifdef ENABLE_NEVERHOOD
+DIST_FILES_ENGINEDATA+=neverhood.dat
+endif
+ifdef ENABLE_QUEEN
+DIST_FILES_ENGINEDATA+=queen.tbl
+endif
+ifdef ENABLE_SKY
+DIST_FILES_ENGINEDATA+=sky.cpt
+endif
+ifdef ENABLE_SUPERNOVA
+DIST_FILES_ENGINEDATA+=supernova.dat
+endif
+ifdef ENABLE_TEENAGENT
+DIST_FILES_ENGINEDATA+=teenagent.dat
+endif
+ifdef ENABLE_TITANIC
+DIST_FILES_ENGINEDATA+=titanic.dat
+endif
+ifdef ENABLE_TONY
+DIST_FILES_ENGINEDATA+=tony.dat
+endif
+ifdef ENABLE_TOON
+DIST_FILES_ENGINEDATA+=toon.dat
+endif
+ifdef ENABLE_ULTIMA
+DIST_FILES_ENGINEDATA+=ultima.dat
+endif
+ifdef ENABLE_WINTERMUTE
+DIST_FILES_ENGINEDATA+=wintermute.zip
+endif
+ifdef ENABLE_XEEN
+DIST_FILES_ENGINEDATA+=xeen.ccs
+endif
+ifdef USE_FREETYPE2
+DIST_FILES_ENGINEDATA+=fonts.dat
+endif
+#DIST_FILES_ENGINEDATA+=macgui.dat # ResidualVM specific
 ifdef ENABLE_GRIM
 DIST_FILES_ENGINEDATA+=residualvm-grim-patch.lab
 DIST_FILES_ENGINEDATA+=mouse.lab
@@ -315,6 +395,11 @@ ifdef ENABLE_MYST3
 DIST_FILES_ENGINEDATA+=myst3.dat
 endif
 DIST_FILES_ENGINEDATA:=$(addprefix $(srcdir)/dists/engine-data/,$(DIST_FILES_ENGINEDATA))
+
+# pred.dic is currently only used for the AGI engine
+ifdef ENABLE_AGI
+DIST_FILES_ENGINEDATA+=$(srcdir)/dists/pred.dic
+endif
 
 # ResidualVM specific
 # Shaders
@@ -329,6 +414,9 @@ DIST_FILES_SHADERS+=$(wildcard $(srcdir)/engines/myst3/shaders/*)
 endif
 ifdef ENABLE_STARK
 DIST_FILES_SHADERS+=$(wildcard $(srcdir)/engines/stark/shaders/*)
+endif
+ifdef ENABLE_WINTERMUTE
+DIST_FILES_SHADERS+=$(wildcard $(srcdir)/engines/wintermute/base/gfx/opengl/shaders/*)
 endif
 endif
 

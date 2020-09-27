@@ -265,6 +265,10 @@ public:
 
 		// Open save
 		Common::InSaveFile *saveFile = g_system->getSavefileManager()->openForLoading(saveInfos.getDescription());
+		if (!saveFile) {
+			warning("Unable to open file %s for reading, slot %d", saveInfos.getDescription().encode().c_str(), slot);
+			return SaveStateDescriptor();
+		}
 
 		// Read state data
 		Common::Serializer s = Common::Serializer(saveFile, 0);
@@ -286,8 +290,13 @@ public:
 			saveInfos.setSaveTime(data.saveHour, data.saveMinute);
 		}
 
-		if (data.saveDescription != "")
+		if (data.saveDescription != "") {
 			saveInfos.setDescription(data.saveDescription);
+		}
+
+		if (s.getVersion() >= 150) {
+			saveInfos.setAutosave(data.isAutosave);
+		}
 
 		delete saveFile;
 

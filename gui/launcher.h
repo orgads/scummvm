@@ -41,17 +41,20 @@ class SaveLoadChooser;
 class LauncherDialog : public Dialog {
 	typedef Common::String String;
 	typedef Common::Array<Common::String> StringArray;
+
+	typedef Common::U32String U32String;
+	typedef Common::Array<Common::U32String> U32StringArray;
 public:
 	LauncherDialog();
-	~LauncherDialog();
+	~LauncherDialog() override;
 
 	void rebuild();
 
-	virtual void handleCommand(CommandSender *sender, uint32 cmd, uint32 data);
+	void handleCommand(CommandSender *sender, uint32 cmd, uint32 data) override;
 
-	virtual void handleKeyDown(Common::KeyState state);
-	virtual void handleKeyUp(Common::KeyState state);
-	virtual void handleOtherEvent(Common::Event evt);
+	void handleKeyDown(Common::KeyState state) override;
+	void handleKeyUp(Common::KeyState state) override;
+	void handleOtherEvent(const Common::Event &evt) override;
 	bool doGameDetection(const Common::String &path);
 protected:
 	EditTextWidget  *_searchWidget;
@@ -73,7 +76,7 @@ protected:
 
 	String _search;
 
-	virtual void reflowLayout();
+	void reflowLayout() override;
 
 	/**
 	 * Fill the list widget with all currently configured targets, and trigger
@@ -86,8 +89,8 @@ protected:
 	void build();
 	void clean();
 
-	void open();
-	void close();
+	void open() override;
+	void close() override;
 
 	/**
 	 * Handle "Add game..." button.

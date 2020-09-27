@@ -89,7 +89,7 @@ GrimEngine::GrimEngine(OSystem *syst, uint32 gameFlags, GrimGameType gameType, C
 		Engine(syst), _currSet(nullptr), _selectedActor(nullptr), _pauseStartTime(0), _opMode(0), _devMode(false) {
 	g_grim = this;
 
-	_debugger = new Debugger();
+	setDebugger(new Debugger());
 	_gameType = gameType;
 	_gameFlags = gameFlags;
 	_gamePlatform = platform;
@@ -213,7 +213,6 @@ GrimEngine::~GrimEngine() {
 	delete g_driver;
 	g_driver = nullptr;
 	delete _iris;
-	delete _debugger;
     delete _hotspotManager;
     delete _cursor;
 
@@ -317,11 +316,11 @@ Common::Error GrimEngine::run() {
 	if (ConfMan.getBool("check_gamedata") && false) { // HACK
 		MD5CheckDialog d;
 		if (!d.runModal()) {
-			Common::String confirmString = Common::String::format(_(
+			Common::U32String confirmString = Common::U32String::format(_(
 				"ResidualVM found some problems with your game data files.\n"
 				"Running ResidualVM nevertheless may cause game bugs or even crashes.\n"
 				"Do you still want to run %s?"),
-			GType_MONKEY4 == getGameType() ? _("Escape From Monkey Island") : _("Grim Fandango")
+			GType_MONKEY4 == getGameType() ? "Escape From Monkey Island" : "Grim Fandango"
 			 );
 			GUI::MessageDialog msg(confirmString, _("Yes"), _("No"));
 			if (!msg.runModal()) {
@@ -645,9 +644,9 @@ void GrimEngine::updateDisplayScene() {
 		}
 		// Draw Primitives
 		_iris->draw();
-		if (_movieSubtitle) {
-			_movieSubtitle->draw();
-		}
+
+		g_movie->drawMovieSubtitle();
+
 	} else if (_mode == NormalMode || _mode == OverworldMode) {
 		updateNormalMode();
 	} else if (_mode == DrawMode) {
@@ -857,8 +856,6 @@ void GrimEngine::mainLoop() {
 		if (g_imuse) {
 			g_imuse->refreshScripts();
 		}
-
-		_debugger->onFrame();
 
 		// Process events
 		Common::Event event;
@@ -1255,7 +1252,7 @@ void GrimEngine::savegameSave() {
 	_savedState = SaveGame::openForSaving(filename);
 	if (!_savedState) {
 		//TODO: Translate this!
-		GUI::displayErrorDialog("Error: the game could not be saved.");
+		GUI::displayErrorDialog(_("Error: the game could not be saved."));
 		return;
 	}
 
@@ -1515,6 +1512,11 @@ void GrimEngine::setMovieSubtitle(TextObject *to) {
 	}
 }
 
+void GrimEngine::drawMovieSubtitle() {
+	if (_movieSubtitle)
+		_movieSubtitle->draw();
+}
+
 void GrimEngine::setMovieSetup() {
 	_movieSetup = _currSet->getCurrSetup()->_name;
 }
@@ -1536,7 +1538,7 @@ void GrimEngine::clearEventQueue() {
 
 bool GrimEngine::hasFeature(EngineFeature f) const {
 	return
-		(f == kSupportsRTL) ||
+		(f == kSupportsReturnToLauncher) ||
 		(f == kSupportsLoadingDuringRuntime) ||
 		(f == kSupportsJoystick);
 }

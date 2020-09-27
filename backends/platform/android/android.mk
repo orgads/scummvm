@@ -1,7 +1,7 @@
 # Android specific build targets
 
 # These must be incremented for each market upload
-ANDROID_VERSIONCODE ?= 1000
+ANDROID_VERSIONCODE ?= 50000
 ANDROID_VERSIONNAME ?= 0.4
 
 PATH_DIST = $(srcdir)/dists/android
@@ -18,7 +18,7 @@ PATH_BUILD_GRADLE = $(PATH_BUILD)/settings.gradle
 PATH_BUILD_SETUPAPK = $(PATH_BUILD)/.setupapk
 
 APK_MAIN = $(PATH_BUILD)/build/outputs/apk/debug/ResidualVM-debug.apk
-APK_MAIN_RELEASE = $(PATH_BUILD)/build/outputs/apk/release/ResidualVM-release-unsigned.apk
+APK_MAIN_RELEASE = $(PATH_BUILD)/build/outputs/apk/release/ResidualVM-release$(if $(KEYSTORE),,-unsigned).apk
 
 $(PATH_BUILD_ASSETS): $(DIST_FILES_THEMES) $(DIST_FILES_ENGINEDATA) $(DIST_FILES_SHADERS) $(DIST_ANDROID_CONTROLS) | $(PATH_BUILD)
 	$(INSTALL) -d $(PATH_BUILD_ASSETS)
@@ -29,17 +29,19 @@ ifdef USE_OPENGL_SHADERS
 endif
 
 $(PATH_BUILD):
-	$(MKDIR) -p $(PATH_BUILD_ASSETS)
+	$(INSTALL) -d $(PATH_BUILD_ASSETS)
 
 $(PATH_BUILD_JNI): libresidualvm.so
-	$(INSTALL) -C -D -m 644 libresidualvm.so $(PATH_BUILD_JNI)
+	$(INSTALL) -d $(dir $(PATH_BUILD_JNI))
+	$(INSTALL) -C -m 644 libresidualvm.so $(PATH_BUILD_JNI)
 
 $(PATH_BUILD_GRADLE): $(PATH_BUILD_ASSETS) $(PATH_DIST)/build.gradle
-	@echo "gradle.ext.versionCode = $(ANDROID_VERSIONCODE)" >> $@
+	$(eval ABIS = $(notdir $(wildcard $(PATH_BUILD)/jni/*)))
+	@echo "gradle.ext.versionCode = $(ANDROID_VERSIONCODE)" > $@
 	@echo "gradle.ext.versionName = '$(ANDROID_VERSIONNAME)'" >> $@
 	@echo "gradle.ext.sourceDir = '$(abspath $(srcdir))'" >> $@
 	@echo "gradle.ext.buildDir = '$(CURDIR)'" >> $@
-	@echo "gradle.ext.androidAbi = '$(ABI)'" >> $@
+	@echo "gradle.ext.androidAbi = '$(ABIS)'" >> $@
 	@echo "include ':ResidualVM'" >> $@
 	@echo "project(':ResidualVM').projectDir = new File('$(abspath $(PATH_DIST))')" >> $@
 	@echo "ndk.dir=$(ANDROID_NDK)" > $(PATH_BUILD)/local.properties
