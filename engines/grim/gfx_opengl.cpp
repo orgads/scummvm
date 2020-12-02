@@ -49,6 +49,7 @@
 #include "engines/grim/model.h"
 #include "engines/grim/set.h"
 #include "engines/grim/emi/modelemi.h"
+#include "engines/grim/remastered/overlay.h"
 #include "engines/grim/registry.h"
 
 #if defined (SDL_BACKEND) && defined(GL_ARB_fragment_program) && !defined(USE_GLEW)
@@ -110,6 +111,7 @@ GfxOpenGL::GfxOpenGL() : _smushNumTex(0),
 }
 
 GfxOpenGL::~GfxOpenGL() {
+	releaseMovieFrame();
 	delete[] _storedDisplay;
 
 	if (_emergFont && glIsList(_emergFont))
@@ -127,18 +129,19 @@ GfxOpenGL::~GfxOpenGL() {
 	}
 }
 
-byte *GfxOpenGL::setupScreen(int screenW, int screenH, bool fullscreen) {
+void GfxOpenGL::setupScreen(int screenW, int screenH, bool fullscreen) {
 	_screenWidth = screenW;
 	_screenHeight = screenH;
 	_scaleW = _screenWidth / (float)_gameWidth;
 	_scaleH = _screenHeight / (float)_gameHeight;
 
+	_globalScaleW = _screenWidth / (float)_globalWidth;
+	_globalScaleH = _screenHeight / (float)_globalHeight;
+
 	_useDepthShader = false;
 	_useDimShader = false;
 
 	g_system->showMouse(false);
-
-	g_system->setWindowCaption("ResidualVM: OpenGL Renderer");
 
 	int screenSize = _screenWidth * _screenHeight * 4;
 	_storedDisplay = new byte[screenSize];
@@ -159,8 +162,6 @@ byte *GfxOpenGL::setupScreen(int screenW, int screenH, bool fullscreen) {
 
 	initExtensions();
 	glGetIntegerv(GL_MAX_LIGHTS, &_maxLights);
-
-	return nullptr;
 }
 
 void GfxOpenGL::initExtensions() {
@@ -229,7 +230,7 @@ void GfxOpenGL::setupCameraFrustum(float fov, float nclip, float fclip) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	float right = nclip * tan(fov / 2 * (LOCAL_PI / 180));
+	float right = nclip * tan(fov / 2 * ((float)M_PI / 180));
 	glFrustum(-right, right, -right * 0.75, right * 0.75, nclip, fclip);
 
 	glMatrixMode(GL_MODELVIEW);
@@ -926,6 +927,55 @@ void GfxOpenGL::drawSprite(const Sprite *sprite) {
 	glPopMatrix();
 }
 
+void GfxOpenGL::drawOverlay(const Overlay *overlay) {
+	glMatrixMode(GL_TEXTURE);
+	glLoadIdentity();
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glEnable(GL_TEXTURE_2D);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	
+
+	glDisable(GL_LIGHTING);
+
+
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GEQUAL, 0.5f);
+
+
+
+	glDisable(GL_DEPTH_TEST);
+	
+
+	float height = overlay->getHeight() * _globalScaleH;
+	float width = overlay->getWidth() * _globalScaleW;
+	float x = overlay->_x * _globalScaleW;
+	float y = overlay->_y * _globalScaleH;
+
+	glBegin(GL_QUADS);
+	glTexCoord2f(0.0f, 0.0f);
+	glVertex2f(x, y);
+	glTexCoord2f(1.0f, 0.0f);
+	glVertex2f((x + width), y);
+	glTexCoord2f(1.0f, 1.0f);
+	glVertex2f((x + width), (y + height));
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex2f(x, (y + height));
+	glEnd();
+
+
+
+	glEnable(GL_LIGHTING);
+	glDisable(GL_ALPHA_TEST);
+	glDepthMask(GL_TRUE);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST);
+
+	glPopMatrix();
+}
+
 void GfxOpenGL::translateViewpointStart() {
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
@@ -1381,7 +1431,47 @@ void GfxOpenGL::destroyFont(Font *font) {
 	}
 }
 
+struct TextObjectUserData {
+	GLuint *_texids;
+};
+
 void GfxOpenGL::createTextObject(TextObject *text) {
+	if (g_grim->getGameType() != GType_GRIM || !(g_grim->getGameFlags() & ADGF_REMASTERED))
+		return;
+
+#ifdef USE_FREETYPE2
+	//error("Could not get font userdata");
+	const Font *font = text->getFont();
+	const FontTTF *f = static_cast<const FontTTF *>(font);
+	Graphics::Font *gf = f->_font;
+	int numLines = text->getNumLines();
+	GLuint *texids = new GLuint[numLines];
+	glGenTextures(numLines, texids);
+	// Not at all correct for line-wrapping, but atleast we get all the lines now.
+	for (int i = 0; i < numLines; i++) {
+		Graphics::Surface surface;
+
+		int width = gf->getStringWidth(text->getLines()[i]);
+		int height = width;
+		surface.create(height, width, Graphics::PixelFormat(4, 8, 8, 8, 8, 0, 8, 16, 24));
+		gf->drawString(&surface, text->getLines()[i], 0, 0, width, 0xFFFFFFFF);
+
+		byte *bitmap = (byte *)surface.getPixels();
+
+		glBindTexture(GL_TEXTURE_2D, texids[i]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, bitmap);
+
+		surface.free();
+	}
+	TextObjectUserData *ud = new TextObjectUserData;
+
+	ud->_texids = texids;
+	text->setUserData(ud);
+#endif
 }
 
 void GfxOpenGL::drawTextObject(const TextObject *text) {
@@ -1408,8 +1498,64 @@ void GfxOpenGL::drawTextObject(const TextObject *text) {
 
 	glColor3ub(color.getRed(), color.getGreen(), color.getBlue());
 	const FontUserData *userData = (const FontUserData *)font->getUserData();
-	if (!userData)
-		error("Could not get font userdata");
+	if (!userData) {
+		if (g_grim->getGameType() != GType_GRIM || !(g_grim->getGameFlags() & ADGF_REMASTERED))
+			error("Could not get font userdata");
+#ifdef USE_FREETYPE2
+		const FontTTF *f = static_cast<const FontTTF *>(font);
+		Graphics::Font *gf = f->_font;
+
+
+		const TextObjectUserData *ud = (const TextObjectUserData *)text->getUserData();
+
+		int numLines = text->getNumLines();
+		for (int i = 0; i < numLines; ++i) {
+			float width = gf->getStringWidth(text->getLines()[i]);
+			float height = width;
+			float x = text->getLineX(i);
+
+			float y = text->getLineY(i);
+
+			if (text->getCoords() == 2 || text->getCoords() == 1) {
+				x *= _globalScaleW;
+				y *= _globalScaleH;
+
+				width  *= _globalScaleW;
+				height *= _globalScaleH;
+			} else if (text->getCoords() == 0) {
+				x *= _scaleW;
+				y *= _scaleH;
+
+				width  *= _scaleW;
+				height *= _scaleH;
+			}
+
+			glBindTexture(GL_TEXTURE_2D, ud->_texids[i]);
+			glBegin(GL_QUADS);
+			glTexCoord2f(0.0f, 0.0f);
+			glVertex2f(x, y);
+			glTexCoord2f(1.0f, 0.0f);
+			glVertex2f((x + width), y);
+			glTexCoord2f(1.0f, 1.0f);
+			glVertex2f((x + width), (y + height));
+			glTexCoord2f(0.0f, 1.0f);
+			glVertex2f(x, (y + height));
+			glEnd();
+
+
+		}
+
+		glColor3f(1, 1, 1);
+
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_BLEND);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_LIGHTING);
+		glDepthMask(GL_TRUE);
+#endif
+		return;
+	}
+
 	float sizeW = userData->size * _scaleW;
 	float sizeH = userData->size * _scaleH;
 	GLuint texture = userData->texture;
@@ -1455,6 +1601,12 @@ void GfxOpenGL::drawTextObject(const TextObject *text) {
 }
 
 void GfxOpenGL::destroyTextObject(TextObject *text) {
+	if (g_grim->getGameType() != GType_GRIM || !(g_grim->getGameFlags() & ADGF_REMASTERED))
+		return;
+
+	TextObjectUserData *ud = (TextObjectUserData *)const_cast<void *>(text->getUserData());
+	glDeleteTextures(text->getNumLines(), ud->_texids);
+	delete ud;
 }
 
 void GfxOpenGL::createTexture(Texture *texture, const uint8 *data, const CMap *cmap, bool clamp) {
@@ -1582,6 +1734,14 @@ void GfxOpenGL::prepareMovieFrame(Graphics::Surface *frame) {
 	int width = frame->w;
 	byte *bitmap = (byte *)frame->getPixels();
 
+	double scaleW = _scaleW;
+	double scaleH = _scaleH;
+	// Remastered hack, don't scale full-screen videos for now.
+	if (height == 1080) {
+		_scaleW = 1.0f;
+		_scaleH = 1.0f;
+	}
+
 	GLenum format;
 	GLenum dataType;
 	int bytesPerPixel = frame->format.bytesPerPixel;
@@ -1653,9 +1813,18 @@ void GfxOpenGL::prepareMovieFrame(Graphics::Surface *frame) {
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 	_smushWidth = (int)(width * _scaleW);
 	_smushHeight = (int)(height * _scaleH);
+	_scaleW = scaleW;
+	_scaleH = scaleH;
 }
 
 void GfxOpenGL::drawMovieFrame(int offsetX, int offsetY) {
+	double scaleW = _scaleW;
+	double scaleH = _scaleH;
+	// Remastered hack, don't scale full-screen videos for now.
+	if (_smushHeight == 1080) {
+		_scaleW = 1.0f;
+		_scaleH = 1.0f;
+	}
 	// prepare view
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -1702,6 +1871,9 @@ void GfxOpenGL::drawMovieFrame(int offsetX, int offsetY) {
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
+
+	_scaleW = scaleW;
+	_scaleH = scaleH;
 }
 
 void GfxOpenGL::releaseMovieFrame() {
@@ -1716,7 +1888,7 @@ void GfxOpenGL::loadEmergFont() {
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // 8 bit font bitmaps
 
 	_emergFont = glGenLists(128);
-	for (int i = 32; i < 127; i++) {
+	for (int i = 32; i < 128; i++) {
 		glNewList(_emergFont + i, GL_COMPILE);
 		glBitmap(8, 13, 0, 2, 10, 0, Font::emerFont[i - 32]);
 		glEndList();

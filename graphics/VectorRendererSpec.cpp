@@ -27,7 +27,6 @@
 #include "graphics/surface.h"
 #include "graphics/transparent_surface.h"
 #include "graphics/nine_patch.h"
-#include "graphics/colormasks.h"
 
 #include "gui/ThemeEngine.h"
 #include "graphics/VectorRenderer.h"
@@ -448,6 +447,7 @@ void colorFill(PixelType *first, PixelType *last, PixelType color) {
 		return;
 	int n = (count + 7) >> 3;
 	switch (count % 8) {
+	default:
 	case 0:	do {
 	       		*first++ = color; // fall through
 	case 7:		*first++ = color; // fall through
@@ -488,6 +488,7 @@ void colorFillClip(PixelType *first, PixelType *last, PixelType color, int realX
 
 	int n = (count + 7) >> 3;
 	switch (count % 8) {
+	default:
 	case 0:	do {
 	       		*first++ = color; // fall through
 	case 7:		*first++ = color; // fall through
@@ -541,6 +542,9 @@ VectorRendererSpec(PixelFormat format) :
 
 	_bitmapAlphaColor = _format.RGBToColor(255, 0, 255);
 	_clippingArea = Common::Rect(0, 0, 32767, 32767);
+
+	_fgColor = _bgColor = _bevelColor = 0;
+	_gradientStart = _gradientEnd = 0;
 }
 
 /****************************
@@ -1057,8 +1061,70 @@ drawString(const Graphics::Font *font, const Common::String &text, const Common:
 	drawArea = drawArea.findIntersectingRect(Common::Rect(0, 0, _activeSurface->w, _activeSurface->h));
 
 	if (!drawArea.isEmpty()) {
+		Common::Rect textArea(area);
+		textArea.right -= deltax;
+
 		Surface textAreaSurface = _activeSurface->getSubArea(drawArea);
-		font->drawString(&textAreaSurface, text, area.left - drawArea.left, offset - drawArea.top, area.width() - deltax, _fgColor, alignH, deltax, ellipsis);
+
+		if (deltax >= 0) {
+			textArea.left += deltax;
+			deltax = 0;
+		}
+
+		font->drawString(&textAreaSurface, text, textArea.left - drawArea.left, offset - drawArea.top, textArea.width(), _fgColor, alignH, deltax, ellipsis);
+	}
+}
+
+template<typename PixelType>
+void VectorRendererSpec<PixelType>::
+drawString(const Graphics::Font *font, const Common::U32String &text, const Common::Rect &area,
+			Graphics::TextAlign alignH, GUI::ThemeEngine::TextAlignVertical alignV, int deltax, bool ellipsis, const Common::Rect &textDrawableArea) {
+
+	int offset = area.top;
+
+	if (font->getFontHeight() < area.height()) {
+		switch (alignV) {
+		case GUI::ThemeEngine::kTextAlignVCenter:
+			offset = area.top + ((area.height() - font->getFontHeight()) >> 1);
+			break;
+		case GUI::ThemeEngine::kTextAlignVBottom:
+			offset = area.bottom - font->getFontHeight();
+			break;
+		default:
+			break;
+		}
+	}
+
+	Common::Rect drawArea;
+	if (textDrawableArea.isEmpty()) {
+		// In case no special area to draw to is given we only draw in the
+		// area specified by the user.
+		drawArea = area;
+		// warning("there is no text drawable area. Please set this area for clipping");
+	} else {
+		// The area we can draw to is the intersection between the allowed
+		// drawing area (textDrawableArea) and the area where we try to draw
+		// the text (area).
+		drawArea = textDrawableArea.findIntersectingRect(area);
+	}
+
+	// Better safe than sorry. We intersect with the actual surface boundaries
+	// to avoid any ugly clipping in _activeSurface->getSubArea which messes
+	// up the calculation of the x and y coordinates where to draw the string.
+	drawArea = drawArea.findIntersectingRect(Common::Rect(0, 0, _activeSurface->w, _activeSurface->h));
+
+	if (!drawArea.isEmpty()) {
+		Common::Rect textArea(area);
+		textArea.right -= deltax;
+
+		Surface textAreaSurface = _activeSurface->getSubArea(drawArea);
+
+		if (deltax >= 0) {
+			textArea.left += deltax;
+			deltax = 0;
+		}
+
+		font->drawString(&textAreaSurface, text, textArea.left - drawArea.left, offset - drawArea.top, textArea.width(), _fgColor, alignH, deltax, ellipsis);
 	}
 }
 
@@ -1205,6 +1271,9 @@ drawCircle(int x, int y, int r) {
 
 	case kFillGradient:
 		break;
+
+	default:
+		break;
 	}
 }
 
@@ -1262,6 +1331,9 @@ drawSquare(int x, int y, int w, int h) {
 			else
 				drawSquareAlg(x, y, w, h, _fgColor, kFillDisabled);
 		}
+		break;
+
+	default:
 		break;
 	}
 }
@@ -1350,6 +1422,9 @@ drawTab(int x, int y, int r, int w, int h) {
 		else
 			drawTabAlg(x, y, w, h, r, _fgColor, Base::_fillMode);
 		break;
+
+	default:
+		break;
 	}
 }
 
@@ -1392,6 +1467,7 @@ drawTriangle(int x, int y, int w, int h, TriangleOrientation orient) {
 		case kTriangleLeft:
 		case kTriangleRight:
 		case kTriangleAuto:
+		default:
 			break;
 		}
 
@@ -1418,6 +1494,7 @@ drawTriangle(int x, int y, int w, int h, TriangleOrientation orient) {
 		case kTriangleLeft:
 		case kTriangleRight:
 		case kTriangleAuto:
+		default:
 			break;
 		}
 
@@ -2286,6 +2363,8 @@ drawTriangleVertAlg(int x1, int y1, int w, int h, bool inverted, PixelType color
 				blendPixelPtr(ptr_right, color, rfpart(intery));
 				blendPixelPtr(ptr_left, color, rfpart(intery));
 				break;
+			default:
+				break;
 			}
 		}
 
@@ -2339,6 +2418,8 @@ drawTriangleVertAlg(int x1, int y1, int w, int h, bool inverted, PixelType color
 				blendPixelPtr(ptr_right, color, rfpart(interx));
 				blendPixelPtr(ptr_left, color, rfpart(interx));
 				break;
+			default:
+				break;
 			}
 		}
 
@@ -2381,6 +2462,8 @@ drawTriangleVertAlg(int x1, int y1, int w, int h, bool inverted, PixelType color
 			colorFill<PixelType>(ptr_right, ptr_left, calcGradient(gradient_h++, h));
 			blendPixelPtr(ptr_right, color, rfpart(interx));
 			blendPixelPtr(ptr_left, color, rfpart(interx));
+			break;
+		default:
 			break;
 		}
 	}
@@ -2480,6 +2563,8 @@ drawTriangleVertAlgClip(int x1, int y1, int w, int h, bool inverted, PixelType c
 				blendPixelPtrClip(ptr_right, color, rfpart(intery), x_right, y_right);
 				blendPixelPtrClip(ptr_left, color, rfpart(intery), x_left, y_left);
 				break;
+			default:
+				break;
 			}
 			}
 
@@ -2539,6 +2624,8 @@ drawTriangleVertAlgClip(int x1, int y1, int w, int h, bool inverted, PixelType c
 				blendPixelPtrClip(ptr_right, color, rfpart(interx), x_right, y_right);
 				blendPixelPtrClip(ptr_left, color, rfpart(interx), x_left, y_left);
 				break;
+			default:
+				break;
 			}
 			}
 
@@ -2587,6 +2674,8 @@ drawTriangleVertAlgClip(int x1, int y1, int w, int h, bool inverted, PixelType c
 			blendPixelPtrClip(ptr_right, color, rfpart(interx), x_right, y_right);
 			blendPixelPtrClip(ptr_left, color, rfpart(interx), x_left, y_left);
 			break;
+		default:
+			break;
 		}
 	}
 }
@@ -2633,6 +2722,8 @@ drawTriangleFast(int x1, int y1, int size, bool inverted, PixelType color, Vecto
 			break;
 		case kFillGradient:
 			colorFill<PixelType>(ptr_right, ptr_left, calcGradient(gradient_h++, size));
+			break;
+		default:
 			break;
 		}
 

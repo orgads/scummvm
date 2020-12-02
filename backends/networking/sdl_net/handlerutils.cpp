@@ -28,6 +28,7 @@
 #include "common/file.h"
 #include "common/translation.h"
 #include "common/unzip.h"
+#include "common/encoding.h"
 
 namespace Networking {
 
@@ -164,16 +165,12 @@ bool HandlerUtils::hasPermittedPrefix(const Common::String &path) {
 #else
 	prefix = ConfMan.get("savepath");
 #endif
-	return (normalized.hasPrefix(normalizePath(prefix)));
+	return normalized.hasPrefix(normalizePath(prefix))
+	       || normalizePath(prefix).compareTo(normalized + "/") == 0;
 }
 
 bool HandlerUtils::permittedPath(const Common::String path) {
 	return hasPermittedPrefix(path) && !isBlacklisted(path);
-}
-
-Common::String HandlerUtils::toUtf8(const char *text) {
-	// FIXME: Convert the GUI to use UTF8
-	return Common::String(text);
 }
 
 void HandlerUtils::setMessageHandler(Client &client, Common::String message, Common::String redirectTo) {
@@ -199,7 +196,7 @@ void HandlerUtils::setFilesManagerErrorMessageHandler(Client &client, Common::St
 			message.c_str(),
 			client.queryParameter("ajax") == "true" ? "AJAX" : "",
 			"%2F", //that's encoded "/"
-			toUtf8(_("Back to the files manager")).c_str()
+			Common::convertFromU32String(_("Back to the files manager")).c_str()
 		),
 		redirectTo
 	);

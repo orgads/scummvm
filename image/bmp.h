@@ -25,6 +25,7 @@
  * Image decoder used in engines:
  *  - hugo
  *  - mohawk
+ *  - petka
  *  - wintermute
  */
 
@@ -69,11 +70,8 @@ private:
 
 /**
  * Outputs an uncompressed BMP stream of the given input surface.
- *
- * @param bottomUp Flip the vertical axis so pixel data is drawn from the
- * bottom up, instead of from the top down.
  */
-bool writeBMP(Common::WriteStream &out, const Graphics::Surface &input, const bool bottomUp = false);
+bool writeBMP(Common::WriteStream &out, const Graphics::Surface &input);
 
 } // End of namespace Image
 

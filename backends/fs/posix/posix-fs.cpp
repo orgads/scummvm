@@ -42,11 +42,9 @@
 #include <sys/types.h>
 #endif
 #ifdef PSP2
-#include "backends/fs/psp2/psp2-dirent.h"
 #define mkdir sceIoMkdir
-#else
-#include <dirent.h>
 #endif
+#include <dirent.h>
 #include <stdio.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -57,6 +55,9 @@
 #include <os2.h>
 #endif
 
+#if defined(__ANDROID__) && !defined(ANDROIDSDL)
+#include "backends/platform/android3d/jni-android.h" // ResidualVM
+#endif
 
 bool POSIXFilesystemNode::exists() const {
 	return access(_path.c_str(), F_OK) == 0;
@@ -79,16 +80,6 @@ void POSIXFilesystemNode::setFlags() {
 
 POSIXFilesystemNode::POSIXFilesystemNode(const Common::String &p) {
 	assert(p.size() > 0);
-
-#ifdef PSP2
-	if (p == "/") {
-		_isDirectory = true;
-		_isValid = false;
-		_path = p;
-		_displayName = p;
-		return;
-	}
-#endif
 
 	// Expand "~/" to the value of the HOME env variable
 	if (p.hasPrefix("~/") || p == "~") {
@@ -180,12 +171,20 @@ bool POSIXFilesystemNode::getChildren(AbstractFSList &myList, ListMode mode, boo
 		return true;
 	}
 #endif
-#ifdef PSP2
+
+#if defined(__ANDROID__) && !defined(ANDROIDSDL)
 	if (_path == "/") {
-		POSIXFilesystemNode *entry1 = new POSIXFilesystemNode("ux0:");
-		myList.push_back(entry1);
-		POSIXFilesystemNode *entry2 = new POSIXFilesystemNode("uma0:");
-		myList.push_back(entry2);
+		Common::Array<Common::String> list = JNI::getAllStorageLocations();
+		for (Common::Array<Common::String>::const_iterator it = list.begin(), end = list.end(); it != end; ++it) {
+			POSIXFilesystemNode *entry = new POSIXFilesystemNode();
+
+			entry->_isDirectory = true;
+			entry->_isValid = true;
+			entry->_displayName = *it;
+			++it;
+			entry->_path = *it;
+			myList.push_back(entry);
+		}
 		return true;
 	}
 #endif
@@ -266,10 +265,6 @@ AbstractFSNode *POSIXFilesystemNode::getParent() const {
 	if (_path.size() == 3 && _path.hasSuffix(":/"))
 		// This is a root directory of a drive
 		return makeNode("/");   // return a virtual root for a list of drives
-#endif
-#ifdef PSP2
-	if (_path.hasSuffix(":"))
-		return makeNode("/");
 #endif
 
 	const char *start = _path.c_str();

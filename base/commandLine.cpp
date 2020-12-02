@@ -84,15 +84,26 @@ static const char HELP_STRING[] =
 	"  --auto-detect            Display a list of games from current or specified directory\n"
 	"                           and start the first one. Use --path=PATH to specify a directory.\n"
 	"  --recursive              In combination with --add or --detect recurse down all subdirectories\n"
-#if defined(WIN32) && !defined(_WIN32_WCE) && !defined(__SYMBIAN32__)
+#if defined(WIN32) && !defined(__SYMBIAN32__)
 	"  --console                Enable the console window (default:enabled)\n"
 #endif
 	"\n"
 	"  -c, --config=CONFIG      Use alternate configuration file\n"
+#if defined(SDL_BACKEND)
+	"  -l, --logfile=PATH       Use alternate path for log file\n"
+#endif
 	"  -p, --path=PATH          Path to where the game is installed\n"
 	"  -x, --save-slot[=NUM]    Save game slot to load (default: autosave)\n"
 	"  -f, --fullscreen         Force full-screen mode\n"
 	"  -F, --no-fullscreen      Force windowed mode\n"
+#if 0 // ResidulVM - not used
+	"  -g, --gfx-mode=MODE      Select graphics scaler (1x,2x,3x,2xsai,super2xsai,\n"
+	"                           supereagle,advmame2x,advmame3x,hq2x,hq3x,tv2x,\n"
+	"                           dotmatrix)\n"
+	"  --stretch-mode=MODE      Select stretch mode (center, integral, fit, stretch)\n"
+	"  --filtering              Force filtered graphics mode\n"
+	"  --no-filtering           Force unfiltered graphics mode\n"
+#endif
 	"  --gui-theme=THEME        Select GUI theme\n"
 	"  --themepath=PATH         Path to where GUI themes are stored\n"
 	"  --list-themes            Display list of all usable GUI themes\n"
@@ -123,22 +134,39 @@ static const char HELP_STRING[] =
 	"                           pce, segacd, wii, windows)\n"
 	"  --savepath=PATH          Path to where saved games are stored\n"
 	"  --extrapath=PATH         Extra path to additional game data\n"
+#if 0 // ResidulVM - not used
 	"  --soundfont=FILE         Select the SoundFont for MIDI playback (only\n"
 	"                           supported by some MIDI drivers)\n"
 	"  --multi-midi             Enable combination AdLib and native MIDI\n"
 	"  --native-mt32            True Roland MT-32 (disable GM emulation)\n"
+	"  --dump-midi              Dumps MIDI events to 'dump.mid', until quitting from game\n"
+	"                           (if file already exists, it will be overwritten)\n"
 	"  --enable-gs              Enable Roland GS mode for MIDI playback\n"
+#endif
 	"  --output-rate=RATE       Select output sample rate in Hz (e.g. 22050)\n"
-	"  --opl-driver=DRIVER      Select AdLib (OPL) emulator (db, mame)\n"
-	"  --talkspeed=NUM          Set talk speed for games (default: 179)\n"
-	"  --show-fps               Set the turn on display FPS info\n"
-	"  --no-show-fps            Set the turn off display FPS info\n"
-	"  --renderer=RENDERER      Select renderer (software, opengl, opengl_shaders)\n"
+#if 0 // ResidulVM - not used
+	"  --opl-driver=DRIVER      Select AdLib (OPL) emulator (db, mame"
+#ifndef DISABLE_NUKED_OPL
+                                                                     ", nuked"
+#endif
+#ifdef ENABLE_OPL2LPT
+                                                                     ", opl2lpt"
+#endif
+                                                                              ")\n"
+#endif
+#if 1 // ResidulVM specific
+	"  --show-fps               Set the turn on display FPS info in 3D games\n"
+	"  --no-show-fps            Set the turn off display FPS info in 3D games\n"
+	"  --renderer=RENDERER      Select 3D renderer (software, opengl, opengl_shaders)\n"
 	"  --aspect-ratio           Enable aspect ratio correction\n"
-	"  --bpp=NUM                Select number of bits per pixel, 0 (auto-detect), 16, 32\n"
-	"                           (default: 0) (only supported by software renderer)\n"
 	"  --[no-]dirtyrects        Enable dirty rectangles optimisation in software renderer\n"
 	"                           (default: enabled)\n"
+#endif
+#if 0 // ResidulVM - not used
+	"  --render-mode=MODE       Enable additional render modes (hercGreen, hercAmber,\n"
+	"                           cga, ega, vga, amiga, fmtowns, pc9821, pc9801, 2gs,\n"
+	"                           atari, macintosh)\n"
+#endif
 #ifdef ENABLE_EVENTRECORDER
 	"  --record-mode=MODE       Specify record mode for event recorder (record, playback,\n"
 	"                           passthrough [default])\n"
@@ -147,12 +175,42 @@ static const char HELP_STRING[] =
 	"                           playback by Event Recorder\n"
 #endif
 	"\n"
-#ifdef ENABLE_GRIM
+#if defined(ENABLE_SKY) || defined(ENABLE_QUEEN)
+	"  --alt-intro              Use alternative intro for CD versions of Beneath a\n"
+	"                           Steel Sky and Flight of the Amazon Queen\n"
+#endif
+#if 0 // ResidulVM - not used
+	"  --copy-protection        Enable copy protection in games, when\n"
+	"                           ScummVM disables it by default.\n"
+#endif
+	"  --talkspeed=NUM          Set talk speed for games (default: 60)\n"
+#if 1 // ResidulVM specific
+	"                           Grim Fandango or EMI (default: 179).\n"
+#endif
+#if defined(ENABLE_SCUMM) || defined(ENABLE_GROOVIE)
+	"  --demo-mode              Start demo mode of Maniac Mansion or The 7th Guest\n"
+#endif
+#if defined(ENABLE_DIRECTOR)
+	"  --start-movie=NAME@NUM   Start movie at frame for Director\n"
+	"							Either can be specified without the other.\n"
+#endif
+#ifdef ENABLE_SCUMM
+	"  --tempo=NUM              Set music tempo (in percent, 50-200) for SCUMM games\n"
+	"                           (default: 100)\n"
+#endif // ResidualVM
+#if (defined(ENABLE_SCUMM) && defined(ENABLE_SCUMM_7_8)) || defined(ENABLE_GRIM) // ResidualVM
 	"  --dimuse-tempo=NUM       Set internal Digital iMuse tempo (10 - 100) per second\n"
 	"                           (default: 10)\n"
+//#endif // ResidualVM
 #endif
+#if 1 // ResidulVM specific
 	"  --engine-speed=NUM       Set frame per second limit (0 - 100), 0 = no limit\n"
 	"                           (default: 60)\n"
+	"                           Grim Fandango or Escape from Monkey Island\n"
+#endif
+	"\n"
+	"The meaning of boolean long options can be inverted by prefixing them with\n"
+	"\"no-\", e.g. \"--no-aspect-ratio\".\n"
 ;
 #endif
 
@@ -191,10 +249,17 @@ void registerDefaults() {
 	// Graphics
 	ConfMan.registerDefault("fullscreen", false);
 	ConfMan.registerDefault("filtering", false);
-	ConfMan.registerDefault("show_fps", false);
 	ConfMan.registerDefault("aspect_ratio", false);
+	ConfMan.registerDefault("gfx_mode", "normal");
+	ConfMan.registerDefault("render_mode", "default");
+	ConfMan.registerDefault("desired_screen_aspect_ratio", "auto");
+	ConfMan.registerDefault("stretch_mode", "default");
+	ConfMan.registerDefault("shader", "default");
+// ResidualVM specific start
+	ConfMan.registerDefault("show_fps", false);
 	ConfMan.registerDefault("dirtyrects", true);
-	ConfMan.registerDefault("bpp", 0);
+	ConfMan.registerDefault("vsync", true);
+// ResidualVM specific end
 
 	// Sound & Music
 	ConfMan.registerDefault("music_volume", 192);
@@ -208,12 +273,14 @@ void registerDefaults() {
 
 	ConfMan.registerDefault("multi_midi", false);
 	ConfMan.registerDefault("native_mt32", false);
+	ConfMan.registerDefault("dump_midi", false);
 	ConfMan.registerDefault("enable_gs", false);
 	ConfMan.registerDefault("midi_gain", 100);
 
 	ConfMan.registerDefault("music_driver", "auto");
 	ConfMan.registerDefault("mt32_device", "null");
 	ConfMan.registerDefault("gm_device", "null");
+	ConfMan.registerDefault("opl2lpt_parport", "null");
 
 	ConfMan.registerDefault("cdrom", 0);
 
@@ -229,15 +296,30 @@ void registerDefaults() {
 	ConfMan.registerDefault("save_slot", -1);
 	ConfMan.registerDefault("autosave_period", 5 * 60); // By default, trigger autosave every 5 minutes
 
-	ConfMan.registerDefault("talkspeed", 179);
+#if defined(ENABLE_SCUMM) || defined(ENABLE_SWORD2)
+	ConfMan.registerDefault("object_labels", true);
+#endif
 
-#ifdef ENABLE_GRIM
+	ConfMan.registerDefault("copy_protection", false);
+	ConfMan.registerDefault("talkspeed", 60);
+
+#if defined(ENABLE_SCUMM) || defined(ENABLE_GROOVIE)
+	ConfMan.registerDefault("demo_mode", false);
+#endif
+#ifdef ENABLE_SCUMM
+	ConfMan.registerDefault("tempo", 0);
+#endif // ResidualVM
+#if (defined(ENABLE_SCUMM) && defined(ENABLE_SCUMM_7_8)) || defined(ENABLE_GRIM) // ResidualVM
 	ConfMan.registerDefault("dimuse_tempo", 10);
 #endif
-	ConfMan.registerDefault("engine_speed", 60);
+//#endif // ResidualVM
+
+#if defined(ENABLE_SKY) || defined(ENABLE_QUEEN)
+	ConfMan.registerDefault("alt_intro", false);
+#endif
 
 	// Miscellaneous
-	ConfMan.registerDefault("joystick_num", -1);
+	ConfMan.registerDefault("joystick_num", 0);
 	ConfMan.registerDefault("confirm_exit", false);
 	ConfMan.registerDefault("disable_sdl_parachute", false);
 
@@ -250,6 +332,10 @@ void registerDefaults() {
 
 	ConfMan.registerDefault("gui_browser_show_hidden", false);
 	ConfMan.registerDefault("gui_browser_native", true);
+	// Specify threshold for scanning directories in the launcher
+	// If number of game entries in scummvm.ini exceeds the specified
+	// number, then skip scanning. -1 = scan always
+	ConfMan.registerDefault("gui_list_max_scan_entries", -1);
 	ConfMan.registerDefault("game", "");
 
 #ifdef USE_FLUIDSYNTH
@@ -500,6 +586,11 @@ Common::String parseCommandLine(Common::StringMap &settings, int argc, const cha
 			DO_OPTION('c', "config")
 			END_OPTION
 
+#if defined(SDL_BACKEND)
+			DO_OPTION('l', "logfile")
+			END_OPTION
+#endif
+
 			DO_OPTION_INT('b', "boot-param")
 			END_OPTION
 
@@ -540,6 +631,16 @@ Common::String parseCommandLine(Common::StringMap &settings, int argc, const cha
 
 			DO_LONG_OPTION("opl-driver")
 			END_OPTION
+
+/* ResidualVM - not used
+			DO_OPTION('g', "gfx-mode")
+			END_OPTION
+
+			DO_LONG_OPTION("stretch-mode")
+			END_OPTION
+
+			DO_LONG_OPTION("shader")
+			END_OPTION*/
 
 			DO_OPTION_INT('m', "music-volume")
 			END_OPTION
@@ -608,21 +709,29 @@ Common::String parseCommandLine(Common::StringMap &settings, int argc, const cha
 			DO_LONG_OPTION_BOOL("native-mt32")
 			END_OPTION
 
+/* ResidualVM - not used
+			DO_LONG_OPTION_BOOL("dump-midi")
+			END_OPTION*/
+
 			DO_LONG_OPTION_BOOL("enable-gs")
 			END_OPTION
 
 			DO_LONG_OPTION_BOOL("aspect-ratio")
 			END_OPTION
 
-			DO_LONG_OPTION_INT("bpp")
-			END_OPTION
+/* ResidualVM - not used
+			DO_LONG_OPTION("render-mode")
+				int renderMode = Common::parseRenderMode(option);
+				if (renderMode == Common::kRenderDefault)
+					usage("Unrecognized render mode '%s'", option);*/
 
+// ResidualVM specific start
 			DO_LONG_OPTION_BOOL("dirtyrects")
 			END_OPTION
 
 			DO_LONG_OPTION("gamma")
 			END_OPTION
-// ResidualVM specific start
+
 			DO_LONG_OPTION("renderer")
 				Graphics::RendererType renderer = Graphics::parseRendererTypeCode(option);
 				if (renderer == Graphics::kRendererTypeDefault)
@@ -654,6 +763,9 @@ Common::String parseCommandLine(Common::StringMap &settings, int argc, const cha
 			DO_LONG_OPTION_INT("talkspeed")
 			END_OPTION
 
+			DO_LONG_OPTION_BOOL("copy-protection")
+			END_OPTION
+
 			DO_LONG_OPTION("gui-theme")
 			END_OPTION
 
@@ -678,17 +790,30 @@ Common::String parseCommandLine(Common::StringMap &settings, int argc, const cha
 			DO_LONG_OPTION("target-md5")
 			END_OPTION
 
-#ifdef ENABLE_GRIM
+#ifdef ENABLE_SCUMM
+			DO_LONG_OPTION_INT("tempo")
+			END_OPTION
+#endif // ResidualVM
+#if (defined(ENABLE_SCUMM) && defined(ENABLE_SCUMM_7_8)) || defined(ENABLE_GRIM) // ResidualVM
 			DO_LONG_OPTION_INT("dimuse-tempo")
+			END_OPTION
+#endif
+//#endif // ResidualVM
+#if defined(ENABLE_SCUMM) || defined(ENABLE_GROOVIE)
+			DO_LONG_OPTION_BOOL("demo-mode")
+			END_OPTION
+#endif
+
+#if defined(ENABLE_SKY) || defined(ENABLE_QUEEN)
+			DO_LONG_OPTION_BOOL("alt-intro")
 			END_OPTION
 #endif
 
 
+// ResidualVM specific start
 			DO_LONG_OPTION_INT("engine-speed")
 			END_OPTION
-
-			DO_LONG_OPTION("speech-mode")
-			END_OPTION
+// ResidualVM specific end
 
 #ifdef IPHONE
 			// This is automatically set when launched from the Springboard.
@@ -696,9 +821,14 @@ Common::String parseCommandLine(Common::StringMap &settings, int argc, const cha
 			END_OPTION
 #endif
 
-#if defined(WIN32) && !defined(_WIN32_WCE) && !defined(__SYMBIAN32__)
+#if defined(WIN32) && !defined(__SYMBIAN32__)
 			// Optional console window on Windows (default: enabled)
 			DO_LONG_OPTION_BOOL("console")
+			END_OPTION
+#endif
+
+#if defined(ENABLE_DIRECTOR)
+			DO_LONG_OPTION("start-movie")
 			END_OPTION
 #endif
 
@@ -718,7 +848,7 @@ static void listGames() {
 
 	const PluginList &plugins = EngineMan.getPlugins();
 	for (PluginList::const_iterator iter = plugins.begin(); iter != plugins.end(); ++iter) {
-		const MetaEngine &metaengine = (*iter)->get<MetaEngine>();
+		const MetaEngineStatic &metaengine = (*iter)->get<MetaEngineStatic>();
 
 		PlainGameList list = metaengine.getSupportedGames();
 		for (PlainGameList::const_iterator v = list.begin(); v != list.end(); ++v) {
@@ -734,7 +864,7 @@ static void listEngines() {
 
 	const PluginList &plugins = EngineMan.getPlugins();
 	for (PluginList::const_iterator iter = plugins.begin(); iter != plugins.end(); ++iter) {
-		const MetaEngine &metaEngine = (*iter)->get<MetaEngine>();
+		const MetaEngineStatic &metaEngine = (*iter)->get<MetaEngineStatic>();
 		printf("%-15s %s\n", metaEngine.getEngineId(), metaEngine.getName());
 	}
 }
@@ -757,7 +887,7 @@ static void listTargets() {
 		// If there's no description, fallback on the default description.
 		if (description.empty()) {
 			QualifiedGameDescriptor g = EngineMan.findTarget(name);
-			if (g.description)
+			if (!g.description.empty())
 				description = g.description;
 		}
 		// If there's still no description, we cannot come up with one. Insert some dummy text.
@@ -801,15 +931,18 @@ static Common::Error listSaves(const Common::String &singleTarget) {
 		// the specified game name, or alternatively whether there is a matching game id.
 		Common::String currentTarget;
 		QualifiedGameDescriptor game;
-		const Plugin *plugin = nullptr;
+
+		const Plugin *metaEnginePlugin = nullptr;
+		const Plugin *enginePlugin = nullptr;
+
 		if (ConfMan.hasGameDomain(*i)) {
 			// The name is a known target
 			currentTarget = *i;
 			EngineMan.upgradeTargetIfNecessary(*i);
-			game = EngineMan.findTarget(*i, &plugin);
-		} else if (game = findGameMatchingName(*i), game.gameId) {
+			game = EngineMan.findTarget(*i, &metaEnginePlugin);
+		} else if (game = findGameMatchingName(*i), !game.gameId.empty()) {
 			// The name is a known game id
-			plugin = EngineMan.findPlugin(game.engineId);
+			metaEnginePlugin = EngineMan.findPlugin(game.engineId);
 			currentTarget = createTemporaryTarget(game.engineId, game.gameId);
 		} else {
 			return Common::Error(Common::kEnginePluginNotFound, Common::String::format("target '%s'", singleTarget.c_str()));
@@ -818,16 +951,27 @@ static Common::Error listSaves(const Common::String &singleTarget) {
 		// If we actually found a domain, we're going to change the domain
 		ConfMan.setActiveDomain(currentTarget);
 
-		if (!plugin) {
+		if (!metaEnginePlugin) {
 			// If the target was specified, treat this as an error, and otherwise skip it.
 			if (!singleTarget.empty())
-				return Common::Error(Common::kEnginePluginNotFound,
+				return Common::Error(Common::kMetaEnginePluginNotFound,
 				                     Common::String::format("target '%s'", i->c_str()));
-			printf("Plugin could not be loaded for target '%s'\n", i->c_str());
+			printf("MetaEnginePlugin could not be loaded for target '%s'\n", i->c_str());
 			continue;
+		} else {
+			enginePlugin = PluginMan.getEngineFromMetaEngine(metaEnginePlugin);
+
+			if (!enginePlugin) {
+				// If the target was specified, treat this as an error, and otherwise skip it.
+				if (!singleTarget.empty())
+					return Common::Error(Common::kEnginePluginNotFound,
+				                     	 Common::String::format("target '%s'", i->c_str()));
+				printf("EnginePlugin could not be loaded for target '%s'\n", i->c_str());
+				continue;
+			}
 		}
 
-		const MetaEngine &metaEngine = plugin->get<MetaEngine>();
+		const MetaEngine &metaEngine = enginePlugin->get<MetaEngine>();
 		Common::String qualifiedGameId = buildQualifiedGameName(game.engineId, game.gameId);
 
 		if (!metaEngine.hasFeature(MetaEngine::kSupportsListSaves)) {
@@ -851,7 +995,7 @@ static Common::Error listSaves(const Common::String &singleTarget) {
 					   "  ---- ------------------------------------------------------\n");
 
 			for (SaveStateList::const_iterator x = saveList.begin(); x != saveList.end(); ++x) {
-				printf("  %-4d %s\n", x->getSaveSlot(), x->getDescription().c_str());
+				printf("  %-4d %s\n", x->getSaveSlot(), x->getDescription().encode().c_str());
 				// TODO: Could also iterate over the full hashmap, printing all key-value pairs
 			}
 			atLeastOneFound = true;
@@ -914,8 +1058,8 @@ static DetectedGames getGameList(const Common::FSNode &dir) {
 	DetectionResults detectionResults = EngineMan.detectGames(files);
 
 	if (detectionResults.foundUnknownGames()) {
-		Common::String report = detectionResults.generateUnknownGameReport(false, 80);
-		g_system->logMessage(LogMessageType::kInfo, report.c_str());
+		Common::U32String report = detectionResults.generateUnknownGameReport(false, 80);
+		g_system->logMessage(LogMessageType::kInfo, report.encode().c_str());
 	}
 
 	return detectionResults.listRecognizedGames();
@@ -1231,7 +1375,7 @@ bool processSettings(Common::String &command, Common::StringMap &settings, Commo
 	QualifiedGameDescriptor gameOption;
 	if (settings.contains("game")) {
 		gameOption = findGameMatchingName(settings["game"]);
-		if (!gameOption.gameId) {
+		if (gameOption.gameId.empty()) {
 			usage("Unrecognized game '%s'. Use the --list-games command for a list of accepted values.\n", settings["game"].c_str());
 		}
 	}
@@ -1314,7 +1458,7 @@ bool processSettings(Common::String &command, Common::StringMap &settings, Commo
 		if (ConfMan.hasGameDomain(command)) {
 			// Command is a known target
 			ConfMan.setActiveDomain(command);
-		} else if (gd = findGameMatchingName(command), gd.gameId) {
+		} else if (gd = findGameMatchingName(command), !gd.gameId.empty()) {
 			// Command is a known game ID
 			Common::String domainName = createTemporaryTarget(gd.engineId, gd.gameId);
 			ConfMan.setActiveDomain(domainName);
