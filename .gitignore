@@ -65,6 +65,9 @@ lib*.a
 /dists/codeblocks/*.layout
 /dists/codeblocks/residualvm*
 
+/doc/doxygen/html
+/doc/doxygen/doxygen_warnings.txt
+
 #Ignore XCode user data and build files
 xcuserdata
 project.xcworkspace
@@ -98,6 +101,7 @@ project.xcworkspace
 
 /plugins
 
+/engines/detection_table.h
 /engines/plugins_table.h
 /engines/engines.mk
 
