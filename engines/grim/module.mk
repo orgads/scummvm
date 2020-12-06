@@ -94,6 +94,7 @@ MODULE_OBJS := \
 	actor.o \
 	animation.o \
 	bitmap.o \
+	cursor.o \
 	costume.o \
 	color.o \
 	colormap.o \
@@ -119,6 +120,7 @@ MODULE_OBJS := \
 	lua_v1_set.o \
 	lua_v1_sound.o \
 	lua_v1_text.o \
+	lua_v1_mouse.o \
 	metaengine.o \
 	material.o \
 	model.o \
@@ -131,6 +133,7 @@ MODULE_OBJS := \
 	set.o \
 	sector.o \
 	sound.o \
+	hotspot.o \
 	sprite.o \
 	textobject.o \
 	textsplit.o \
