@@ -174,10 +174,8 @@ HNMDecoder::HNM4VideoTrack::HNM4VideoTrack(uint32 width, uint32 height, uint32 f
 	// We will use _frameBufferC/P as the surface pixels, just init there with nullptr to avoid unintended usage of surface
 	const Graphics::PixelFormat &f = Graphics::PixelFormat::createFormatCLUT8();
 	_surface.init(width, height, width * f.bytesPerPixel, nullptr, f);
-	_frameBufferC = new byte[frameSize];
-	memset(_frameBufferC, 0, frameSize);
-	_frameBufferP = new byte[frameSize];
-	memset(_frameBufferP, 0, frameSize);
+	_frameBufferC = new byte[frameSize]();
+	_frameBufferP = new byte[frameSize]();
 }
 
 HNMDecoder::HNM4VideoTrack::~HNM4VideoTrack() {

@@ -322,8 +322,7 @@ TownsScreen::TownsScreen(OSystem *system, int width, int height, Graphics::Pixel
 	_system(system), _width(width), _height(height), _pixelFormat(format), _pitch(width * format.bytesPerPixel), _scrollOffset(0), _scrollRemainder(0) {
 	memset(&_layers[0], 0, sizeof(TownsScreenLayer));
 	memset(&_layers[1], 0, sizeof(TownsScreenLayer));
-	_outBuffer = new byte[_pitch * _height];
-	memset(_outBuffer, 0, _pitch * _height);
+	_outBuffer = new byte[_pitch * _height]();
 
 	setupLayer(0, width, height, 1, 1, 256);
 
@@ -370,9 +369,8 @@ void TownsScreen::setupLayer(int layer, int width, int height, int scaleW, int s
 		warning("TownsScreen::setupLayer(): Layer palette usage requires 16 bit graphics setting.\nLayer palette will be ignored.");
 
 	delete[] l->pixels;
-	l->pixels = new uint8[l->pitch * l->height];
+	l->pixels = new uint8[l->pitch * l->height]();
 	assert(l->pixels);
-	memset(l->pixels, 0, l->pitch * l->height);
 
 	// build offset tables to speed up merging/scaling layers
 	delete[] l->bltInternX;

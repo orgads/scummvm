@@ -117,8 +117,7 @@ class MainMenuInputState_BR : public MenuInputState {
 		// one is in normal color, the other is inverted.
 		// the two 'frames' are used to display selected/unselected menu items
 
-		byte *data = new byte[MENUITEM_WIDTH * MENUITEM_HEIGHT * 2];
-		memset(data, 0, MENUITEM_WIDTH * MENUITEM_HEIGHT * 2);
+		byte *data = new byte[MENUITEM_WIDTH * MENUITEM_HEIGHT * 2]();
 
 		// build first frame to be displayed when item is not selected
 		if (_vm->getPlatform() == Common::kPlatformDOS) {
