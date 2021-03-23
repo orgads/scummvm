@@ -50,7 +50,7 @@ Intrinsic RemorseIntrinsics[] = {
 	Ultima8Engine::I_setAvatarInStasis, // void Intrinsic00C(2 bytes)
 	Item::I_getDirToItem, // byte Intrinsic00D(6 bytes)
 	Actor::I_turnToward,
-	0, // TODO: VideoGump::I_playVideo(item, vidname, int16 sizex, int16 sizey)
+	MovieGump::I_playMovieCutsceneAlt,
 	// 0x010
 	Item::I_getQLo, // Based on having same coff as 02B
 	Actor::I_getMap, // int Intrinsic011(4 bytes)
@@ -362,7 +362,7 @@ Intrinsic RemorseIntrinsics[] = {
 	Actor::I_setActivity, // void Intrinsic131(6 bytes)
 	Item::I_andStatus, // void Intrinsic132(6 bytes)
 	Item::I_getQHi,  // based on same coff set as 026
-    0, // void Intrinsic134(2 bytes)
+    WeaselGump::I_showWeaselGump, // void Intrinsic134(2 bytes)
     Actor::I_setDead,
     0, // void UNUSEDInt136()
     0  // void UNUSEDInt137()

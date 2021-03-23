@@ -25,7 +25,7 @@
 
 #include "ultima/ultima8/gumps/modal_gump.h"
 #include "ultima/ultima8/usecode/intrinsics.h"
-#include "ultima/ultima8/misc/p_dynamic_cast.h"
+#include "ultima/ultima8/misc/classtype.h"
 
 namespace Ultima {
 namespace Ultima8 {
@@ -39,8 +39,9 @@ public:
 
 	MovieGump();
 	MovieGump(int width, int height, Common::SeekableReadStream *rs,
-			  bool introMusicHack = false, const byte *overridePal = nullptr,
-	          uint32 flags = 0, int32 layer = LAYER_MODAL);
+			  bool introMusicHack = false, bool noScale = false,
+			  const byte *overridePal = nullptr,
+	          uint32 flags = FLAG_PREVENT_SAVE, int32 layer = LAYER_MODAL);
 	~MovieGump() override;
 
 	void InitGump(Gump *newparent, bool take_focus = true) override;
@@ -54,13 +55,14 @@ public:
 
 	bool OnKeyDown(int key, int mod) override;
 
-	static ProcId U8MovieViewer(Common::SeekableReadStream *rs, bool fade, bool introMusicHack = false);
+	static ProcId U8MovieViewer(Common::SeekableReadStream *rs, bool fade, bool introMusicHack, bool noScale);
 
 	bool loadData(Common::ReadStream *rs);
 	void saveData(Common::WriteStream *ws) override;
 
 	INTRINSIC(I_playMovieOverlay);
 	INTRINSIC(I_playMovieCutscene);
+	INTRINSIC(I_playMovieCutsceneAlt);
 
 protected:
 	MoviePlayer *_player;

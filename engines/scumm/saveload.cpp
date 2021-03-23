@@ -85,7 +85,7 @@ bool ScummEngine::canLoadGameStateCurrently() {
 	// aware of *any* spots where loading is not supported?
 
 	// HE games are limited to original load and save interface only,
-	// due to numerous glitches (see bug #1726909) that can occur.
+	// due to numerous glitches (see bug #3210) that can occur.
 	//
 	// Except the earliest HE Games (3DO and initial DOS version of
 	// puttputt), which didn't offer scripted load/save screens.
@@ -119,7 +119,7 @@ bool ScummEngine::canSaveGameStateCurrently() {
 	// original EXE allowed this.
 
 	// HE games are limited to original load and save interface only,
-	// due to numerous glitches (see bug #1726909) that can occur.
+	// due to numerous glitches (see bug #3210) that can occur.
 	//
 	// Except the earliest HE Games (3DO and initial DOS version of
 	// puttputt), which didn't offer scripted load/save screens.
@@ -580,7 +580,7 @@ bool ScummEngine::loadState(int slot, bool compat, Common::String &filename) {
 	// after game load, and o2_loadRoomWithEgo() does as well
 	// this script starts character-dependent music
 	//
-	// Fixes bug #1766072: MANIACNES: Music Doesn't Start On Load Game
+	// Fixes bug #3362: MANIACNES: Music Doesn't Start On Load Game
 	if (_game.platform == Common::kPlatformNES) {
 		runScript(5, 0, 0, 0);
 
@@ -1318,7 +1318,6 @@ void ScummEngine::saveLoadWithSerializer(Common::Serializer &s) {
 
 	if (hasTownsData) {
 		s.syncBytes(_textPalette, 48);
-		// TODO: This seems wrong, there are 16 _cyclRects
 		s.syncArray(_cyclRects, 10, syncWithSerializer, VER(82));
 		if (s.getVersion() >= VER(82))
 			syncWithSerializer(s, _curStringRect);
@@ -1483,7 +1482,7 @@ void ScummEngine::saveLoadWithSerializer(Common::Serializer &s) {
 			_charset->setCurID(curId);
 		} else {
 			// Before V72, the charset id wasn't saved. This used to cause issues such
-			// as the one described in the bug report #1722153. For these savegames,
+			// as the one described in the bug report #3194. For these savegames,
 			// we reinitialize the id using a, hopefully, sane value.
 			_charset->setCurID(_string[0]._default.charset);
 		}
@@ -1572,7 +1571,7 @@ void ScummEngine_v7::saveLoadWithSerializer(Common::Serializer &s) {
 	s.syncAsSint32LE(_verbLineSpacing, VER(68));
 
 	if (s.getVersion() <= VER(68) && s.isLoading()) {
-		// WORKAROUND bug #1846049: Reset the default charset color to a sane value.
+		// WORKAROUND bug #3483: Reset the default charset color to a sane value.
 		_string[0]._default.charset = 1;
 	}
 }

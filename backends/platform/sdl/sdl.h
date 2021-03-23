@@ -36,9 +36,6 @@
 #ifdef USE_DISCORD
 class DiscordPresence;
 #endif
-#if defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS) || defined(USE_GLES2)
-#include "backends/graphics3d/openglsdl/openglsdl-graphics3d.h"
-#endif
 
 /**
  * Base OSystem class for all SDL ports.
@@ -76,6 +73,10 @@ public:
 	virtual bool hasTextInClipboard() override;
 	virtual Common::U32String getTextFromClipboard() override;
 	virtual bool setTextInClipboard(const Common::U32String &text) override;
+#endif
+
+#if SDL_VERSION_ATLEAST(2, 0, 14)
+	virtual bool openUrl(const Common::String &url) override;
 #endif
 
 	virtual void setWindowCaption(const Common::U32String &caption) override;
@@ -132,7 +133,9 @@ protected:
 	// Graphics capabilities
 	void detectFramebufferSupport();
 	void detectAntiAliasingSupport();
-	OpenGLSdlGraphics3dManager::Capabilities _capabilities;
+
+	bool _supportsFrameBuffer;
+	Common::Array<uint> _antiAliasLevels;
 #endif
 
 	/**

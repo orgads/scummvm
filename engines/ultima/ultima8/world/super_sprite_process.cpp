@@ -20,15 +20,11 @@
  *
  */
 
-#include "ultima/ultima8/misc/pent_include.h"
 #include "ultima/ultima8/world/super_sprite_process.h"
 
 #include "ultima/ultima8/games/game_data.h"
-#include "ultima/ultima8/graphics/shape.h"
 #include "ultima/ultima8/kernel/kernel.h"
-#include "ultima/ultima8/kernel/core_app.h"
 #include "ultima/ultima8/kernel/delay_process.h"
-#include "ultima/ultima8/misc/direction.h"
 #include "ultima/ultima8/misc/direction_util.h"
 #include "ultima/ultima8/usecode/uc_list.h"
 #include "ultima/ultima8/world/loop_script.h"
@@ -36,7 +32,6 @@
 #include "ultima/ultima8/world/fire_type.h"
 #include "ultima/ultima8/world/get_object.h"
 #include "ultima/ultima8/world/item_factory.h"
-#include "ultima/ultima8/world/item.h"
 #include "ultima/ultima8/world/world.h"
 #include "ultima/ultima8/world/actors/actor.h"
 #include "ultima/ultima8/world/sprite_process.h"
@@ -57,7 +52,7 @@ SuperSpriteProcess::SuperSpriteProcess() : Process(),
 SuperSpriteProcess::SuperSpriteProcess(int shape, int frame, int sx, int sy, int sz,
 									   int dx, int dy, int dz,
 									   uint16 firetype, uint16 damage, uint16 source,
-									   uint16 target, uint8 spread) :
+									   uint16 target, bool inexact) :
 		_shape(shape), _frame(frame), _startpt(sx, sy, sz), _destpt(dx, dy, dz),
 		_nextpt(sx, sy, sz), _fireType(firetype), _damage(damage), _source(source),
 		_target(target), _counter(1), _item0x77(0), _spriteNo(0),
@@ -67,9 +62,9 @@ SuperSpriteProcess::SuperSpriteProcess(int shape, int frame, int sx, int sy, int
 	const FireType *firetypedat = GameData::get_instance()->getFireType(firetype);
 	assert(firetypedat);
 	if (firetypedat->getAccurate()) {
-		spread = 0;
+		inexact = false;
 	}
-	if (spread) {
+	if (inexact) {
 		int rng = _startpt.maxDistXYZ(_destpt);
 		Item *srcitem = getItem(source);
 		if (srcitem == getControlledActor()) {
@@ -140,6 +135,14 @@ void SuperSpriteProcess::move(int x, int y, int z) {
 		item->move(_nowpt);
 }
 
+static inline int _sign(int x) {
+	if (x < 0)
+		return -1;
+	else if (x == 0)
+		return 0;
+	return 1;
+}
+
 void SuperSpriteProcess::run() {
 	CurrentMap *map = World::get_instance()->getCurrentMap();
 	int mapChunkSize = map->getChunkSize();
@@ -159,23 +162,29 @@ void SuperSpriteProcess::run() {
 		newpt.z += _counter * _zstep;
 	} else {
 		int targetz = 0;
-		if (_counter > firetypedat->getRoundDuration()) {
+		if (_counter < firetypedat->getRoundDuration()) {
 			if (!_expired) {
+				Direction dir8 = dir_current;
 				if (_target == 0) {
 					targetz = _nowpt.z;
 				} else {
-					Item *target = getItem(_target);
+					const Item *target = getItem(_target);
 					if (target) {
 						int32 tx, ty, tz;
 						int32 cx, cy, cz;
 						target->getLocation(tx, ty, tz);
 						target->getCentre(cx, cy, cz);
 						targetz = cz + 8;
+						dir8 = Direction_GetWorldDir(ty - _nowpt.y, tx - _nowpt.x, dirmode_8dirs);
 					}
 				}
 
-				// TODO: Apply point adjustments for firetype 9 here
-				// (lines 134~214 of disasm)
+				int xoff = Direction_XFactor(dir8);
+				if (_sign(xoff) != _sign(_xstep))
+					_xstep *= 2;
+				int yoff = Direction_YFactor(dir8);
+				if (_sign(yoff) != _sign(_ystep))
+					_ystep *= 2;
 			}
 		} else {
 			_expired = true;
@@ -214,6 +223,9 @@ void SuperSpriteProcess::run() {
 			}
 		}
 	}
+
+	// TODO: Clamp Z values as original does ~lines 280-290 of
+	// SuperSpriteProcess::run()
 	_pt3 = newpt;
 
 	_counter++;
@@ -226,10 +238,10 @@ void SuperSpriteProcess::run() {
 	}
 
 	if (_pt3.z != 0 && _pt3.z != 0xfa) {
-		int32 duration = firetypedat->getRoundDuration();
+		int32 duration = firetypedat->getRoundDuration() + 25;
 
-		if (_counter >= duration) {
-			// disasm ~line 311
+		if (_counter < duration) {
+			// disasm ~line 305
 			if (!map->isChunkFast(_nowpt.x / mapChunkSize, _nowpt.y / mapChunkSize)) {
 				destroyItemOrTerminate();
 				return;
@@ -275,22 +287,44 @@ void SuperSpriteProcess::makeBulletSplash(const Point3 &pt) {
 	if (firetypedat->getRange()) {
 		Item *item = getItem(_item0x77);
 		Item *src = getItem(_source);
-		firetypedat->applySplashDamageAround(pt, _damage, item, src);
+		firetypedat->applySplashDamageAround(pt, _damage, 1, item, src);
 	}
 	firetypedat->makeBulletSplashShapeAndPlaySound(pt.x, pt.y, pt.z);
+}
+
+static bool _pointOutOfMap(const int32 pt[3], int32 maxxy) {
+	return (pt[0] < 0     || pt[1] < 0     || pt[2] < 0 ||
+			pt[0] > maxxy || pt[1] > maxxy || pt[2] > 255);
 }
 
 void SuperSpriteProcess::hitAndFinish() {
 	Point3 pt(_nowpt);
 	//int dist = _nowpt.maxDistXYZ(_pt3);
 
-	CurrentMap *map = World::get_instance()->getCurrentMap();
-	Std::list<CurrentMap::SweepItem> hits;
+	int xstep = _pt3.x - _nowpt.x;
+	int ystep = _pt3.y - _nowpt.y;
+	int zstep = _pt3.z - _nowpt.z;
 	int32 start[3] = {_nowpt.x, _nowpt.y, _nowpt.z};
 	int32 end[3] = {_pt3.x, _pt3.y, _pt3.z};
 	int32 dims[3] = {1, 1, 1};
-	bool collision = map->sweepTest(start, end, dims, ShapeInfo::SI_SOLID,
-									_source, true, &hits);
+	// will never get a collision if not stepping at all..
+	bool collision = !(xstep || ystep || zstep);
+	Std::list<CurrentMap::SweepItem> hits;
+
+	while (!collision) {
+		CurrentMap *map = World::get_instance()->getCurrentMap();
+		collision = map->sweepTest(start, end, dims, ShapeInfo::SI_SOLID,
+								   _source, true, &hits);
+		start[0] += xstep;
+		start[1] += ystep;
+		start[2] += zstep;
+		end[0] += xstep;
+		end[1] += ystep;
+		end[2] += zstep;
+		const int32 mapmax = map->getChunkSize() * MAP_NUM_CHUNKS;
+		if (_pointOutOfMap(start, mapmax) || _pointOutOfMap(end, mapmax))
+			break;
+	}
 
 	if (collision && hits.size()) {
 		const CurrentMap::SweepItem &firsthit = hits.front();

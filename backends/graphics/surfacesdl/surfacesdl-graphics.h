@@ -27,6 +27,7 @@
 #include "backends/graphics/sdl/sdl-graphics.h"
 #include "graphics/pixelformat.h"
 #include "graphics/scaler.h"
+#include "graphics/scalerplugin.h"
 #include "common/events.h"
 #include "common/mutex.h"
 
@@ -38,21 +39,6 @@
 // Define this to allow for focus rectangle debugging
 #define USE_SDL_DEBUG_FOCUSRECT
 #endif
-
-enum {
-	GFX_NORMAL = 0,
-	GFX_DOUBLESIZE = 1,
-	GFX_TRIPLESIZE = 2,
-	GFX_2XSAI = 3,
-	GFX_SUPER2XSAI = 4,
-	GFX_SUPEREAGLE = 5,
-	GFX_ADVMAME2X = 6,
-	GFX_ADVMAME3X = 7,
-	GFX_HQ2X = 8,
-	GFX_HQ3X = 9,
-	GFX_TV2X = 10,
-	GFX_DOTMATRIX = 11
-};
 
 
 class AspectRatio {
@@ -79,6 +65,7 @@ public:
 	virtual void setFeatureState(OSystem::Feature f, bool enable) override;
 	virtual bool getFeatureState(OSystem::Feature f) const override;
 
+	const OSystem::GraphicsMode *supportedGraphicsModes() const;
 	virtual const OSystem::GraphicsMode *getSupportedGraphicsModes() const override;
 	virtual int getDefaultGraphicsMode() const override;
 	virtual bool setGraphicsMode(int mode, uint flags = OSystem::kGfxModeNoFlags) override;
@@ -181,7 +168,6 @@ protected:
 	virtual void handleResizeImpl(const int width, const int height, const int xdpi, const int ydpi) override;
 
 	virtual int getGraphicsModeScale(int mode) const override;
-	virtual ScalerProc *getGraphicsScalerProc(int mode) const;
 
 	virtual void setupHardwareSize();
 
@@ -220,6 +206,7 @@ protected:
 	SDL_Surface *_tmpscreen2;
 
 	SDL_Surface *_overlayscreen;
+	bool _useOldSrc;
 	Graphics::PixelFormat _overlayFormat;
 
 	enum {
@@ -322,12 +309,16 @@ protected:
 	uint8 _originalBitsPerPixel;
 #endif
 
-	ScalerProc *_scalerProc;
-	int _scalerType;
 	int _transactionMode;
 
 	// Indicates whether it is needed to free _hwSurface in destructor
 	bool _displayDisabled;
+
+	const PluginList &_scalerPlugins;
+	ScalerPluginObject *_scalerPlugin;
+	uint _scalerIndex;
+	uint _maxExtraPixels;
+	uint _extraPixels;
 
 	bool _screenIsLocked;
 	Graphics::Surface _framebuffer;
@@ -424,7 +415,7 @@ protected:
 
 private:
 	void setFullscreenMode(bool enable);
-	void handleScalerHotkeys(int scalefactor, int scalerType);
+	void handleScalerHotkeys(int factor);
 
 	/**
 	 * Converts the given point from the overlay's coordinate space to the

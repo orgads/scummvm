@@ -20,8 +20,6 @@
  *
  */
 
-#include "ultima/ultima8/misc/pent_include.h"
-#include "ultima/ultima8/world/damage_info.h"
 #include "ultima/ultima8/world/item.h"
 #include "ultima/ultima8/world/item_factory.h"
 #include "ultima/ultima8/audio/audio_process.h"
@@ -59,7 +57,7 @@ bool DamageInfo::applyToItem(Item *item, uint16 points) const {
 	// Get some data out of the item before we potentially delete
 	// it by explosion
 	uint16 q = item->getQuality();
-	int32 x, y , z;
+	int32 x, y, z;
 	item->getLocation(x, y, z);
 	int32 mapnum = item->getMapNum();
 

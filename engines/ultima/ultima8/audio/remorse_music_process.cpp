@@ -20,15 +20,14 @@
  *
  */
 
-#include "ultima/ultima8/misc/pent_include.h"
+#include "common/system.h"
 #include "ultima/ultima8/ultima8.h"
 #include "ultima/ultima8/audio/remorse_music_process.h"
-#include "ultima/ultima8/games/game_data.h"
-#include "ultima/ultima8/audio/music_flex.h"
-#include "ultima/ultima8/audio/midi_player.h"
-#include "ultima/ultima8/audio/audio_mixer.h"
 #include "ultima/ultima8/filesys/file_system.h"
 #include "audio/mods/mod_xm_s3m.h"
+
+#include "ultima/ultima8/world/world.h"
+#include "ultima/ultima8/world/current_map.h"
 
 namespace Ultima {
 namespace Ultima8 {
@@ -88,8 +87,12 @@ static const char *TRACK_FILE_NAMES_REGRET[] = {
 	"xmas" // for demo
 };
 
+static const int REGRET_MAP_TRACKS[] = {
+	 0,  1, 10,  2,  0,  3, 11,  4,
+	16,  5, 20,  6,  0,  7, 13,  8,
+	15,  9, 12, 10, 19, 14, 21,  0};
 
-// p_dynamic_cast stuff
+
 DEFINE_RUNTIME_CLASSTYPE_CODE(RemorseMusicProcess)
 
 RemorseMusicProcess::RemorseMusicProcess() : MusicProcess(), _currentTrack(0), _savedTrack(0), _m16offset(0), _combatMusicActive(false) {
@@ -104,11 +107,27 @@ RemorseMusicProcess::~RemorseMusicProcess() {
 }
 
 void RemorseMusicProcess::playMusic(int track) {
+	if (GAME_IS_REGRET && track == 0x45) {
+		// Play the default track for the current map
+		uint32 curmap = World::get_instance()->getCurrentMap()->getNum();
+		if (curmap < ARRAYSIZE(REGRET_MAP_TRACKS)) {
+			track = REGRET_MAP_TRACKS[curmap];
+		} else {
+			track = 0;
+		}
+
+		// Regret has a Christmas music easter egg.
+		TimeDate t;
+		g_system->getTimeAndDate(t);
+		if (t.tm_mon == 11 && t.tm_mday >= 24) {
+			track = 22;
+		}
+	}
 	playMusic_internal(track);
 }
 
 void RemorseMusicProcess::playCombatMusic(int track) {
-	playMusic_internal(track);
+	// Only U8 has combat music.. ignore it.
 }
 
 void RemorseMusicProcess::queueMusic(int track) {
@@ -129,13 +148,14 @@ void RemorseMusicProcess::saveTrackState() {
 }
 
 void RemorseMusicProcess::restoreTrackState() {
-	_currentTrack = _savedTrack;
+	int saved = _savedTrack;
 	_savedTrack = 0;
-	playMusic_internal(_currentTrack);
+	playMusic_internal(saved);
 }
 
 void RemorseMusicProcess::playMusic_internal(int track) {
 	if (track < 0 || track > _maxTrack) {
+		warning("Not playing track %d (max is %d)", track, _maxTrack);
 		playMusic_internal(0);
 		return;
 	}
@@ -149,7 +169,7 @@ void RemorseMusicProcess::playMusic_internal(int track) {
 	Audio::Mixer *mixer = Ultima8Engine::get_instance()->_mixer;
 	assert(mixer);
 
-	if (track == _currentTrack && mixer->isSoundHandleActive(_soundHandle))
+	if (track == _currentTrack && (track == 0 || mixer->isSoundHandleActive(_soundHandle)))
 		// Already playing what we want.
 		return;
 
@@ -159,7 +179,7 @@ void RemorseMusicProcess::playMusic_internal(int track) {
 
 	if (track > 0) {
 		// TODO: It's a bit ugly having this here.  Should be in GameData.
-		const Std::string fname = Std::string::format("@game/sound/%s.amf", _trackNames[track]);
+		const Std::string fname = Std::string::format("sound/%s.amf", _trackNames[track]);
 		FileSystem *filesystem = FileSystem::get_instance();
 		assert(filesystem);
 		Common::SeekableReadStream *rs = filesystem->ReadFile(fname);

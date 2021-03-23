@@ -23,6 +23,7 @@
 #ifndef TWINE_HOLOMAP_H
 #define TWINE_HOLOMAP_H
 
+#include "twine/renderer/renderer.h"
 #include "common/scummsys.h"
 #include "twine/twine.h"
 
@@ -41,18 +42,91 @@ class Holomap {
 private:
 	TwinEEngine *_engine;
 
+	bool isTriangleVisible(const Vertex *vertices) const;
+
 	struct Location {
-		uint16 x = 0;
-		uint16 y = 0;
-		uint16 z = 0;
+		IVec3 angle;
 		uint16 textIndex = 0;
+		char name[30] = "";
+	};
+
+	enum HolomapVehicle {
+		FerryBoat = 31,
+		Motorbike = 33,
+		Car = 35,
+		FishingBoat = 37,
+		Catamaran = 39,
+		Hovercraft = 41,
+		Dino = 43,
+		ArmyBoat = 45,
+		HamalayiTransporter = 47
+	};
+
+	IVec3 _holomapSurface[561];
+
+	// original game size: 2244 (lba1)
+	struct HolomapSort {
+		int16 z = 0;
+		uint16 projectedPosIdx = 0;
+	};
+	HolomapSort _holomapSort[512];
+
+	struct HolomapProjectedPos {
+		int16 x = 0;
+		int16 y = 0;
+		int16 unk1 = 0;
+		int16 unk2 = 0;
+	};
+	HolomapProjectedPos _projectedSurfacePositions[561];
+	int _projectedSurfaceIndex = 0;
+
+	struct TrajectoryData {
+		int16 locationIdx = -1;
+		int16 trajLocationIdx = -1;
+		int16 vehicleIdx = -1;
+		IVec3 pos;
+		int16 numAnimFrames = 0;
+		struct TrajectoryPos {
+			int16 x = 0;
+			int16 y = 0;
+		};
+		TrajectoryPos positions[512];
+
+		bool isValid() const {
+			return locationIdx != -1;
+		}
+
+		/**
+		 * The HQR index of the vehicle model for the holomap
+		 * @note Multiplied by 2 because the model index is always followed by the corresponding animation index for that model
+		 */
+		int32 getModel() const {
+			return 2 * vehicleIdx + HolomapVehicle::FerryBoat;
+		}
+
+		int32 getAnimation() const {
+			return getModel() + 1;
+		}
 	};
 
 	int32 _numLocations = 0;
 	Location _locations[NUM_LOCATIONS];
 
-	int32 needToLoadHolomapGFX = 0;
-	uint8 paletteHolomap[NUMOFCOLORS * 3]{0};
+	int32 _holomapPaletteIndex = 0;
+	uint8 _paletteHolomap[NUMOFCOLORS * 3]{0};
+
+	void drawHolomapText(int32 centerx, int32 top, const char *title);
+	int32 getNextHolomapLocation(int32 currentLocation, int32 dir) const;
+
+	void renderLocations(int xRot, int yRot, int zRot, bool lower);
+	TrajectoryData loadTrajectoryData(int32 trajectoryIdx);
+
+	void renderHolomapModel(const uint8 *bodyPtr, int32 x, int32 y, int32 zPos);
+
+	void prepareHolomapSurface();
+	void prepareHolomapProjectedPositions();
+	void prepareHolomapPolygons();
+	void renderHolomapSurfacePolygons();
 
 public:
 	Holomap(TwinEEngine *engine);
@@ -65,21 +139,15 @@ public:
 
 	bool loadLocations();
 
+	const char *getLocationName(int index) const;
+
 	/**
 	 * Clear Holomap location position
 	 * @param locationIdx Scene where position must be cleared
 	 */
 	void clearHolomapPosition(int32 locationIdx);
 
-	/** Draw Holomap Title */
-	void drawHolomapTitle(int32 width, int32 height);
-
-	/** Draw Holomap Trajectory */
 	void drawHolomapTrajectory(int32 trajectoryIndex);
-
-	void loadGfxSub(uint8 *modelPtr);
-	void loadGfxSub1();
-	void loadGfxSub2();
 
 	/** Load Holomap content */
 	void loadHolomapGFX();
@@ -87,6 +155,11 @@ public:
 	/** Main holomap process loop */
 	void processHolomap();
 };
+
+inline const char *Holomap::getLocationName(int index) const {
+	assert(index >= 0 && index <= ARRAYSIZE(_locations));
+	return _locations[index].name;
+}
 
 } // namespace TwinE
 

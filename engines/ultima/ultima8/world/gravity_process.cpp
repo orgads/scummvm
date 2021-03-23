@@ -24,19 +24,14 @@
 
 #include "ultima/ultima8/audio/audio_process.h"
 #include "ultima/ultima8/kernel/kernel.h"
-#include "ultima/ultima8/kernel/core_app.h"
-#include "ultima/ultima8/misc/pent_include.h"
-#include "ultima/ultima8/misc/direction.h"
+#include "ultima/ultima8/ultima8.h"
 #include "ultima/ultima8/world/actors/actor.h"
 #include "ultima/ultima8/world/actors/actor_anim_process.h"
-#include "ultima/ultima8/world/current_map.h"
-#include "ultima/ultima8/world/world.h"
 #include "ultima/ultima8/world/get_object.h"
 
 namespace Ultima {
 namespace Ultima8 {
 
-// p_dynamic_cast stuff
 DEFINE_RUNTIME_CLASSTYPE_CODE(GravityProcess)
 
 GravityProcess::GravityProcess()
@@ -354,7 +349,7 @@ void GravityProcess::actorFallStoppedCru(Actor *actor, int height) {
 	Kernel *kernel = Kernel::get_instance();
 
 	if (height / 8 > 2 &&
-		(lastanim != Animation::anotherJump &&
+		(lastanim != Animation::quickJumpCru &&
 		 lastanim != Animation::slowCombatRollLeft &&
 		 lastanim != Animation::slowCombatRollRight &&
 		 lastanim != Animation::combatRollLeft &&
@@ -362,7 +357,7 @@ void GravityProcess::actorFallStoppedCru(Actor *actor, int height) {
 		 lastanim != Animation::run &&
 		 lastanim != Animation::jumpForward &&
 		 lastanim != Animation::unknownAnim30 &&
-		 lastanim != Animation::runWithLargeWeapon)) {
+		 lastanim != Animation::brightKneelAndFireLargeWeapon)) {
 		// play land animation, overriding other animations
 		kernel->killProcesses(_itemNum, ActorAnimProcess::ACTOR_ANIM_PROC_TYPE, false); // CONSTANT!
 		ProcId lpid = actor->doAnim(Animation::jumpLanding, dir_current);

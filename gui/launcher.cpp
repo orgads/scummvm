@@ -278,22 +278,14 @@ void LauncherDialog::updateListing() {
 	// Retrieve a list of all games defined in the config file
 	_domains.clear();
 	const ConfigManager::DomainMap &domains = ConfMan.getGameDomains();
-	bool scanEntries = numEntries == -1 ? true : (domains.size() <= numEntries);
+	bool scanEntries = numEntries == -1 ? true : ((int)domains.size() <= numEntries);
 
 	// Turn it into a list of pointers
 	Common::List<LauncherEntry> domainList;
 	for (ConfigManager::DomainMap::const_iterator iter = domains.begin(); iter != domains.end(); ++iter) {
-#ifdef __DS__
-		// DS port uses an extra section called 'ds'.  This prevents the section from being
-		// detected as a game.
-		if (iter->_key == "ds") {
-			continue;
-		}
-#endif
+		String description;
 
-		String description(iter->_value.getVal("description"));
-
-		if (description.empty()) {
+		if (!iter->_value.tryGetVal("description", description)) {
 			QualifiedGameDescriptor g = EngineMan.findTarget(iter->_key);
 			if (!g.description.empty())
 				description = g.description;
@@ -503,9 +495,9 @@ void LauncherDialog::loadGame(int item) {
 	}
 
 	if (enginePlugin) {
-		const MetaEngine &metaEngineConnect = enginePlugin->get<MetaEngine>();
-		if (metaEngineConnect.hasFeature(MetaEngine::kSupportsListSaves) &&
-			metaEngineConnect.hasFeature(MetaEngine::kSupportsLoadingDuringStartup)) {
+		const MetaEngine &metaEngine = enginePlugin->get<MetaEngine>();
+		if (metaEngine.hasFeature(MetaEngine::kSupportsListSaves) &&
+			metaEngine.hasFeature(MetaEngine::kSupportsLoadingDuringStartup)) {
 			int slot = _loadDialog->runModalWithPluginAndTarget(enginePlugin, target);
 			if (slot >= 0) {
 				ConfMan.setActiveDomain(_domains[item]);

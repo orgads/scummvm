@@ -622,7 +622,7 @@ void Engine::openMainMenuDialog() {
 	// Load savegame after main menu execution
 	// (not from inside the menu loop to avoid
 	// mouse cursor glitches and similar bugs,
-	// e.g. #2822778).
+	// e.g. #4420).
 	if (_saveSlotToLoad >= 0) {
 		Common::Error status = loadGameState(_saveSlotToLoad);
 		if (status.getCode() != Common::kNoError) {
@@ -774,7 +774,7 @@ Common::Error Engine::saveGameState(int slot, const Common::String &desc, bool i
 
 	Common::Error result = saveGameStream(saveFile, isAutosave);
 	if (result.getCode() == Common::kNoError) {
-		MetaEngine::appendExtendedSave(saveFile, getTotalPlayTime() / 1000, desc, isAutosave);
+		getMetaEngine().appendExtendedSave(saveFile, getTotalPlayTime() / 1000, desc, isAutosave);
 
 		saveFile->finalize();
 	}

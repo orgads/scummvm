@@ -25,7 +25,6 @@
  *
  */
 
-#include "engines/icb/common/px_rccommon.h"
 #include "engines/icb/debug.h"
 #include "engines/icb/mission.h"
 #include "engines/icb/global_objects.h"
@@ -91,7 +90,7 @@ const short barXY[7][2] = {
 
 #include "surface_manager.h"
 
-void DrawSegment(int x, int y, int dx, int dy, int danger) {
+void DrawSegment(int32 x, int32 y, int32 dx, int32 dy, int32 danger) {
 	uint8 *surface_address;
 	uint32 pitch;
 
@@ -122,9 +121,9 @@ void DrawSegment(int x, int y, int dx, int dy, int danger) {
 }
 
 // draw a digit using lcd display, -1 for the :
-void DrawDigit(int x, int y, int d, int danger) {
-	int sx, sy, dx, dy;
-	int i, dig;
+void DrawDigit(int32 x, int32 y, int32 d, int32 danger) {
+	int32 sx, sy, dx, dy;
+	int32 i, dig;
 
 	// special dash...
 	if (d == -1) {
@@ -157,8 +156,8 @@ void DrawDigit(int x, int y, int d, int danger) {
 }
 
 // draw mm:ss
-void DrawTime(int mins, int secs, int hs, int danger) {
-	int x, y;
+void DrawTime(int32 mins, int32 secs, int32 hs, int32 danger) {
+	int32 x, y;
 
 	x = TIME_X;
 	y = TIME_Y;
@@ -188,9 +187,9 @@ void DrawTimer() {
 	if (!timerOn)
 		return;
 
-	int mins, secs, cycles, totalSecs, hs, danger;
+	int32 mins, secs, cycles, totalSecs, hs, danger;
 
-	cycles = g_globalScriptVariables.GetVariable(timerVariable);
+	cycles = g_globalScriptVariables->GetVariable(timerVariable);
 
 	totalSecs = cycles / timerMultiplier;
 
@@ -231,7 +230,7 @@ mcodeFunctionReturnCodes fn_activate_timer(int32 &, int32 *params) {
 	timerVariable = HashString(timer_name);
 
 	// test variable exists...
-	int32 test = g_globalScriptVariables.FindVariable(timerVariable);
+	int32 test = g_globalScriptVariables->FindVariable(timerVariable);
 	if (test == -1) {
 		Fatal_error("No global variable %s which fn_activate_timer() has been told to follow!", timer_name);
 	}

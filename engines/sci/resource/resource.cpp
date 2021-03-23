@@ -626,7 +626,7 @@ void ResourceSource::loadResource(ResourceManager *resMan, Resource *res) {
 }
 
 Resource *ResourceManager::testResource(ResourceId id) {
-	return _resMap.getVal(id, NULL);
+	return _resMap.getValOrDefault(id, NULL);
 }
 
 int ResourceManager::addAppropriateSources() {
@@ -676,7 +676,7 @@ int ResourceManager::addAppropriateSources() {
 		if (mapFiles.empty() || files.empty())
 			return 0;
 
-		if (Common::File::exists("ressci.001")) {
+		if (Common::File::exists("ressci.001") && !Common::File::exists("resource.aud")) {
 			_multiDiscAudio = true;
 		}
 
@@ -1998,13 +1998,13 @@ int ResourceManager::readResourceMapSCI1(ResourceSource *map) {
 				return SCI_ERROR_NO_RESOURCE_FILES_FOUND;
 			}
 
-			Resource *resource = _resMap.getVal(resId, NULL);
-			if (!resource) {
+			Resource *resource =  NULL;
+			if (!_resMap.tryGetVal(resId,resource)) {
 				addResource(resId, source, fileOffset, 0, map->getLocationName());
 			} else {
 				// If the resource is already present in a volume, change it to
 				// the new content (but only in a volume, so as not to overwrite
-				// external patches - refer to bug #3366295).
+				// external patches - refer to bug #5796).
 				// This is needed at least for the German version of Pharkas.
 				// That version contains several duplicate resources INSIDE the
 				// resource data files like fonts, views, scripts, etc. Thus,
@@ -2196,7 +2196,7 @@ Resource *ResourceManager::updateResource(ResourceId resId, ResourceSource *src,
 
 Resource *ResourceManager::updateResource(ResourceId resId, ResourceSource *src, uint32 offset, uint32 size, const Common::String &sourceMapLocation) {
 	// Update a patched resource, whether it exists or not
-	Resource *res = _resMap.getVal(resId, nullptr);
+	Resource *res = _resMap.getValOrDefault(resId, nullptr);
 
 	// When pulling from resource the "main" file may not even
 	// exist as both forks may be combined into MacBin

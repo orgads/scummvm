@@ -59,7 +59,7 @@ enum TextAlign {
 enum WordWrapMode {
 	kWordWrapDefault			= 0,		///< Default wrapping mode.
 	kWordWrapEvenWidthLines 	= 1 << 0,	///< Make the resulting line segments close to the same width.
-	kWordWrapOnExplicitNewLines	= 1 << 1	///< Text is wrapped on new lines. Otherwise, treats them as single whitespace. Disables kWordWrapEvenWidthLines.
+	kWordWrapOnExplicitNewLines	= 1 << 1	///< Text is wrapped on new lines. Otherwise, treats them as single whitespace.
 };
 
 /**
@@ -91,6 +91,14 @@ public:
 	 * @return Font height in pixels.
 	 */
 	virtual int getFontHeight() const = 0;
+
+	/**
+	 * Return the ascent of the font.
+	 *
+	 * @return Font ascent in pixels. If it is unknown
+	 * a value of -1 is returned.
+	 */
+	virtual int getFontAscent() const;
 
 	/**
 	 * Return the maximum width of the font.
@@ -180,8 +188,9 @@ public:
 	 * @param color The color of the character.
 	 */
 	virtual void drawChar(Surface *dst, uint32 chr, int x, int y, uint32 color) const = 0;
+	virtual void drawChar(ManagedSurface *dst, uint32 chr, int x, int y, uint32 color) const;
+
 	/** @overload */
-	void drawChar(ManagedSurface *dst, uint32 chr, int x, int y, uint32 color) const;
 
 	/**
 	 * Draw the given @p str string to the given @p dst surface.
@@ -238,7 +247,6 @@ public:
 	int wordWrapText(const Common::String &str, int maxWidth, Common::Array<Common::String> &lines, int initWidth = 0, uint32 mode = kWordWrapOnExplicitNewLines) const;
 	/** @overload */
 	int wordWrapText(const Common::U32String &str, int maxWidth, Common::Array<Common::U32String> &lines, int initWidth = 0, uint32 mode = kWordWrapOnExplicitNewLines) const;
-
 };
 /** @} */
 } // End of namespace Graphics

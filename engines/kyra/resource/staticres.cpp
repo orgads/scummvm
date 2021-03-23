@@ -39,7 +39,7 @@
 
 namespace Kyra {
 
-#define RESFILE_VERSION 106
+#define RESFILE_VERSION 108
 
 namespace {
 bool checkKyraDat(Common::SeekableReadStream *file) {
@@ -94,6 +94,7 @@ const IndexTable iLanguageTable[] = {
 	{ Common::IT_ITA, 5 },
 	{ Common::JA_JPN, 6 },
 	{ Common::RU_RUS, 7 },
+	{ Common::HE_ISR, 8 },
 	{ -1, -1 }
 };
 
@@ -816,7 +817,7 @@ void KyraEngine_LoK::initStaticResource() {
 	const int32 *cdaTable = (const int32 *)_staticres->loadRawData(k1TownsCDATable, cdaTableSize);
 
 	// FIXME: It seems Kyra1 MAC CD includes AdLib and MIDI music and sfx, thus we enable
-	// support for those for now. (Based on patch #2767489 "Support for Mac Kyrandia 1 CD" by satz).
+	// support for those for now. (Based on ticket #9008 "Support for Mac Kyrandia 1 CD" by satz).
 	if (_flags.platform == Common::kPlatformDOS || _flags.platform == Common::kPlatformMacintosh) {
 		SoundResourceInfo_PC resInfoIntro(soundFilesIntro, soundFilesIntroSize);
 		SoundResourceInfo_PC resInfoIngame(soundFiles, soundFilesSize);
@@ -964,6 +965,8 @@ void KyraEngine_LoK::loadMainScreen(int page) {
 		_screen->loadBitmap("MAIN_ITA.CPS", page, page, 0);
 	else if (_flags.lang == Common::RU_RUS)
 		_screen->loadBitmap("MAIN_ENG.CPS", page, page, 0);
+	else if (_flags.lang == Common::HE_ISR)
+		_screen->loadBitmap("MAIN_HEB.CPS", page, page, 0);
 	else
 		warning("no main graphics file found");
 

@@ -66,12 +66,14 @@ KYRARPG_COMMON_OBJ_ORIG := $(KYRARPG_COMMON_OBJ)
 # Skip rules for these files, by resetting the LOAD_RULES_MK
 LOAD_RULES_MK :=
 
+ifdef DETECTION_FULL
 # Reset detection objects, which uptill now are filled with only
 # enabled engines.
 DETECT_OBJS :=
 
 # Include all engine's module files, which populate DETECT_OBJS
 -include $(srcdir)/engines/*/module.mk
+endif
 
 # Reset stuff
 MODULES := $(MODULES_ORIG)
@@ -85,7 +87,7 @@ KYRARPG_COMMON_OBJ := $(KYRARPG_COMMON_OBJ_ORIG)
 LOAD_RULES_MK := 1
 
 ifneq ($(DETECTION_STATIC), 1)
--include $(srcdir)/engines/detect_modules.mk
+-include $(srcdir)/base/detection/module.mk
 else
 MODULE_DIRS += $(sort $(dir $(DETECT_OBJS)))
 endif
@@ -125,7 +127,7 @@ endif
 
 # The build rule for the ScummVM executable
 $(EXECUTABLE): $(DETECT_OBJS) $(OBJS)
-	$(QUIET_LINK)$(LD) $(LDFLAGS) $(PRE_OBJS_FLAGS) $+ $(POST_OBJS_FLAGS) $(LIBS) -o $@
+	+$(QUIET_LINK)$(LD) $(LDFLAGS) $(PRE_OBJS_FLAGS) $+ $(POST_OBJS_FLAGS) $(LIBS) -o $@
 
 ifdef SPLIT_DWARF
 $(EXECUTABLE).dwp: $(EXECUTABLE)
@@ -135,7 +137,8 @@ endif
 distclean: clean clean-devtools
 	$(RM) config.h config.mk config.log engines/engines.mk engines/plugins_table.h
 
-clean:
+clean: clean-toplevel
+clean-toplevel:
 	$(RM_REC) $(DEPDIRS)
 	$(RM) $(OBJS) $(DETECT_OBJS) $(EXECUTABLE)
 ifdef SPLIT_DWARF
@@ -252,10 +255,15 @@ endif
 ifneq ($(shell cd $(srcdir); git rev-parse --verify HEAD 1>/dev/null 2>&1 || echo "error"),error)
 GITROOT := $(srcdir)
 ifeq ($(origin VER_REV), undefined)
+GIT_VER_MAJOR = $(shell git --version | sed 's/^git version //' | cut -d. -f 1)
 # Are there uncommitted changes? (describe --dirty is only available since 1.6.6)
+ifeq ($(GIT_VER_MAJOR),1)
 VER_DIRTY := $(shell cd $(srcdir); git update-index --refresh --unmerged 1>/dev/null 2>&1; git diff-index --quiet HEAD || echo "-dirty")
+else
+GIT_DIRTY_FLAG = --dirty
+endif
 # Get the working copy base revision
-VER_REV := $(shell cd $(srcdir); git describe --long --match desc/\* | cut -d '-' -f 2-)$(VER_DIRTY)
+VER_REV := $(shell cd $(srcdir); git describe $(GIT_DIRTY_FLAG) --long --match desc/\* | cut -d '-' -f 2-)$(VER_DIRTY)
 endif
 else
 GITROOT := git://github.com/scummvm/scummvm.git
@@ -376,6 +384,9 @@ endif
 ifdef ENABLE_DRASCULA
 DIST_FILES_ENGINEDATA+=drascula.dat
 endif
+ifdef ENABLE_HADESCH
+DIST_FILES_ENGINEDATA+=hadesch_translations.dat
+endif
 ifdef ENABLE_HUGO
 DIST_FILES_ENGINEDATA+=hugo.dat
 endif
@@ -463,4 +474,4 @@ DIST_FILES_SHADERS+=$(wildcard $(srcdir)/engines/wintermute/base/gfx/opengl/shad
 endif
 endif
 
-.PHONY: all clean distclean plugins dist-src
+.PHONY: all clean distclean plugins dist-src clean-toplevel

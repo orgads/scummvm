@@ -32,6 +32,7 @@
 #include "scumm/imuse_digi/dimuse.h"
 #ifdef ENABLE_HE
 #include "scumm/he/intern_he.h"
+#include "scumm/he/localizer.h"
 #endif
 #include "scumm/resource.h"
 #include "scumm/scumm.h"
@@ -183,7 +184,7 @@ void ScummEngine_v6::drawBlastTexts() {
 			do {
 				c = *buf++;
 
-				// FIXME: This is a workaround for bugs #864030 and #1399843:
+				// FIXME: This is a workaround for bugs #864030 and #2440:
 				// In COMI, some text contains ASCII character 11 = 0xB. It's
 				// not quite clear what it is good for; so for now we just ignore
 				// it, which seems to match the original engine (BTW, traditionally,
@@ -336,7 +337,11 @@ bool ScummEngine::handleNextCharsetCode(Actor *a, int *code) {
 			talk_sound_b = buffer[8] | (buffer[9] << 8) | (buffer[12] << 16) | (buffer[13] << 24);
 			buffer += 14;
 			if (_game.heversion >= 60) {
+#ifdef ENABLE_HE
+				((SoundHE *)_sound)->startHETalkSound(_localizer ? _localizer->mapTalk(talk_sound_a) : talk_sound_a);
+#else
 				((SoundHE *)_sound)->startHETalkSound(talk_sound_a);
+#endif
 			} else {
 				_sound->talkSound(talk_sound_a, talk_sound_b, 2);
 			}
@@ -406,7 +411,7 @@ bool ScummEngine_v72he::handleNextCharsetCode(Actor *a, int *code) {
 			}
 			value[i] = 0;
 			//talk_sound_b = atoi(value);
-			((SoundHE *)_sound)->startHETalkSound(talk_sound_a);
+			((SoundHE *)_sound)->startHETalkSound(_localizer ? _localizer->mapTalk(talk_sound_a) : talk_sound_a);
 			break;
 		case 104:
 			_haveMsg = 0;
@@ -429,7 +434,7 @@ bool ScummEngine_v72he::handleNextCharsetCode(Actor *a, int *code) {
 			value[i] = 0;
 			talk_sound_a = atoi(value);
 			//talk_sound_b = 0;
-			((SoundHE *)_sound)->startHETalkSound(talk_sound_a);
+			((SoundHE *)_sound)->startHETalkSound(_localizer ? _localizer->mapTalk(talk_sound_a) : talk_sound_a);
 			break;
 		case 119:
 			_haveMsg = 0xFF;
@@ -656,7 +661,7 @@ void ScummEngine::CHARSET_1() {
 		memcpy(_charsetColorMap, _charsetData[_charset->getCurID()], 4);
 
 #ifndef DISABLE_TOWNS_DUAL_LAYER_MODE
-	if (_keepText && _game.platform == Common::kPlatformFMTowns)
+	if (_game.platform == Common::kPlatformFMTowns && (_keepText || _haveMsg == 0xFF))
 		memcpy(&_charset->_str, &_curStringRect, sizeof(Common::Rect));
 #endif
 
@@ -676,7 +681,11 @@ void ScummEngine::CHARSET_1() {
 		return;
 	}
 
-	if (a && !_string[0].no_talk_anim) {
+	// The second check is from LOOM DOS EGA disasm. It prevents weird speech animations
+	// with empty strings (bug #990). The same code is present in actorTalk(). The FM-Towns
+	// versions don't have such code, but I do not get the weird speech animations either.
+	// So apparently it is not needed there.
+	if (a && !_string[0].no_talk_anim && !(_game.id == GID_LOOM && _game.platform != Common::kPlatformFMTowns && !_charsetBuffer[_charsetBufPos])) {
 		a->runActorTalkScript(a->_talkStartFrame);
 		_useTalkAnims = true;
 	}
@@ -753,7 +762,7 @@ void ScummEngine::CHARSET_1() {
 			continue;
 		}
 
-		// Handle line overflow for V3. See also bug #1306269.
+		// Handle line overflow for V3. See also bug #2213.
 		if (_game.version == 3 && _nextLeft >= _screenWidth) {
 			_nextLeft = _screenWidth;
 		}
@@ -1014,7 +1023,7 @@ void ScummEngine::drawString(int a, const byte *msg) {
 	_charset->setCurID(_string[a].charset);
 
 	// HACK: Correct positions of text in books in Indy3 Mac.
-	// See also patch #1851568.
+	// See also bug #8759.
 	if (_game.id == GID_INDY3 && _game.platform == Common::kPlatformMacintosh && a == 1) {
 		if (_currentRoom == 75) {
 			// Grail Diary Page 1 (Library)
@@ -1270,7 +1279,7 @@ int ScummEngine::convertMessageToString(const byte *msg, byte *dst, int dstSize)
 				continue;
 			}
 
-			// WORKAROUND for bug #1514457: Yet another script bug in Indy3.
+			// WORKAROUND for bug #2715: Yet another script bug in Indy3.
 			// Once more a german 'sz' was encoded incorrectly, but this time
 			// they simply encoded it as 0xFF instead of 0xE1. Happens twice
 			// in script 71.
@@ -1415,7 +1424,7 @@ int ScummEngine::convertVerbMessage(byte *dst, int dstSize, int var) {
 	num = readVar(var);
 	if (num) {
 		for (k = 1; k < _numVerbs; k++) {
-			// Fix ZAK FM-TOWNS bug #1013617 by emulating exact (inconsistant?) behavior of the original code
+			// Fix ZAK FM-TOWNS bug #1734 by emulating exact (inconsistant?) behavior of the original code
 			if (num == _verbs[k].verbid && !_verbs[k].type && (!_verbs[k].saveid || (_game.version == 3 && _game.platform == Common::kPlatformFMTowns))) {
 				// Process variation of Korean postpositions
 				// Used by Korean fan translated games (monkey1, monkey2)
@@ -1817,7 +1826,7 @@ void ScummEngine_v7::translateText(const byte *text, byte *trans_buff) {
 		_lastStringTag[i] = 0;
 	}
 
-	// WORKAROUND for bug #1172655.
+	// WORKAROUND for bug #1977.
 	if (_game.id == GID_DIG) {
 		// Based on the second release of The Dig
 		// Only applies to the subtitles and not speech

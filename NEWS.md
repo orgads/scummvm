@@ -5,21 +5,36 @@ For a more comprehensive changelog of the latest experimental code, see:
 
  New games:
    - Added support for Grim Fandango.
-   - Added support for Escape from Monkey Island.
    - Added support for The Longest Journey.
    - Added support for Myst 3: Exile.
    - Added support for Hades' Challenge.
    - Added support for Little Big Adventure.
    - Added support for Red Comrades 1: Save the Galaxy.
    - Added support for Red Comrades 2: For the Great Justice.
+   - Added support for Transylvania
+   - Added support for Crimson Crown
+   - Added support for OO-Topos
+   - Added support for Glulx interactive fiction games
+   - Added support for Private Eye (US release)
+
+ New ports:
+   - The Nintendo DS port got a major rewrite.
 
  General:
    - Switched ScummVM GUI output to UTF-32.
-   - Updated the Roland MT-32 emulation code to Munt 2.4.1.
+   - Updated the Roland MT-32 emulation code to the Munt project's mt32emu 2.4.2.
+   - Updated Dropbox Cloud Storage to use the new Dropbox OAuth workflow.
+   - Major extension to the number of supported graphics scalers.
+
+ AGOS:
+   - Added support for the Japanese PC-98 version of Elvira 1.
+
+ Dreamweb:
+   - Rendering fixes for Russian fan translation.
 
  Glk:
-   - Fix savegame issues with several subengines.
-   - Fix memory overrun in Level9 game detector.
+   - Fixed savegame issues with several subengines.
+   - Fixed memory overrun in Level9 game detector.
    - Added detections for 2020 IF Comp games.
    - Enabled Glulx sub-engine.
 
@@ -27,15 +42,22 @@ For a more comprehensive changelog of the latest experimental code, see:
    - Added support for Bargon Attack Russian translation.
    - Added support for Woodruff Russian translation.
 
+ Griffon:
+   - Fixed Return to Launcher from The Griffon Legend.
+
  Grim:
    - Added support for Brazillian Portuguese Grim Fandango.
-   - Added support for Russian EMI.
 
  Kyra:
    - Added support for the Japanese Sega-CD version of Eye of the Beholder.
- 
+   - Added support for the Hebrew fan translation of Legend of Kyrandia.
+
  Lure:
-   - Fix fire animation in first room when loading saves.
+   - Fixed fire animation in first room when loading saves.
+   - Fixed MT-32 support.
+
+ Pegasus:
+   - Added support for DVD/GOG.com release.
 
  SAGA:
    - Added support for ITE GOG Mac CD v1.1.
@@ -49,12 +71,18 @@ For a more comprehensive changelog of the latest experimental code, see:
    - Added support for the Korean fan translations of Castle of Dr. Brain, Eco Quest, Gabriel Knight,
      King's Quest 1, 5 and 6, Laura Bow 2: Dagger of Amon Ra and Space Quest 4.
    - Added support for numerous Korean translations from scummkor project.
+   - Added detection for LSL6 Russian.
+   - Added detection for alternate LSL7 Russian.
 
  SCUMM:
    - Fixed Chinese, Japanese and Korean text display for The Dig and for The Curse of Monkey Island. These fixes
      also include some improvements to the common text display (mainly the formatting of wrapped texts).
    - Fixed display of Chinese, Japanese and Korean pause and restart dialogs.
    - Added support for numerous Korean translations from scummkor project.
+   - Added support for Russobit-M versions of Pajama2 and SpyOzone.
+   - Fixed speech playback in Akella version of COMI.
+   - Added support for Discord and Humble Bundle versions of Indiana Jones and the Fate of Atlantis.
+   - Added smooth scrolling for FM-Towns versions of games.
 
  Tinsel:
    - Enabled the Return to Launcher feature.
@@ -86,9 +114,10 @@ For a more comprehensive changelog of the latest experimental code, see:
    - Re-activate nuked OPL Adlib driver
 
  MorphOS port:
-   - Add native system file browser feature
-   - Add Cloud feature
+   - Added native system file browser feature
+   - Added Cloud feature
    - Re-activate nuked OPL Adlib driver
+   - Added CAMD MIDI driver support
 
 #### 2.2.0 "Interactive Fantasy" (2020-09-27)
 
@@ -120,6 +149,7 @@ For a more comprehensive changelog of the latest experimental code, see:
    - Added option to select the default voice for ports that support Text-to-Speech.
    - Added support for Discord Rich Presence integration on supported platforms (Windows Vista+, macOS 10.9+ 64 Bit)
    - Major improvements to the keymapper.
+   - Games are now recognised by engineid:gameid combination.
 
  BBVS:
    - Added support for the demo, available from our website.
@@ -1186,7 +1216,7 @@ For a more comprehensive changelog of the latest experimental code, see:
    - Implemented Roland MT-32 output driver.
 
  Drascula:
-   - Added Spanish subtitles in the Von Braun cutscene (#3069981: no subtitles
+   - Added Spanish subtitles in the Von Braun cutscene (#5372: no subtitles
      in scene with "von Braun").
 
  Gob:
@@ -1373,7 +1403,7 @@ For a more comprehensive changelog of the latest experimental code, see:
      glitches remain so not official supported.
 
  Drascula:
-   - Added German and French subtitles in the Von Braun cutscene (#3069981:
+   - Added German and French subtitles in the Von Braun cutscene (#5372:
      no subtitles in scene with "von Braun").
    - Improved French translation of the game.
    - Added support for "Return To Launcher".
@@ -1568,7 +1598,7 @@ For a more comprehensive changelog of the latest experimental code, see:
  Broken Sword 2:
    - Fixed missing speech in some cutscenes.
    - Fixed a memory leak that would eventually cause the game to hang.
-     (#2976008 - BS2: Game lockup in British Museum)
+     (#4828 - BS2: Game lockup in British Museum)
 
  Drascula:
    - Fixed number of GFX glitches.
@@ -1633,7 +1663,7 @@ For a more comprehensive changelog of the latest experimental code, see:
 
  Drascula:
    - Fixed regression that caused some texts to always be in English, even when
-     using another language. (#2970211 - DRASCULA: missing german translation)
+     using another language. (#4819 - DRASCULA: missing german translation)
 
  KYRA:
    - Fixed a bug which caused the DOS versions to crash before the credits when
@@ -2303,7 +2333,7 @@ For a more comprehensive changelog of the latest experimental code, see:
    - Fixed last-minute crash when playing sound effects.
 
  WinCE Port:
-   - Should fix weird crashes with DOTT stamp and in FOA. (#1399830 #1392815)
+   - Should fix weird crashes with DOTT stamp and in FOA. (#2439 #2430)
    - Fixed Monkey Island blocking keyboard panel on Smartphones. (thks Knakos)
    - Fixed QVGA Smartphone detection (mean it this time :p).
    - Fixed Smartphone double right click issue.

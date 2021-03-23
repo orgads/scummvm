@@ -30,6 +30,7 @@
 #include "graphics/fonts/ttf.h"
 #include "graphics/font.h"
 #include "graphics/surface.h"
+#include "graphics/managed_surface.h"
 
 #include "common/ustr.h"
 #include "common/file.h"
@@ -148,6 +149,8 @@ public:
 
 	virtual int getFontHeight() const;
 
+	virtual int getFontAscent() const;
+
 	virtual int getMaxCharWidth() const;
 
 	virtual int getCharWidth(uint32 chr) const;
@@ -157,6 +160,8 @@ public:
 	virtual Common::Rect getBoundingBox(uint32 chr) const;
 
 	virtual void drawChar(Surface *dst, uint32 chr, int x, int y, uint32 color) const;
+	virtual void drawChar(ManagedSurface *dst, uint32 chr, int x, int y, uint32 color) const;
+
 private:
 	bool _initialized;
 	FT_Face _face;
@@ -185,6 +190,8 @@ private:
 	int computePointSize(int size, TTFSizeMode sizeMode) const;
 	int readPointSizeFromVDMXTable(int height) const;
 	int computePointSizeFromHeaders(int height) const;
+	void drawChar(Surface *dst, uint32 chr, int x, int y, uint32 color,
+		const uint32 *transparentColor) const;
 
 	FT_Int32 _loadFlags;
 	FT_Render_Mode _renderMode;
@@ -521,6 +528,10 @@ int TTFFont::getFontHeight() const {
 	return _height;
 }
 
+int TTFFont::getFontAscent() const {
+	return _ascent;
+}
+
 int TTFFont::getMaxCharWidth() const {
 	return _width;
 }
@@ -582,8 +593,10 @@ Common::Rect TTFFont::getBoundingBox(uint32 chr) const {
 namespace {
 
 template<typename ColorType>
-static void renderGlyph(uint8 *dstPos, const int dstPitch, const uint8 *srcPos, const int srcPitch, const int w, const int h, ColorType color, const PixelFormat &dstFormat) {
-	uint8 sR, sG, sB;
+static void renderGlyph(uint8 *dstPos, const int dstPitch, const uint8 *srcPos,
+		const int srcPitch, const int w, const int h, ColorType color,
+		const PixelFormat &dstFormat, const uint32 *transparentColor) {
+	uint8 sA, sR, sG, sB;
 	dstFormat.colorToRGB(color, sR, sG, sB);
 
 	for (int y = 0; y < h; ++y) {
@@ -594,16 +607,25 @@ static void renderGlyph(uint8 *dstPos, const int dstPitch, const uint8 *srcPos, 
 			if (*src == 255) {
 				*rDst = color;
 			} else if (*src) {
-				const uint8 a = *src;
+				sA = *src;
 
-				uint8 dR, dG, dB;
-				dstFormat.colorToRGB(*rDst, dR, dG, dB);
+				uint8 dA, dR, dG, dB;
+				if (transparentColor && *rDst == *transparentColor) {
+					dA = dR = dG = dB = 0;
+				} else {
+					dstFormat.colorToARGB(*rDst, dA, dR, dG, dB);
+				}
 
-				dR = ((255 - a) * dR + a * sR) / 255;
-				dG = ((255 - a) * dG + a * sG) / 255;
-				dB = ((255 - a) * dB + a * sB) / 255;
+				double sAn = (double)sA / 255.0;
+				double dAn = (double)dA / 255.0;
+				double oAn = sAn + dAn * (1.0 - sAn);
 
-				*rDst = dstFormat.RGBToColor(dR, dG, dB);
+				dR = static_cast<uint8>(sR * sAn + dR * dAn * (1.0 - sAn) / oAn);
+				dG = static_cast<uint8>(sG * sAn + dG * dAn * (1.0 - sAn) / oAn);
+				dB = static_cast<uint8>(sB * sAn + dB * dAn * (1.0 - sAn) / oAn);
+				dA = static_cast<uint8>(oAn * 255.0);
+
+				*rDst = dstFormat.ARGBToColor(dA, dR, dG, dB);
 			}
 
 			++rDst;
@@ -618,6 +640,24 @@ static void renderGlyph(uint8 *dstPos, const int dstPitch, const uint8 *srcPos, 
 } // End of anonymous namespace
 
 void TTFFont::drawChar(Surface *dst, uint32 chr, int x, int y, uint32 color) const {
+	drawChar(dst, chr, x, y, color, nullptr);
+}
+
+void TTFFont::drawChar(ManagedSurface *dst, uint32 chr, int x, int y, uint32 color) const {
+	if (dst->hasTransparentColor()) {
+		uint32 transColor = dst->getTransparentColor();
+		drawChar(dst->surfacePtr(), chr, x, y, color, &transColor);
+	} else {
+		drawChar(dst->surfacePtr(), chr, x, y, color, nullptr);
+	}
+
+	Common::Rect charBox = getBoundingBox(chr);
+	charBox.translate(x, y);
+	dst->addDirtyRect(charBox);
+}
+
+void TTFFont::drawChar(Surface * dst, uint32 chr, int x, int y, uint32 color,
+		const uint32 *transparentColor) const {
 	assureCached(chr);
 	GlyphCache::const_iterator glyphEntry = _glyphs.find(chr);
 	if (glyphEntry == _glyphs.end())
@@ -684,9 +724,9 @@ void TTFFont::drawChar(Surface *dst, uint32 chr, int x, int y, uint32 color) con
 			srcPos += glyph.image.pitch;
 		}
 	} else if (dst->format.bytesPerPixel == 2) {
-		renderGlyph<uint16>(dstPos, dst->pitch, srcPos, glyph.image.pitch, w, h, color, dst->format);
+		renderGlyph<uint16>(dstPos, dst->pitch, srcPos, glyph.image.pitch, w, h, color, dst->format, transparentColor);
 	} else if (dst->format.bytesPerPixel == 4) {
-		renderGlyph<uint32>(dstPos, dst->pitch, srcPos, glyph.image.pitch, w, h, color, dst->format);
+		renderGlyph<uint32>(dstPos, dst->pitch, srcPos, glyph.image.pitch, w, h, color, dst->format, transparentColor);
 	}
 }
 

@@ -34,7 +34,6 @@
 #define PSXPL_ID "PLF"
 
 #include "engines/icb/gfx/psx_zlayers.h"
-#include "engines/icb/gfx/psx_bg.h"
 #include "engines/icb/common/px_bitmap_psx.h"
 
 namespace ICB {
@@ -71,10 +70,10 @@ namespace ICB {
             uint8   zdata[w*h];
             psxZOverlay layers[n]
             {
-            short xs, xe;
-                short ys, ye;
-                u_short zs, ze;
-                u_short dZScale, dZShift;
+            int16 xs, xe;
+                int16 ys, ye;
+                uint16 zs, ze;
+                uint16 dZScale, dZShift;
             }
         }
    }
@@ -112,10 +111,10 @@ namespace ICB {
             uint8   zdata[w*h];
             psxZOverlay layers[n]
             {
-            short xs, xe;
-                short ys, ye;
-                u_short zs, ze;
-                u_short dZScale, dZShift;
+            int16 xs, xe;
+                int16 ys, ye;
+                uint16 zs, ze;
+                uint16 dZScale, dZShift;
             }
         }
    }

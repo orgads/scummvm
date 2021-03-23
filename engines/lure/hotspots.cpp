@@ -2827,8 +2827,8 @@ void HotspotTickHandlers::standardCharacterAnimHandler(Hotspot &h) {
 
 //			if (h.destHotspotId() != 0) {
 				// Walking to an exit, check for any required room change
-				if (Support::checkRoomChange(h))
-					break;
+			if (Support::checkRoomChange(h))
+				break;
 //			}
 		}
 
@@ -2909,21 +2909,21 @@ void HotspotTickHandlers::roomExitAnimHandler(Hotspot &h) {
 		h.setOccupied(true);
 
 		++rs.currentFrame;
-		if ((rs.currentFrame == rs.destFrame) && (h.hotspotId() == room.roomNumber()))
+		if ((rs.currentFrame == rs.destFrame) && (h.roomNumber() == room.roomNumber()) && (rs.closeSound != 0))
 			Sound.addSound(rs.closeSound);
 
 	} else if ((rec->blocked == 0) && (rs.currentFrame != 0)) {
 		// Opening the door
 		h.setOccupied(false);
 
-		--rs.currentFrame;
-		if ((rs.currentFrame == rs.destFrame) && (h.hotspotId() == room.roomNumber())) {
+		if ((rs.currentFrame == rs.destFrame) && (h.roomNumber() == room.roomNumber()) && (rs.openSound != 0)) {
 			Sound.addSound(rs.openSound);
 
 			// If in the outside village, trash reverb
 			if (fields.getField(AREA_FLAG) == 1)
 				Sound.musicInterface_TrashReverb();
 		}
+		--rs.currentFrame;
 	}
 
 	h.setFrameNumber(rs.currentFrame);

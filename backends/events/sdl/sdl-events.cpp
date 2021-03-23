@@ -38,6 +38,9 @@
 #define GAMECONTROLLERDB_FILE "gamecontrollerdb.txt"
 
 static uint32 convUTF8ToUTF32(const char *src) {
+	if (!src || src[0] == 0)
+		return 0;
+
 	Common::U32String u32(src);
 	return u32[0];
 }
@@ -177,9 +180,9 @@ bool SdlEventSource::processMouseEvent(Common::Event &event, int x, int y, int r
 
 	if (_graphicsManager) {
 		if (dynamic_cast<SdlGraphics3dManager *>(_graphicsManager)) {
-			dynamic_cast<SdlGraphics3dManager *>(_graphicsManager)->notifyMousePosition(event.mouse);
+			return dynamic_cast<SdlGraphics3dManager *>(_graphicsManager)->notifyMousePosition(event.mouse);
 		} else if (dynamic_cast<SdlGraphicsManager *>(_graphicsManager)) {
-			dynamic_cast<SdlGraphicsManager *>(_graphicsManager)->notifyMousePosition(event.mouse);
+			return dynamic_cast<SdlGraphicsManager *>(_graphicsManager)->notifyMousePosition(event.mouse);
 		}
 	}
 

@@ -255,16 +255,6 @@ void _remora::ActivateRemora(RemoraMode eMode) {
 }
 
 void _remora::DoPlatformSpecificInitialisation() {
-
-	uint32 nFileNameHash, nClusterHash;
-	char pcFileName[ENGINE_STRING_LEN];
-
-	// Load the Map Data.  When clustered the session files have the base stripped.
-	strcpy(pcFileName, REMORA_MAP_FILENAME);
-
-	nClusterHash = MS->Fetch_session_cluster_hash();
-	nFileNameHash = NULL_HASH;
-
 	// Allocate a text buffer if one hasn't been allocated already.
 	if (!m_pDisplayBuffer)
 		m_pDisplayBuffer = new _remora_line[REMORA_TEXT_BUFFER_ROWS];
@@ -599,8 +589,8 @@ void _remora::DrawStaticBarriers(_rgb oLineColour) const {
 		for (j = 0; j < pSlice->num_cubes; ++j) {
 			// Get to the barriers for this cube.
 			nBarrierCubeOffset = pSlice->offset_cubes[j];
-			pBarrierCube = (_barrier_cube *)((unsigned char *)pSlice + nBarrierCubeOffset);
-			pBarrierArray = (uint32 *)((unsigned char *)pSlice + pBarrierCube->barriers);
+			pBarrierCube = (_barrier_cube *)((uint8 *)pSlice + nBarrierCubeOffset);
+			pBarrierArray = (uint32 *)((uint8 *)pSlice + pBarrierCube->barriers);
 
 			// Draw the barriers for this cube.
 			for (k = 0; k < (uint32)pBarrierCube->num_barriers; ++k) {
@@ -1091,7 +1081,7 @@ void _remora::DrawPulse() {
 	int32 nHighlightIndex;
 	int32 pnWholePulse[REMORA_PULSE_POINTS * REMORA_MAX_HEALTH][2];
 	float pfHighlightValues[REMORA_PULSE_POINTS * REMORA_MAX_HEALTH];
-	int32 nBaseX, nBaseY;
+	//int32 nBaseX, nBaseY;
 	int32 nX1, nY1, nX2, nY2;
 	_rgb oLineColour, oDrawColour;
 	uint32 nWholePulseIndex;
@@ -1102,8 +1092,8 @@ void _remora::DrawPulse() {
 	uint32 nHits, nHealth;
 
 	// Calculate a base drawing point for the whole thing.
-	nBaseX = REMORA_PULSE_X;
-	nBaseY = REMORA_PULSE_Y;
+	//nBaseX = REMORA_PULSE_X;
+	//nBaseY = REMORA_PULSE_Y;
 
 	// Work out player's health.
 	pPlayer = (c_game_object *)MS->objects->Fetch_item_by_name("player");
@@ -1372,11 +1362,6 @@ void _remora::ColourToRGB(uint8 nAttributes, uint8 &nRed, uint8 &nGreen, uint8 &
 }
 
 void _remora::SetUpM08LockControl() {
-	uint32 oBitmapNameHash;
-
-	// We need the size of the scan screen for clipping the barriers.
-	oBitmapNameHash = NULL_HASH;
-
 	// Here we build a list of the door names and what object ID they are.
 	BuildM08DoorList();
 }
@@ -1928,7 +1913,7 @@ void DrawGouraudTriangle(uint32 x0, uint32 y0, uint32 x1, uint32 y1, uint32 x2, 
 					++x;
 				}
 
-				int xLim = remora_spans[y].x1;
+				int32 xLim = remora_spans[y].x1;
 				if (xLim > REMORA_SCREEN_WIDTH)
 					xLim = REMORA_SCREEN_WIDTH;
 
@@ -1949,7 +1934,7 @@ void DrawGouraudTriangle(uint32 x0, uint32 y0, uint32 x1, uint32 y1, uint32 x2, 
 					uint8 *pixel = (uint8 *)&left;
 					uint8 *add = (uint8 *)&newCol;
 					// Add from RGB components
-					for (int p = 0; p < 3; p++) {
+					for (int32 p = 0; p < 3; p++) {
 						pixel[p] = MIN(255, pixel[p] + add[p]);
 					}
 #else
@@ -2028,7 +2013,7 @@ void DrawGouraudTriangle(uint32 x0, uint32 y0, uint32 x1, uint32 y1, uint32 x2, 
 				if (x < 0)
 					x = 0;
 
-				int xLim = remora_spans[y].x1;
+				int32 xLim = remora_spans[y].x1;
 				if (xLim > REMORA_SCREEN_WIDTH)
 					xLim = REMORA_SCREEN_WIDTH;
 
@@ -2049,7 +2034,7 @@ void DrawGouraudTriangle(uint32 x0, uint32 y0, uint32 x1, uint32 y1, uint32 x2, 
 				uint8 *pixel = (uint8 *)&left;
 				uint8 *add = (uint8 *)&newCol;
 				// Add from RGB components
-				for (int p = 0; p < 3; p++) {
+				for (int32 p = 0; p < 3; p++) {
 					pixel[p] = (pixel[p] + add[p]) >> 1;
 				}
 #else

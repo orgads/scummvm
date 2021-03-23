@@ -24,6 +24,7 @@
 #define ULTIMA_ULTIMA8_META_ENGINE
 
 #include "backends/keymapper/keymapper.h"
+#include "engines/metaengine.h"
 
 namespace Ultima {
 namespace Ultima8 {
@@ -40,7 +41,7 @@ enum KeybindingAction {
 	ACTION_MOVE_RIGHT, ACTION_MOVE_RUN, ACTION_MOVE_STEP, ACTION_ATTACK,
 	ACTION_CAMERA_AVATAR,
 
-	ACTION_CHEAT_MODE, ACTION_CLIPPING, ACTION_DEC_SORT_ORDER,
+	ACTION_CLIPPING, ACTION_DEC_SORT_ORDER,
 	ACTION_INC_SORT_ORDER, ACTION_QUICK_MOVE_ASCEND, ACTION_QUICK_MOVE_DESCEND,
 	ACTION_QUICK_MOVE_UP, ACTION_QUICK_MOVE_DOWN, ACTION_QUICK_MOVE_LEFT,
 	ACTION_QUICK_MOVE_RIGHT,
@@ -67,6 +68,11 @@ public:
 	static Common::KeymapArray initKeymaps(const Common::String &gameId, bool isMenuActive = false);
 
 	/**
+	* Return the extra GUI options used by the target.
+	*/
+	static const ExtraGuiOptions getExtraGuiOptions(const Common::String& target);
+
+	/**
 	 * Execute an engine keymap press action
 	 */
 	static void pressAction(KeybindingAction keyAction);
@@ -75,6 +81,11 @@ public:
 	 * Execute an engine keymap release action
 	 */
 	static void releaseAction(KeybindingAction keyAction);
+
+	/**
+	* Enables/disables keymaps based on whether text input is active
+	*/
+	static void setTextInputActive(bool isActive);
 
 	/**
 	 * Enables/disables keymaps based on whether the in-game menu is active

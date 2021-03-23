@@ -66,7 +66,7 @@ public:
 	}
 
 	Common::SeekableReadStream *createReadStreamForMember(const Common::String &name) const override {
-		Common::FSNode fsNode = _fileMap[name];
+		Common::FSNode fsNode = _fileMap.getValOrDefault(name);
 		return fsNode.createReadStream();
 	}
 
@@ -87,7 +87,7 @@ static Common::String sanitizeName(const char *name, int maxLen) {
 			// Skipping short words and "the"
 			if ((word.size() > 2 && !word.equals("the")) || (!word.empty() && Common::isDigit(word[0]))) {
 				// Adding first word, or when word fits
-				if (res.empty() || word.size() < maxLen)
+				if (res.empty() || (int)word.size() < maxLen)
 					res += word;
 
 				maxLen -= word.size();

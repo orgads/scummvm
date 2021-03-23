@@ -24,7 +24,7 @@
 #define FORBIDDEN_SYMBOL_ALLOW_ALL
 
 // HACK to allow building with the SDL backend on MinGW
-// see bug #1800764 "TOOLS: MinGW tools building broken"
+// see bug #3412 "TOOLS: MinGW tools building broken"
 #ifdef main
 #undef main
 #endif // main
@@ -45,7 +45,7 @@
 
 
 enum {
-	kKyraDatVersion = 106
+	kKyraDatVersion = 108
 };
 
 const ExtractFilename extractFilenames[] = {
@@ -1201,6 +1201,7 @@ const TypeTable languageTable[] = {
 	{ IT_ITA, 5 },
 	{ JA_JPN, 6 },
 	{ RU_RUS, 7 },
+	{ HE_ISR, 8 },
 	{ -1, -1 }
 };
 

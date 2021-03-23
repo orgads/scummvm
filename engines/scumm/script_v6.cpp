@@ -718,7 +718,7 @@ void ScummEngine_v6::o6_jump() {
 			_scummVars[202] = 35;
 	}
 
-	// WORKAROUND bug #2826144: Talking to the guard at the bigfoot party, after
+	// WORKAROUND bug #4464: Talking to the guard at the bigfoot party, after
 	// he's let you inside, will cause the game to hang, if you end the conversation.
 	// This is a script bug, due to a missing jump in one segment of the script.
 	if (_game.id == GID_SAMNMAX && vm.slot[_currentScript].number == 101 && readVar(0x8000 + 97) == 1 && offset == 1) {
@@ -735,6 +735,25 @@ void ScummEngine_v6::o6_startScript() {
 	getStackList(args, ARRAYSIZE(args));
 	script = pop();
 	flags = pop();
+
+	// WORKAROUND for a bug also present in the original EXE: After greasing (or oiling?)
+	// the cannonballs in the Plunder Town Theater, during the juggling show, the game
+	// cuts from room 18 (backstage) to room 19 (stage).
+	//
+	// Usually, when loading a room script 29 handles the change of background music, 
+	// based on which room we've just loaded.
+	// Unfortunately, during this particular cutscene, script 29 is not executing,
+	// therefore the music is unchanged from room 18 to 19 (the muffled backstage 
+	// version is played), and is not coherent with the drums fill played afterwards 
+	// (sequence 2225), which is unmuffled.
+	//
+	// This fix checks for this situation happening (and only this one), and makes a call
+	// to a soundKludge operation like script 29 would have done.
+	if (_game.id == GID_CMI && _currentRoom == 19 &&
+		vm.slot[_currentScript].number == 168 && script == 118) {
+		int list[16] = { 4096, 1278, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		_sound->soundKludge(list, 2);
+	}
 
 	// WORKAROUND bug #556558: At Dino Bungee National Memorial, the buttons for
 	// the Wally and Rex dinosaurs will always restart their speech, instead of
@@ -763,7 +782,7 @@ void ScummEngine_v6::o6_startScript() {
 		return;
 	}
 
-	// WORKAROUND bug #1878514: When turning pages in the recipe book
+	// WORKAROUND bug #3591: When turning pages in the recipe book
 	// (found on Blood Island), there is a brief moment where it displays
 	// text from two different pages at the same time.
 	//
@@ -850,7 +869,7 @@ void ScummEngine_v6::o6_drawObjectAt() {
 	int x = pop();
 	int obj = pop();
 
-	// WORKAROUND bug #1846746 : Adjust x and y position of
+	// WORKAROUND bug #3487 : Adjust x and y position of
 	// objects in credits sequence, to match other ports
 	if (_game.id == GID_PUTTMOON && _game.platform == Common::kPlatform3DO &&
 		_roomResource == 38 && vm.slot[_currentScript].number == 206) {
@@ -1224,7 +1243,7 @@ void ScummEngine_v6::o6_animateActor() {
 	}
 	if (_game.id == GID_SAMNMAX && _roomResource == 35 &&
 		vm.slot[_currentScript].number == 202 && act == 4 && anim == 14) {
-		// WORKAROUND bug #1223621 (Animation glitch at World of Fish).
+		// WORKAROUND bug #2068 (Animation glitch at World of Fish).
 		// Before starting animation 14 of the fisherman, make sure he isn't
 		// talking anymore. This appears to be a bug in the original game as well.
 		if (getTalkingActor() == 4) {
@@ -2209,7 +2228,7 @@ void ScummEngine_v6::o6_soundKludge() {
 
 	_sound->soundKludge(list, num);
 
-	// WORKAROUND for bug #1398195: The room-11-2016 script contains a
+	// WORKAROUND for bug #2438: The room-11-2016 script contains a
 	// slight bug causing it to busy-wait for a sound to finish. Even under
 	// the best of circumstances, this will cause the game to hang briefly.
 	// On platforms where threading is cooperative, it will cause the game
@@ -2331,7 +2350,7 @@ void ScummEngine_v6::o6_talkActor() {
 
 	_actorToPrintStrFor = pop();
 
-	// WORKAROUND for bug #2016521: "DOTT: Bernard impersonating LaVerne"
+	// WORKAROUND for bug #3803: "DOTT: Bernard impersonating LaVerne"
 	// Original script did not check for VAR_EGO == 2 before executing
 	// a talkActor opcode.
 	if (_game.id == GID_TENTACLE && vm.slot[_currentScript].number == 307

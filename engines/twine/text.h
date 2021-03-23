@@ -55,10 +55,11 @@ namespace TextId {
 enum _TextId {
 	kBehaviourNormal = 0,
 	kBehaviourSporty = 1,
-	kBehaviourAgressiveManual = 2,
+	kBehaviourAggressiveManual = 2,
 	kBehaviourHiding = 3,
-	kBehaviourAgressiveAuto = 4,
+	kBehaviourAggressiveAuto = 4,
 	kUseProtopack = 5,
+	kSendell = 6,
 	kMusicVolume = 10,
 	kSoundVolume = 11,
 	kCDVolume = 12,
@@ -77,7 +78,7 @@ enum _TextId {
 	kVolumeSettings = 30,
 	kDetailsPolygonsHigh = 31,
 	kDetailsShadowHigh = 32,
-	//kScenaryZoomOn = 33, // duplicate with 133 - TODO check if this is the same in all languages
+	//kSceneryZoomOn = 33, // duplicate with 133 - TODO check if this is the same in all languages
 	kCreateNewPlayer = 40,
 	kCreateSaveGame = 41,
 	kEnterYourName = 42,
@@ -92,16 +93,42 @@ enum _TextId {
 	kRemoveProtoPack = 105,
 	kDetailsPolygonsMiddle = 131,
 	kShadowsFigures = 132,
-	kScenaryZoomOn = 133,
+	kSceneryZoomOn = 133,
+	kIntroText1 = 150,
+	kIntroText2 = 151,
+	kIntroText3 = 152,
+	kBookOfBu = 161,
+	kBonusList = 162,
 	kDetailsPolygonsLow = 231,
 	kShadowsDisabled = 232,
-	kNoScenaryZoom = 233
+	kNoSceneryZoom = 233
 };
 }
 
 #define TEXT_MAX_FADE_IN_CHR 32
 
+#define COLOR_BLACK 0
+#define COLOR_BRIGHT_BLUE 4
+#define COLOR_9 9
+#define COLOR_14 14
+#define COLOR_RED 68
+#define COLOR_73 73
+#define COLOR_75 75
+#define COLOR_79 79
+#define COLOR_91 91
+#define COLOR_BRIGHT_BLUE2 69
+#define COLOR_WHITE 15
+#define COLOR_GOLD 155
+#define COLOR_158 158
+
+enum class ProgressiveTextState {
+	End = 0,				/**< Text has reached its end and we are waiting for user input */
+	ContinueRunning = 1,	/**< Text is fading in */
+	NextPage = 2			/**< Waiting for user input to abort or start the next page to fade in */
+};
+
 class TwinEEngine;
+
 class Text {
 private:
 	TwinEEngine *_engine;
@@ -120,7 +147,7 @@ private:
 	 * @param character ascii character to display
 	 * @param color character color
 	 */
-	void drawCharacterShadow(int32 x, int32 y, uint8 character, int32 color);
+	void drawCharacterShadow(int32 x, int32 y, uint8 character, int32 color, Common::Rect& dirtyRect);
 	void initProgressiveTextBuffer();
 	struct WordSize {
 		int32 inChar = 0;
@@ -141,36 +168,29 @@ private:
 	 * @param counter The amount of characters to handle - max 32
 	 */
 	void fadeInCharacters(int32 counter, int32 fontColor);
-	/**
-	 * Copy dialogue text
-	 * @param src source text buffer
-	 * @param dst destination text buffer
-	 * @param size text size
-	 */
-	void copyText(const char *src, char *dst, int32 size);
 
 	// RECHECK THIS LATER
-	int32 currentBankIdx = TextBankId::None; // textVar1
+	int32 _currentBankIdx = TextBankId::None; // textVar1
 
 	/** Dialogue text pointer */
-	char *dialTextPtr = nullptr; // bufText
+	char *_dialTextPtr = nullptr; // bufText
 	/** Dialogue entry order pointer */
-	int32 dialOrderSize = 0;
-	char *dialOrderPtr = nullptr; // bufOrder
+	int32 _dialOrderSize = 0;
+	char *_dialOrderPtr = nullptr; // bufOrder
 	/** Number of dialogues text entries */
-	int16 numDialTextEntries = 0;
+	int16 _numDialTextEntries = 0;
 
 	// TODO: refactor all this variables and related functions
 	char _progressiveTextBuffer[256] {'\0'};
-	char *printText8Var8 = nullptr;
-	int32 printText10Var1 = 0;
+	const char *_currentTextPosition = nullptr;
 
 	int32 _dialTextXPos = 0;
-	char *_progressiveTextBufferPtr = nullptr;
-	int32 _dialTextBoxCurrentLine = 0;
 	int32 _dialTextYPos = 0;
-	bool _progressiveTextEnd = false;
-	bool _progressiveTextNextPage = false;
+
+	/** Current position of in the buffer of characters that are currently faded in */
+	char *_progressiveTextBufferPtr = nullptr;
+
+	int32 _dialTextBoxCurrentLine = 0;
 	struct BlendInCharacter {
 		int16 chr = 0;
 		int16 x = 0;
@@ -184,9 +204,13 @@ private:
 	/** Current dialogue text size */
 	int32 _currDialTextSize = 0;
 
+	char _currMenuTextBuffer[256];
+	int32 _currMenuTextBank = TextBankId::None;
+	int32 _currMenuTextIndex = -1;
+
 	/** Pixel size between dialogue text */
 	int32 _dialSpaceBetween = 0;
-	/** Pixel size of the space character */
+	/** Pixel size of the space character - recalculated per per line */
 	int32 _dialCharSpace = 0;
 	/** Dialogue text color */
 	int32 _dialTextColor = 0;
@@ -207,10 +231,14 @@ private:
 	Common::Rect _dialTextBox { 0, 0, 0, 0};
 
 	int32 _dialTextBoxLines = 0; // dialogueBoxParam1
-	int32 _dialTextBoxParam2 = 0; // dialogueBoxParam2
+	int32 _dialTextBoxMaxX = 0; // dialogueBoxParam2
+
+	bool displayText(int32 index, bool showText, bool playVox, bool loop);
 public:
-	Text(TwinEEngine *engine) : _engine(engine) {}
+	Text(TwinEEngine *engine);
 	~Text();
+
+	static const int32 lineHeight = 38;
 
 	// TODO: refactor all this variables and related functions
 	bool _hasValidTextHandle = false;
@@ -222,7 +250,6 @@ public:
 	// ---
 
 	int32 currDialTextEntry = 0; // ordered entry
-	int32 nextDialTextEntry = 0; // ordered entry
 	Common::String currentVoxBankFile;
 
 	bool showDialogueBubble = true;
@@ -232,6 +259,7 @@ public:
 	 * @param bankIdx Text bank index
 	 */
 	void initTextBank(int32 bankIdx);
+	void initSceneTextBank();
 
 	/**
 	 * Display a certain dialogue text in the screen
@@ -241,7 +269,7 @@ public:
 	 */
 	void drawText(int32 x, int32 y, const char *dialogue);
 
-	bool drawTextFullscreen(int32 index);
+	bool drawTextProgressive(int32 index, bool playVox = true, bool loop = true);
 
 	/**
 	 * Gets dialogue text width size
@@ -255,7 +283,10 @@ public:
 	void initInventoryDialogueBox();
 
 	void initText(int32 index);
-	int updateProgressiveText();
+	void initInventoryText(int index);
+	void initItemFoundText(int index);
+	void fadeInRemainingChars();
+	ProgressiveTextState updateProgressiveText();
 
 	/**
 	 * Set font type parameters
@@ -303,6 +334,7 @@ public:
 	void textClipSmall();
 
 	void drawAskQuestion(int32 index);
+	void drawHolomapLocation(int32 index);
 
 	bool playVox(int32 index);
 	bool playVoxSimple(int32 index);

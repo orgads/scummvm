@@ -218,6 +218,32 @@ const KYRAGameDescription adGameDescs[] = {
 		KYRA1_FLOPPY_FLAGS
 	},
 
+	{ // from trembyle
+		{
+			"kyra1",
+			_s("Missing game code"), // Reason for being unsupported
+			AD_ENTRY1("GEMCUT.EMC", "3f319d6908830a46ff42229a39a2c7ec"),
+			Common::ZH_ANY,
+			Common::kPlatformDOS,
+			ADGF_UNSUPPORTED,
+			GUIO5(GUIO_NOSPEECH, GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIPCSPK, GUIO_RENDERVGA)
+		},
+		KYRA1_FLOPPY_FLAGS
+	},
+
+	{ // from trembyle
+		{
+			"kyra1",
+			_s("Missing game code"), // Reason for being unsupported
+			AD_ENTRY1("GEMCUT.EMC", "57907d931675dbd16386c1d81d18fee4"),
+			Common::KO_KOR,
+			Common::kPlatformDOS,
+			ADGF_UNSUPPORTED,
+			GUIO5(GUIO_NOSPEECH, GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIPCSPK, GUIO_RENDERVGA)
+		},
+		KYRA1_FLOPPY_FLAGS
+	},
+
 	{
 		{
 			"kyra1",
@@ -315,6 +341,20 @@ const KYRAGameDescription adGameDescs[] = {
 		},
 		KYRA1_CD_FLAGS
 	},
+
+	{ // HEBREW FAN TRANSLATION
+		{
+			"kyra1",
+			"CD",
+			AD_ENTRY1("GEMCUT.PAK", "20c141be61ed01bfda09197e0452bcf7"),
+			Common::HE_ISR,
+			Common::kPlatformDOS,
+			ADGF_CD,
+			GUIO4(GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIPCSPK, GUIO_RENDERVGA)
+		},
+		KYRA1_CD_FLAGS
+	},
+
 	{
 		{
 			"kyra1",
@@ -340,7 +380,7 @@ const KYRAGameDescription adGameDescs[] = {
 		KYRA1_CD_FLAGS
 	},
 
-	{ // italian fan translation see fr#1727941 "KYRA: add Italian CD Version to kyra.dat"
+	{ // italian fan translation see bug #7567 "KYRA: add Italian CD Version to kyra.dat"
 		{
 			"kyra1",
 			"CD",
@@ -366,7 +406,7 @@ const KYRAGameDescription adGameDescs[] = {
 		KYRA1_CD_FLAGS
 	},
 
-	{ // Kyra 1 Mac CD as mentioned in fr #2766454 "KYRA1: Add support for Macintosh CD" by nnooiissee
+	{ // Kyra 1 Mac CD as mentioned in bug #7695 "KYRA1: Add support for Macintosh CD" by nnooiissee
 		{
 			"kyra1",
 			"CD",
@@ -550,6 +590,19 @@ const KYRAGameDescription adGameDescs[] = {
 	{ // Floppy version extracted
 		{
 			"kyra2",
+			_s("Missing game code"), // Reason for being unsupported
+			AD_ENTRY1("FATE.PAK", "5bfc4dd48778ca1f3a9e001e345a9774"),
+			Common::ZH_ANY,
+			Common::kPlatformDOS,
+			ADGF_UNSUPPORTED,
+			GUIO6(GUIO_NOSPEECH, GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIGM, GUIO_MIDIPCSPK, GUIO_RENDERVGA)
+		},
+		KYRA2_FLOPPY_FLAGS
+	},
+
+	{ // Floppy version extracted
+		{
+			"kyra2",
 			"Extracted",
 			AD_ENTRY1("CH01-S00.DLG", "54b7a5a94f6e1ec91f0fb1311eec09ab"),
 			Common::RU_RUS,
@@ -610,7 +663,7 @@ const KYRAGameDescription adGameDescs[] = {
 		KYRA2_CD_FLAGS
 	},
 
-	// Italian fan translation, see fr#2003504 "KYRA: add support for Italian version of Kyrandia 2&3"
+	// Italian fan translation, see bug #7642 "KYRA: add support for Italian version of Kyrandia 2&3"
 	{ // CD version
 		{
 			"kyra2",
@@ -941,7 +994,7 @@ const KYRAGameDescription adGameDescs[] = {
 		KYRA3_CD_INS_FLAGS
 	},
 
-	// Spanish fan translation, see fr#1994040 "KYRA3: Add support for Spanish fan translation"
+	// Spanish fan translation, see bug #7637 "KYRA3: Add support for Spanish fan translation"
 	{
 		{
 			"kyra3",
@@ -982,7 +1035,7 @@ const KYRAGameDescription adGameDescs[] = {
 		KYRA3_CD_FAN_FLAGS(Common::ES_ESP, Common::EN_ANY)
 	},
 
-	// Italian fan translation, see fr#2003504 "KYRA: add support for Italian version of Kyrandia 2&3"
+	// Italian fan translation, see bug #7642 "KYRA: add support for Italian version of Kyrandia 2&3"
 	{
 		{
 			"kyra3",
@@ -1336,7 +1389,7 @@ const KYRAGameDescription adGameDescs[] = {
 		LOL_FLOPPY_CMP_FLAGS
 	},
 
-	{ // French floppy version 1.20, bug #3552534 "KYRA: LOL Floppy FR version unknown"
+	{ // French floppy version 1.20, bug #6111 "KYRA: LOL Floppy FR version unknown"
 		{
 			"lol",
 			0,
@@ -1405,7 +1458,7 @@ const KYRAGameDescription adGameDescs[] = {
 		LOL_FLOPPY_FLAGS
 	},
 
-	{ // French floppy version 1.20, bug #3608967 "Lands of Lore - french version 1.20 MD5"
+	{ // French floppy version 1.20, bug #6264 "Lands of Lore - french version 1.20 MD5"
 		{
 			"lol",
 			"Extracted",
@@ -1419,7 +1472,7 @@ const KYRAGameDescription adGameDescs[] = {
 		LOL_FLOPPY_FLAGS
 	},
 
-	{ // French floppy version 1.23, bug #3552534 "KYRA: LOL Floppy FR version unknown"
+	{ // French floppy version 1.23, bug #6111 "KYRA: LOL Floppy FR version unknown"
 		{
 			"lol",
 			"Extracted",
@@ -1712,6 +1765,20 @@ const KYRAGameDescription adGameDescs[] = {
 			Common::ES_ESP,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
+			GUIO7(GUIO_NOSPEECH, GUIO_MIDIADLIB, GUIO_MIDIPCSPK, GUIO_RENDERVGA, GUIO_RENDEREGA, GAMEOPTION_EOB_HPGRAPHS, GAMEOPTION_EOB_MOUSESWAP)
+		},
+		EOB2_FLAGS
+	},
+
+
+	{
+		{
+			"eob2",
+			_s("Missing game code"), // Reason for being unsupported
+			AD_ENTRY1s("LEVEL15.INF", "f972f628d21bae404a7d52bb287c0012", -1),
+			Common::ZH_ANY,
+			Common::kPlatformDOS,
+			ADGF_UNSUPPORTED,
 			GUIO7(GUIO_NOSPEECH, GUIO_MIDIADLIB, GUIO_MIDIPCSPK, GUIO_RENDERVGA, GUIO_RENDEREGA, GAMEOPTION_EOB_HPGRAPHS, GAMEOPTION_EOB_MOUSESWAP)
 		},
 		EOB2_FLAGS

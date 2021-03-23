@@ -39,15 +39,11 @@ namespace Graphics {
  * @{
  */
 
-class Font;
-
 /**
  * A derived graphics surface, which supports automatically managing the allocated
  * surface data block and introduces several new blitting methods.
  */
 class ManagedSurface {
-	/** See @ref Font. */
-	friend class Font;
 private:
 	/**
 	 * The Graphics::Surface that the managed surface encapsulates.
@@ -86,16 +82,10 @@ private:
 	bool _paletteSet;
 protected:
 	/**
-	 * Base method that descendant classes can override for recording the affected
-	 * dirty areas of the surface.
-	 */
-	virtual void addDirtyRect(const Common::Rect &r);
-
-	/**
 	 * Inner method for blitting.
 	 */
 	void blitFromInner(const Surface &src, const Common::Rect &srcRect,
-		const Common::Point &destPos, const uint32 *palette);
+		const Common::Rect &destRect, const uint32 *srcPalette);
 
 	/**
 	 * Inner method for copying another surface into this one at a given destination position.
@@ -156,14 +146,16 @@ public:
 	 * directly to it, since it would bypass dirty rect handling.
 	 */
 	operator const Surface &() const { return _innerSurface; }
+
 	/**
-	 * Automatically convert to a Graphics::Surface by
-	 * simply returning the inner surface.
+	 * Return the underyling Graphics::Surface
 	 *
-	 * This must be const, because changes are not supposed to be done
-	 * directly to it, since it would bypass dirty rect handling.
+	 * If a caller uses the non-const surfacePtr version and changes
+	 * the surface, they'll be responsible for calling addDirtyRect
+	 * for any affected area
 	 */
 	const Surface &rawSurface() const { return _innerSurface; }
+	Surface *surfacePtr() { return &_innerSurface; }
 
 	/**
 	 * Reassign one managed surface to another one.
@@ -252,6 +244,12 @@ public:
 	virtual void clearDirtyRects() {}
 
 	/**
+	 * Base method that descendant classes can override for recording the affected
+	 * dirty areas of the surface.
+	 */
+	virtual void addDirtyRect(const Common::Rect &r);
+
+	/**
 	 * When the managed surface is a subsection of a parent surface, return the
 	 * the offset in the parent surface where the managed surface starts at.
 	 */
@@ -279,6 +277,18 @@ public:
 	 */
 	void blitFrom(const Surface &src, const Common::Rect &srcRect,
 		const Common::Point &destPos);
+
+	/**
+	 * Copy another surface into this one at a given destination area and perform the potential scaling.
+	 */
+	void blitFrom(const Surface &src, const Common::Rect &srcRect,
+		const Common::Rect &destRect);
+
+	/**
+	 * Copy another surface into this one at a given destination area and perform the potential scaling.
+	 */
+	void blitFrom(const ManagedSurface &src, const Common::Rect &srcRect,
+		const Common::Rect &destRect);
 
 	/**
 	 * Copy another surface into this one.
@@ -447,6 +457,15 @@ public:
 	void transBlitFrom(const ManagedSurface &src, const Common::Rect &srcRect, const Common::Rect &destRect,
 		uint transColor = 0, bool flipped = false, uint overrideColor = 0, uint srcAlpha = 0xff,
 		const Surface *mask = nullptr, bool maskOnly = false);
+
+	/**
+	 * Does a blitFrom ignoring any transparency settings
+	 */
+	void rawBlitFrom(const Surface &src, const Common::Rect &srcRect,
+			const Common::Point &destPos, const uint32 *palette) {
+		blitFromInner(src, srcRect, Common::Rect(destPos.x, destPos.y,
+			destPos.x + srcRect.width(), destPos.y + srcRect.height()), palette);
+	}
 
 	/**
 	 * Clear the entire surface.

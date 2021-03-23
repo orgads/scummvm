@@ -65,6 +65,7 @@ enum {
 
 	kCmdGlobalGraphicsOverride = 'OGFX',
 	kCmdGlobalShaderOverride = 'OSHD',
+	kCmdGlobalBackendOverride = 'OBAK',
 	kCmdGlobalAudioOverride = 'OSFX',
 	kCmdGlobalMIDIOverride = 'OMID',
 	kCmdGlobalMT32Override = 'OM32',
@@ -185,9 +186,9 @@ EditGameDialog::EditGameDialog(const String &domain)
 	if (metaEnginePlugin) {
 		int tabId = tab->addTab(_("Engine"), "GameOptions_Engine");
 
-		const MetaEngineDetection &metaEngine = metaEnginePlugin->get<MetaEngineDetection>();
-		metaEngine.registerDefaultSettings(_domain);
-		_engineOptions = metaEngine.buildEngineOptionsWidgetStatic(tab, "GameOptions_Engine.Container", _domain);
+		const MetaEngineDetection &metaEngineDetection = metaEnginePlugin->get<MetaEngineDetection>();
+		metaEngineDetection.registerDefaultSettings(_domain);
+		_engineOptions = metaEngineDetection.buildEngineOptionsWidgetStatic(tab, "GameOptions_Engine.Container", _domain);
 
 		if (_engineOptions) {
 			_engineOptions->setParentDialog(this);
@@ -244,6 +245,11 @@ EditGameDialog::EditGameDialog(const String &domain)
 	// The backend tab (shown only if the backend implements one)
 	//
 	int backendTabId = tab->addTab(_("Backend"), "GameOptions_Backend");
+
+	if (g_system->getOverlayWidth() > 320)
+		_globalBackendOverride = new CheckboxWidget(tab, "GameOptions_Backend.EnableTabCheckbox", _("Override global backend settings"), Common::U32String(), kCmdGlobalBackendOverride);
+	else
+		_globalBackendOverride = new CheckboxWidget(tab, "GameOptions_Backend.EnableTabCheckbox", _c("Override global backend settings", "lowres"), Common::U32String(), kCmdGlobalBackendOverride);
 
 	g_system->registerDefaultSettings(_domain);
 	_backendOptions = g_system->buildBackendOptionsWidget(tab, "GameOptions_Backend.Container", _domain);
@@ -354,8 +360,8 @@ EditGameDialog::EditGameDialog(const String &domain)
 	// 9) The Achievements tab
 	//
 	if (enginePlugin) {
-		const MetaEngine &metaEngineConnect = enginePlugin->get<MetaEngine>();
-		Common::AchievementsInfo achievementsInfo = metaEngineConnect.getAchievementsInfo(domain);
+		const MetaEngine &metaEngine = enginePlugin->get<MetaEngine>();
+		Common::AchievementsInfo achievementsInfo = metaEngine.getAchievementsInfo(domain);
 		if (achievementsInfo.descriptions.size() > 0) {
 			tab->addTab(_("Achievements"), "GameOptions_Achievements");
 			addAchievementsControls(tab, "GameOptions_Achievements.", achievementsInfo);
@@ -408,6 +414,11 @@ void EditGameDialog::open() {
 	if (g_system->hasFeature(OSystem::kFeatureShader)) {
 		e = ConfMan.hasKey("shader", _domain);
 		_globalShaderOverride->setState(e);
+	}
+
+	if (_backendOptions) {
+		e = _backendOptions->hasKeys();
+		_globalBackendOverride->setState(e);
 	}
 
 	e = ConfMan.hasKey("music_driver", _domain) ||
@@ -508,6 +519,10 @@ void EditGameDialog::handleCommand(CommandSender *sender, uint32 cmd, uint32 dat
 		break;
 	case kCmdGlobalShaderOverride:
 		setShaderSettingsState(data != 0);
+		g_gui.scheduleTopDialogRedraw();
+		break;
+	case kCmdGlobalBackendOverride:
+		_backendOptions->setEnabled(data != 0);
 		g_gui.scheduleTopDialogRedraw();
 		break;
 	case kCmdGlobalAudioOverride:

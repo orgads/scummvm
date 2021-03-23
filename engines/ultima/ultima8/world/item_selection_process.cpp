@@ -20,21 +20,16 @@
  *
  */
 
-#include "ultima/ultima8/misc/pent_include.h"
 
-#include "ultima/ultima8/games/game_data.h"
 #include "ultima/ultima8/audio/audio_process.h"
-#include "ultima/ultima8/kernel/core_app.h"
-#include "ultima/ultima8/kernel/kernel.h"
+#include "ultima/ultima8/ultima8.h"
 #include "ultima/ultima8/world/actors/main_actor.h"
 #include "ultima/ultima8/world/item_selection_process.h"
 #include "ultima/ultima8/world/item_factory.h"
-#include "ultima/ultima8/world/item.h"
 #include "ultima/ultima8/world/world.h"
 #include "ultima/ultima8/world/current_map.h"
 #include "ultima/ultima8/world/get_object.h"
 #include "ultima/ultima8/world/loop_script.h"
-#include "ultima/ultima8/graphics/shape_info.h"
 #include "ultima/ultima8/usecode/uc_list.h"
 
 namespace Ultima {
@@ -46,7 +41,6 @@ static const uint32 SELECTOR_SHAPE = 0x5a3;
 static const uint16 SELECT_FAILED_SFX_REMORSE = 0xb0;
 static const uint16 SELECT_FAILED_SFX_REGRET = 0x1a7;
 
-// p_dynamic_cast stuff
 DEFINE_RUNTIME_CLASSTYPE_CODE(ItemSelectionProcess)
 
 ItemSelectionProcess::ItemSelectionProcess() : Process(), _selectedItem(0),
@@ -89,7 +83,7 @@ bool ItemSelectionProcess::selectNextItem() {
 		if (item->getShape() == 0x4ed || family == ShapeInfo::SF_CRUWEAPON ||
 			family == ShapeInfo::SF_CRUAMMO || family == ShapeInfo::SF_CRUBOMB ||
 			family == ShapeInfo::SF_CRUINVITEM ||
-			(info && (info->_flags & ShapeInfo::SI_SELECTABLE))) {
+			(info && (info->_flags & ShapeInfo::SI_CRU_SELECTABLE))) {
 
 			int32 cx, cy, cz;
 			item->getCentre(cx, cy, cz);
@@ -137,7 +131,7 @@ void ItemSelectionProcess::useSelectedItem() {
 	Item *item = getItem(_selectedItem);
 	if (item) {
 		const ShapeInfo *info = item->getShapeInfo();
-		if (info && (info->_flags & ShapeInfo::SI_SELECTABLE)) {
+		if (info && (info->_flags & ShapeInfo::SI_CRU_SELECTABLE)) {
 			item->callUsecodeEvent_use();
 		} else {
 			MainActor *actor = getMainActor();

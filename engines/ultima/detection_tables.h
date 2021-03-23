@@ -22,6 +22,10 @@
 
 namespace Ultima {
 
+#define GAMEOPTION_ORIGINAL_SAVELOAD GUIO_GAMEOPTIONS1
+
+#define GUI_OPTIONS_ULTIMA8	GUIO2(GUIO_NOMIDI, GAMEOPTION_ORIGINAL_SAVELOAD)
+
 static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 #ifndef RELEASE_BUILD
 	{
@@ -239,6 +243,21 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 		GF_VGA_ENHANCED
 	},
 
+	// Ultima VIII - CD (provided by ddeluca1com, bug #11944)
+	{
+		{
+			"ultima8",
+			"",
+			AD_ENTRY1s("eusecode.flx", "5494165cbf4b07be04a465e28350e086", 1209018),
+			Common::EN_ANY,
+			Common::kPlatformDOS,
+			ADGF_NO_FLAGS,
+			GUI_OPTIONS_ULTIMA8
+		},
+		GAME_ULTIMA8,
+		0
+	},
+
 	// Ultima VIII - Ultima Collection 1998
 	{
 		{
@@ -248,7 +267,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			Common::EN_ANY,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
-			GUIO1(GUIO_NOMIDI)
+			GUI_OPTIONS_ULTIMA8
 		},
 		GAME_ULTIMA8,
 		0
@@ -263,7 +282,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			Common::EN_ANY,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
-			GUIO1(GUIO_NOMIDI)
+			GUI_OPTIONS_ULTIMA8
 		},
 		GAME_ULTIMA8,
 		0
@@ -277,7 +296,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			Common::FR_FRA,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
-			GUIO1(GUIO_NOMIDI)
+			GUI_OPTIONS_ULTIMA8
 		},
 		GAME_ULTIMA8,
 		0
@@ -291,7 +310,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			Common::DE_DEU,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
-			GUIO1(GUIO_NOMIDI)
+			GUI_OPTIONS_ULTIMA8
 		},
 		GAME_ULTIMA8,
 		0
@@ -306,7 +325,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			Common::DE_DEU,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
-			GUIO1(GUIO_NOMIDI)
+			GUI_OPTIONS_ULTIMA8
 		},
 		GAME_ULTIMA8,
 		0
@@ -320,7 +339,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			Common::ES_ESP,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
-			GUIO1(GUIO_NOMIDI)
+			GUI_OPTIONS_ULTIMA8
 		},
 		GAME_ULTIMA8,
 		0
@@ -334,7 +353,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			Common::JA_JPN,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
-			GUIO1(GUIO_NOMIDI)
+			GUI_OPTIONS_ULTIMA8
 		},
 		GAME_ULTIMA8,
 		0

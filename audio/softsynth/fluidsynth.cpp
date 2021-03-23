@@ -46,6 +46,34 @@
 #include "backends/platform/ios7/ios7_common.h"
 #endif
 
+#if defined(FLUIDSYNTH_VERSION_MAJOR) && FLUIDSYNTH_VERSION_MAJOR > 1
+static void logHandler(int level, const char *message, void *data)
+#else
+static void logHandler(int level, char *message, void *data)
+#endif
+{
+	switch (level) {
+	case FLUID_PANIC:
+		error("FluidSynth: %s", message);
+		break;
+	case FLUID_ERR:
+		warning("FluidSynth: %s", message);
+		break;
+	case FLUID_WARN:
+		debug(1, "FluidSynth: %s", message);
+		break;
+	case FLUID_INFO:
+		debug(2, "FluidSynth: %s", message);
+		break;
+	case FLUID_DBG:
+		debug(3, "FluidSynth: %s", message);
+		break;
+	default:
+		fluid_default_log_function(level, message, data);
+		break;
+	}
+}
+
 class MidiDriver_FluidSynth : public MidiDriver_Emulated {
 private:
 	MidiChannel_MPU401 _midiChannels[16];
@@ -165,6 +193,12 @@ static long SoundFontMemLoader_tell(void *handle) {
 int MidiDriver_FluidSynth::open() {
 	if (_isOpen)
 		return MERR_ALREADY_OPEN;
+
+	fluid_set_log_function(FLUID_PANIC, logHandler, NULL);
+	fluid_set_log_function(FLUID_ERR, logHandler, NULL);
+	fluid_set_log_function(FLUID_WARN, logHandler, NULL);
+	fluid_set_log_function(FLUID_INFO, logHandler, NULL);
+	fluid_set_log_function(FLUID_DBG, logHandler, NULL);
 
 #if defined(FLUIDSYNTH_VERSION_MAJOR) && FLUIDSYNTH_VERSION_MAJOR > 1
 	// When provided with in-memory SoundFont data, only use the configured

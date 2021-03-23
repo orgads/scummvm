@@ -755,6 +755,17 @@ void SoundCommandParser::reconstructPlayList() {
 			processPlaySound(entry->soundObj, entry->playBed, true);
 		}
 	}
+
+	// Emulate the original SCI0 behavior: If no sound with status kSoundPlaying was found we
+	// look for the first sound with status kSoundPaused and start that. It relies on a correctly
+	// sorted playlist, but we have that...
+	if (_soundVersion <= SCI_VERSION_0_LATE && !_music->getFirstSlotWithStatus(kSoundPlaying)) {
+		if (MusicEntry *pSnd = _music->getFirstSlotWithStatus(kSoundPaused)) {
+			writeSelectorValue(_segMan, pSnd->soundObj, SELECTOR(loop), pSnd->loop);
+			writeSelectorValue(_segMan, pSnd->soundObj, SELECTOR(priority), pSnd->priority);
+			processPlaySound(pSnd->soundObj, pSnd->playBed, true);
+		}
+	}
 }
 
 #ifdef ENABLE_SCI32
@@ -839,7 +850,7 @@ void GfxPalette::saveLoadWithSerializer(Common::Serializer &s) {
 		// We need to save intensity of the _sysPalette at least for kq6 when entering the dark cave (room 390)
 		//  from room 340. scripts will set intensity to 60 for this room and restore them when leaving.
 		//  Sierra SCI is also doing this (although obviously not for SCI0->SCI01 games, still it doesn't hurt
-		//  to save it everywhere). Refer to bug #3072868
+		//  to save it everywhere). Refer to bug #5383
 		s.syncBytes(_sysPalette.intensity, 256);
 	}
 	if (s.getVersion() >= 24) {

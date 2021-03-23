@@ -20,9 +20,7 @@
  *
  */
 
-#include "ultima/ultima8/misc/pent_include.h"
 #include "ultima/ultima8/world/snap_process.h"
-#include "ultima/ultima8/world/item.h"
 #include "ultima/ultima8/world/get_object.h"
 #include "ultima/ultima8/world/actors/main_actor.h"
 #include "ultima/ultima8/world/camera_process.h"
@@ -33,7 +31,6 @@ namespace Ultima8 {
 
 SnapProcess *SnapProcess::_instance = nullptr;
 
-// p_dynamic_cast stuff
 DEFINE_RUNTIME_CLASSTYPE_CODE(SnapProcess)
 
 SnapProcess::SnapProcess() : Process(), _currentSnapEgg() {
