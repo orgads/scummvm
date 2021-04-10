@@ -542,10 +542,6 @@ void GameData::loadRemorseData() {
 	ConfigFileManager *config = ConfigFileManager::get_instance();
 	// Load weapon, armour info
 	config->readConfigFile("data/remorseweapons.ini", "weapons");
-#if 0
-	config->readConfigFile("data/u8armour.ini", "armour");
-	config->readConfigFile("data/u8monsters.ini", "monsters");
-#endif
 	config->readConfigFile("data/remorse.ini", "game");
 
 	// Load typeflags
@@ -663,10 +659,9 @@ void GameData::loadRemorseData() {
 	if (!stuffds)
 		error("Unable to load static/stuff.dat");
 
-	// TODO: What's in this dat file?
+	// Weasel shop data.
 	// 14 blocks of 323 bytes, references like W01 and I07
-	// (presumably weapon and inventory)
-	// shop data?
+	// (weapon and inventory)
 	while (!stuffds->eos()) {
 		WeaselDat *data = new WeaselDat(stuffds);
 		_weaselData.push_back(data);

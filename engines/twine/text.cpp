@@ -27,15 +27,18 @@
 #include "common/scummsys.h"
 #include "common/str.h"
 #include "common/system.h"
+#include "common/text-to-speech.h"
 #include "common/util.h"
 #include "twine/audio/sound.h"
 #include "twine/input.h"
 #include "twine/menu/interface.h"
 #include "twine/menu/menu.h"
+#include "twine/parser/text.h"
 #include "twine/renderer/renderer.h"
 #include "twine/renderer/screens.h"
 #include "twine/resources/hqr.h"
 #include "twine/resources/resources.h"
+#include "twine/scene/gamestate.h"
 #include "twine/scene/scene.h"
 #include "twine/twine.h"
 
@@ -44,9 +47,6 @@ namespace TwinE {
 /** FLA movie extension */
 #define VOX_EXT ".vox"
 
-#define INDEXOFFSET 0
-#define DIALOGSOFFSET 1
-
 static const int32 PADDING = 8;
 
 Text::Text(TwinEEngine *engine) : _engine(engine) {
@@ -54,11 +54,9 @@ Text::Text(TwinEEngine *engine) : _engine(engine) {
 }
 
 Text::~Text() {
-	free(_dialTextPtr);
-	free(_dialOrderPtr);
 }
 
-void Text::initVoxBank(int32 bankIdx) {
+void Text::initVoxBank(TextBankId bankIdx) {
 	static const char *LanguageSuffixTypes[] = {
 	    "sys",
 	    "cre",
@@ -76,98 +74,93 @@ void Text::initVoxBank(int32 bankIdx) {
 	    "010", // Polar Island voices
 	    "011"  //
 	};
-	if (bankIdx < 0 || bankIdx >= ARRAYSIZE(LanguageSuffixTypes)) {
-		error("bankIdx is out of bounds: %i", bankIdx);
+	if ((int)bankIdx < 0 || (int)bankIdx >= ARRAYSIZE(LanguageSuffixTypes)) {
+		error("bankIdx is out of bounds: %i", (int)bankIdx);
 	}
 	// get the correct vox hqr file
-	currentVoxBankFile = Common::String::format("%s%s" VOX_EXT, LanguageTypes[_engine->cfgfile.LanguageId].id, LanguageSuffixTypes[bankIdx]);
+	currentVoxBankFile = Common::String::format("%s%s" VOX_EXT, LanguageTypes[_engine->cfgfile.LanguageId].id, LanguageSuffixTypes[(int)bankIdx]);
 	// TODO: loop through other languages and take the scummvm settings regarding voices into account...
 
 	// TODO check the rest to reverse
 }
 
-bool Text::initVoxToPlay(int32 index) { // setVoxFileAtDigit
-	currDialTextEntry = 0;
+bool Text::initVoxToPlayTextId(TextId textId) {
+	const TextEntry *text = _engine->_resources->getText(_currentBankIdx, textId);
+	return initVoxToPlay(text);
+}
+
+bool Text::initVoxToPlay(const TextEntry *text) {
+	currDialTextEntry = text;
 	voxHiddenIndex = 0;
 	hasHiddenVox = false;
 
-	if (!_engine->cfgfile.Voice) {
+	if (text == nullptr) {
 		return false;
 	}
 
-	Common::MemoryReadStream stream((const byte *)_dialOrderPtr, _dialOrderSize);
-	// choose right text from order index
-	for (int32 i = 0; i < _numDialTextEntries; i++) {
-		const int32 orderIdx = stream.readSint16LE();
-		if (orderIdx == index) {
-			currDialTextEntry = i;
-			break;
-		}
+	if (!_engine->cfgfile.Voice) {
+		debug(3, "Voices are disabled");
+		return false;
 	}
 
-	_engine->_sound->playVoxSample(currDialTextEntry);
-
-	return true;
+	return _engine->_sound->playVoxSample(currDialTextEntry);
 }
 
-bool Text::playVox(int32 index) {
+bool Text::playVox(const TextEntry *text) {
 	if (!_engine->cfgfile.Voice) {
 		return false;
 	}
-	if (hasHiddenVox && !_engine->_sound->isSamplePlaying(index)) {
-		_engine->_sound->playVoxSample(index);
+	if (text == nullptr) {
+		return false;
+	}
+	if (hasHiddenVox && !_engine->_sound->isSamplePlaying(text->index)) {
+		_engine->_sound->playVoxSample(text);
 		return true;
 	}
 
 	return false;
 }
 
-bool Text::playVoxSimple(int32 index) {
-	if (_engine->_sound->isSamplePlaying(index)) {
+bool Text::playVoxSimple(const TextEntry *text) {
+	if (text == nullptr) {
+		return false;
+	}
+	if (_engine->_sound->isSamplePlaying(text->index)) {
 		return true;
 	}
-	return playVox(index);
+	return playVox(text);
 }
 
-bool Text::stopVox(int32 index) {
-	if (!_engine->_sound->isSamplePlaying(index)) {
+bool Text::stopVox(const TextEntry *text) {
+#ifdef USE_TTS
+	Common::TextToSpeechManager *ttsMan = g_system->getTextToSpeechManager();
+	if (ttsMan != nullptr) {
+		ttsMan->stop();
+	}
+#endif
+	if (text == nullptr) {
+		return false;
+	}
+	if (!_engine->_sound->isSamplePlaying(text->index)) {
 		return false;
 	}
 	hasHiddenVox = false;
-	_engine->_sound->stopSample(index);
+	_engine->_sound->stopSample(text->index);
 	return true;
 }
 
-void Text::initTextBank(int32 bankIdx) {
+void Text::initTextBank(TextBankId bankIdx) {
 	// don't load if we already have the dialogue text bank loaded
 	if (bankIdx == _currentBankIdx) {
 		return;
 	}
 
 	_currentBankIdx = bankIdx;
-
-	// get index according with language
-	const int32 size = _engine->isLBA1() ? 28 : 30;
-	// the text banks indices are split into index and dialogs - each entry thus consists of two entries in the hqr
-	// every 28 entries starts a new language
-	const int32 languageIndex = _engine->cfgfile.LanguageId * size + (int)bankIdx * 2;
-	_dialOrderSize = HQR::getAllocEntry((uint8 **)&_dialOrderPtr, Resources::HQR_TEXT_FILE, languageIndex + INDEXOFFSET);
-	if (_dialOrderSize == 0) {
-		warning("Failed to initialize text bank %i from file %s", languageIndex, Resources::HQR_TEXT_FILE);
-		return;
-	}
-
-	_numDialTextEntries = _dialOrderSize / 2;
-
-	if (HQR::getAllocEntry((uint8 **)&_dialTextPtr, Resources::HQR_TEXT_FILE, languageIndex + DIALOGSOFFSET) == 0) {
-		warning("Failed to initialize additional text bank %i from file %s", languageIndex + 1, Resources::HQR_TEXT_FILE);
-		return;
-	}
 	initVoxBank(bankIdx);
 }
 
 void Text::initSceneTextBank() {
-	initTextBank(_engine->_scene->sceneTextBank + TextBankId::Citadel_Island);
+	initTextBank((TextBankId)((int)_engine->_scene->sceneTextBank + (int)TextBankId::Citadel_Island));
 }
 
 void Text::drawCharacter(int32 x, int32 y, uint8 character) {
@@ -301,16 +294,16 @@ void Text::initInventoryDialogueBox() {
 	_fadeInCharactersPos = 0;
 }
 
-void Text::initInventoryText(int index) {
+void Text::initInventoryText(InventoryItems index) {
 	// 100 if the offset for the inventory item descriptions
-	initText(100 + index);
+	initText((TextId)(100 + (int)index));
 }
 
-void Text::initItemFoundText(int index) {
-	initText(100 + index);
+void Text::initItemFoundText(InventoryItems index) {
+	initText((TextId)(100 + (int)index));
 }
 
-void Text::initText(int32 index) {
+void Text::initText(TextId index) {
 	if (!getText(index)) {
 		_hasValidTextHandle = false;
 		return;
@@ -489,7 +482,7 @@ void Text::renderContinueReadingTriangle() {
 	polygon.numVertices = ARRAYSIZE(vertices);
 	polygon.colorIndex = _dialTextStopColor;
 	polygon.renderType = POLYGONTYPE_FLAT;
-	_engine->_renderer->renderPolygons(polygon, vertices);
+	_engine->_renderer->renderPolygons(polygon, vertices, top, bottom);
 
 	_engine->copyBlockPhys(Common::Rect(left, top, right, bottom));
 }
@@ -587,10 +580,13 @@ ProgressiveTextState Text::updateProgressiveText() {
 	return ProgressiveTextState::ContinueRunning;
 }
 
-bool Text::displayText(int32 index, bool showText, bool playVox, bool loop) {
+bool Text::displayText(TextId index, bool showText, bool playVox, bool loop) {
+	debug(3, "displayText(index = %i, showText = %s, playVox = %s)",
+		(int)index, showText ? "true" : "false", playVox ? "true" : "false");
 	if (playVox) {
+		const TextEntry *textEntry = _engine->_resources->getText(_currentBankIdx, index);
 		// get right VOX entry index
-		initVoxToPlay(index);
+		initVoxToPlay(textEntry);
 	}
 
 	bool aborted = false;
@@ -660,7 +656,7 @@ bool Text::displayText(int32 index, bool showText, bool playVox, bool loop) {
 	return aborted;
 }
 
-bool Text::drawTextProgressive(int32 index, bool playVox, bool loop) {
+bool Text::drawTextProgressive(TextId index, bool playVox, bool loop) {
 	_engine->exitSceneryView();
 	_engine->_interface->saveClip();
 	_engine->_interface->resetClip();
@@ -693,39 +689,22 @@ void Text::setTextCrossColor(int32 stopColor, int32 startColor, int32 stepSize) 
 	_dialTextBufferSize = ((startColor - stopColor) + 1) / stepSize;
 }
 
-bool Text::getText(int32 index) {
-	const int16 *localTextBuf = (const int16 *)_dialTextPtr;
-	const int16 *localOrderBuf = (const int16 *)_dialOrderPtr;
-
-	const int32 numEntries = _numDialTextEntries;
-	int32 currIdx = 0;
-	// choose right text from order index
-	do {
-		const int16 orderIdx = READ_LE_UINT16(localOrderBuf);
-		if (orderIdx == index) {
-			break;
-		}
-		currIdx++;
-		localOrderBuf++;
-	} while (currIdx < numEntries);
-
-	if (currIdx >= numEntries) {
+bool Text::getText(TextId index) {
+	const TextEntry *textEntry = _engine->_resources->getText(_currentBankIdx, index);
+	if (textEntry == nullptr) {
 		return false;
 	}
-
-	const int32 ptrCurrentEntry = READ_LE_INT16(&localTextBuf[currIdx]);
-	const int32 ptrNextEntry = READ_LE_INT16(&localTextBuf[currIdx + 1]);
-
-	_currDialTextPtr = _dialTextPtr + ptrCurrentEntry;
-	_currDialTextSize = ptrNextEntry - ptrCurrentEntry;
+	_currDialTextPtr = textEntry->string.c_str();
+	_currDialTextSize = textEntry->string.size();
 
 	// RECHECK: this was added for vox playback
-	currDialTextEntry = currIdx;
+	currDialTextEntry = textEntry;
 
+	debug(3, "text for bank %i with index %i (currIndex: %i): %s", (int)_currentBankIdx, textEntry->index, (int)textEntry->textIndex, _currDialTextPtr);
 	return true;
 }
 
-bool Text::getMenuText(int32 index, char *text, uint32 textSize) {
+bool Text::getMenuText(TextId index, char *text, uint32 textSize) {
 	if (index == _currMenuTextIndex) {
 		if (_currMenuTextBank == _engine->_scene->sceneTextBank) {
 			Common::strlcpy(text, _currMenuTextBuffer, textSize);
@@ -775,11 +754,11 @@ void Text::textClipSmall() {
 	_dialTextBoxMaxX = _engine->width() - 2 * margin - 2 * PADDING;
 }
 
-void Text::drawAskQuestion(int32 index) {
+void Text::drawAskQuestion(TextId index) {
 	displayText(index, true, true, true);
 }
 
-void Text::drawHolomapLocation(int32 index) {
+void Text::drawHolomapLocation(TextId index) {
 	textClipSmall();
 	setFontCrossColor(COLOR_WHITE);
 	_engine->_interface->drawFilledRect(_dialTextBox, COLOR_BLACK);

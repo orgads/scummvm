@@ -61,18 +61,22 @@ void SoundClipWaveBase::poll() {
 }
 
 int SoundClipWaveBase::play() {
-	_mixer->playStream(Audio::Mixer::kSFXSoundType, &_soundHandle, _stream,
+	_mixer->playStream(_soundType, &_soundHandle, _stream,
 		-1, 255, 0, DisposeAfterUse::NO);
 	return 1;
 }
 
 int SoundClipWaveBase::play_from(int position) {
-	// TODO: Implement playing from arbitrary positions
 	if (position == 0) {
 		play();
 		return 1;
 	} else {
-		return 0;
+		// TODO: Implement playing from arbitrary positions. This is
+		// used when restoring savegames to resume the music at the
+		// point the savegame was made. For now, since ScummVM doesn't
+		// have seek for audio streams, we'll restart from the beginning
+		play();
+		return 1;
 	}
 }
 

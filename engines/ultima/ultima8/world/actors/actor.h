@@ -88,6 +88,8 @@ public:
 		return (_actorFlags & ACT_KNEELING) != 0;
 	}
 
+	bool isFalling() const;
+
 	CombatProcess *getCombatProcess(); 	// in U8
 	AttackProcess *getAttackProcess();	// in Crusader
 	virtual void setInCombat(int activity);
@@ -248,6 +250,9 @@ public:
 	//! Get the number of directions supported by a given animation
 	DirectionMode animDirMode(Animation::Sequence anim) const;
 
+	//! True if the actor is currently doing an animation.
+	bool isBusy() const;
+
 	//! overrides the standard item collideMove so we  can notify nearby objects.
 	int32 collideMove(int32 x, int32 y, int32 z, bool teleport, bool force,
 	                  ObjId *hititem = 0, uint8 *dirs = 0) override;
@@ -271,8 +276,12 @@ public:
 		return damage;
 	}
 
-	virtual uint8 getShieldType() const {
-		return 0;
+	uint8 getShieldType() const {
+		return _shieldType;
+	}
+
+	void setShieldType(uint8 type) {
+		_shieldType = type;
 	}
 
 	uint16 getActiveWeapon() const {
@@ -287,6 +296,25 @@ public:
 
 	// A cru-specific behavior - mostly make "ugh" noises, or explode for some robots.
 	void tookHitCru();
+
+	//! Add the x/y/z fire offsets given the current state of the actor
+	void addFireAnimOffsets(int32 &x, int32 &y, int32 &z);
+
+	uint32 getAttackMoveTimeoutFinish() const {
+		return _attackMoveStartTime + _attackMoveTimeout;
+	}
+
+	uint16 getAttackMoveDodgeFactor() const {
+		return _attackMoveDodgeFactor;
+	}
+
+	bool getAttackAimFlag() const {
+		return _attackAimFlag;
+	}
+
+	void setAttackAimFlag(bool val) {
+		_attackAimFlag = val;
+	}
 
 	ENABLE_RUNTIME_CLASSTYPE()
 
@@ -354,6 +382,7 @@ public:
 	INTRINSIC(I_getCurrentActivityNo);
 	INTRINSIC(I_turnToward);
 	INTRINSIC(I_isKneeling);
+	INTRINSIC(I_isFalling);
 
 	enum ActorFlags {
 		ACT_INVINCIBLE     = 0x000001, // flags from npcdata byte 0x1B
@@ -419,6 +448,21 @@ protected:
 
 	//! Kernel timer last time NPC was hit (only used in Crusader)
 	int32 _lastTimeWasHit;
+
+	//! Type of shield (only used in Crusader)
+	uint8 _shieldType;
+
+	//! The frame certain animations last happened (for Crusader).
+	//! Used in calcualting how hard controlled actor is to hit.
+	uint32 _attackMoveStartTime;
+	//! The number of frames the above effect lasts for.
+	uint32 _attackMoveTimeout;
+	//! A spread divisor used by shots targeting the controlled actor when they
+	//! are within the above timeout.
+	uint16 _attackMoveDodgeFactor;
+
+	//! A flag used in Crusader attack process which adjusts the aim accuracy.
+	bool _attackAimFlag;
 
 	//! starts an activity (Ultima 8 version)
 	//! \return processID of process handling the activity or zero

@@ -292,7 +292,7 @@ MODULE_OBJS = \
 	plugins/ags_creditz/ags_creditz2.o \
 	plugins/ags_creditz/drawing.o \
 	plugins/ags_flashlight/ags_flashlight.o \
-	plugins/ags_galaxy_steam/ags_blackwell_steam.o \
+	plugins/ags_galaxy_steam/ags_wadjeteye_steam.o \
 	plugins/ags_galaxy_steam/ags_galaxy_steam.o \
 	plugins/ags_joy/ags_joy.o \
 	plugins/ags_nickenstien_gfx/ags_nickenstien_gfx.o \
@@ -311,6 +311,7 @@ MODULE_OBJS = \
 	plugins/ags_sprite_font/variable_width_font.o \
 	plugins/ags_sprite_font/variable_width_sprite_font.o \
 	plugins/ags_sprite_font/variable_width_sprite_font_clifftop.o \
+	plugins/ags_shell/ags_shell.o \
 	plugins/ags_tcp_ip/ags_tcp_ip.o \
 	plugins/ags_wadjet_util/ags_wadjet_util.o
 

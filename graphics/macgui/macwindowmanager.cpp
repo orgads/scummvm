@@ -189,9 +189,6 @@ MacWindowManager::MacWindowManager(uint32 mode, MacPatterns *patterns) {
 
 	_fullRefresh = true;
 
-	_palette = nullptr;
-	_paletteSize = 0;
-
 	if (mode & kWMMode32bpp)
 		_pixelformat = Graphics::PixelFormat(4, 8, 8, 8, 8, 24, 16, 8, 0);
 	else
@@ -206,6 +203,11 @@ MacWindowManager::MacWindowManager(uint32 mode, MacPatterns *patterns) {
 
 	g_system->getPaletteManager()->setPalette(palette, 0, ARRAYSIZE(palette) / 3);
 
+	_paletteSize = ARRAYSIZE(palette) / 3;
+	_palette = (byte *)malloc(_paletteSize * 3);
+	if (_palette)
+		memcpy(_palette, palette, _paletteSize * 3);
+
 	_fontMan = new MacFontManager(mode);
 
 	_cursor = nullptr;
@@ -215,7 +217,9 @@ MacWindowManager::MacWindowManager(uint32 mode, MacPatterns *patterns) {
 	CursorMan.showMouse(true);
 
 	loadDataBundle();
-	loadDesktop();
+	if (!(_mode & Graphics::kWMNoScummVMWallpaper)) {
+		loadDesktop();
+	}
 }
 
 MacWindowManager::~MacWindowManager() {
@@ -451,11 +455,43 @@ void macDrawPixel(int x, int y, int color, void *data) {
 	}
 }
 
+void macDrawInvertPixel(int x, int y, int color, void *data) {
+	MacPlotData *p = (MacPlotData *)data;
+
+	if (p->fillType > p->patterns->size() || !p->fillType)
+		return;
+
+	if (x >= 0 && x < p->surface->w && y >= 0 && y < p->surface->h) {
+		uint xu = (uint)x; // for letting compiler optimize it
+		uint yu = (uint)y;
+
+		byte cur_color = *((byte *)p->surface->getBasePtr(xu, yu));
+		// 0 represent black in default palette, and 4 represent white
+		// if color is black, we invert it to white, otherwise, we invert it to black
+		byte invert_color = 0;
+		if (cur_color == 0) {
+			invert_color = 4;
+		}
+		*((byte *)p->surface->getBasePtr(xu, yu)) = invert_color;
+
+		if (p->mask)
+			*((byte *)p->mask->getBasePtr(xu, yu)) = 0xff;
+	}
+}
+
 MacDrawPixPtr MacWindowManager::getDrawPixel() {
 	if (_pixelformat.bytesPerPixel == 1)
 		return &macDrawPixel<byte *>;
 	else
 		return &macDrawPixel<uint32 *>;
+}
+
+// get the function of drawing invert pixel for default palette
+MacDrawPixPtr MacWindowManager::getDrawInvertPixel() {
+	if (_pixelformat.bytesPerPixel == 1)
+		return &macDrawInvertPixel;
+	warning("function of drawing invert pixel for default palette has not implemented yet");
+	return nullptr;
 }
 
 void MacWindowManager::loadDesktop() {
@@ -951,7 +987,8 @@ void MacWindowManager::passPalette(const byte *pal, uint size) {
 		free(_palette);
 
 	_palette = (byte *)malloc(size * 3);
-	memcpy(_palette, pal, size * 3);
+	if (_palette)
+		memcpy(_palette, pal, size * 3);
 	_paletteSize = size;
 
 	_colorHash.clear();

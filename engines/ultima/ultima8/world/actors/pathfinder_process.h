@@ -44,8 +44,6 @@ public:
 	void run() override;
 	void terminate() override;
 
-//	virtual void terminate();
-
 	bool loadData(Common::ReadStream *rs, uint32 version);
 	void saveData(Common::WriteStream *ws) override;
 

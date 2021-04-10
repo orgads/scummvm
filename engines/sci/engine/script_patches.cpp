@@ -10904,6 +10904,45 @@ static const uint16 pq1vgaPatchFloatOutsideCarols2[] = {
 	PATCH_END
 };
 
+// The GOG release includes New Rising Sun's script patches which throttle speed
+//  in core classes. Since we do our own speed throttling, we patch the scripts
+//  back to the original code for compatibility.
+//
+// Applies to: English floppy with NRS patches 994.HEP/SCR and 999.HEP/SCR
+// Responsible methods: Game:doit, Script:doit
+static const uint16 pq1vgaSignatureNrsSpeedThrottle1[] = {
+	0x78,                                // push1
+	0x78,                                // push1
+	SIG_MAGICDWORD,
+	0x43, 0x41, 0x02,                    // callk Wait 02 [ Wait 1 ]
+	0x30, SIG_UINT16(0x0000),            // bnt 0000
+	SIG_ADDTOOFFSET(+10),
+	0x63, 0x12,                          // pToa script
+	SIG_END
+};
+
+static const uint16 pq1vgaPatchNrsSpeedThrottle1[] = {
+	0x81, 0x25,                          // lag 37
+	0x31, 0x0e,                          // bnt 0e
+	0x35, 0x00,                          // ldi 00
+	0xa1, 0x25,                          // sag 37
+	PATCH_END
+};
+
+static const uint16 pq1vgaSignatureNrsSpeedThrottle2[] = {
+	SIG_MAGICDWORD,
+	0x67, 0x1c,                          // pTos seconds
+	0x35, 0x00,                          // ldi 00
+	0x1a,                                // eq?
+	0x30, SIG_UINT16(0x0012),            // bnt 0012
+	SIG_END
+};
+
+static const uint16 pq1vgaPatchNrsSpeedThrottle2[] = {
+	0x33, 0x18,                          // jmp 18 [ skip Script throttling ]
+	PATCH_END
+};
+
 //          script, description,                                         signature                            patch
 static const SciScriptPatcherEntry pq1vgaSignatures[] = {
 	{  true,    30, "float outside carol's (1/2)",                    7, pq1vgaSignatureFloatOutsideCarols1,  pq1vgaPatchFloatOutsideCarols1 },
@@ -10912,6 +10951,8 @@ static const SciScriptPatcherEntry pq1vgaSignatures[] = {
 	{  true,   341, "put gun in locker bug",                          1, pq1vgaSignaturePutGunInLockerBug,    pq1vgaPatchPutGunInLockerBug },
 	{  true,   500, "map save/restore bug",                           2, pq1vgaSignatureMapSaveRestoreBug,    pq1vgaPatchMapSaveRestoreBug },
 	{  true,   928, "Narrator lockup fix",                            1, sciNarratorLockupSignature,          sciNarratorLockupPatch },
+	{  true,   994, "NRS: remove speed throttle (1/2)",               1, pq1vgaSignatureNrsSpeedThrottle1,    pq1vgaPatchNrsSpeedThrottle1 },
+	{  true,   999, "NRS: remove speed throttle (2/2)",               1, pq1vgaSignatureNrsSpeedThrottle2,    pq1vgaPatchNrsSpeedThrottle2 },
 	SCI_SIGNATUREENTRY_TERMINATOR
 };
 
@@ -11132,12 +11173,39 @@ static const uint16 pq3PatchRoadSignUpdates[] = {
 	PATCH_END
 };
 
+// The GOG release includes New Rising Sun's script patches which throttle speed
+//  in core classes. Since we do our own speed throttling, we patch the scripts
+//  back to the original code for compatibility.
+//
+// Applies to: PC floppy with NRS patches 994.HEP/SCR
+// Responsible method: Game:doit
+static const uint16 pq3SignatureNrsSpeedThrottle[] = {
+	0x78,                                // push1
+	0x7a,                                // push2
+	0x43, 0x41, 0x02,                    // callk Wait 02 [ Wait 2 ]
+	SIG_MAGICDWORD,
+	0x30, SIG_UINT16(0x0001),            // bnt 0001
+	0x00,                                // bnot
+	SIG_ADDTOOFFSET(+10),
+	0x63, 0x08,                          // pToa script
+	SIG_END
+};
+
+static const uint16 pq3PatchNrsSpeedThrottle[] = {
+	0x81, 0x25,                          // lag 37
+	0x30, PATCH_UINT16(0x000e),          // bnt 000e
+	0x35, 0x00,                          // ldi 00
+	0xa1, 0x25,                          // sag 37
+	PATCH_END
+};
+
 //          script, description,                                 signature                     patch
 static const SciScriptPatcherEntry pq3Signatures[] = {
-	{  true, 25, "fix road sign updates",                     1, pq3SignatureRoadSignUpdates,  pq3PatchRoadSignUpdates },
-	{  true, 33, "prevent house fire repeating",              1, pq3SignatureHouseFireRepeats, pq3PatchHouseFireRepeats },
-	{  true, 36, "give locket missing points",                1, pq3SignatureGiveLocketPoints, pq3PatchGiveLocketPoints },
-	{  true, 36, "doctor mouth speed",                        1, pq3SignatureDoctorMouthSpeed, pq3PatchDoctorMouthSpeed },
+	{  true,    25, "fix road sign updates",                  1, pq3SignatureRoadSignUpdates,  pq3PatchRoadSignUpdates },
+	{  true,    33, "prevent house fire repeating",           1, pq3SignatureHouseFireRepeats, pq3PatchHouseFireRepeats },
+	{  true,    36, "give locket missing points",             1, pq3SignatureGiveLocketPoints, pq3PatchGiveLocketPoints },
+	{  true,    36, "doctor mouth speed",                     1, pq3SignatureDoctorMouthSpeed, pq3PatchDoctorMouthSpeed },
+	{  true,   994, "NRS: remove speed throttle",             1, pq3SignatureNrsSpeedThrottle, pq3PatchNrsSpeedThrottle },
 	SCI_SIGNATUREENTRY_TERMINATOR
 };
 
@@ -13201,6 +13269,37 @@ static const uint16 qfg3PatchNrsAngerGuardian[] = {
 	PATCH_END
 };
 
+// The NRS fan-patch, which is included with the GOG release, has a script bug
+//  which causes spears to float during the moving target contest in room 460.
+//  The patch throttles the speed of several room objects with a technique that
+//  assumes there will only be one instance of each. trackSpear is responsible
+//  for updating the position of a spear that hits the moving target and one of
+//  these is created for each spear. Each trackSpear uses the same variable to
+//  enforce their doit throttling and so they stomp on each other's values.
+//  Subsequent trackSpears never make it past the throttling code and are stuck.
+//
+// We fix this by patching out the buggy trackSpear throttling. Disabling this
+//  code has no effect on speed because it turns out that trackSpear isn't
+//  responsible for any speeds in the first place.
+//
+// Applies to: Any version with NRS patches 460.HEP/SCR, such as GOG
+// Responsible method: trackSpear:doit
+// Fixes bug: #11426
+static const uint16 qfg3SignatureNrsFloatingSpears[] = {
+	0x78,                               // push1
+	SIG_MAGICDWORD,
+	0x89, 0x58,                         // lsg 58 [ game time ]
+	0x83, 0x67,                         // lal 67 [ game time of previous trackSpear:doit ]
+	SIG_ADDTOOFFSET(+15),
+	0xa3, 0x67,                         // sal 67 [ store game time ]
+	SIG_END
+};
+
+static const uint16 qfg3PatchNrsFloatingSpears[] = {
+	0x32, PATCH_UINT16(0x0013),         // jmp 0013 [ skip trackSpear throttling ]
+	PATCH_END
+};
+
 //          script, description,                                      signature                    patch
 static const SciScriptPatcherEntry qfg3Signatures[] = {
 	{  true,   944, "import dialog continuous calls",                     1, qfg3SignatureImportDialog,           qfg3PatchImportDialog },
@@ -13212,6 +13311,7 @@ static const SciScriptPatcherEntry qfg3Signatures[] = {
 	{  true,   285, "missing points for telling about initiation heap",   1, qfg3SignatureMissingPoints1,         qfg3PatchMissingPoints1 },
 	{  true,   285, "missing points for telling about initiation script", 1, qfg3SignatureMissingPoints2a,	      qfg3PatchMissingPoints2 },
 	{  true,   285, "missing points for telling about initiation script", 1, qfg3SignatureMissingPoints2b,        qfg3PatchMissingPoints2 },
+	{  true,   460, "NRS: floating spears",                               1, qfg3SignatureNrsFloatingSpears,      qfg3PatchNrsFloatingSpears },
 	{  true,   550, "combat speed throttling script",                     1, qfg3SignatureCombatSpeedThrottling1, qfg3PatchCombatSpeedThrottling1 },
 	{  true,   550, "combat speed throttling heap",                       1, qfg3SignatureCombatSpeedThrottling2, qfg3PatchCombatSpeedThrottling2 },
 	{  true,   750, "hero goes out of bounds in room 750",                2, qfg3SignatureRoom750Bounds1,         qfg3PatchRoom750Bounds1 },

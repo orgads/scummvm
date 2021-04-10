@@ -31,6 +31,7 @@
 #include "common/debug-channels.h"
 #include "common/events.h"
 #include "common/file.h"
+#include "common/util.h"
 #include "engines/util.h"
 
 #include "ags/shared/core/platform.h"
@@ -70,7 +71,7 @@ AGSEngine *g_vm;
 AGSEngine::AGSEngine(OSystem *syst, const AGSGameDescription *gameDesc) : Engine(syst),
 		_gameDescription(gameDesc), _randomSource("AGS"), _events(nullptr), _music(nullptr),
 		_rawScreen(nullptr), _screen(nullptr), _gfxDriver(nullptr),
-		_globals(nullptr) {
+		_globals(nullptr), _forceTextAA(false) {
 	g_vm = this;
 	DebugMan.addDebugChannel(kDebugGraphics, "Graphics", "Graphics debug level");
 	DebugMan.addDebugChannel(kDebugPath, "Path", "Pathfinding debug level");
@@ -78,8 +79,12 @@ AGSEngine::AGSEngine(OSystem *syst, const AGSGameDescription *gameDesc) : Engine
 	DebugMan.addDebugChannel(kDebugScan, "Scan", "Scan for unrecognised games");
 
 	_events = new EventsManager();
-	_music = new Music(_mixer);
+	_music = new Music();
 	_globals = new ::AGS3::Globals();
+
+	Common::String forceAA;
+	if (ConfMan.getActiveDomain()->tryGetVal("force_text_aa", forceAA))
+		Common::parseBool(forceAA, _forceTextAA);
 }
 
 AGSEngine::~AGSEngine() {
@@ -135,6 +140,9 @@ Common::Error AGSEngine::run() {
 #endif
 	_G(debug_flags) = 0;
 
+	if (ConfMan.hasKey("display_fps"))
+		_G(display_fps) = ConfMan.getBool("display_fps") ? AGS3::kFPS_Forced : AGS3::kFPS_Hide;
+
 	AGS3::ConfigTree startup_opts;
 	int res = AGS3::main_process_cmdline(startup_opts, ARGC, ARGV);
 	if (res != 0)
@@ -167,6 +175,7 @@ Common::Error AGSEngine::run() {
 	if (_GP(usetup).disable_exception_handling)
 #endif
 	{
+		syncSoundSettings();
 		AGS3::initialize_engine(startup_opts);
 
 		// Do shutdown stuff
@@ -182,12 +191,17 @@ Common::Error AGSEngine::run() {
 }
 
 SaveStateList AGSEngine::listSaves() const {
-	return getMetaEngine().listSaves(_targetName.c_str());
+	return getMetaEngine()->listSaves(_targetName.c_str());
 }
 
 void AGSEngine::setGraphicsMode(size_t w, size_t h) {
-	Graphics::PixelFormat FORMAT(4, 8, 8, 8, 8, 24, 16, 8, 0);
-	initGraphics(w, h, &FORMAT);
+	Common::List<Graphics::PixelFormat> supportedFormatsList = g_system->getSupportedFormats();
+	Graphics::PixelFormat format;
+	if (!supportedFormatsList.empty())
+		format = supportedFormatsList.front();
+	else
+		format = Graphics::PixelFormat(4, 8, 8, 8, 8, 24, 16, 8, 0);
+	initGraphics(w, h, &format);
 
 	_rawScreen = new Graphics::Screen();
 	_screen = new ::AGS3::BITMAP(_rawScreen);

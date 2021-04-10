@@ -28,6 +28,7 @@
 #include "twine/audio/sound.h"
 #include "twine/menu/interface.h"
 #include "twine/parser/anim.h"
+#include "twine/parser/holomap.h"
 #include "twine/renderer/redraw.h"
 #include "twine/renderer/renderer.h"
 #include "twine/renderer/screens.h"
@@ -66,7 +67,7 @@ bool Holomap::loadLocations() {
 		_locations[i].angle.x = ClampAngle(stream.readSint16LE());
 		_locations[i].angle.y = ClampAngle(stream.readSint16LE());
 		_locations[i].angle.z = ClampAngle(stream.readSint16LE());
-		_locations[i].textIndex = stream.readUint16LE();
+		_locations[i].textIndex = (TextId)stream.readUint16LE();
 
 		if (_engine->_text->getMenuText(_locations[i].textIndex, _locations[i].name, sizeof(_locations[i].name))) {
 			debug(2, "Scene %i: %s", i, _locations[i].name);
@@ -114,7 +115,7 @@ void Holomap::loadHolomapGFX() {
 }
 
 static int sortHolomapSurfaceCoordsByDepth(const void *a1, const void *a2) {
-	return *(const int16 *)a1 - *(const int16 *)a2;
+	return (int)*(const int16 *)a1 - (int)*(const int16 *)a2;
 }
 
 // verified with disassembly
@@ -166,7 +167,6 @@ void Holomap::prepareHolomapPolygons() {
 	int holomapSortArrayIdx = 0;
 	int holomapSurfaceArrayIdx = 0;
 	_projectedSurfaceIndex = 0;
-	_engine->_renderer->setBaseRotation(0, 0, 0);
 	for (int32 angle = -ANGLE_90; angle <= ANGLE_90; angle += ANGLE_11_25) {
 		int rotation = 0;
 		for (int32 stepWidth = 0; stepWidth < ANGLE_11_25; ++stepWidth) {
@@ -259,45 +259,19 @@ void Holomap::drawHolomapText(int32 centerx, int32 top, const char *title) {
 	_engine->_text->drawText(x, y, title);
 }
 
-void Holomap::renderHolomapModel(const uint8 *bodyPtr, int32 x, int32 y, int32 zPos) {
+void Holomap::renderHolomapModel(const BodyData &bodyData, int32 x, int32 y, int32 zPos) {
 	_engine->_renderer->setBaseRotation(x, y, 0);
 	_engine->_renderer->getBaseRotationPosition(0, 0, zPos + 1000);
 	_engine->_renderer->getBaseRotationPosition(_engine->_renderer->destPos.x, _engine->_renderer->destPos.y, _engine->_renderer->destPos.z);
 	_engine->_interface->resetClip();
-	_engine->_renderer->renderIsoModel(_engine->_renderer->destPos.x, _engine->_renderer->destPos.y, _engine->_renderer->destPos.z, x, y, 0, bodyPtr);
-}
-
-Holomap::TrajectoryData Holomap::loadTrajectoryData(int32 trajectoryIdx) {
-	Common::MemoryReadStream stream(_engine->_resources->holomapPointAnimPtr, _engine->_resources->holomapPointAnimSize);
-	for (int32 trajIdx = 0; trajIdx < trajectoryIdx; ++trajIdx) {
-		if (stream.eos() || stream.err()) {
-			return TrajectoryData();
-		}
-		stream.skip(12);
-		const int16 animVal = stream.readSint16LE();
-		stream.skip(4 * animVal);
-	}
-	TrajectoryData data;
-	data.locationIdx = stream.readSint16LE();
-	data.trajLocationIdx = stream.readSint16LE();
-	data.vehicleIdx = stream.readSint16LE();
-	data.pos.x = stream.readSint16LE();
-	data.pos.y = stream.readSint16LE();
-	data.pos.z = stream.readSint16LE();
-	data.numAnimFrames = stream.readSint16LE();
-	assert(data.numAnimFrames < ARRAYSIZE(data.positions));
-	for (int32 i = 0; i < data.numAnimFrames; ++i) {
-		data.positions[i].x = stream.readSint16LE();
-		data.positions[i].y = stream.readSint16LE();
-	}
-	return data;
+	_engine->_renderer->renderIsoModel(_engine->_renderer->destPos.x, _engine->_renderer->destPos.y, _engine->_renderer->destPos.z, x, y, 0, bodyData);
 }
 
 void Holomap::drawHolomapTrajectory(int32 trajectoryIndex) {
 	debug("Draw trajectory index %i", trajectoryIndex);
 
-	const Holomap::TrajectoryData &data = loadTrajectoryData(trajectoryIndex);
-	if (!data.isValid()) {
+	const Trajectory *data = _engine->_resources->getTrajectory(trajectoryIndex);
+	if (data == nullptr) {
 		warning("Failed to load trajectory data for index %i", trajectoryIndex);
 		return;
 	}
@@ -310,20 +284,20 @@ void Holomap::drawHolomapTrajectory(int32 trajectoryIndex) {
 	loadHolomapGFX();
 	ScopedEngineFreeze timeFreeze(_engine);
 	_engine->_renderer->setCameraPosition(400, 240, 128, 1024, 1024);
-	_engine->_renderer->setCameraAngle(0, 0, 0, data.pos.x, data.pos.y, data.pos.z, 5300);
+	_engine->_renderer->setCameraAngle(0, 0, 0, data->pos.x, data->pos.y, data->pos.z, 5300);
 
 	renderHolomapSurfacePolygons();
 
-	const Location &loc = _locations[data.locationIdx];
+	const Location &loc = _locations[data->locationIdx];
 	renderHolomapModel(_engine->_resources->holomapPointModelPtr, loc.angle.x, loc.angle.y, 0);
 
 	_engine->flip();
 	ActorMoveStruct move;
 	AnimTimerDataStruct animTimerData;
 	AnimData animData;
-	animData.loadFromHQR(Resources::HQR_RESS_FILE, data.getAnimation());
-	uint8 *modelPtr = nullptr;
-	HQR::getAllocEntry(&modelPtr, Resources::HQR_RESS_FILE, data.getModel());
+	animData.loadFromHQR(Resources::HQR_RESS_FILE, data->getAnimation());
+	BodyData bodyData;
+	bodyData.loadFromHQR(Resources::HQR_RESS_FILE, data->getModel());
 	uint frameNumber = 0;
 	int32 frameTime = _engine->lbaTime;
 	int16 trajAnimFrameIdx = 0;
@@ -355,7 +329,7 @@ void Holomap::drawHolomapTrajectory(int32 trajectoryIndex) {
 			_engine->_movements->setActorAngleSafe(ANGLE_0, -ANGLE_90, 500, &move);
 		}
 
-		if (_engine->_animations->setModelAnimation(frameNumber, animData, modelPtr, &animTimerData)) {
+		if (_engine->_animations->setModelAnimation(frameNumber, animData, bodyData, &animTimerData)) {
 			frameNumber++;
 			if (frameNumber >= animData.getNumKeyframes()) {
 				frameNumber = animData.getLoopFrame();
@@ -366,24 +340,24 @@ void Holomap::drawHolomapTrajectory(int32 trajectoryIndex) {
 		_engine->_renderer->setLightVector(-60, 128, 0);
 		const Common::Rect rect(0, 200, 199, 479);
 		_engine->_interface->drawFilledRect(rect, COLOR_BLACK);
-		_engine->_renderer->renderIsoModel(0, 0, 0, 0, newAngle, 0, modelPtr);
+		_engine->_renderer->renderIsoModel(0, 0, 0, 0, newAngle, 0, bodyData);
 		_engine->copyBlockPhys(rect);
 		_engine->_renderer->setCameraPosition(400, 240, 128, 1024, 1024);
-		_engine->_renderer->setCameraAngle(0, 0, 0, data.pos.x, data.pos.y, data.pos.z, 5300);
-		_engine->_renderer->setLightVector(data.pos.x, data.pos.y, 0);
+		_engine->_renderer->setCameraAngle(0, 0, 0, data->pos.x, data->pos.y, data->pos.z, 5300);
+		_engine->_renderer->setLightVector(data->pos.x, data->pos.y, 0);
 		if (frameTime + 40 <= _engine->lbaTime) {
 			frameTime = _engine->lbaTime;
 			int32 modelX;
 			int32 modelY;
-			if (trajAnimFrameIdx < data.numAnimFrames) {
-				modelX = data.positions[trajAnimFrameIdx].x;
-				modelY = data.positions[trajAnimFrameIdx].y;
+			if (trajAnimFrameIdx < data->numAnimFrames) {
+				modelX = data->positions[trajAnimFrameIdx].x;
+				modelY = data->positions[trajAnimFrameIdx].y;
 			} else {
-				if (data.numAnimFrames < trajAnimFrameIdx) {
+				if (data->numAnimFrames < trajAnimFrameIdx) {
 					break;
 				}
-				modelX = _locations[data.trajLocationIdx].angle.x;
-				modelY = _locations[data.trajLocationIdx].angle.y;
+				modelX = _locations[data->trajLocationIdx].angle.x;
+				modelY = _locations[data->trajLocationIdx].angle.y;
 			}
 			renderHolomapModel(_engine->_resources->holomapPointModelPtr, modelX, modelY, 0);
 			++trajAnimFrameIdx;
@@ -403,7 +377,6 @@ void Holomap::drawHolomapTrajectory(int32 trajectoryIndex) {
 
 	_engine->_text->initSceneTextBank();
 	_engine->_input->enableKeyMap(mainKeyMapId);
-	free(modelPtr);
 }
 
 int32 Holomap::getNextHolomapLocation(int32 currentLocation, int32 dir) const {
@@ -471,18 +444,18 @@ void Holomap::renderLocations(int xRot, int yRot, int zRot, bool lower) {
 	for (int i = 0; i < n; ++i) {
 		const DrawListStruct &drawList = _engine->_redraw->drawList[i];
 		const uint16 flags = drawList.type;
-		const uint8 *bodyPtr = nullptr;
+		const BodyData *bodyData = nullptr;
 		if (flags == 1u) {
-			bodyPtr = _engine->_resources->holomapArrowPtr;
+			bodyData = &_engine->_resources->holomapArrowPtr;
 		} else if (flags == 2u) {
-			bodyPtr = _engine->_resources->holomapTwinsenModelPtr;
+			bodyData = &_engine->_resources->holomapTwinsenModelPtr;
 		} else if (flags == 3u) {
-			bodyPtr = _engine->_resources->holomapTwinsenArrowPtr;
+			bodyData = &_engine->_resources->holomapTwinsenArrowPtr;
 		}
-		if (bodyPtr != nullptr) {
+		if (bodyData != nullptr) {
 			int32 angleX = _locations[drawList.actorIdx].angle.x;
 			int32 angleY = _locations[drawList.actorIdx].angle.y;
-			_engine->_renderer->renderIsoModel(drawList.x, drawList.y, drawList.z, angleX, angleY, 0, bodyPtr);
+			_engine->_renderer->renderIsoModel(drawList.x, drawList.y, drawList.z, angleX, angleY, 0, *bodyData);
 		}
 	}
 }

@@ -44,6 +44,7 @@
 #include "ultima/ultima8/world/fire_type.h"
 #include "ultima/ultima8/world/sprite_process.h"
 #include "ultima/ultima8/world/actors/avatar_gravity_process.h"
+#include "ultima/ultima8/world/actors/actor_anim_process.h"
 #include "ultima/ultima8/audio/music_process.h"
 #include "ultima/ultima8/world/actors/anim_action.h"
 
@@ -248,6 +249,7 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 		} else {
 			Item *existing = getFirstItemWithShape(shapeno, true);
 			if (!existing) {
+				// Shields. Note, these are the same in Remorse and Regret.
 				if ((shapeno == 0x52e) || (shapeno == 0x52f) || (shapeno == 0x530)) {
 					int shieldtype;
 					switch (shapeno) {
@@ -672,32 +674,24 @@ void MainActor::nextWeapon() {
 	Std::vector<Item *> weapons;
 	getItemsWithShapeFamily(weapons, ShapeInfo::SF_CRUWEAPON, true);
 	_activeWeapon = getIdOfNextItemInList(weapons, _activeWeapon);
+
+	// Update combat stance in case we switched big/small weapon.
+	if (_lastAnim == Animation::combatStand) {
+		if (isBusy()) {
+			// Corner case - need to stop active "stand"
+			// animation to correct it.
+			Kernel::get_instance()->killProcesses(_objId, ActorAnimProcess::ACTOR_ANIM_PROC_TYPE, true);
+		}
+		doAnim(Animation::combatStand, dir_current);
+	}
 }
 
 void MainActor::nextInvItem() {
 	Std::vector<Item *> items;
 	getItemsWithShapeFamily(items, ShapeInfo::SF_CRUINVITEM, true);
+	getItemsWithShapeFamily(items, ShapeInfo::SF_CRUBOMB, true);
 	_activeInvItem = getIdOfNextItemInList(items, _activeInvItem);
 }
-
-void MainActor::addFireAnimOffsets(int32 &x, int32 &y, int32 &z) {
-	assert(GAME_IS_CRUSADER);
-	Animation::Sequence fireanim = (isKneeling() ? Animation::kneelAndFire : Animation::attack);
-	uint32 actionno = AnimDat::getActionNumberForSequence(fireanim, this);
-	Direction dir = getDir();
-
-	const AnimAction *animaction = GameData::get_instance()->getMainShapes()->getAnim(getShape(), actionno);
-	for (unsigned int i = 0; i < animaction->getSize(); i++) {
-		const AnimFrame &frame = animaction->getFrame(dir, i);
-		if (frame.is_cruattack()) {
-			x += frame.cru_attackx();
-			y += frame.cru_attacky();
-			z += frame.cru_attackz();
-			return;
-		}
-	}
-}
-
 
 void MainActor::saveData(Common::WriteStream *ws) {
 	Actor::saveData(ws);
@@ -863,12 +857,22 @@ uint32 MainActor::I_addItemCru(const uint8 *args,
 }
 
 uint32 MainActor::I_getNumberOfCredits(const uint8 *args,
-unsigned int /*argsize*/) {
+									   unsigned int /*argsize*/) {
 	MainActor *av = getMainActor();
 	if (av) {
 		Item *item = av->getFirstItemWithShape(0x4ed, true);
 		if (item)
 			return item->getQuality();
+	}
+	return 0;
+}
+
+uint32 MainActor::I_switchMap(const uint8 *args,
+									   unsigned int /*argsize*/) {
+	ARG_UINT16(mapnum);
+	MainActor *av = getMainActor();
+	if (av) {
+		av->teleport(mapnum, 0x1e); // CONSTANT
 	}
 	return 0;
 }
@@ -894,7 +898,7 @@ void MainActor::useInventoryItem(Item *item) {
 
 	// 0x4d4 = datalink, 0x52d = scanner, 0x52e = ionic,
 	// 0x52f = plasma, 0x530 = graviton
-	// TODO: check these for no regret
+	// Note: These are the same in Remorse and Regret.
 	if (GAME_IS_CRUSADER && (shapenum != 0x4d4 && shapenum != 0x52d &&
 							 shapenum != 0x530 && shapenum != 0x52f &&
 							 shapenum != 0x52e)) {

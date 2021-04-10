@@ -361,8 +361,12 @@ bool SceneViewWindow::jumpToScene(const Location &newLocation) {
 
 	SceneBase *newScene = constructSceneObject(this, newSceneStaticData, passedLocation);
 
-	if (_currentScene && _currentScene->postExitRoom(this, passedLocation) == SC_DEATH)
+	if (_currentScene && _currentScene->postExitRoom(this, passedLocation) == SC_DEATH) {
+		newScene->preDestructor();
+		delete newScene;
+
 		return false;
+	}
 
 	if (!newScene)
 		error("Failed to create scene");
@@ -444,8 +448,12 @@ bool SceneViewWindow::jumpToSceneRestore(const Location &newLocation) {
 	SceneBase *newScene = constructSceneObject(this, newSceneStaticData, passedLocation);
 
 	// Call the post-transition function
-	if (_currentScene && _currentScene->postExitRoom(this, passedLocation) == SC_DEATH)
+	if (_currentScene && _currentScene->postExitRoom(this, passedLocation) == SC_DEATH) {
+		newScene->preDestructor();
+		delete newScene;
+
 		return false;
+	}
 
 	if (_currentScene) {
 		_currentScene->preDestructor();
@@ -486,7 +494,7 @@ bool SceneViewWindow::jumpToSceneRestore(const Location &newLocation) {
 	return true;
 }
 
-bool SceneViewWindow::moveInDirection(int direction) {
+bool SceneViewWindow::moveInDirection(Direction direction) {
 	if (!_currentScene)
 		return false;
 
@@ -495,19 +503,19 @@ bool SceneViewWindow::moveInDirection(int direction) {
 	DestinationScene destinationData;
 
 	switch (direction) {
-	case 0: // Up
+	case kDirectionUp: // Up
 		destinationData = _currentScene->_staticData.destUp;
 		break;
-	case 1: // Left
+	case kDirectionLeft: // Left
 		destinationData = _currentScene->_staticData.destLeft;
 		break;
-	case 2: // Right
+	case kDirectionRight: // Right
 		destinationData = _currentScene->_staticData.destRight;
 		break;
-	case 3: // Down
+	case kDirectionDown: // Down
 		destinationData = _currentScene->_staticData.destDown;
 		break;
-	case 4: // Forward
+	case kDirectionForward: // Forward
 		destinationData = _currentScene->_staticData.destForward;
 		break;
 	}
@@ -608,8 +616,11 @@ bool SceneViewWindow::moveToDestination(const DestinationScene &destinationData)
 	// Call the post-exit function
 	retVal = _currentScene->postExitRoom(this, destinationData.destinationScene);
 
-	if (retVal == SC_DEATH)
+	if (retVal == SC_DEATH) {
+		newScene->preDestructor();
+		delete newScene;
 		return false;
+	}
 
 	if (retVal != SC_TRUE) {
 		newScene->preDestructor();
@@ -814,8 +825,12 @@ bool SceneViewWindow::timeSuitJump(int destination) {
 
 	if (_currentScene) {
 		// Post-transition function
-		if (_currentScene->postExitRoom(this, specOldLocation) == SC_DEATH)
+		if (_currentScene->postExitRoom(this, specOldLocation) == SC_DEATH) {
+			newScene->preDestructor();
+			delete newScene;
+
 			return false;
+		}
 
 		// Delete the old scene
 		_currentScene->preDestructor();
@@ -1068,8 +1083,12 @@ bool SceneViewWindow::videoTransition(const Location &location, DestinationScene
 		_vm->_sound->timerCallback();
 	}
 
-	if (_vm->shouldQuit())
+	if (_vm->shouldQuit()) {
+		newBackground->free();
+		delete newBackground;
+
 		return true;
+	}
 
 	animationMovie.reset();
 
@@ -1131,8 +1150,12 @@ bool SceneViewWindow::walkTransition(const Location &location, const Destination
 		_vm->_sound->timerCallback();
 	}
 
-	if (_vm->shouldQuit())
+	if (_vm->shouldQuit()) {
+		newBackground->free();
+		delete newBackground;
+
 		return true;
+	}
 
 	_vm->_sound->stopFootsteps();
 
@@ -1146,7 +1169,7 @@ bool SceneViewWindow::walkTransition(const Location &location, const Destination
 	return true;
 }
 
-bool SceneViewWindow::pushTransition(Graphics::Surface *curBackground, Graphics::Surface *newBackground, int direction, int stripSize, int totalTime) {
+bool SceneViewWindow::pushTransition(Graphics::Surface *curBackground, Graphics::Surface *newBackground, int direction, uint stripSize, int totalTime) {
 	// Check the validity of the parameters
 	if (!curBackground || !newBackground || direction < 0 || direction > 4 || stripSize <= 0 || totalTime < 0)
 		return false;
@@ -1160,7 +1183,7 @@ bool SceneViewWindow::pushTransition(Graphics::Surface *curBackground, Graphics:
 		for (int i = 0; i < DIB_FRAME_HEIGHT; i += stripSize) {
 			curBackground->move(0, stripSize, curBackground->h);
 
-			for (int j = 0; j < stripSize; j++)
+			for (uint j = 0; j < stripSize; j++)
 				memcpy(curBackground->getBasePtr(0, j), newBackground->getBasePtr(0, curBackground->h - (i + stripSize) + j), newBackground->w * newBackground->format.bytesPerPixel);
 
 			invalidateWindow(false);
@@ -1193,7 +1216,7 @@ bool SceneViewWindow::pushTransition(Graphics::Surface *curBackground, Graphics:
 		for (int i = 0; i < DIB_FRAME_HEIGHT; i += stripSize) {
 			curBackground->move(0, -stripSize, curBackground->h);
 
-			for (int j = 0; j < stripSize; j++)
+			for (uint j = 0; j < stripSize; j++)
 				memcpy(curBackground->getBasePtr(0, curBackground->h - stripSize + j), newBackground->getBasePtr(0, i + j), newBackground->w * newBackground->format.bytesPerPixel);
 
 			invalidateWindow(false);
@@ -1228,8 +1251,8 @@ bool SceneViewWindow::slideInTransition(Graphics::Surface *newBackground, int di
 
 	switch (direction) {
 	case 0: // Push down
-		for (int i = stripSize; i <= DIB_FRAME_HEIGHT; i += stripSize) {
-			for (int j = 0; j < i; j++)
+		for (uint i = stripSize; i <= DIB_FRAME_HEIGHT; i += stripSize) {
+			for (uint j = 0; j < i; j++)
 				memcpy(_preBuffer->getBasePtr(0, j), newBackground->getBasePtr(0, DIB_FRAME_HEIGHT - j), newBackground->w * newBackground->format.bytesPerPixel);
 
 			invalidateWindow(false);
@@ -1237,8 +1260,8 @@ bool SceneViewWindow::slideInTransition(Graphics::Surface *newBackground, int di
 		}
 		break;
 	case 1: // Push right
-		for (int i = stripSize; i <= DIB_FRAME_WIDTH; i += stripSize) {
-			for (int j = 0; j < DIB_FRAME_HEIGHT; j++)
+		for (uint i = stripSize; i <= DIB_FRAME_WIDTH; i += stripSize) {
+			for (uint j = 0; j < DIB_FRAME_HEIGHT; j++)
 				memcpy(_preBuffer->getBasePtr(0, j), newBackground->getBasePtr(DIB_FRAME_WIDTH - i, j), i * newBackground->format.bytesPerPixel);
 
 			invalidateWindow(false);
@@ -1246,8 +1269,8 @@ bool SceneViewWindow::slideInTransition(Graphics::Surface *newBackground, int di
 		}
 		break;
 	case 2: // Push left
-		for (int i = stripSize; i <= DIB_FRAME_WIDTH; i += stripSize) {
-			for (int j = 0; j < DIB_FRAME_HEIGHT; j++)
+		for (uint i = stripSize; i <= DIB_FRAME_WIDTH; i += stripSize) {
+			for (uint j = 0; j < DIB_FRAME_HEIGHT; j++)
 				memcpy(_preBuffer->getBasePtr(0, DIB_FRAME_WIDTH - i), newBackground->getBasePtr(0, j), i * newBackground->format.bytesPerPixel);
 
 			invalidateWindow(false);
@@ -1255,8 +1278,8 @@ bool SceneViewWindow::slideInTransition(Graphics::Surface *newBackground, int di
 		}
 		break;
 	case 3: // Push up
-		for (int i = stripSize; i <= DIB_FRAME_HEIGHT; i += stripSize) {
-			for (int j = 0; j < i; j++)
+		for (uint i = stripSize; i <= DIB_FRAME_HEIGHT; i += stripSize) {
+			for (uint j = 0; j < i; j++)
 				memcpy(_preBuffer->getBasePtr(0, DIB_FRAME_HEIGHT - j), newBackground->getBasePtr(0, j), newBackground->w * newBackground->format.bytesPerPixel);
 
 			invalidateWindow(false);
@@ -1768,7 +1791,8 @@ bool SceneViewWindow::stopAsynchronousAnimation() {
 
 	_asyncMovie->stopVideo();
 
-	_currentScene->movieCallback(this, _asyncMovie, 0, MOVIE_STOPPED);
+	if (!_currentScene->movieCallback(this, _asyncMovie, 0, MOVIE_STOPPED))
+		return false;
 
 	delete _asyncMovie;
 	_asyncMovie = nullptr;

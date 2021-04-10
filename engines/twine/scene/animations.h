@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef TWINE_ANIMATIONS_H
-#define TWINE_ANIMATIONS_H
+#ifndef TWINE_SCENE_ANIMATIONS_H
+#define TWINE_SCENE_ANIMATIONS_H
 
 #include "common/scummsys.h"
 #include "twine/scene/actor.h"
@@ -45,6 +45,9 @@ private:
 	 */
 	bool verifyAnimAtKeyframe(int32 keyframeIdx, const AnimData &animData, AnimTimerDataStruct *animTimerDataPtr);
 
+	void copyKeyFrameToState(const KeyFrame *keyframe, BodyData &bodyData, int32 numBones) const;
+	void copyStateToKeyFrame(KeyFrame *keyframe, const BodyData &bodyData) const;
+
 	int animKeyframeBufIdx = 0;
 	KeyFrame animKeyframeBuf[32];
 
@@ -53,12 +56,8 @@ private:
 	/** Last rotation angle */
 	int16 processLastRotationAngle = ANGLE_0; // processActorVar6
 
-	/** Current step X coornidate */
-	int16 currentStepX = 0;
-	/** Current step Y coornidate */
-	int16 currentStepY = 0;
-	/** Current step Z coornidate */
-	int16 currentStepZ = 0;
+	/** Current step coordinates */
+	IVec3 currentStep;
 
 public:
 	Animations(TwinEEngine *engine);
@@ -72,19 +71,19 @@ public:
 	 * Set animation keyframe
 	 * @param keyframIdx Animation keyframe index
 	 * @param animData Animation data
-	 * @param bodyPtr Body model poitner
+	 * @param bodyData Body model data
 	 * @param animTimerDataPtr Animation time data
 	 */
-	void setAnimAtKeyframe(int32 keyframeIdx, const AnimData &animData, uint8 *const bodyPtr, AnimTimerDataStruct *animTimerDataPtr);
+	void setAnimAtKeyframe(int32 keyframeIdx, const AnimData &animData, BodyData &bodyData, AnimTimerDataStruct *animTimerDataPtr);
 
 	/**
 	 * Set new body animation
 	 * @param keyframeIdx Animation key frame index
 	 * @param animData Animation data
-	 * @param bodyPtr Body model poitner
+	 * @param bodyData Body model data
 	 * @param animTimerDataPtr Animation time data
 	 */
-	bool setModelAnimation(int32 keyframeIdx, const AnimData &animData, uint8 *const bodyPtr, AnimTimerDataStruct *animTimerDataPtr);
+	bool setModelAnimation(int32 keyframeIdx, const AnimData &animData, BodyData &bodyData, AnimTimerDataStruct *animTimerDataPtr);
 
 	/**
 	 * Get entity anim index (This is taken from File3D entities)
@@ -95,10 +94,10 @@ public:
 
 	/**
 	 * Stock animation - copy the next keyFrame from a different buffer
-	 * @param bodyPtr Body model poitner
+	 * @param bodyData Body model data
 	 * @param animTimerDataPtr Animation time data
 	 */
-	void stockAnimation(const uint8 *bodyPtr, AnimTimerDataStruct *animTimerDataPtr);
+	void stockAnimation(const BodyData &bodyData, AnimTimerDataStruct *animTimerDataPtr);
 
 	/**
 	 * Initialize animation

@@ -91,9 +91,13 @@ void MacTextWindow::resize(int w, int h, bool inner) {
 }
 
 void MacTextWindow::appendText(const Common::U32String &str, const MacFont *macFont, bool skipAdd) {
+	// the reason we put undrawInput here before appendText, is we don't want the appended text affect our input
+	// thus, we first delete all of out input, and we append new text, and we redraw the input
+	undrawInput();
 	_mactext->appendText(str, macFont->getId(), macFont->getSize(), macFont->getSlant(), skipAdd);
 
 	_contentIsDirty = true;
+	_inputIsDirty = true;	//force it to redraw input
 
 	if (_editable) {
 		_scrollPos = MAX(0, _mactext->getTextHeight() - getInnerDimensions().height());
@@ -154,15 +158,13 @@ bool MacTextWindow::draw(bool forceRedraw) {
 	_cursorDirty = false;
 
 	// Compose
-	_mactext->draw(_composeSurface, 0, _scrollPos, _composeSurface->w - 2, _scrollPos + _composeSurface->h - 2, kConWOverlap - 2, kConWOverlap - 2);
+	_mactext->draw(_composeSurface, 0, _scrollPos, _composeSurface->w - 2, _scrollPos + _composeSurface->h - 2, 1, 1);
 
 	if (_cursorState)
-		_composeSurface->blitFrom(*_cursorSurface, *_cursorRect, Common::Point(_cursorX + kConWOverlap - 2, _cursorY + kConHOverlap - 2));
+		_composeSurface->blitFrom(*_cursorSurface, *_cursorRect, Common::Point(_cursorX + 1, _cursorY + 1));
 
 	if (_selectedText.endY != -1)
 		drawSelection();
-
-	_composeSurface->transBlitFrom(_borderSurface, _wm->_colorGreen);
 
 	return true;
 }
@@ -171,7 +173,9 @@ bool MacTextWindow::draw(ManagedSurface *g, bool forceRedraw) {
 	if (!draw(forceRedraw))
 		return false;
 
-	g->transBlitFrom(*_composeSurface, _composeSurface->getBounds(), Common::Point(_dims.left - 2, _dims.top - 2), _wm->_colorGreen2);
+	g->blitFrom(*_composeSurface, Common::Rect(0, 0, _composeSurface->w, _composeSurface->h), Common::Point(_innerDims.left, _innerDims.top));
+	uint32 transcolor = (_wm->_pixelformat.bytesPerPixel == 1) ? _wm->_colorGreen : 0;
+	g->transBlitFrom(_borderSurface, Common::Rect(0, 0, _borderSurface.w, _borderSurface.h), Common::Point(_dims.left, _dims.top), transcolor);
 
 	return true;
 }
@@ -229,7 +233,7 @@ void MacTextWindow::drawSelection() {
 			numLines--;
 		}
 
-		byte *ptr = (byte *)_composeSurface->getBasePtr(x1 + kConWOverlap - 2, y + kConWOverlap - 2);
+		byte *ptr = (byte *)_composeSurface->getBasePtr(x1 + 1, y + 1);
 
 		for (int x = x1; x < x2; x++, ptr++)
 			if (*ptr == _wm->_colorBlack)
@@ -295,6 +299,14 @@ Common::U32String MacTextWindow::cutSelection() {
 	return selection;
 }
 
+void MacTextWindow::calcScrollBar() {
+	int maxText = _mactext->getTextHeight() + getInnerDimensions().height();
+	int drawableHeight = getInnerDimensions().height();
+	float scrollSize = (float)drawableHeight * drawableHeight / (float)maxText;
+	float scrollPos = (float)_scrollPos * drawableHeight / (float)maxText;
+	setScroll(scrollPos, scrollSize);
+}
+
 bool MacTextWindow::processEvent(Common::Event &event) {
 	WindowClick click = isInBorder(event.mouse.x, event.mouse.y);
 
@@ -318,6 +330,7 @@ bool MacTextWindow::processEvent(Common::Event &event) {
 
 		case Common::KEYCODE_RETURN:
 			undrawInput();
+			_inputIsDirty = true; // we force it to redraw input
 			return false; // Pass it to the higher level for processing
 
 		default:
@@ -339,24 +352,23 @@ bool MacTextWindow::processEvent(Common::Event &event) {
 		return MacWindow::processEvent(event);	// Pass it to upstream
 
 	if (event.type == Common::EVENT_WHEELUP) {
+		setHighlight(kBorderScrollUp);
+		calcScrollBar();
 		scroll(-2);
 		return true;
 	}
 
 	if (event.type == Common::EVENT_WHEELDOWN) {
+		setHighlight(kBorderScrollDown);
+		calcScrollBar();
 		scroll(2);
 		return true;
 	}
 
 	if (click == kBorderScrollUp || click == kBorderScrollDown) {
 		if (event.type == Common::EVENT_LBUTTONDOWN) {
-			int consoleHeight = getInnerDimensions().height();
-			int textFullSize = _mactext->getTextHeight();
-			float scrollPos = (float)_scrollPos / textFullSize;
-			float scrollSize = (float)consoleHeight / textFullSize;
-
-			setScroll(scrollPos, scrollSize);
-
+			setHighlight(click);
+			calcScrollBar();
 			return true;
 		} else if (event.type == Common::EVENT_LBUTTONUP) {
 			switch (click) {
@@ -465,25 +477,19 @@ void MacTextWindow::undrawInput() {
 	for (uint i = 0; i < _inputTextHeight; i++)
 		_mactext->removeLastLine();
 
-	if (_inputTextHeight)
-		appendText("\n", _font, true);
-
 	_inputTextHeight = 0;
 }
 
 void MacTextWindow::drawInput() {
-	undrawInput();
+	int oldLen = _mactext->getLineCount() - _inputTextHeight;
 
-	Common::Array<Common::U32String> text;
-
-	// Now recalc new text height
-	_fontRef->wordWrapText(_inputText, _maxWidth, text);
-	_inputTextHeight = MAX((uint)1, text.size()); // We always have line to clean
-
-	// And add new input line to the text
+	// add new input line to the text
 	appendText(_inputText, _font, true);
 
-	_cursorX = _inputText.empty() ? 0 : _fontRef->getStringWidth(text[_inputTextHeight - 1]);
+	// Now recalc new text height
+	int newLen = _mactext->getLineCount();
+	_inputTextHeight = newLen - oldLen;
+	_cursorX = _inputText.empty() ? 0 : _mactext->getLastLineWidth();
 
 	updateCursorPos();
 

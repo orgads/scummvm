@@ -55,6 +55,7 @@
 #include "ultima/ultima8/world/loop_script.h"
 #include "ultima/ultima8/audio/audio_process.h"
 #include "ultima/ultima8/audio/music_process.h"
+#include "ultima/ultima8/world/gravity_process.h"
 
 namespace Ultima {
 namespace Ultima8 {
@@ -68,7 +69,9 @@ Actor::Actor() : _strength(0), _dexterity(0), _intelligence(0),
 		_lastAnim(Animation::stand), _animFrame(0), _direction(dir_north),
 		_fallStart(0), _unkByte(0), _actorFlags(0), _combatTactic(0),
 		_homeX(0), _homeY(0), _homeZ(0), _currentActivityNo(0),
-		_lastActivityNo(0), _activeWeapon(0), _lastTimeWasHit(0) {
+		_lastActivityNo(0), _activeWeapon(0), _lastTimeWasHit(0),
+		_shieldType(0), _attackMoveStartTime(0), _attackMoveTimeout(0),
+		_attackMoveDodgeFactor(1), _attackAimFlag(false) {
 	_defaultActivity[0] = 0;
 	_defaultActivity[1] = 0;
 	_defaultActivity[2] = 0;
@@ -495,6 +498,47 @@ uint16 Actor::doAnim(Animation::Sequence anim, Direction dir, unsigned int steps
 		} else if (anim != Animation::kneel) {
 			clearActorFlag(ACT_KNEELING);
 		}
+
+		const uint32 frameno = Kernel::get_instance()->getFrameNum();
+		switch(anim) {
+			case Animation::walk:
+			case Animation::retreat: // SmallWeapon
+				_attackMoveStartTime = frameno;
+				_attackMoveTimeout = 120;
+				_attackMoveDodgeFactor = 3;
+				break;
+			case Animation::run:
+			case Animation::combatRollLeft:
+			case Animation::combatRollRight:
+			case Animation::stopRunningAndDrawLargeWeapon:
+			case Animation::stopRunningAndDrawSmallWeapon:
+			case Animation::jumpForward:
+			case Animation::jump:
+			case Animation::slowCombatRollLeft:
+			case Animation::slowCombatRollRight:
+			//case Animation::startRunSmallWeapon:
+			//case Animation::startRunLargeWeapon:
+			case Animation::startRun:
+				_attackMoveStartTime = frameno;
+				_attackMoveTimeout = 120;
+				_attackMoveDodgeFactor = 2;
+				break;
+			case Animation::slideLeft:
+			case Animation::slideRight:
+				_attackMoveStartTime = frameno;
+				_attackMoveTimeout = 60;
+				_attackMoveDodgeFactor = 3;
+				break;
+			case Animation::startKneeling:
+			case Animation::stopKneeling:
+				_attackMoveStartTime = frameno;
+				_attackMoveTimeout = 75;
+				_attackMoveDodgeFactor = 3;
+				break;
+			default:
+				break;
+		}
+
 	}
 
 #if 1
@@ -510,6 +554,11 @@ uint16 Actor::doAnim(Animation::Sequence anim, Direction dir, unsigned int steps
 	Process *p = new ActorAnimProcess(this, anim, dir, steps);
 
 	return Kernel::get_instance()->addProcess(p);
+}
+
+bool Actor::isBusy() const {
+	uint32 count = Kernel::get_instance()->getNumProcesses(_objId, ActorAnimProcess::ACTOR_ANIM_PROC_TYPE);
+	return count != 0;
 }
 
 bool Actor::hasAnim(Animation::Sequence anim) {
@@ -616,6 +665,9 @@ uint16 Actor::turnTowardDir(Direction targetdir) {
 			turnanim = Animation::lookRight;
 		}
 	}
+
+	if (targetdir == curdir)
+		return 0; // nothing to do.
 
 	if (combat) {
 		turnanim = Animation::combatStand;
@@ -1267,7 +1319,7 @@ ProcId Actor::killAllButFallAnims(bool death) {
 
 	if (death) {
 		// if dead, we want to kill everything but animations
-		kernel->killProcessesNotOfType(_objId, 0xF0, true);
+		kernel->killProcessesNotOfType(_objId, ActorAnimProcess::ACTOR_ANIM_PROC_TYPE, true);
 	} else {
 		// otherwise, need to focus on combat, so kill everything else
 		killAllButCombatProcesses();
@@ -1397,6 +1449,17 @@ int Actor::calculateAttackDamage(uint16 other, int damage, uint16 damage_type) {
 	return damage;
 }
 
+bool Actor::isFalling() const {
+	ProcId gravitypid = getGravityPID();
+	if (!gravitypid)
+		return false;
+
+	// TODO: this is not exactly the same as the Crusader implementation,
+	// but pretty close.  Is that ok?
+	GravityProcess *proc = dynamic_cast<GravityProcess *>(Kernel::get_instance()->getProcess(gravitypid));
+	return (proc && proc->is_active());
+}
+
 CombatProcess *Actor::getCombatProcess() {
 	Process *p = Kernel::get_instance()->findProcess(_objId, 0xF2); // CONSTANT!
 	if (!p)
@@ -1451,6 +1514,9 @@ void Actor::setInCombatCru(int activity) {
 	assert(getAttackProcess() == nullptr);
 
 	setActorFlag(ACT_INCOMBAT);
+
+	if (getObjId() == World::get_instance()->getControlledNPCNum())
+		return;
 
 	AttackProcess *ap = new AttackProcess(this);
 	Kernel::get_instance()->addProcess(ap);
@@ -1588,6 +1654,27 @@ void Actor::dumpInfo() const {
 	     << ConsoleStream::dec << Std::endl;
 }
 
+void Actor::addFireAnimOffsets(int32 &x, int32 &y, int32 &z) {
+	assert(GAME_IS_CRUSADER);
+	Animation::Sequence fireanim = (isKneeling() ? Animation::kneelAndFire : Animation::attack);
+	uint32 actionno = AnimDat::getActionNumberForSequence(fireanim, this);
+	Direction dir = getDir();
+
+	const AnimAction *animaction = GameData::get_instance()->getMainShapes()->getAnim(getShape(), actionno);
+	if (!animaction)
+		return;
+
+	for (unsigned int i = 0; i < animaction->getSize(); i++) {
+		const AnimFrame &frame = animaction->getFrame(dir, i);
+		if (frame.is_cruattack()) {
+			x += frame.cru_attackx();
+			y += frame.cru_attacky();
+			z += frame.cru_attackz();
+			return;
+		}
+	}
+}
+
 void Actor::saveData(Common::WriteStream *ws) {
 	Container::saveData(ws);
 	ws->writeUint16LE(_strength);
@@ -1616,6 +1703,11 @@ void Actor::saveData(Common::WriteStream *ws) {
 		ws->writeUint16LE(_lastActivityNo);
 		ws->writeUint16LE(_activeWeapon);
 		ws->writeSint32LE(_lastTimeWasHit);
+		ws->writeByte(_shieldType);
+		ws->writeUint32LE(_attackMoveStartTime);
+		ws->writeUint32LE(_attackMoveTimeout);
+		ws->writeUint16LE(_attackMoveDodgeFactor);
+		ws->writeByte(_attackAimFlag ? 1 : 0);
 	}
 }
 
@@ -1648,6 +1740,11 @@ bool Actor::loadData(Common::ReadStream *rs, uint32 version) {
 		_lastActivityNo = rs->readUint16LE();
 		_activeWeapon = rs->readUint16LE();
 		_lastTimeWasHit = rs->readSint32LE();
+		_shieldType = rs->readByte();
+		_attackMoveStartTime = rs->readUint32LE();
+		_attackMoveTimeout = rs->readUint32LE();
+		_attackMoveDodgeFactor = rs->readUint16LE();
+		_attackAimFlag = rs->readByte() != 0;
 	}
 
 	return true;
@@ -1880,20 +1977,30 @@ uint32 Actor::I_setTarget(const uint8 *args, unsigned int /*argsize*/) {
 	ARG_UINT16(target);
 	if (!actor) return 0;
 
-	assert(GAME_IS_U8);
+	if (GAME_IS_U8) {
+		CombatProcess *cp = actor->getCombatProcess();
+		if (!cp) {
+			actor->setInCombatU8();
+			cp = actor->getCombatProcess();
+		}
+		if (!cp) {
+			warning("Actor::I_setTarget: failed to enter combat mode");
+			return 0;
+		}
 
-	CombatProcess *cp = actor->getCombatProcess();
-	if (!cp) {
-		actor->setInCombatU8();
-		cp = actor->getCombatProcess();
-	}
-	if (!cp) {
-		perr << "Actor::I_setTarget: failed to enter combat mode"
-		     << Std::endl;
-		return 0;
-	}
+		cp->setTarget(target);
+	} else {
+		if (actor->isDead() || actor->getObjId() == 1)
+			return 0;
 
-	cp->setTarget(target);
+		actor->setActivityCru(5);
+		AttackProcess *ap = actor->getAttackProcess();
+		if (!ap) {
+			warning("Actor::I_setTarget: failed to enter attack mode");
+			return 0;
+		}
+		ap->setTarget(target);
+	}
 
 	return 0;
 }
@@ -2105,11 +2212,9 @@ uint32 Actor::I_areEnemiesNear(const uint8 *args, unsigned int /*argsize*/) {
 }
 
 uint32 Actor::I_isBusy(const uint8 *args, unsigned int /*argsize*/) {
-	ARG_UC_PTR(ptr);
-	uint16 id = UCMachine::ptrToObject(ptr);
+	ARG_ACTOR_FROM_PTR(actor);
 
-	uint32 count = Kernel::get_instance()->getNumProcesses(id, ActorAnimProcess::ACTOR_ANIM_PROC_TYPE);
-	if (count > 0)
+	if (actor->isBusy())
 		return 1;
 	else
 		return 0;
@@ -2408,6 +2513,13 @@ uint32 Actor::I_isKneeling(const uint8 *args, unsigned int /*argsize*/) {
 	if (!actor) return 0;
 
 	return actor->isKneeling() ? 1 : 0;
+}
+
+uint32 Actor::I_isFalling(const uint8 *args, unsigned int /*argsize*/) {
+	ARG_ACTOR_FROM_PTR(actor);
+	if (!actor) return 0;
+
+	return actor->isFalling() ? 1 : 0;
 }
 
 } // End of namespace Ultima8

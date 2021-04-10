@@ -74,12 +74,28 @@
 
 namespace TwinE {
 
+#include "common/pack-start.h"
+struct I16Vec3 {
+	int16 x = 0;
+	int16 y = 0;
+	int16 z = 0;
+};
+#include "common/pack-end.h"
+static_assert(sizeof(I16Vec3) == 6, "Unexpected pointTab size");
+
 struct IVec3 {
 	constexpr IVec3() : x(0), y(0), z(0) {}
 	constexpr IVec3(int32 _x, int32 _y, int32 _z) : x(_x), y(_y), z(_z) {}
 	int32 x;
 	int32 y;
 	int32 z;
+
+	inline IVec3 &operator=(const I16Vec3& other) {
+		x = other.x;
+		y = other.y;
+		z = other.z;
+		return *this;
+	}
 
 	inline IVec3& operator+=(const IVec3 &other) {
 		x += other.x;
@@ -94,37 +110,13 @@ struct IVec3 {
 		z -= other.z;
 		return *this;
 	}
-
-	inline int32 &operator[](size_t idx) {
-		switch (idx) {
-		default:
-		case 0:
-			return x;
-		case 1:
-			return y;
-		case 2:
-			return z;
-		}
-	}
-
-	inline int32 operator[](size_t idx) const {
-		switch (idx) {
-		default:
-		case 0:
-			return x;
-		case 1:
-			return y;
-		case 2:
-			return z;
-		}
-	}
 };
 
-inline IVec3 operator+(const IVec3 &lhs, const IVec3 &rhs) {
+inline constexpr IVec3 operator+(const IVec3 &lhs, const IVec3 &rhs) {
 	return IVec3{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
 }
 
-inline IVec3 operator-(const IVec3 &lhs, const IVec3 &rhs) {
+inline constexpr IVec3 operator-(const IVec3 &lhs, const IVec3 &rhs) {
 	return IVec3{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
 }
 
@@ -411,6 +403,117 @@ enum LBA1SceneId {
 	Credits_List_Sequence = 119,
 
 	SceneIdMax = 120
+};
+
+// lba
+enum class TextBankId : int16 {
+	None = -1,
+	Options_and_menus = 0,
+	Credits = 1,
+	Inventory_Intro_and_Holomap = 2,
+	Citadel_Island = 3,
+	Principal_Island = 4,
+	White_Leaf_Desert = 5,
+	Proxima_Island = 6,
+	Rebellion_Island = 7,
+	Hamalayi_mountains_southern_range = 8,
+	Hamalayi_mountains_northern_range = 9,
+	Tippet_Island = 10,
+	Brundle_Island = 11,
+	Fortress_Island = 12,
+	Polar_Island = 13
+};
+
+/** menu text ids */
+enum class TextId : int16 {
+	kNone = -1,
+	kBehaviourNormal = 0,
+	kBehaviourSporty = 1,
+	kBehaviourAggressiveManual = 2,
+	kBehaviourHiding = 3,
+	kBehaviourAggressiveAuto = 4,
+	kUseProtopack = 5,
+	kSendell = 6,
+	kMusicVolume = 10,
+	kSoundVolume = 11,
+	kCDVolume = 12,
+	kSpeechVolume = 13,
+	kMasterVolume = 14,
+	kReturnGame = 15,
+	kSaveSettings = 16,
+	kNewGame = 20,
+	kContinueGame = 21,
+	kQuit = 22,
+	kOptions = 23,
+	kDelete = 24,
+	kReturnMenu = 26,
+	kGiveUp = 27,
+	kContinue = 28,
+	kVolumeSettings = 30,
+	kDetailsPolygonsHigh = 31,
+	kDetailsShadowHigh = 32,
+	//kSceneryZoomOn = 33, // duplicate with 133 - TODO check if this is the same in all languages
+	kCreateNewPlayer = 40,
+	kCreateSaveGame = 41,
+	kEnterYourName = 42,
+	kPlayerAlreadyExists = 43,
+	kEnterYourNewName = 44,
+	kDeleteSaveGame = 45,
+	kSaveManage = 46,
+	kAdvanced = 47,
+	kDelete2 = 48, // difference between 24 and 48?
+	kTransferVoices = 49,
+	kPleaseWaitWhileVoicesAreSaved = 50,
+	kRemoveProtoPack = 105,
+	kDetailsPolygonsMiddle = 131,
+	kShadowsFigures = 132,
+	kSceneryZoomOn = 133,
+	kIntroText1 = 150,
+	kIntroText2 = 151,
+	kIntroText3 = 152,
+	kBookOfBu = 161,
+	kBonusList = 162,
+	kDetailsPolygonsLow = 231,
+	kShadowsDisabled = 232,
+	kNoSceneryZoom = 233,
+
+	// custom strings (not originally included in the game)
+	kCustomHighResOptionOn = -2,
+	kCustomHighResOptionOff = -3,
+	kCustomWallCollisionOn = -4,
+	kCustomWallCollisionOff = -5
+};
+
+enum InventoryItems {
+	kiHolomap = 0,
+	kiMagicBall = 1,
+	kiUseSabre = 2,
+	kiGawleysHorn = 3,
+	kiTunic = 4,
+	kiBookOfBu = 5,
+	kSendellsMedallion = 6,
+	kFlaskOfClearWater = 7,
+	kRedCard = 8,
+	kBlueCard = 9,
+	kIDCard = 10,
+	kMrMiesPass = 11,
+	kiProtoPack = 12,
+	kSnowboard = 13,
+	kiPinguin = 14,
+	kGasItem = 15,
+	kPirateFlag = 16,
+	kMagicFlute = 17,
+	kSpaceGuitar = 18,
+	kHairDryer = 19,
+	kAncesteralKey = 20,
+	kBottleOfSyrup = 21,
+	kEmptyBottle = 22,
+	kFerryTicket = 23,
+	kKeypad = 24,
+	kCoffeeCan = 25,
+	kiBonusList = 26,
+	kiCloverLeaf = 27,
+	MaxInventoryItems = 28
 };
 
 // lba2 does from 0 to 0x1000

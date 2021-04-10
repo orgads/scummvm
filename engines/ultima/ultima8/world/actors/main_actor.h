@@ -142,9 +142,6 @@ public:
 	//! Detonate used bomb
 	void detonateBomb();
 
-	//! Add the x/y/z fire offsets given the current state of the actor
-	void addFireAnimOffsets(int32 &x, int32 &y, int32 &z);
-
 	bool loadData(Common::ReadStream *rs, uint32 version);
 	void saveData(Common::WriteStream *ws) override;
 
@@ -162,6 +159,7 @@ public:
 	INTRINSIC(I_clrKeycards);
 	INTRINSIC(I_addItemCru);
 	INTRINSIC(I_getNumberOfCredits);
+	INTRINSIC(I_switchMap);
 
 	void getWeaponOverlay(const WeaponOverlayFrame *&frame, uint32 &shape);
 

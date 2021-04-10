@@ -32,18 +32,14 @@
 namespace Ultima {
 namespace Ultima8 {
 
-static const int INVENTORY_GUMP_SHAPE = 5;
 static const int INVENTORY_TEXT_FONT = 12;
 
 DEFINE_RUNTIME_CLASSTYPE_CODE(CruInventoryGump)
-CruInventoryGump::CruInventoryGump() : CruStatGump(), _inventoryShape(nullptr),
-	_inventoryItemGump(nullptr), _inventoryText(nullptr) {
-
+CruInventoryGump::CruInventoryGump() : CruStatGump(), _inventoryItemGump(nullptr), _inventoryText(nullptr) {
 }
 
 CruInventoryGump::CruInventoryGump(Shape *shape, int x)
-	: CruStatGump(shape, x), _inventoryShape(nullptr), _inventoryItemGump(nullptr),
-		_inventoryText(nullptr) {
+	: CruStatGump(shape, x), _inventoryItemGump(nullptr), _inventoryText(nullptr) {
 	_frameNum = 0;
 }
 
@@ -59,49 +55,12 @@ void CruInventoryGump::InitGump(Gump *newparent, bool take_focus) {
 		return;
 	}
 
-	_inventoryShape = gumpshapes->getShape(INVENTORY_GUMP_SHAPE);
-	if (!_inventoryShape || !_inventoryShape->getFrame(0)) {
-		warning("failed to init stat gump: no inventory shape");
-		return;
-	}
 	_inventoryItemGump = new Gump();
 	_inventoryItemGump->InitGump(this, false);
 	// we'll set the shape for this gump later.
 
 	_inventoryText = new TextWidget();
 	_inventoryText->InitGump(this, false);
-}
-
-// TODO: This is a bit of a hack.. should be configured
-// in the weapon ini file.
-static uint16 getDisplayFrameForShape(uint16 shapeno) {
-	switch (shapeno) {
-	case 0x351:
-		return 0x0;
-	case 0x4D4:
-		return 0x1;
-	case 0x52D:
-		return 0x2;
-	case 0x52E:
-		return 0x3;
-	case 0x582:
-		return 0x19;
-	case 0x52F:
-		return 0x5;
-	case 0x55F:
-		return 0x18;
-	case 0x530:
-		return 0x7;
-	case 0x3A2:
-		return 0x16;
-	case 0x3A3:
-		return 0x15;
-	case 0x3A4:
-		return 0x17;
-	default:
-		warning("No inventory gump frame for shape %d", shapeno);
-		return 0;
-	}
 }
 
 void CruInventoryGump::PaintThis(RenderSurface *surf, int32 lerp_factor, bool scaled) {
@@ -119,8 +78,19 @@ void CruInventoryGump::PaintThis(RenderSurface *surf, int32 lerp_factor, bool sc
 		if (!item) {
 			_inventoryItemGump->SetShape(0, 0);
 		} else {
-			uint16 frame = getDisplayFrameForShape(item->getShape());
-			_inventoryItemGump->SetShape(_inventoryShape, frame);
+			GumpShapeArchive *gumpshapes = GameData::get_instance()->getGumps();
+			if (!gumpshapes) {
+				warning("failed to paint stat gump: no gump shape archive");
+				return;
+			}
+
+			const ShapeInfo *shapeinfo = item->getShapeInfo();
+			if (!shapeinfo->_weaponInfo) {
+				warning("no weapon info for active inventory item %d", item->getShape());
+				return;
+			}
+			Shape *invshape = gumpshapes->getShape(shapeinfo->_weaponInfo->_displayGumpShape);
+			_inventoryItemGump->SetShape(invshape, shapeinfo->_weaponInfo->_displayGumpFrame);
 			_inventoryItemGump->UpdateDimsFromShape();
 			_inventoryItemGump->setRelativePosition(CENTER);
 

@@ -343,13 +343,13 @@ void Redraw::processDrawListActors(const DrawListStruct &drawCmd, bool bgRedraw)
 	ActorStruct *actor = _engine->_scene->getActor(actorIdx);
 	if (actor->previousAnimIdx >= 0) {
 		const AnimData &animData = _engine->_resources->animData[actor->previousAnimIdx];
-		_engine->_animations->setModelAnimation(actor->animPosition, animData, _engine->_resources->bodyTable[actor->entity], &actor->animTimerData);
+		_engine->_animations->setModelAnimation(actor->animPosition, animData, _engine->_resources->bodyData[actor->entity], &actor->animTimerData);
 	}
 
 	const int32 x = actor->pos.x - _engine->_grid->camera.x;
 	const int32 y = actor->pos.y - _engine->_grid->camera.y;
 	const int32 z = actor->pos.z - _engine->_grid->camera.z;
-	if (!_engine->_renderer->renderIsoModel(x, y, z, ANGLE_0, actor->angle, ANGLE_0, _engine->_resources->bodyTable[actor->entity])) {
+	if (!_engine->_renderer->renderIsoModel(x, y, z, ANGLE_0, actor->angle, ANGLE_0, _engine->_resources->bodyData[actor->entity])) {
 		return;
 	}
 
@@ -457,13 +457,13 @@ void Redraw::processDrawListActorSprites(const DrawListStruct &drawCmd, bool bgR
 }
 
 void Redraw::processDrawListExtras(const DrawListStruct &drawCmd) {
-	int32 actorIdx = drawCmd.actorIdx;
-	ExtraListStruct *extra = &_engine->_extra->extraList[actorIdx];
+	int32 extraIdx = drawCmd.actorIdx;
+	ExtraListStruct *extra = &_engine->_extra->extraList[extraIdx];
 
 	_engine->_renderer->projectPositionOnScreen(extra->pos - _engine->_grid->camera);
 
 	if (extra->info0 & EXTRA_SPECIAL_MASK) {
-		_engine->_extra->drawExtraSpecial(actorIdx, _engine->_renderer->projPos.x, _engine->_renderer->projPos.y);
+		_engine->_extra->drawExtraSpecial(extraIdx, _engine->_renderer->projPos.x, _engine->_renderer->projPos.y);
 	} else {
 		const SpriteData &spritePtr = _engine->_resources->spriteData[extra->info0];
 		const int32 spriteWidth = spritePtr.surface().w;
@@ -623,7 +623,7 @@ void Redraw::renderOverlays() {
 				_engine->_interface->drawFilledRect(rect, COLOR_BLACK);
 				_engine->_interface->setClip(rect);
 
-				const uint8* bodyPtr = _engine->_resources->inventoryTable[item];
+				const BodyData &bodyPtr = _engine->_resources->inventoryTable[item];
 				_overlayRotation += 1; // overlayRotation += 8;
 				_engine->_renderer->renderInventoryItem(40, 40, bodyPtr, _overlayRotation, 16000);
 				_engine->_menu->drawBox(rect);
@@ -633,7 +633,7 @@ void Redraw::renderOverlays() {
 			}
 			case OverlayType::koText: {
 				char text[256];
-				_engine->_text->getMenuText(overlay->info0, text, sizeof(text));
+				_engine->_text->getMenuText((TextId)overlay->info0, text, sizeof(text));
 
 				const int32 textLength = _engine->_text->getTextSize(text);
 				const int32 textHeight = 48;

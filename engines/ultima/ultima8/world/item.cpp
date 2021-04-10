@@ -27,6 +27,7 @@
 #include "ultima/ultima8/usecode/uc_list.h"
 #include "ultima/ultima8/world/world.h"
 #include "ultima/ultima8/kernel/kernel.h"
+#include "ultima/ultima8/kernel/delay_process.h"
 #include "ultima/ultima8/world/get_object.h"
 #include "ultima/ultima8/graphics/main_shape_archive.h"
 #include "ultima/ultima8/graphics/gump_shape_archive.h"
@@ -468,11 +469,28 @@ Box Item::getWorldBox() const {
 }
 
 void Item::setShape(uint32 shape) {
-	_shape = shape;
-	_cachedShapeInfo = nullptr;
 	_cachedShape = nullptr;
-	// FIXME: In Crusader, here we should check if the shape
-	// changed from targetable to not-targetable, or vice-versa
+
+	if (GAME_IS_CRUSADER) {
+		// In Crusader, here we need to check if the shape
+		// changed from targetable to not-targetable, or vice-versa
+		const ShapeInfo *oldinfo = getShapeInfo();
+		_shape = shape;
+		_cachedShapeInfo = nullptr;
+		const ShapeInfo *newinfo = getShapeInfo();
+
+		if (!hasFlags(FLG_BROKEN)) {
+			if (oldinfo->is_targetable() && !newinfo->is_targetable()) {
+				World::get_instance()->getCurrentMap()->removeTargetItem(this);
+			}
+			else if (!oldinfo->is_targetable() && newinfo->is_targetable()) {
+				World::get_instance()->getCurrentMap()->addTargetItem(this);
+			}
+		}
+	} else {
+		_shape = shape;
+		_cachedShapeInfo = nullptr;
+	}
 }
 
 bool Item::overlaps(const Item &item2) const {
@@ -1299,7 +1317,7 @@ uint16 Item::fireWeapon(int32 x, int32 y, int32 z, Direction dir, int firetype, 
 	return spriteprocpid;
 }
 
-uint16 Item::fireDistance(Item *other, Direction dir, int16 xoff, int16 yoff, int16 zoff) {
+uint16 Item::fireDistance(const Item *other, Direction dir, int16 xoff, int16 yoff, int16 zoff) {
 	if (!other)
 		return 0;
 
@@ -1412,7 +1430,7 @@ uint16 Item::fireDistance(Item *other, Direction dir, int16 xoff, int16 yoff, in
 	return dist / 32;
 }
 
-int32 Item::getTargetZRelativeToAttackerZ(int32 otherz) {
+int32 Item::getTargetZRelativeToAttackerZ(int32 otherz) const {
 	int32 tsx, tsy, tsz;
 	getFootpadData(tsx, tsy, tsz);
 
@@ -1679,7 +1697,7 @@ void Item::setupLerp(int32 gametick) {
 	// Animate it, if needed
 	const ShapeInfo *info = getShapeInfo();
 	if (info->_animType &&
-			((gametick % info->_animSpeed) == (_objId % info->_animSpeed)))
+			((gametick % info->_animSpeed) == 0))
 		animateItem();
 
 	// Setup the prev values for lerping
@@ -1709,55 +1727,65 @@ void Item::animateItem() {
 	if (!info->_animType)
 		return;
 
-	int anim_data = info->_animData;
-	int speed = info->_animSpeed;
-
-	if ((static_cast<int>(_lastSetup) % speed * 2) != (_objId % speed * 2) && info->_animType != 1)
-		return;
-
+	uint32 anim_data = info->_animData;
 	const Shape *shp = getShapeObject();
 
 	switch (info->_animType) {
 	case 2:
-		// 50 % chance
-		if (getRandom() & 1) break;
-		// Intentional fall-through
+		// Randomly change frame
+		if ((getRandom() & 1) && shp)
+			_frame = getRandom() % shp->frameCount();
+		break;
 
 	case 1:
 	case 3:
-		// 50 % chance
-		if (anim_data == 1 && (getRandom() & 1)) break;
-		_frame ++;
-		if (anim_data < 2) {
-			if (shp && _frame == shp->frameCount()) _frame = 0;
-		} else {
-			// Data represents frame count for the loop
-			unsigned int num = (_frame - 1) / anim_data;
-			if (_frame == ((num + 1)*anim_data)) _frame = num * anim_data;
+		// animdata 0 = always increment
+		// animdata 1 = 50 % chance of changing
+		// animdata 2+ = loop in frame blocks of size animdata
+		if (anim_data == 0 || (anim_data == 1 && (getRandom() & 1))) {
+			_frame++;
+			if (shp && _frame >= shp->frameCount())
+				_frame = 0;
+		} else if (anim_data > 1) {
+			_frame++;
+			uint32 num = (_frame - 1) / anim_data;
+			if (_frame == ((num + 1) * anim_data))
+				_frame = num * anim_data;
 		}
 		break;
 
 	case 4:
-		if (anim_data && !(getRandom() % anim_data)) break;
-		_frame ++;
-		if (shp && _frame == shp->frameCount()) _frame = 0;
+		// Randomly start animating, with chance of 1/(animdata + 2)
+		// once animating, go through all frames.
+		if (_frame || getRandom() % (anim_data + 2)) {
+			_frame++;
+			if (shp && _frame >= shp->frameCount())
+				_frame = 0;
+		}
 		break;
 
-
 	case 5:
+		// Just call the usecode
 		callUsecodeEvent_anim();
 		break;
 
 	case 6:
-		if (anim_data < 2) {
-			if (_frame == 0) break;
-			_frame ++;
-			if (shp && _frame == shp->frameCount()) _frame = 1;
-		} else {
-			if (!(_frame % anim_data)) break;
-			_frame ++;
-			unsigned int num = (_frame - 1) / anim_data;
-			if (_frame == ((num + 1)*anim_data)) _frame = num * anim_data + 1;
+		// animdata 0 = stick on frame 0, else loop from 1 to count
+		// animdata 1 = same as 0, but with 50% chance of change
+		// animdata 2+ = same, but loop in frame blocks of size animdata
+		if (anim_data == 0 || (anim_data == 1 && (getRandom() & 1))) {
+			if (!_frame)
+				break;
+			_frame++;
+			if (shp && _frame >= shp->frameCount())
+				_frame = 1;
+		} else if (anim_data > 1) {
+			if (!(_frame % anim_data))
+				break;
+			_frame++;
+			uint32 num = (_frame - 1) / anim_data;
+			if (_frame == ((num + 1) * anim_data))
+				_frame = num * anim_data + 1;
 		}
 		break;
 
@@ -1809,7 +1837,7 @@ void Item::enterFastArea() {
 	}
 
 	if (!hasFlags(FLG_BROKEN) && GAME_IS_CRUSADER) {
-		if ((si->_flags & ShapeInfo::SI_CRU_TARGETABLE) || (si->_flags & ShapeInfo::SI_OCCL)) {
+		if (si->is_targetable()) {
 			World::get_instance()->getCurrentMap()->addTargetItem(this);
 		}
 		if (_shape == SNAP_EGG_SHAPE) {
@@ -1989,16 +2017,16 @@ GravityProcess *Item::ensureGravityProcess() {
 
 void Item::fall() {
 	const ShapeInfo *info = getShapeInfo();
-	if (_flags & FLG_HANGING || info->is_fixed() ||
-		(info->_weight == 0 && GAME_IS_CRUSADER)) {
+	bool hanging = GAME_IS_U8 && (_flags & FLG_HANGING);
+
+	if (hanging || info->is_fixed() || info->_weight == 0) {
 		// can't fall
 		return;
 	}
 
 	int gravity = GAME_IS_CRUSADER ? 2 : 4; //!! constants
 
-	GravityProcess *p = ensureGravityProcess();
-	p->setGravity(gravity);
+	hurl(0, 0, 0, gravity);
 }
 
 void Item::grab() {
@@ -2031,9 +2059,16 @@ void Item::grab() {
 
 
 void Item::hurl(int xs, int ys, int zs, int grav) {
+	// crusader sleeps existing gravity at first
+	bool do_sleep = GAME_IS_CRUSADER && (_gravityPid == 0);
 	GravityProcess *p = ensureGravityProcess();
 	p->setGravity(grav);
 	p->move(xs, ys, zs);
+	if (do_sleep) {
+		Process *delayProc = new DelayProcess(0x14);
+		ProcId pid = Kernel::get_instance()->addProcess(delayProc);
+		p->waitFor(pid);
+	}
 }
 
 
@@ -2686,6 +2721,17 @@ uint32 Item::I_getUnkEggType(const uint8 *args, unsigned int /*argsize*/) {
 	}
 }
 
+uint32 Item::I_setUnkEggType(const uint8 *args, unsigned int /*argsize*/) {
+	ARG_ITEM_FROM_PTR(item);
+	ARG_UINT16(val);
+	if (!item) return 0;
+
+	if (item->getFamily() == ShapeInfo::SF_UNKEGG) {
+		item->setQuality(val);
+	}
+	return 0;
+}
+
 uint32 Item::I_getQuantity(const uint8 *args, unsigned int /*argsize*/) {
 	ARG_ITEM_FROM_PTR(item);
 	if (!item) return 0;
@@ -3324,6 +3370,11 @@ uint32 Item::I_popToCoords(const uint8 *args, unsigned int /*argsize*/) {
 	if (GAME_IS_CRUSADER) {
 		x *= 2;
 		y *= 2;
+		// HACK!!  DEATHFL::ordinal20 has a hack to add 1 to z for the death
+		// animation (falling into acid), but then our animation tracker
+		// detects a fall and stops animating.  Fight hacks with hacks..
+		if (item->_shape == 1408 && z > 0)
+			z -= 1;
 	}
 
 	item->move(x, y, z);
@@ -3605,7 +3656,6 @@ uint32 Item::I_shoot(const uint8 *args, unsigned int /*argsize*/) {
 	ARG_UINT16(gravity); // either 2 (fish) or 1 (death disk, dart)
 	if (!item) return 0;
 
-	assert(GAME_IS_U8);
 	MissileTracker tracker(item, point.getX(), point.getY(), point.getZ(),
 	                       speed, gravity);
 	tracker.launchItem();

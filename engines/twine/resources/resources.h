@@ -20,14 +20,16 @@
  *
  */
 
-#ifndef TWINE_RESOURCES_H
-#define TWINE_RESOURCES_H
+#ifndef TWINE_RESOURCES_RESOURCES_H
+#define TWINE_RESOURCES_RESOURCES_H
 
 #include "common/hashmap.h"
 #include "common/scummsys.h"
+#include "twine/parser/holomap.h"
 #include "twine/parser/sprite.h"
-#include "twine/scene/gamestate.h"
+#include "twine/parser/text.h"
 #include "twine/resources/hqr.h"
+#include "twine/scene/gamestate.h"
 #include "twine/scene/scene.h"
 
 namespace TwinE {
@@ -59,8 +61,8 @@ namespace TwinE {
 #define RESSHQR_ALARMREDPAL 22
 #define RESSHQR_FLAINFO 23
 #define RESSHQR_DARKPAL 24
-#define RESSHQR_TWINSEN_ZOE_SENDELLIMG  25
-#define RESSHQR_TWINSEN_ZOE_SENDELLPAL  26
+#define RESSHQR_TWINSEN_ZOE_SENDELLIMG 25
+#define RESSHQR_TWINSEN_ZOE_SENDELLPAL 26
 #define RESSHQR_ADELINEIMG 27
 #define RESSHQR_ADELINEPAL 28
 
@@ -147,31 +149,31 @@ private:
 	void preloadSamples();
 	void loadFlaInfo();
 
-	using MovieInfoMap = Common::HashMap<Common::String, Common::Array<int32>>;
+	using MovieInfoMap = Common::HashMap<Common::String, Common::Array<int32> >;
 	MovieInfoMap _flaMovieFrames;
+
+	TrajectoryData _trajectories;
+
+	TextData _textData;
 
 public:
 	Resources(TwinEEngine *engine) : _engine(engine) {}
 	~Resources();
 
-	const Common::Array<int32>& getFlaMovieInfo(const Common::String &name) const;
+	const Common::Array<int32> &getFlaMovieInfo(const Common::String &name) const;
 
 	/** Table with all loaded samples */
-	uint8 *inventoryTable[NUM_INVENTORY_ITEMS] {nullptr};
-	/** Table with all loaded samples sizes */
-	uint32 inventorySizeTable[NUM_INVENTORY_ITEMS] {0};
+	BodyData inventoryTable[NUM_INVENTORY_ITEMS];
 
 	/** Table with all loaded sprites */
-	uint8 *spriteTable[NUM_SPRITES] {nullptr};
+	uint8 *spriteTable[NUM_SPRITES]{nullptr};
 	/** Table with all loaded sprite sizes */
-	uint32 spriteSizeTable[NUM_SPRITES] {0};
+	uint32 spriteSizeTable[NUM_SPRITES]{0};
 	SpriteData spriteData[NUM_SPRITES];
 
 	AnimData animData[NUM_ANIMS];
 
 	/** Actors 3D body table - size of NUM_BODIES */
-	uint8 *bodyTable[NUM_BODIES]{nullptr};
-	int32 bodyTableSize[NUM_BODIES]{0};
 	BodyData bodyData[NUM_BODIES];
 
 	/** Table with all loaded samples */
@@ -191,19 +193,18 @@ public:
 	uint8 *holomapSurfacePtr = nullptr;
 	uint32 holomapImageSize = 0;
 	uint8 *holomapImagePtr = nullptr;
-	uint32 holomapPointModelSize = 0;
-	uint8 *holomapPointModelPtr = nullptr;
-	uint32 holomapTwinsenModelSize = 0;
-	uint8 *holomapTwinsenModelPtr = nullptr;
-	uint32 holomapTwinsenArrowSize = 0;
-	uint8 *holomapTwinsenArrowPtr = nullptr;
-	uint32 holomapArrowSize = 0;
-	uint8 *holomapArrowPtr = nullptr;
-	uint32 holomapPointAnimSize = 0;
-	uint8 *holomapPointAnimPtr = nullptr;
+
+	BodyData holomapPointModelPtr;
+	BodyData holomapTwinsenModelPtr;
+	BodyData holomapTwinsenArrowPtr;
+	BodyData holomapArrowPtr;
 
 	/** Initialize resource pointers */
 	void initResources();
+
+	const Trajectory *getTrajectory(int index) const;
+
+	const TextEntry *getText(TextBankId textBankId, TextId index) const;
 
 	// main palette
 	static constexpr const char *HQR_RESS_FILE = "ress.hqr";
@@ -242,6 +243,10 @@ public:
 	// inventory objects
 	static constexpr const char *HQR_INVOBJ_FILE = "invobj.hqr";
 
+	/**
+	 * @brief Floppy version of the game uses gifs for replacing the videos
+	 */
+	static constexpr const char *HQR_FLAGIF_FILE = "fla_gif.hqr";
 	static constexpr const char *HQR_FLASAMP_FILE = "flasamp.hqr";
 	static constexpr const char *HQR_MIDI_MI_DOS_FILE = "midi_mi.hqr";
 	static constexpr const char *HQR_MIDI_MI_WIN_FILE = "midi_mi_win.hqr";

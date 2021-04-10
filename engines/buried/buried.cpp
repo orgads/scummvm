@@ -32,12 +32,14 @@
 #include "common/system.h"
 #include "common/textconsole.h"
 #include "common/translation.h"
+#include "common/winexe_ne.h"
+#include "common/winexe_pe.h"
 #include "engines/util.h"
+#include "graphics/wincursor.h"
 #include "gui/message.h"
 
 #include "buried/buried.h"
 #include "buried/console.h"
-#include "buried/database.h"
 #include "buried/frame_window.h"
 #include "buried/graphics.h"
 #include "buried/message.h"
@@ -57,7 +59,6 @@ BuriedEngine::BuriedEngine(OSystem *syst, const ADGameDescription *gameDesc) : E
 	_mainWindow = nullptr;
 	_focusedWindow = nullptr;
 	_captureWindow = nullptr;
-	_console = nullptr;
 	_pauseStartTime = 0;
 	_yielding = false;
 
@@ -77,19 +78,12 @@ BuriedEngine::~BuriedEngine() {
 	delete _mainEXE;
 	delete _library;
 	delete _sound;
-	delete _console;
 
 	// The queue should be empty since all windows destroy their messages
 }
 
 Common::Error BuriedEngine::run() {
-	_console = new BuriedConsole(this);
-
-#ifndef USE_ICONV
-	// The Japanese version needs iconv support
-	if (getLanguage() == Common::JA_JPN)
-		return Common::Error(Common::kUnknownError, "No iconv support available");
-#endif
+	setDebugger(new BuriedConsole(this));
 
 	if (isTrueColor()) {
 		initGraphics(640, 480, 0);
@@ -101,24 +95,29 @@ Common::Error BuriedEngine::run() {
 	}
 
 	if (isWin95()) {
-		_mainEXE = new DatabasePE();
-		_library = new DatabasePE();
-	} else if (isCompressed()) {
-		_mainEXE = new DatabaseNECompressed();
-		_library = new DatabaseNECompressed();
+		_mainEXE = new Common::PEResources();
+		_library = new Common::PEResources();
 	} else {
-		_mainEXE = new DatabaseNE();
+		_mainEXE = new Common::NEResources();
 
 		// Demo only uses the main EXE
 		if (!isDemo())
-			_library = new DatabaseNE();
+			_library = new Common::NEResources();
 	}
 
-	if (!_mainEXE->load(getEXEName()))
-		error("Failed to load main EXE '%s'", getEXEName().c_str());
+	if (isCompressed()) {
+		if (!_mainEXE->loadFromCompressedEXE(getEXEName()))
+			error("Failed to load main EXE '%s'", getEXEName().c_str());
 
-	if (_library && !_library->load(getLibraryName()))
-		error("Failed to load library DLL '%s'", getLibraryName().c_str());
+		if (_library && !_library->loadFromCompressedEXE(getLibraryName()))
+			error("Failed to load library DLL '%s'", getLibraryName().c_str());
+	} else {
+		if (!_mainEXE->loadFromEXE(getEXEName()))
+			error("Failed to load main EXE '%s'", getEXEName().c_str());
+
+		if (_library && !_library->loadFromEXE(getLibraryName()))
+			error("Failed to load library DLL '%s'", getLibraryName().c_str());
+	}
 
 	syncSoundSettings();
 
@@ -162,12 +161,32 @@ Common::Error BuriedEngine::run() {
 	return Common::kNoError;
 }
 
-GUI::Debugger *BuriedEngine::getDebugger() {
-	return _console;
-}
-
 Common::String BuriedEngine::getString(uint32 stringID) {
-	return _mainEXE->loadString(stringID);
+	bool continueReading = true;
+	Common::String result;
+
+	while (continueReading) {
+		Common::String string = _mainEXE->loadString(stringID);
+
+		if (string.empty())
+			return "";
+
+		if (string[0] == '!') {
+			string.deleteChar(0);
+			stringID++;
+		} else {
+			continueReading = false;
+		}
+
+		result += string;
+	}
+
+	// Change any \r to \n
+	for (uint32 i = 0; i < result.size(); i++)
+		if (result[i] == '\r')
+			result.setChar('\n', i);
+
+	return result;
 }
 
 Common::String BuriedEngine::getFilePath(uint32 stringID) {
@@ -198,45 +217,49 @@ Common::String BuriedEngine::getFilePath(uint32 stringID) {
 	return output;
 }
 
+Graphics::WinCursorGroup *BuriedEngine::getCursorGroup(uint32 cursorGroupID) {
+	return Graphics::WinCursorGroup::createCursorGroup(_mainEXE, cursorGroupID);
+}
+
 Common::SeekableReadStream *BuriedEngine::getBitmapStream(uint32 bitmapID) {
 	// The demo's bitmaps are in the main EXE
 	if (isDemo())
-		return _mainEXE->getBitmapStream(bitmapID);
+		return _mainEXE->getResource(Common::kWinBitmap, bitmapID);
 
 	// The rest in the database library
-	return _library->getBitmapStream(bitmapID);
+	return _library->getResource(Common::kWinBitmap, bitmapID);
 }
 
 Common::SeekableReadStream *BuriedEngine::getNavData(uint32 resourceID) {
-	return _mainEXE->getResourceStream("NAVDATA", resourceID);
+	return _mainEXE->getResource(Common::String("NAVDATA"), resourceID);
 }
 
 Common::SeekableReadStream *BuriedEngine::getSndData(uint32 resourceID) {
-	return _mainEXE->getResourceStream("SNDDATA", resourceID);
+	return _mainEXE->getResource(Common::String("SNDDATA"), resourceID);
 }
 
 Common::SeekableReadStream *BuriedEngine::getAnimData(uint32 resourceID) {
-	return _mainEXE->getResourceStream("ANIMDATA", resourceID);
+	return _mainEXE->getResource(Common::String("ANIMDATA"), resourceID);
 }
 
 Common::SeekableReadStream *BuriedEngine::getAIData(uint32 resourceID) {
-	return _mainEXE->getResourceStream("AIDATA", resourceID);
+	return _mainEXE->getResource(Common::String("AIDATA"), resourceID);
 }
 
 Common::SeekableReadStream *BuriedEngine::getItemData(uint32 resourceID) {
-	return _mainEXE->getResourceStream("ITEMDATA", resourceID);
+	return _mainEXE->getResource(Common::String("ITEMDATA"), resourceID);
 }
 
 Common::SeekableReadStream *BuriedEngine::getBookData(uint32 resourceID) {
-	return _mainEXE->getResourceStream("BOOKDATA", resourceID);
+	return _mainEXE->getResource(Common::String("BOOKDATA"), resourceID);
 }
 
 Common::SeekableReadStream *BuriedEngine::getFileBCData(uint32 resourceID) {
-	return _mainEXE->getResourceStream("FILEBCDATA", resourceID);
+	return _mainEXE->getResource(Common::String("FILEBCDATA"), resourceID);
 }
 
 Common::SeekableReadStream *BuriedEngine::getINNData(uint32 resourceID) {
-	return _mainEXE->getResourceStream("INNDATA", resourceID);
+	return _mainEXE->getResource(Common::String("INNDATA"), resourceID);
 }
 
 uint BuriedEngine::createTimer(Window *window, uint period) {
@@ -403,14 +426,8 @@ void BuriedEngine::pollForEvents() {
 				_focusedWindow->postMessage(new KeyUpMessage(event.kbd, 0));
 			break;
 		case Common::EVENT_KEYDOWN:
-			if (event.kbd.keycode == Common::KEYCODE_d && (event.kbd.flags & Common::KBD_CTRL)) {
-				// Gobble up ctrl+d for the console
-				_console->attach();
-				_console->onFrame();
-			} else {
-				if (_focusedWindow)
-					_focusedWindow->postMessage(new KeyDownMessage(event.kbd, 0));
-			}
+			if (_focusedWindow)
+				_focusedWindow->postMessage(new KeyDownMessage(event.kbd, 0));
 			break;
 		case Common::EVENT_LBUTTONDOWN: {
 			Window *window = _captureWindow ? _captureWindow : _mainWindow->childWindowAtPoint(event.mouse);
@@ -454,7 +471,19 @@ void BuriedEngine::setTransitionSpeed(int newSpeed) {
 }
 
 uint32 BuriedEngine::getVersion() {
-	return _mainEXE->getVersion();
+	if (isWin95()) {
+		// Not really needed, it should only be 1.1
+		return MAKEVERSION(1, 1, 0, 0);
+	}
+
+	Common::SeekableReadStream *res = _mainEXE->getResource(Common::kWinVersion, 1);
+	Common::WinResources::VersionInfo *versionInfo = _mainEXE->parseVersionInfo(res);
+
+	uint32 result = MAKEVERSION(versionInfo->fileVersion[0], versionInfo->fileVersion[1], versionInfo->fileVersion[2], versionInfo->fileVersion[3]);
+	delete versionInfo;
+	delete res;
+
+	return result;
 }
 
 Common::String BuriedEngine::getFilePath(int timeZone, int environment, int fileOffset) {

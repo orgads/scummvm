@@ -627,7 +627,7 @@ void SurfaceSdlGraphicsManager::detectSupportedFormats() {
 #endif
 
 int SurfaceSdlGraphicsManager::getGraphicsModeScale(int mode) const {
-	if (mode >= (int)s_supportedGraphicsModes->size())
+	if (mode < 0 || mode >= (int)s_supportedGraphicsModes->size())
 		return -1;
 
 	return (*s_supportedGraphicsModesData)[mode].scaleFactor;
@@ -643,7 +643,7 @@ bool SurfaceSdlGraphicsManager::setGraphicsMode(int mode, uint flags) {
 
 	int newScaleFactor;
 
-	if (mode >= (int)s_supportedGraphicsModes->size()) {
+	if (mode < 0 || mode >= (int)s_supportedGraphicsModes->size()) {
 		warning("unknown gfx mode %d", mode);
 		return false;
 	}
@@ -797,7 +797,7 @@ void SurfaceSdlGraphicsManager::initSize(uint w, uint h, const Graphics::PixelFo
 			// 0 will currently always be Normal1x scaling
 			setGraphicsMode(0);
 		} else {
-			g_system->setGraphicsMode(ConfMan.get("gfx_mode").c_str());
+			setGraphicsMode(getGraphicsModeIdByName(ConfMan.get("gfx_mode")));
 		}
 	}
 

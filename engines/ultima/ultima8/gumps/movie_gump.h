@@ -63,9 +63,23 @@ public:
 	INTRINSIC(I_playMovieOverlay);
 	INTRINSIC(I_playMovieCutscene);
 	INTRINSIC(I_playMovieCutsceneAlt);
+	INTRINSIC(I_playMovieCutsceneRegret);
 
 protected:
 	MoviePlayer *_player;
+
+	// Load subtitles with format detection
+	void loadSubtitles(Common::SeekableReadStream *rs);
+
+	// Load subtitles from a txt file (No Remorse format)
+	void loadTXTSubs(Common::SeekableReadStream *rs);
+
+	// Load subtitles from a iff file (No Regret format)
+	void loadIFFSubs(Common::SeekableReadStream *rs);
+
+	Common::HashMap<int, Common::String> _subtitles;
+	uint16 _subtitleWidget;
+
 };
 
 } // End of namespace Ultima8

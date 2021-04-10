@@ -38,7 +38,12 @@ struct ADGameDescription;
 namespace Common {
 class SeekableReadStream;
 class Serializer;
+class WinResources;
 class WriteStream;
+}
+
+namespace Graphics {
+struct WinCursorGroup;
 }
 
 namespace Buried {
@@ -51,7 +56,6 @@ enum {
 };
 
 class BuriedConsole;
-class Database;
 struct GlobalFlags;
 class GraphicsManager;
 struct Location;
@@ -80,13 +84,13 @@ public:
 	Common::Language getLanguage() const;
 
 	bool hasFeature(EngineFeature f) const;
-	GUI::Debugger *getDebugger();
 	void pauseEngineIntern(bool pause);
 
 	// Resources
 	Common::String getString(uint32 stringID);
 	Common::String getFilePath(uint32 stringID);
 	Common::String getFilePath(int timeZone, int environment, int fileOffset);
+	Graphics::WinCursorGroup *getCursorGroup(uint32 cursorGroupID);
 	Common::SeekableReadStream *getBitmapStream(uint32 bitmapID);
 	Common::SeekableReadStream *getNavData(uint32 resourceID);
 	Common::SeekableReadStream *getSndData(uint32 resourceID);
@@ -103,12 +107,10 @@ public:
 	uint32 computeFileNameResourceID(int timeZone, int environment, int fileOffset);
 
 	GraphicsManager *_gfx;
-	Database *_mainEXE;
 	SoundManager *_sound;
 	Window *_mainWindow; // Only one main window is supported.
 	Window *_focusedWindow;
 	Window *_captureWindow;
-	BuriedConsole *_console;
 
 	// Timers
 	uint createTimer(Window *window, uint period);
@@ -149,7 +151,7 @@ public:
 	Common::Error runLoadDialog();
 
 private:
-	Database *_library;
+	Common::WinResources *_mainEXE, *_library;
 
 	struct Timer {
 		Window *owner;

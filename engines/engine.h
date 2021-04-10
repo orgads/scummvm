@@ -175,6 +175,11 @@ protected:
 
 private:
 	/**
+	 * The associated metaengine
+	 */
+	MetaEngine *_metaEngine;
+
+	/**
 	 * The pause level.
 	 *
 	 * 0 means 'running'. A positive value indicates how often the engine
@@ -322,7 +327,7 @@ public:
 	/**
 	 * Return the engine's debugger instance, if any.
 	 */
-	virtual GUI::Debugger *getDebugger() { return _debugger; }
+	virtual GUI::Debugger *getDebugger() final { return _debugger; }
 
 	/**
 	 * Set the engine's debugger.
@@ -490,7 +495,12 @@ public:
 	/**
 	 * Return the MetaEngine instance used by this engine.
 	 */
-	static MetaEngine &getMetaEngine();
+	inline MetaEngine *getMetaEngine() const { return _metaEngine; }
+
+	/**
+	 * Set the MetaEngine instance used by this engine.
+	 */
+	inline void setMetaEngine(MetaEngine *metaEngine) { _metaEngine = metaEngine; }
 
 	/**
 	 * Pause the engine.

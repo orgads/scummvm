@@ -16,15 +16,17 @@ For a more comprehensive changelog of the latest experimental code, see:
    - Added support for OO-Topos
    - Added support for Glulx interactive fiction games
    - Added support for Private Eye (US release)
+   - Added support for AGS Games versions 2.5+
 
  New ports:
    - The Nintendo DS port got a major rewrite.
 
  General:
    - Switched ScummVM GUI output to UTF-32.
-   - Updated the Roland MT-32 emulation code to the Munt project's mt32emu 2.4.2.
+   - Updated the Roland MT-32 emulation code to the Munt project's mt32emu 2.5.0.
    - Updated Dropbox Cloud Storage to use the new Dropbox OAuth workflow.
    - Major extension to the number of supported graphics scalers.
+   - Display path to scummvm configuration file in GUI -> Options -> Paths
 
  AGOS:
    - Added support for the Japanese PC-98 version of Elvira 1.

@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef TWINE_RENDERER_H
-#define TWINE_RENDERER_H
+#ifndef TWINE_RENDERER_RENDERER_H
+#define TWINE_RENDERER_RENDERER_H
 
 #include "common/endian.h"
 #include "common/rect.h"
@@ -40,10 +40,6 @@
 #define POLYGONTYPE_DITHER 8
 #define POLYGONTYPE_UNKNOWN 9
 
-namespace Common {
-class MemoryReadStream;
-}
-
 namespace TwinE {
 
 class TwinEEngine;
@@ -58,6 +54,8 @@ struct CmdRenderPolygon {
 	uint8 renderType = 0;
 	uint8 numVertices = 0;
 	int16 colorIndex = 0;
+	int16 top = 0;
+	int16 bottom = 0;
 	// followed by Vertex array
 };
 
@@ -69,135 +67,19 @@ struct IMatrix3x3 {
 
 inline IMatrix3x3 operator*(const IMatrix3x3 &matrix, const IVec3 &vec) {
 	IMatrix3x3 out;
-	out.row1[0] = matrix.row1[0] * vec.x;
-	out.row1[1] = matrix.row1[1] * vec.x;
-	out.row1[2] = matrix.row1[2] * vec.x;
+	out.row1.x = matrix.row1.x * vec.x;
+	out.row1.y = matrix.row1.y * vec.x;
+	out.row1.z = matrix.row1.z * vec.x;
 
-	out.row2[0] = matrix.row2[0] * vec.y;
-	out.row2[1] = matrix.row2[1] * vec.y;
-	out.row2[2] = matrix.row2[2] * vec.y;
+	out.row2.x = matrix.row2.x * vec.y;
+	out.row2.y = matrix.row2.y * vec.y;
+	out.row2.z = matrix.row2.z * vec.y;
 
-	out.row3[0] = matrix.row3[0] * vec.z;
-	out.row3[1] = matrix.row3[1] * vec.z;
-	out.row3[2] = matrix.row3[2] * vec.z;
+	out.row3.x = matrix.row3.x * vec.z;
+	out.row3.y = matrix.row3.y * vec.z;
+	out.row3.z = matrix.row3.z * vec.z;
 	return out;
 }
-
-#include "common/pack-start.h"
-struct BonesBaseData {
-	int16 firstPoint = 0;  // data1
-	int16 numOfPoints = 0; // data2
-	int16 basePoint = 0;   // data3
-	int16 baseElement = 0; // param
-	int16 flag = 0;
-	int16 rotateZ = 0;
-	int16 rotateY = 0;
-	int16 rotateX = 0;
-	int16 unk1 = 0; // field_10
-	int16 numOfShades = 0;
-	int16 unk2 = 0;
-	int32 field_18 = 0;
-	int32 y = 0;
-	int32 field_20 = 0;
-	int32 field_24 = 0;
-};
-#include "common/pack-end.h"
-static_assert(sizeof(BonesBaseData) == 38, "Unexpected elementEntry size");
-
-class Model {
-private:
-	static uint8 *getBonesData(uint8 *bodyPtr) {
-		uint8 *verticesBase = getData(bodyPtr);
-		const int16 numVertices = READ_LE_INT16(verticesBase);
-		return verticesBase + 2 + numVertices * 6;
-	}
-
-	static const uint8 *getBonesData(const uint8 *bodyPtr) {
-		const uint8 *verticesBase = getData(bodyPtr);
-		const int16 numVertices = READ_LE_INT16(verticesBase);
-		return verticesBase + 2 + numVertices * 6;
-	}
-
-	static uint8 *getData(uint8 *bodyPtr) {
-		return bodyPtr + 0x1A;
-	}
-
-	static const uint8 *getData(const uint8 *bodyPtr) {
-		return bodyPtr + 0x1A;
-	}
-public:
-	static inline bool isAnimated(const uint8 *bodyPtr) {
-		const int16 bodyHeader = READ_LE_INT16(bodyPtr);
-		return (bodyHeader & 2) != 0;
-	}
-
-	static const uint8 *getVerticesBaseData(const uint8 *bodyPtr) {
-		return getData(bodyPtr) + 2;
-	}
-
-	static const BoneFrame *getBonesStateData(const uint8 *bodyPtr, int boneIdx) {
-		assert(boneIdx <= getNumBones(bodyPtr));
-		return (const BoneFrame*)((const uint8*)getBonesBaseData(bodyPtr) + 8 + (boneIdx * sizeof(BonesBaseData)));
-	}
-
-	static BoneFrame *getBonesStateData(uint8 *bodyPtr, int boneIdx) {
-		assert(boneIdx <= getNumBones(bodyPtr));
-		return (BoneFrame*)((uint8*)getBonesBaseData(bodyPtr) + 8 + (boneIdx * sizeof(BonesBaseData)));
-	}
-
-	static BonesBaseData *getBonesBaseData(uint8 *bodyPtr, int boneIdx = 0) {
-		assert(boneIdx <= getNumBones(bodyPtr));
-		return (BonesBaseData *)(getBonesData(bodyPtr) + 2 + (boneIdx * sizeof(BonesBaseData)));
-	}
-
-	static const BonesBaseData *getBonesBaseData(const uint8 *bodyPtr, int boneIdx = 0) {
-		assert(boneIdx <= getNumBones(bodyPtr));
-		return (const BonesBaseData *)(getBonesData(bodyPtr) + 2 + (boneIdx * sizeof(BonesBaseData)));
-	}
-
-	static int16 getNumBones(const uint8 *bodyPtr) {
-		const uint8 *bonesBase = getBonesData(bodyPtr);
-		return READ_LE_INT16(bonesBase);
-	}
-
-	static int16 getNumVertices(const uint8 *bodyPtr) {
-		const uint8 *verticesBase = getData(bodyPtr);
-		return READ_LE_INT16(verticesBase);
-	}
-
-	static const uint8 *getShadesBaseData(const uint8 *bodyPtr, int16 shadeIdx = 0) {
-		assert(shadeIdx <= getNumShades(bodyPtr));
-		return getShadesData(bodyPtr) + 2 + (shadeIdx * 8);
-	}
-
-	static const uint8 *getShadesData(const uint8 *bodyPtr) {
-		const int16 numBones = getNumBones(bodyPtr);
-		return (const uint8 *)getBonesBaseData(bodyPtr, numBones);
-	}
-
-	static int16 getNumShades(const uint8 *bodyPtr) {
-		const uint8 *shadesBase = getShadesData(bodyPtr);
-		return READ_LE_INT16(shadesBase);
-	}
-
-	static int16 getNumShadesBone(const uint8 *bodyPtr, int boneIdx) {
-		return getBonesBaseData(bodyPtr, boneIdx)->numOfShades;
-	}
-
-	static const uint8 *getPolygonData(const uint8 *bodyPtr) {
-		const uint8 *shades = getShadesBaseData(bodyPtr);
-		const int16 numShades = getNumShades(bodyPtr);
-		if (numShades <= 0) {
-			return shades;
-		}
-		const int16 bones = getNumBones(bodyPtr);
-		for (int16 boneIdx = 0; boneIdx < bones; ++boneIdx) {
-			int16 numOfShades = getNumShadesBone(bodyPtr, boneIdx);
-			shades += numOfShades * 8;
-		}
-		return shades;
-	}
-};
 
 class Renderer {
 private:
@@ -209,6 +91,9 @@ private:
 		/**
 		 * Pointer to the command data
 		 * @sa renderCoordinatesBuffer
+		 * @sa CmdRenderLine
+		 * @sa CmdRenderSphere
+		 * @sa CmdRenderPolygon
 		 */
 		uint8 *dataPtr = nullptr;
 	};
@@ -241,37 +126,23 @@ private:
 		int16 radius = 0;
 	};
 
-#include "common/pack-start.h"
-	struct pointTab {
-		int16 x = 0;
-		int16 y = 0;
-		int16 z = 0;
-	};
-#include "common/pack-end.h"
-	static_assert(sizeof(pointTab) == 6, "Unexpected pointTab size");
-
-	struct polyVertexHeader {
-		int16 shadeEntry = 0;
-		int16 dataOffset = 0;
-	};
-
 	struct ModelData {
-		pointTab computedPoints[800];
-		pointTab flattenPoints[800];
+		I16Vec3 computedPoints[800];
+		I16Vec3 flattenPoints[800];
 		int16 shadeTable[500]{0};
 	};
 
 	ModelData _modelData;
 
-	bool renderAnimatedModel(ModelData *modelData, const uint8 *bodyPtr, RenderCommand *renderCmds, const IVec3 &angleVec, const IVec3 &renderPos);
+	bool renderAnimatedModel(ModelData *modelData, const BodyData &bodyData, RenderCommand *renderCmds, const IVec3 &angleVec, const IVec3 &renderPos);
 	void circleFill(int32 x, int32 y, int32 radius, uint8 color);
-	bool renderModelElements(int32 numOfPrimitives, const uint8 *polygonPtr, RenderCommand **renderCmds, ModelData *modelData);
+	bool renderModelElements(int32 numOfPrimitives, const BodyData &bodyData, RenderCommand **renderCmds, ModelData *modelData);
 	void getCameraAnglePositions(int32 x, int32 y, int32 z);
 	void applyRotation(IMatrix3x3 *targetMatrix, const IMatrix3x3 *currentMatrix, const IVec3 &angleVec);
-	void applyPointsRotation(const pointTab *pointsPtr, int32 numPoints, pointTab *destPoints, const IMatrix3x3 *rotationMatrix);
-	void processRotatedElement(IMatrix3x3 *targetMatrix, const pointTab *pointsPtr, int32 rotZ, int32 rotY, int32 rotX, const BonesBaseData *boneData, ModelData *modelData);
-	void applyPointsTranslation(const pointTab *pointsPtr, int32 numPoints, pointTab *destPoints, const IMatrix3x3 *translationMatrix, const IVec3 &angleVec);
-	void processTranslatedElement(IMatrix3x3 *targetMatrix, const pointTab *pointsPtr, int32 rotX, int32 rotY, int32 rotZ, const BonesBaseData *boneData, ModelData *modelData);
+	void applyPointsRotation(const Common::Array<BodyVertex>& vertices, int32 firstPoint, int32 numPoints, I16Vec3 *destPoints, const IMatrix3x3 *rotationMatrix);
+	void processRotatedElement(IMatrix3x3 *targetMatrix, const Common::Array<BodyVertex>& vertices, int32 rotX, int32 rotY, int32 rotZ, const BodyBone &bone, ModelData *modelData);
+	void applyPointsTranslation(const Common::Array<BodyVertex>& vertices, int32 firstPoint, int32 numPoints, I16Vec3 *destPoints, const IMatrix3x3 *translationMatrix, const IVec3 &angleVec);
+	void processTranslatedElement(IMatrix3x3 *targetMatrix, const Common::Array<BodyVertex>& vertices, int32 rotX, int32 rotY, int32 rotZ, const BodyBone &bone, ModelData *modelData);
 	void translateGroup(int32 x, int32 y, int32 z);
 
 	IVec3 _baseTransPos;
@@ -317,13 +188,12 @@ private:
 	void renderPolygonsDither(uint8 *out, int vtop, int32 vsize) const;
 	void renderPolygonsMarble(uint8 *out, int vtop, int32 vsize, uint8 color) const;
 
-	void computeBoundingBox(Vertex *vertices, int32 numVertices, int &vleft, int &vright, int &vtop, int &vbottom) const;
 	void computePolygons(int16 polyRenderType, const Vertex *vertices, int32 numVertices);
 
 	const RenderCommand *depthSortRenderCommands(int32 numOfPrimitives);
-	uint8 *preparePolygons(Common::MemoryReadStream &stream, int32 &numOfPrimitives, RenderCommand **renderCmds, uint8 *renderBufferPtr, ModelData *modelData);
-	uint8 *prepareSpheres(Common::MemoryReadStream &stream, int32 &numOfPrimitives, RenderCommand **renderCmds, uint8 *renderBufferPtr, ModelData *modelData);
-	uint8 *prepareLines(Common::MemoryReadStream &stream, int32 &numOfPrimitives, RenderCommand **renderCmds, uint8 *renderBufferPtr, ModelData *modelData);
+	uint8 *preparePolygons(const Common::Array<BodyPolygon>& polygons, int32 &numOfPrimitives, RenderCommand **renderCmds, uint8 *renderBufferPtr, ModelData *modelData);
+	uint8 *prepareSpheres(const Common::Array<BodySphere>& spheres, int32 &numOfPrimitives, RenderCommand **renderCmds, uint8 *renderBufferPtr, ModelData *modelData);
+	uint8 *prepareLines(const Common::Array<BodyLine>& lines, int32 &numOfPrimitives, RenderCommand **renderCmds, uint8 *renderBufferPtr, ModelData *modelData);
 
 	void baseMatrixTranspose();
 
@@ -346,7 +216,7 @@ public:
 	void setLightVector(int32 angleX, int32 angleY, int32 angleZ);
 	void getBaseRotationPosition(int32 x, int32 y, int32 z);
 
-	void renderPolygons(const CmdRenderPolygon &polygon, Vertex *vertices);
+	void renderPolygons(const CmdRenderPolygon &polygon, Vertex *vertices, int vtop, int vbottom);
 
 	inline int32 projectPositionOnScreen(const IVec3& pos) {
 		return projectPositionOnScreen(pos.x, pos.y, pos.z);
@@ -364,18 +234,18 @@ public:
 	void setBaseRotation(int32 x, int32 y, int32 z, bool transpose = false);
 	void setOrthoProjection(int32 x, int32 y, int32 z);
 
-	bool renderIsoModel(int32 x, int32 y, int32 z, int32 angleX, int32 angleY, int32 angleZ, const uint8 *bodyPtr);
+	bool renderIsoModel(int32 x, int32 y, int32 z, int32 angleX, int32 angleY, int32 angleZ, const BodyData &bodyData);
 
 	/**
 	 * @param angle A value of @c -1 means that the model is automatically rotated
 	 */
-	void renderBehaviourModel(int32 boxLeft, int32 boxTop, int32 boxRight, int32 boxBottom, int32 y, int32 angle, const uint8 *bodyPtr);
+	void renderBehaviourModel(int32 boxLeft, int32 boxTop, int32 boxRight, int32 boxBottom, int32 y, int32 angle, const BodyData &bodyData);
 	/**
 	 * @param angle A value of @c -1 means that the model is automatically rotated
 	 */
-	void renderBehaviourModel(const Common::Rect &rect, int32 y, int32 angle, const uint8 *bodyPtr);
+	void renderBehaviourModel(const Common::Rect &rect, int32 y, int32 angle, const BodyData &bodyData);
 
-	void renderInventoryItem(int32 x, int32 y, const uint8 *bodyPtr, int32 angle, int32 param);
+	void renderInventoryItem(int32 x, int32 y, const BodyData &bodyData, int32 angle, int32 param);
 
 	void renderHolomapVertices(const Vertex vertexCoordinates[3], const Vertex vertexAngles[3]);
 };

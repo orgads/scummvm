@@ -1124,7 +1124,7 @@ bool Debugger::cmdAttack(int argc, const char **argv) {
 }
 
 bool Debugger::cmdCameraOnAvatar(int argc, const char **argv) {
-	MainActor *actor = getMainActor();
+	Actor *actor = getControlledActor();
 	if (actor) {
 		int32 x, y, z;
 		actor->getLocation(x, y, z);
@@ -1720,6 +1720,11 @@ bool Debugger::cmdU8ShapeViewer(int argc, const char **argv) {
 }
 
 bool Debugger::cmdShowMenu(int argc, const char **argv) {
+	World *world = World::get_instance();
+	if (world && world->getControlledNPCNum() != 1) {
+		world->setControlledNPCNum(1);
+		return false;
+	}
 	MenuGump::showMenu();
 	return false;
 }

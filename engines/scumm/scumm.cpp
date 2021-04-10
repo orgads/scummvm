@@ -249,7 +249,9 @@ ScummEngine::ScummEngine(OSystem *syst, const DetectorResult &dr)
 	_roomWidth = 0;
 	_screenHeight = 0;
 	_screenWidth = 0;
-	memset(_virtscr, 0, sizeof(_virtscr));
+	for (uint i = 0; i < ARRAYSIZE(_virtscr); i++) {
+		_virtscr[i].clear();
+	}
 	camera.reset();
 	memset(_colorCycle, 0, sizeof(_colorCycle));
 	memset(_colorUsedByCycle, 0, sizeof(_colorUsedByCycle));
@@ -808,9 +810,13 @@ int ScummEngine_v0::DelayCalculateDelta() {
 ScummEngine_v6::ScummEngine_v6(OSystem *syst, const DetectorResult &dr)
 	: ScummEngine(syst, dr) {
 	_blastObjectQueuePos = 0;
-	memset(_blastObjectQueue, 0, sizeof(_blastObjectQueue));
+	for (uint i = 0; i < ARRAYSIZE(_blastObjectQueue); i++) {
+		_blastObjectQueue[i].clear();
+	}
 	_blastTextQueuePos = 0;
-	memset(_blastTextQueue, 0, sizeof(_blastTextQueue));
+	for (uint i = 0; i < ARRAYSIZE(_blastTextQueue); i++) {
+		_blastTextQueue[i].clear();
+	}
 
 	memset(_akosQueue, 0, sizeof(_akosQueue));
 	_akosQueuePos = 0;
@@ -894,7 +900,9 @@ ScummEngine_v70he::~ScummEngine_v70he() {
 ScummEngine_v71he::ScummEngine_v71he(OSystem *syst, const DetectorResult &dr)
 	: ScummEngine_v70he(syst, dr) {
 	_auxBlocksNum = 0;
-	memset(_auxBlocks, 0, sizeof(_auxBlocks));
+	for (uint i = 0; i < ARRAYSIZE(_auxBlocks); i++) {
+		_auxBlocks[i].clear();
+	}
 	_auxEntriesNum = 0;
 	memset(_auxEntries, 0, sizeof(_auxEntries));
 
@@ -2028,7 +2036,7 @@ void ScummEngine::setupMusic(int midi) {
 			useOnlyNative = true;
 		} else if (_sound->_musicType == MDT_AMIGA) {
 			nativeMidiDriver = new IMuseDriver_Amiga(_mixer);
-			_native_mt32 = false;
+			_native_mt32 = _enable_gs = false;
 			useOnlyNative = true;
 		} else if (_sound->_musicType != MDT_ADLIB && _sound->_musicType != MDT_TOWNS && _sound->_musicType != MDT_PCSPK) {
 			nativeMidiDriver = MidiDriver::createMidi(dev);

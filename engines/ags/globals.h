@@ -185,8 +185,8 @@ public:
 	int __rgb_b_shift_32 = DEFAULT_RGB_B_SHIFT_32;
 	int __rgb_a_shift_32 = DEFAULT_RGB_A_SHIFT_32;
 
-	RGB_MAP *_rgb_map;
-	COLOR_MAP *_color_map;
+	RGB_MAP *_rgb_map = nullptr;
+	COLOR_MAP *_color_map = nullptr;
 	int _trans_blend_alpha = 0;
 	int _trans_blend_red = 0;
 	int _trans_blend_green = 0;
@@ -217,6 +217,15 @@ public:
 	// do, we should give the audio layer a chance to update.
 	// 16 milliseconds is rough period for 60fps
 	const std::chrono::milliseconds _MaximumDelayBetweenPolling = std::chrono::milliseconds(16);
+
+	/**@}*/
+
+	/**
+	 * \defgroup agsplugin globals
+	 * @{
+	 */
+
+	AGS::Shared::Bitmap *_glVirtualScreenWrap;
 
 	/**@}*/
 
@@ -1187,7 +1196,7 @@ public:
 	 * @{
 	 */
 
-	int _pluginSimulatedClick = 0;
+	int _pluginSimulatedClick = -1;
 	int _mouse_z_was = 0;
 
 	/**@}*/

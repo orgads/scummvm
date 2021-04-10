@@ -48,7 +48,10 @@ void CruAvatarMoverProcess::run() {
 	// we check if the combat angle needs updating - this keeps it smooth.
 
 	const Actor *avatar = getControlledActor();
-	assert(avatar);
+
+	// Controlled actor may have gone
+	if (!avatar)
+		return;
 
 	// When not in combat the angle is kept as -1
 	if (avatar->isInCombat()) {
@@ -154,7 +157,7 @@ void CruAvatarMoverProcess::handleCombatMode() {
 	} else if (hasMovementFlags(MOVE_BACK)) {
 		Animation::Sequence nextanim;
 		if (hasMovementFlags(MOVE_JUMP)) {
-			if (!avatar->isKneeling()) {
+			if (!avatar->isKneeling() && avatar->hasAnim(Animation::kneelStartCru)) {
 				nextanim = Animation::kneelStartCru;
 				avatar->setActorFlag(Actor::ACT_KNEELING);
 			} else {
@@ -216,8 +219,8 @@ void CruAvatarMoverProcess::handleCombatMode() {
 			nextanim = Animation::combatRunSmallWeapon;
 		}
 
-		nextanim = Animation::checkWeapon(nextanim, lastanim);
-		step(nextanim, nextdir);
+		Animation::Sequence wpnanim = Animation::checkWeapon(nextanim, lastanim);
+		step(wpnanim, nextdir);
 		return;
 	}
 
@@ -236,7 +239,7 @@ void CruAvatarMoverProcess::handleCombatMode() {
 		idleanim = Animation::stopRunningAndDrawSmallWeapon;
 	}
 
-	// not doing anything in particular? stand
+	// Not doing anything in particular? stand.
 	if (lastanim != idleanim) {
 		Animation::Sequence nextanim = Animation::checkWeapon(idleanim, lastanim);
 		waitFor(avatar->doAnim(nextanim, direction));
@@ -330,7 +333,7 @@ void CruAvatarMoverProcess::handleNormalMode() {
 		return;
 
 	// doing another animation?
-	if (Kernel::get_instance()->getNumProcesses(1, ActorAnimProcess::ACTOR_ANIM_PROC_TYPE))
+	if (avatar->isBusy())
 		return;
 
 	// not doing anything in particular? stand

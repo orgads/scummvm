@@ -7,39 +7,37 @@
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
- * of the License, or(at your option) any later version.
- *
+ * of the License, or (at your option) any later version.
+
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
  */
 
-#ifndef AGS_PLUGINS_AGS_GALAXY_STEAM_AGS_BLACKWELL_STEAM_H
-#define AGS_PLUGINS_AGS_GALAXY_STEAM_AGS_BLACKWELL_STEAM_H
+#ifndef NANCY_STATE_STATE_H
+#define NANCY_STATE_STATE_H
 
-#include "ags/plugins/ags_galaxy_steam/ags_galaxy_steam.h"
+namespace Nancy {
+namespace State {
 
-namespace AGS3 {
-namespace Plugins {
-namespace AGSGalaxySteam {
-
-class AGSBlackwellSteam : public AGSSteam {
-private:
-	static void AGS_EngineStartup(IAGSEngine *engine);
-	static void AddAchievement(ScriptMethodParams &params);
-    
+// Base class for all states. Provides a simple API for handling state switching
+class State {
 public:
-	AGSBlackwellSteam();
+	State() {}
+	virtual ~State() {};
+
+	virtual void process() = 0;
+	virtual void onStateEnter() {}
+	virtual void onStateExit() {}
 };
 
-} // namespace AGSGalaxySteam
-} // namespace Plugins
-} // namespace AGS3
+} // End of namespace State
+} // End of namespace Nancy
 
-#endif
+#endif // NANCY_STATE_STATE_H

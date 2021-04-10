@@ -77,13 +77,27 @@ SuperSpriteProcess::SuperSpriteProcess(int shape, int frame, int sx, int sy, int
 			else
 				rng /= 10;
 		} else {
-			if (dynamic_cast<Actor *>(srcitem) != nullptr) {
-				rng /= 2;
+			Actor *srcnpc = dynamic_cast<Actor *>(srcitem);
+			Actor *controlled = getControlledActor();
+			const uint32 frameno = Kernel::get_instance()->getFrameNum();
+			const uint32 timeoutfinish = controlled ? controlled->getAttackMoveTimeoutFinish() : 0;
+			if (!srcnpc || !srcnpc->getAttackAimFlag()) {
+				if (!srcnpc || frameno < timeoutfinish) {
+					if (!srcnpc && (controlled && controlled->isKneeling())) {
+						rng = rng / 5;
+					} else {
+						const uint16 dodgefactor = controlled ? controlled->getAttackMoveDodgeFactor() : 2;
+						if (!srcnpc) {
+							rng = rng / (dodgefactor * 3);
+						} else {
+							rng = rng / dodgefactor;
+						}
+					}
+				} else {
+					rng = rng / 8;
+				}
 			} else {
-				// TODO: various other flags are checked in the game (around 1138:0bd1)
-				// such as World_FinishedAvatarMoveTimeout() -> 8
-				//  to make it either 5 or 8.  For now just use 5.
-				rng /= 5;
+				rng = rng / 2;
 			}
 		}
 
@@ -224,20 +238,22 @@ void SuperSpriteProcess::run() {
 		}
 	}
 
-	// TODO: Clamp Z values as original does ~lines 280-290 of
-	// SuperSpriteProcess::run()
 	_pt3 = newpt;
+	if (_pt3.z < 0)
+		_pt3.z = 0;
+	if (_pt3.z > 0xfa)
+		_pt3.z = 0xfa;
 
 	_counter++;
 
-	if (!_itemNum && _counter > 1) {
+	if (!_spriteNo && _counter > 1) {
 		Item *sprite = ItemFactory::createItem(_shape, _frame, 0, Item::FLG_DISPOSABLE,
 			0, 0, Item::EXT_SPRITE, true);
 		_spriteNo = sprite->getObjId();
 		sprite->move(_nowpt);
 	}
 
-	if (_pt3.z != 0 && _pt3.z != 0xfa) {
+	if (_pt3.z > 0 && _pt3.z < 0xfa) {
 		int32 duration = firetypedat->getRoundDuration() + 25;
 
 		if (_counter < duration) {
@@ -362,6 +378,16 @@ void SuperSpriteProcess::hitAndFinish() {
 	destroyItemOrTerminate();
 }
 
+void SuperSpriteProcess::terminate() {
+	if (_spriteNo) {
+		Item *sprite = getItem(_spriteNo);
+		if (sprite)
+			sprite->destroy();
+		_spriteNo = 0;
+	}
+	Process::terminate();
+}
+
 void SuperSpriteProcess::destroyItemOrTerminate() {
 	if (_itemNum) {
 		Item *item = getItem(_itemNum);
@@ -377,27 +403,28 @@ void SuperSpriteProcess::destroyItemOrTerminate() {
 void SuperSpriteProcess::advanceFrame() {
 	_nextpt = _pt3;
 
-	if (_itemNum) {
-		warning("TODO: SuperSpriteProcess::advanceFrame: Implement area search 10e0_123a");
-		// TODO: do an area search for something here.
-		// AreaSearch_10e0_123a
+	Item *item = getItem(_itemNum);
+	if (item) {
+		item->collideMove(_pt3.x, _pt3.y, _pt3.z, false, false);
 	}
 
 	if (_spriteNo) {
 		Item *sprite = getItem(_spriteNo);
 		assert(sprite);
 		sprite->move(_nextpt);
-		uint32 frame = sprite->getFrame();
-		frame++;
-		if (frame > 0x4b)
-			frame = 0x47;
-		sprite->setFrame(frame);
+		if (_fireType == 0xe) {
+			uint32 frame = sprite->getFrame();
+			frame++;
+			if (frame > 0x4b)
+				frame = 0x47;
+			sprite->setFrame(frame);
+		}
 	}
 
 	if (_fireType == 3) {
 		if (_pt5.x != -1) {
 			// Create a little sparkly thing
-			Process *p = new SpriteProcess(0x426, 0, 9, 0, 3, _pt5.x, _pt5.y, _pt5.z);
+			Process *p = new SpriteProcess(0x426, 0, 9, 1, 3, _pt5.x, _pt5.y, _pt5.z);
 			Kernel::get_instance()->addProcess(p);
 		}
 		_pt5 = _nextpt;
@@ -405,22 +432,25 @@ void SuperSpriteProcess::advanceFrame() {
 }
 
 bool SuperSpriteProcess::areaSearch() {
-	// int x1, int y1, int z1, int x2, int y2, int z2
 	CurrentMap *map = World::get_instance()->getCurrentMap();
 
-	warning("TODO: SuperSpriteProcess::areaSearch: Implement area search 1138_0ee8");
-	// TODO: Implement SuperSprite_AreaSearch_1138_0ee8
-	uint16 lsrange = _pt3.maxDistXYZ(_nextpt);
-	UCList uclist(2);
-	LOOPSCRIPT(script, LS_TOKEN_TRUE); // we want all items
-	map->areaSearch(&uclist, script, sizeof(script), nullptr,
-					lsrange, true, _nextpt.x, _nextpt.y);
-	for (unsigned int i = 0; i < uclist.getSize(); ++i) {
-		Item *searchitem = getItem(uclist.getuint16(i));
-		assert(searchitem);
+	int32 start[3] = {_nowpt.x, _nowpt.y, _nowpt.z};
+	int32 end[3] = {_pt3.x, _pt3.y, _pt3.z};
+	int32 dims[3] = {1, 1, 1};
+
+	Item *item = getItem(_itemNum);
+	if (item)
+		item->getLocation(start[0], start[1], start[2]);
+
+	Std::list<CurrentMap::SweepItem> hits;
+	map->sweepTest(start, end, dims, ShapeInfo::SI_SOLID,
+							   _source, true, &hits);
+
+	if (hits.size() > 0) {
+		_item0x77 = hits.front()._item;
 	}
 
-	return false;
+	return hits.size() == 0;
 }
 
 
@@ -435,17 +465,19 @@ void SuperSpriteProcess::saveData(Common::WriteStream *ws) {
 	_startpt.saveData(ws);
 	_pt5.saveData(ws);
 	_destpt.saveData(ws);
+	ws->writeUint16LE(_frame);
 	ws->writeUint16LE(_fireType);
 	ws->writeUint16LE(_damage);
 	ws->writeUint16LE(_source);
 	ws->writeUint16LE(_target);
+	ws->writeUint16LE(_counter);
 	ws->writeUint16LE(_item0x77);
 	ws->writeUint16LE(_spriteNo);
 	ws->writeFloatLE(_xstep);
 	ws->writeFloatLE(_ystep);
 	ws->writeFloatLE(_zstep);
-
-	// TODO: Update save and load functions once this is finished.
+	ws->writeByte(_startedAsFiretype9);
+	ws->writeByte(_expired);
 }
 
 bool SuperSpriteProcess::loadData(Common::ReadStream *rs, uint32 version) {
@@ -459,15 +491,19 @@ bool SuperSpriteProcess::loadData(Common::ReadStream *rs, uint32 version) {
 	_startpt.loadData(rs, version);
 	_pt5.loadData(rs, version);
 	_destpt.loadData(rs, version);
+	_frame = rs->readUint16LE();
 	_fireType = rs->readUint16LE();
 	_damage = rs->readUint16LE();
 	_source = rs->readUint16LE();
 	_target = rs->readUint16LE();
+	_counter = rs->readUint16LE();
 	_item0x77 = rs->readUint16LE();
 	_spriteNo = rs->readUint16LE();
 	_xstep = rs->readFloatLE();
 	_ystep = rs->readFloatLE();
 	_zstep = rs->readFloatLE();
+	_startedAsFiretype9 = (rs->readByte() != 0);
+	_expired = (rs->readByte() != 0);
 
 	return true;
 }

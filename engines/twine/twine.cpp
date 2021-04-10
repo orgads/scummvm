@@ -225,15 +225,16 @@ Common::Error TwinEEngine::run() {
 	debug("The original Little Big Adventure game is:");
 	debug("(c) 1994 by Adeline Software International, All Rights Reserved.");
 
+	ConfMan.registerDefault("usehighres", false);
+	ConfMan.registerDefault("wallcollision", false);
+
 	syncSoundSettings();
 	int32 w = ORIGINAL_WIDTH;
 	int32 h = ORIGINAL_HEIGHT;
-	if (ConfMan.hasKey("usehighres")) {
-		const bool highRes = ConfMan.getBool("usehighres");
-		if (highRes) {
-			w = 1024;
-			h = 768;
-		}
+	const bool highRes = ConfMan.getBool("usehighres");
+	if (highRes) {
+		w = 1024;
+		h = 768;
 	}
 
 	initGraphics(w, h);
@@ -324,7 +325,7 @@ bool TwinEEngine::hasFeature(EngineFeature f) const {
 }
 
 SaveStateList TwinEEngine::getSaveSlots() const {
-	return getMetaEngine().listSaves(_targetName.c_str());
+	return getMetaEngine()->listSaves(_targetName.c_str());
 }
 
 void TwinEEngine::wipeSaveSlot(int slot) {
@@ -397,8 +398,8 @@ void TwinEEngine::initConfigurations() {
 
 	const char *lng = Common::getLanguageDescription(_gameLang);
 	cfgfile.LanguageId = getLanguageTypeIndex(lng);
-	cfgfile.Voice = ConfGetIntOrDefault("voice", 1) == 1;
-	cfgfile.FlagDisplayText = ConfGetIntOrDefault("displaytext", 1) == 1;
+	cfgfile.Voice = ConfGetBoolOrDefault("voice", true);
+	cfgfile.FlagDisplayText = ConfGetBoolOrDefault("displaytext", true);
 	const Common::String midiType = ConfGetOrDefault("miditype", "auto");
 	if (midiType == "None") {
 		cfgfile.MidiType = MIDIFILE_NONE;
@@ -462,9 +463,6 @@ void TwinEEngine::queueMovie(const char *filename) {
 }
 
 void TwinEEngine::initEngine() {
-	// getting configuration file
-	initConfigurations();
-
 	_screens->clearScreen();
 
 	// Check if LBA CD-Rom is on drive
@@ -521,6 +519,9 @@ void TwinEEngine::initAll() {
 	_redraw->renderRect = rect();
 	// Set clip to fullscreen by default, allows main menu to render properly after load
 	_interface->resetClip();
+
+	// getting configuration file
+	initConfigurations();
 
 	_resources->initResources();
 
@@ -1148,8 +1149,8 @@ const char *TwinEEngine::getGameId() const {
 }
 
 bool TwinEEngine::unlockAchievement(const Common::String &id) {
-	const MetaEngine &meta = getMetaEngine();
-	const Common::AchievementsInfo &achievementsInfo = meta.getAchievementsInfo(ConfMan.getActiveDomainName());
+	const MetaEngine *meta = getMetaEngine();
+	const Common::AchievementsInfo &achievementsInfo = meta->getAchievementsInfo(ConfMan.getActiveDomainName());
 
 	Common::String msg = id;
 	for (uint32 i = 0; i < achievementsInfo.descriptions.size(); i++) {

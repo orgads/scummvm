@@ -100,7 +100,7 @@ Intrinsic RemorseIntrinsics[] = {
 	Item::I_setQLo,
 	Item::I_getFamily,
 	Container::I_destroyContents,
-	Item::I_fall, // FIXME: Not really the same as the U8 version.. does this work?
+	Item::I_fall,
 	Egg::I_getEggId, // void Intrinsic03F(4 bytes)
 	// 0x040
 	CameraProcess::I_moveTo, // void Intrinsic040(8 bytes)
@@ -148,7 +148,7 @@ Intrinsic RemorseIntrinsics[] = {
 	Item::I_setNpcNum, // void Item::I_setSomething068(Item *, int16 something) , see VALUEBOX:ordinal20
 	Item::I_andStatus, // void Intrinsic069(6 bytes)
 	Item::I_move, // void Intrinsic06A(10 bytes)
-	UCMachine::I_true, // TODO: This is actualy "is compiled with VIOLENCE=1" (was set to 0 in germany). For now just always say yes.
+	UCMachine::I_true, // Note: This is actualy "is compiled with VIOLENCE=1" (was set to 0 in germany). For now just always say yes.
 	Kernel::I_resetRef, // void Intrinsic06C(4 bytes)
 	Item::I_getNpcNum, // based on same coff as 102 (-> variable name in TRIGGER::ordinal21)
 	Item::I_andStatus, // void Intrinsic06E(6 bytes)
@@ -181,7 +181,7 @@ Intrinsic RemorseIntrinsics[] = {
 	CameraProcess::I_getCameraY, // void Intrinsic087(void)
 	Item::I_setMapArray,
 	Item::I_getNpcNum, // based on same coff as 102 (-> variable name in TRIGGER::ordinal21)
-	0, // void Intrinsic08A(12 bytes)
+	Item::I_shoot, // void Intrinsic08A(12 bytes)
 	Item::I_enterFastArea, // void Intrinsic08B(4 bytes)
 	Item::I_setBroken, // void Intrinsic08C(4 bytes)
 	Item::I_hurl, // void Intrinsic08D(12 bytes)
@@ -250,7 +250,7 @@ Intrinsic RemorseIntrinsics[] = {
 	Item::I_hurl, // void Intrinsic0C8(12 bytes)
 	Item::I_getQHi,  // based on same coff set as 026
 	Actor::I_addHp, // int Intrinsic0CA(6 bytes)
-	0, // 0CB void I_createMapJumpProcess(int16 mapnum)", // TODO: Implement me
+	MainActor::I_switchMap, // 0CB
 	Actor::I_isInCombat, // int Intrinsic0CC(4 bytes)
 	Actor::I_setActivity, // void Intrinsic0CD(6 bytes)
 	UCMachine::I_true, // whether the string "GAME COMPILE=1" has the 1.  Might be interesting to see how this changes the game.. for now just set to true.
@@ -278,7 +278,7 @@ Intrinsic RemorseIntrinsics[] = {
 	Actor::I_getDefaultActivity1, // void Intrinsic0E2(4 bytes)
 	Actor::I_getDefaultActivity2, // void Intrinsic0E3(4 bytes)
 	Actor::I_getLastAnimSet, // void Intrinsic0E4(4 bytes)
-	0, // TODO: Actor::I_attack(Actor *, uint16 target) (implement me)
+	Actor::I_setTarget,
 	Actor::I_setUnkByte, // void Intrinsic0E6(6 bytes)
 	Actor::I_setDead,
 	Item::I_cast, // void Intrinsic0E8(6 bytes)

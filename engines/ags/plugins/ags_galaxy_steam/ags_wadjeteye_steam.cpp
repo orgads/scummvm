@@ -20,23 +20,28 @@
  *
  */
 
-#include "ags/plugins/ags_galaxy_steam/ags_blackwell_steam.h"
+#include "ags/plugins/ags_galaxy_steam/ags_wadjeteye_steam.h"
 
 namespace AGS3 {
 namespace Plugins {
 namespace AGSGalaxySteam {
 
-AGSBlackwellSteam::AGSBlackwellSteam() : AGSSteam() {
+AGSWadjetEyeSteam::AGSWadjetEyeSteam() : AGSSteam() {
 	DLL_METHOD(AGS_EngineStartup);
 }
 
-void AGSBlackwellSteam::AddAchievement(ScriptMethodParams &params) {
+void AGSWadjetEyeSteam::AddAchievement(ScriptMethodParams &params) {
 	params._result = 0;
 }
 
-void AGSBlackwellSteam::AGS_EngineStartup(IAGSEngine *engine) {
+void AGSWadjetEyeSteam::AddStat(ScriptMethodParams &params) {
+	params._result = 0;
+}
+
+void AGSWadjetEyeSteam::AGS_EngineStartup(IAGSEngine *engine) {
 	AGSSteam::AGS_EngineStartup(engine);
 	SCRIPT_METHOD_EXT(Steam::AddAchievement^1, AddAchievement);
+	SCRIPT_METHOD_EXT(Steam::AddStat^2, AddStat);
 	SCRIPT_METHOD_EXT(Steam::IsAchievementAchieved^1, IsAchievementAchieved);
 	SCRIPT_METHOD_EXT(Steam::SetAchievementAchieved^1, SetAchievementAchieved);
 	SCRIPT_METHOD_EXT(Steam::ResetAchievement^1, ResetAchievement);

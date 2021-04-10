@@ -53,8 +53,7 @@ GameState::GameState(TwinEEngine *engine) : _engine(engine) {
 	clearGameFlags();
 	Common::fill(&inventoryFlags[0], &inventoryFlags[NUM_INVENTORY_ITEMS], 0);
 	Common::fill(&holomapFlags[0], &holomapFlags[NUM_LOCATIONS], 0);
-	playerName[0] = '\0';
-	Common::fill(&gameChoices[0], &gameChoices[10], 0);
+	Common::fill(&gameChoices[0], &gameChoices[10], TextId::kNone);
 }
 
 void GameState::initEngineProjections() {
@@ -82,8 +81,6 @@ void GameState::initGameStateVars() {
 	_engine->_scene->initSceneVars();
 
 	Common::fill(&holomapFlags[0], &holomapFlags[NUM_LOCATIONS], 0);
-
-	_engine->_actor->clearBodyTable();
 }
 
 void GameState::initHeroVars() {
@@ -164,11 +161,11 @@ bool GameState::loadGame(Common::SeekableReadStream *file) {
 	int playerNameIdx = 0;
 	do {
 		const byte c = file->readByte();
-		playerName[playerNameIdx++] = c;
+		_engine->_menuOptions->saveGameName[playerNameIdx++] = c;
 		if (c == '\0') {
 			break;
 		}
-		if (playerNameIdx >= ARRAYSIZE(playerName)) {
+		if (playerNameIdx >= ARRAYSIZE(_engine->_menuOptions->saveGameName)) {
 			warning("Failed to load savegame. Invalid playername.");
 			return false;
 		}
@@ -231,8 +228,8 @@ bool GameState::loadGame(Common::SeekableReadStream *file) {
 
 bool GameState::saveGame(Common::WriteStream *file) {
 	debug(2, "Save game");
-	if (playerName[0] == '\0') {
-		Common::strlcpy(playerName, "TwinEngineSave", sizeof(playerName));
+	if (_engine->_menuOptions->saveGameName[0] == '\0') {
+		Common::strlcpy(_engine->_menuOptions->saveGameName, "TwinEngineSave", sizeof(_engine->_menuOptions->saveGameName));
 	}
 
 	int32 sceneIdx = _engine->_scene->currentSceneIdx;
@@ -244,7 +241,7 @@ bool GameState::saveGame(Common::WriteStream *file) {
 	}
 
 	file->writeByte(0x03);
-	file->writeString(playerName);
+	file->writeString(_engine->_menuOptions->saveGameName);
 	file->writeByte('\0');
 	file->writeByte(NUM_GAME_FLAGS);
 	for (uint8 i = 0; i < NUM_GAME_FLAGS; ++i) {
@@ -305,7 +302,7 @@ void GameState::setGameFlag(uint8 index, uint8 value) {
 	}
 }
 
-void GameState::processFoundItem(int32 item) {
+void GameState::processFoundItem(InventoryItems item) {
 	ScopedEngineFreeze freeze(_engine);
 	_engine->_grid->centerOnActor(_engine->_scene->sceneHero);
 
@@ -321,11 +318,11 @@ void GameState::processFoundItem(int32 item) {
 	const int32 itemCameraY = _engine->_grid->newCamera.y * BRICK_HEIGHT;
 	const int32 itemCameraZ = _engine->_grid->newCamera.z * BRICK_SIZE;
 
-	uint8 *bodyPtr = _engine->_resources->bodyTable[_engine->_scene->sceneHero->entity];
+	BodyData &bodyData = _engine->_resources->bodyData[_engine->_scene->sceneHero->entity];
 	const int32 bodyX = _engine->_scene->sceneHero->pos.x - itemCameraX;
 	const int32 bodyY = _engine->_scene->sceneHero->pos.y - itemCameraY;
 	const int32 bodyZ = _engine->_scene->sceneHero->pos.z - itemCameraZ;
-	_engine->_renderer->renderIsoModel(bodyX, bodyY, bodyZ, ANGLE_0, ANGLE_45, ANGLE_0, bodyPtr);
+	_engine->_renderer->renderIsoModel(bodyX, bodyY, bodyZ, ANGLE_0, ANGLE_45, ANGLE_0, bodyData);
 	_engine->_interface->setClip(_engine->_redraw->renderRect);
 
 	const int32 itemX = (_engine->_scene->sceneHero->pos.x + BRICK_HEIGHT) / BRICK_SIZE;
@@ -358,14 +355,14 @@ void GameState::processFoundItem(int32 item) {
 
 	ProgressiveTextState textState = ProgressiveTextState::ContinueRunning;
 
-	_engine->_text->initVoxToPlay(item);
+	_engine->_text->initVoxToPlayTextId((TextId)item);
 
 	const int32 bodyAnimIdx = _engine->_animations->getBodyAnimIndex(AnimationTypes::kFoundItem);
 	const AnimData &currentAnimData = _engine->_resources->animData[bodyAnimIdx];
 
 	AnimTimerDataStruct tmpAnimTimer = _engine->_scene->sceneHero->animTimerData;
 
-	_engine->_animations->stockAnimation(bodyPtr, &_engine->_scene->sceneHero->animTimerData);
+	_engine->_animations->stockAnimation(bodyData, &_engine->_scene->sceneHero->animTimerData);
 
 	uint currentAnimState = 0;
 
@@ -391,14 +388,14 @@ void GameState::processFoundItem(int32 item) {
 		_engine->_interface->resetClip();
 		initEngineProjections();
 
-		if (_engine->_animations->setModelAnimation(currentAnimState, currentAnimData, bodyPtr, &_engine->_scene->sceneHero->animTimerData)) {
+		if (_engine->_animations->setModelAnimation(currentAnimState, currentAnimData, bodyData, &_engine->_scene->sceneHero->animTimerData)) {
 			currentAnimState++; // keyframe
 			if (currentAnimState >= currentAnimData.getNumKeyframes()) {
 				currentAnimState = currentAnimData.getLoopFrame();
 			}
 		}
 
-		_engine->_renderer->renderIsoModel(bodyX, bodyY, bodyZ, ANGLE_0, ANGLE_45, ANGLE_0, bodyPtr);
+		_engine->_renderer->renderIsoModel(bodyX, bodyY, bodyZ, ANGLE_0, ANGLE_45, ANGLE_0, bodyData);
 		_engine->_interface->setClip(_engine->_redraw->renderRect);
 		_engine->_grid->drawOverModelActor(itemX, itemY, itemZ);
 		_engine->_redraw->addRedrawArea(_engine->_redraw->renderRect);
@@ -449,11 +446,11 @@ void GameState::processFoundItem(int32 item) {
 	_engine->_scene->sceneHero->animTimerData = tmpAnimTimer;
 }
 
-void GameState::processGameChoices(int32 choiceIdx) {
+void GameState::processGameChoices(TextId choiceIdx) {
 	_engine->_screens->copyScreen(_engine->frontVideoBuffer, _engine->workVideoBuffer);
 
 	_gameChoicesSettings.reset();
-	_gameChoicesSettings.setTextBankId(_engine->_scene->sceneTextBank + TextBankId::Citadel_Island);
+	_gameChoicesSettings.setTextBankId((TextBankId)((int)_engine->_scene->sceneTextBank + (int)TextBankId::Citadel_Island));
 
 	// filled via script
 	for (int32 i = 0; i < numChoices; i++) {
@@ -467,7 +464,7 @@ void GameState::processGameChoices(int32 choiceIdx) {
 	choiceAnswer = gameChoices[activeButton];
 
 	// get right VOX entry index
-	if (_engine->_text->initVoxToPlay(choiceAnswer)) {
+	if (_engine->_text->initVoxToPlayTextId(choiceAnswer)) {
 		while (_engine->_text->playVoxSimple(_engine->_text->currDialTextEntry)) {
 			FrameMarker frame;
 			ScopedFPS scopedFps;
@@ -495,8 +492,8 @@ void GameState::processGameoverAnimation() {
 	_engine->setPalette(_engine->_screens->paletteRGBA);
 	_engine->flip();
 	_engine->_screens->copyScreen(_engine->frontVideoBuffer, _engine->workVideoBuffer);
-	uint8 *gameOverPtr = nullptr;
-	if (HQR::getAllocEntry(&gameOverPtr, Resources::HQR_RESS_FILE, RESSHQR_GAMEOVERMDL) == 0) {
+	BodyData gameOverPtr;
+	if (!gameOverPtr.loadFromHQR(Resources::HQR_RESS_FILE, RESSHQR_GAMEOVERMDL)) {
 		return;
 	}
 
@@ -512,7 +509,6 @@ void GameState::processGameoverAnimation() {
 		ScopedFPS scopedFps(66);
 		_engine->readKeys();
 		if (_engine->shouldQuit()) {
-			free(gameOverPtr);
 			return;
 		}
 
@@ -536,7 +532,6 @@ void GameState::processGameoverAnimation() {
 	_engine->delaySkip(2000);
 
 	_engine->_interface->resetClip();
-	free(gameOverPtr);
 	_engine->_screens->copyScreen(_engine->workVideoBuffer, _engine->frontVideoBuffer);
 	_engine->flip();
 	initEngineProjections();

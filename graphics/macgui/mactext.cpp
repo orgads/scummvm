@@ -170,6 +170,7 @@ MacText::MacText(const Common::U32String &s, MacWindowManager *wm, const MacFont
 	_textAlignment = textAlignment;
 	_interLinear = interlinear;
 	_maxWidth = maxWidth;
+	_textShadow = 0;
 
 	if (macFont) {
 		_defaultFormatting = MacFontRun(_wm, macFont->getId(), macFont->getSlant(), macFont->getSize(), 0, 0, 0);
@@ -198,6 +199,7 @@ MacText::MacText(const Common::String &s, MacWindowManager *wm, const MacFont *m
 	_textAlignment = textAlignment;
 	_interLinear = interlinear;
 	_maxWidth = maxWidth;
+	_textShadow = 0;
 
 	if (macFont) {
 		_defaultFormatting = MacFontRun(_wm, macFont->getId(), macFont->getSlant(), macFont->getSize(), 0, 0, 0);
@@ -364,6 +366,10 @@ void MacText::splitString(const Common::U32String &str, int curLine) {
 
 	D(9, "** splitString(\"%s\")", toPrintable(str.encode()).c_str());
 
+	// TODO::code is not elegant, we need to figure out a way which include all situations
+	if (curLine == -1)
+		curLine = _textLines.size();
+
 	if (_textLines.empty()) {
 		_textLines.resize(1);
 		_textLines[0].chunks.push_back(_defaultFormatting);
@@ -393,10 +399,13 @@ void MacText::splitString(const Common::U32String &str, int curLine) {
 		while (*l) {
 			if (*l == '\r') {
 				l++;
-
 				if (*l == '\n')	// Skip whole '\r\n'
 					l++;
-
+				break;
+			}
+			// deal with single \n
+			if (*l == '\n') {
+				l++;
 				break;
 			}
 
@@ -466,11 +475,11 @@ void MacText::splitString(const Common::U32String &str, int curLine) {
 			}
 			// calc word_width, the trick we define here is we don`t count the space
 			int word_width = current_format.getFont()->getStringWidth(tmp);
+			// add all spaces left
 			while (*s == ' ') {
 				tmp += *s;
 				s++;
 			}
-			// add all spaces left
 
 			// now let`s try to split
 			// first we have to try to get the whole word
@@ -490,7 +499,7 @@ void MacText::splitString(const Common::U32String &str, int curLine) {
 
 			int cur_width = getLineWidth(curLine, true);
 
-			D(0, "curWidth %d word_width %d", cur_width, word_width);
+			D(9, "curWidth %d word_width %d", cur_width, word_width);
 			// if cur_width == 0 but there`s chunks, meaning there must be empty string here
 			// if cur_width == 0, then you don`t have to add a newline for it
 			if (cur_width + word_width > _maxWidth && cur_width != 0) {
@@ -558,6 +567,11 @@ void MacText::splitString(const Common::U32String &str, int curLine) {
 		D(9, "** splitString: new line");
 
 		_textLines[curLine].paragraphEnd = true;
+		// if the chunks is empty, which means the line will not be rendered properly
+		// so we add a empty string here
+		if (_textLines[curLine].chunks.empty()) {
+			_textLines[curLine].chunks.push_back(_defaultFormatting);
+		}
 
 		curLine++;
 		_textLines.insert_at(curLine, MacTextLine());
@@ -733,6 +747,12 @@ int MacText::getLineCharWidth(int line, bool enforce) {
 	return width;
 }
 
+int MacText::getLastLineWidth() {
+	if (_textLines.size() == 0)
+		return 0;
+	return getLineWidth(_textLines.size() - 1, true);
+}
+
 int MacText::getLineHeight(int line) {
 	if ((uint)line >= _textLines.size())
 		return 0;
@@ -838,8 +858,6 @@ void MacText::resize(int w, int h) {
 }
 
 void MacText::appendText(const Common::U32String &str, int fontId, int fontSize, int fontSlant, bool skipAdd) {
-	appendTextDefault(str, skipAdd);
-
 	uint oldLen = _textLines.size();
 
 	MacFontRun fontRun = MacFontRun(_wm, fontId, fontSlant, fontSize, 0, 0, 0);
@@ -881,7 +899,6 @@ void MacText::appendTextDefault(const Common::U32String &str, bool skipAdd) {
 		_str += _defaultFormatting.toString();
 		_str += str;
 	}
-
 	splitString(str);
 	recalcDims();
 
@@ -921,16 +938,16 @@ void MacText::removeLastLine() {
 void MacText::draw(ManagedSurface *g, int x, int y, int w, int h, int xoff, int yoff) {
 	if (_textLines.empty())
 		return;
-
 	render();
+
+	if (x + w < _surface->w || y + h < _surface->h)
+		g->fillRect(Common::Rect(x, y, x + w, y + w), _bgcolor);
 
 	g->blitFrom(*_surface, Common::Rect(MIN<int>(_surface->w, x), MIN<int>(_surface->h, y), MIN<int>(_surface->w, x + w), MIN<int>(_surface->h, y + h)), Common::Point(xoff, yoff));
 
 	if (_textShadow)
 		g->transBlitFrom(*_surface, Common::Rect(MIN<int>(_surface->w, x), MIN<int>(_surface->h, y), MIN<int>(_surface->w, x + w), MIN<int>(_surface->h, y + h)), Common::Point(xoff + _textShadow, yoff + _textShadow), 0xff);
 
-	if (x + w < _surface->w || y + h < _surface->h)
-		g->fillRect(Common::Rect(x, y, x + w, y + w), _bgcolor);
 
 	_contentIsDirty = false;
 	_cursorDirty = false;
