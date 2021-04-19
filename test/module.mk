@@ -39,6 +39,11 @@ ifeq ($(ENABLE_ULTIMA), STATIC_PLUGIN)
 	TEST_LIBS += engines/ultima/libultima.a
 endif
 
+ifeq ($(ENABLE_SCUMM), STATIC_PLUGIN)
+	TESTS += $(srcdir)/test/engines/scumm/*.h
+	TEST_LIBS += engines/scumm/libscumm.a
+endif
+
 #
 TEST_FLAGS   := --runner=StdioPrinter --no-std --no-eh --include=$(srcdir)/test/cxxtest_mingw.h
 TEST_CFLAGS  := $(CFLAGS) -I$(srcdir)/test/cxxtest
