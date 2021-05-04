@@ -20,12 +20,16 @@
  *
  */
 
+#include "common/system.h"
 #include "common/random.h"
 #include "common/config-manager.h"
+#include "common/serializer.h"
 
 #include "engines/nancy/nancy.h"
 #include "engines/nancy/sound.h"
+#include "engines/nancy/input.h"
 #include "engines/nancy/util.h"
+#include "engines/nancy/graphics.h"
 
 #include "engines/nancy/action/primaryvideo.h"
 #include "engines/nancy/action/responses.cpp"
@@ -34,8 +38,6 @@
 
 namespace Nancy {
 namespace Action {
-
-PlayPrimaryVideoChan0 *PlayPrimaryVideoChan0::_activePrimaryVideo = nullptr;
 
 void PlayPrimaryVideoChan0::ConditionFlag::read(Common::SeekableReadStream &stream) {
 	type = (ConditionType)stream.readByte();
@@ -108,8 +110,8 @@ bool PlayPrimaryVideoChan0::ConditionFlags::isSatisfied() const {
 PlayPrimaryVideoChan0::~PlayPrimaryVideoChan0() {
 	_decoder.close();
 
-	if (_activePrimaryVideo == this) {
-		_activePrimaryVideo = nullptr;
+	if (NancySceneState.getActivePrimaryVideo() == this) {
+		NancySceneState.setActivePrimaryVideo(nullptr);
 	}
 
 	NancySceneState.setShouldClearTextbox(true);
@@ -122,6 +124,11 @@ void PlayPrimaryVideoChan0::init() {
 	}
 
 	_drawSurface.create(_src.width(), _src.height(), _decoder.getPixelFormat());
+
+	if (!_paletteName.empty()) {
+		GraphicsManager::loadSurfacePalette(_drawSurface, _paletteName);
+		setTransparent(true);
+	}
 
 	RenderObject::init();
 
@@ -138,7 +145,17 @@ void PlayPrimaryVideoChan0::updateGraphics() {
 	}
 
 	if (_decoder.needsUpdate()) {
-		_drawSurface.blitFrom(*_decoder.decodeNextFrame(), _src, Common::Point());
+		if (_videoFormat == 2) {
+			_drawSurface.blitFrom(*_decoder.decodeNextFrame(), _src, Common::Point());
+		} else if (_videoFormat == 1) {
+			// This seems to be the only place in the engine where format 1 videos
+			// are scaled with arbitrary sizes; everything else uses double size
+			Graphics::Surface *scaledFrame = _decoder.decodeNextFrame()->getSubArea(_src).scale(_screenPosition.width(), _screenPosition.height());
+			GraphicsManager::copyToManaged(*scaledFrame, _drawSurface, true);
+			scaledFrame->free();
+			delete scaledFrame;
+		}
+
 		_needsRedraw = true;
 	}
 
@@ -148,54 +165,64 @@ void PlayPrimaryVideoChan0::updateGraphics() {
 void PlayPrimaryVideoChan0::onPause(bool pause) {
 	_decoder.pauseVideo(pause);
 
-	if (pause) {
+	if (!pause) {
 		registerGraphics();
 	}
 }
 
 void PlayPrimaryVideoChan0::readData(Common::SeekableReadStream &stream) {
-	uint16 beginOffset = stream.pos();
+	Common::Serializer ser(&stream, nullptr);
+	ser.setVersion(g_nancy->getGameType());
 
 	readFilename(stream, _videoName);
 
-	stream.skip(0x13);
+	if (ser.getVersion() == kGameTypeVampire) {
+		readFilename(stream, _paletteName);
+	}
+	
+	ser.skip(2);
+	ser.syncAsUint16LE(_videoFormat);
+	ser.skip(0x13, kGameTypeVampire, kGameTypeVampire);
+	ser.skip(0xF, kGameTypeNancy1);
 
 	readRect(stream, _src);
 	readRect(stream, _screenPosition);
 
 	char *rawText = new char[1500];
-	stream.read(rawText, 1500);
+	ser.syncBytes((byte *)rawText, 1500);
 	UI::Textbox::assembleTextLine(rawText, _text, 1500);
 	delete[] rawText;
 
 	_sound.read(stream, SoundDescription::kNormal);
 	_responseGenericSound.read(stream, SoundDescription::kNormal);
-	stream.skip(1);
-	_conditionalResponseCharacterID = stream.readByte();
-	_goodbyeResponseCharacterID = stream.readByte();
-	_isDialogueExitScene = (NancyFlag)stream.readByte();
-	_doNotPop = (NancyFlag)stream.readByte();
+	ser.skip(1);
+	ser.syncAsByte(_conditionalResponseCharacterID);
+	ser.syncAsByte(_goodbyeResponseCharacterID);
+	ser.syncAsByte(_isDialogueExitScene);
+	ser.syncAsByte(_doNotPop);
 	_sceneChange.readData(stream);
 
-	stream.seek(beginOffset + 0x69C);
+	ser.skip(0x35, kGameTypeVampire, kGameTypeVampire);
+	ser.skip(0x32, kGameTypeNancy1);
 
-	uint16 numResponses = stream.readUint16LE();
+	uint16 numResponses = 0;
+	ser.syncAsUint16LE(numResponses);
 	rawText = new char[400];
 
 	_responses.reserve(numResponses);
 	for (uint i = 0; i < numResponses; ++i) {
 		_responses.push_back(ResponseStruct());
-		ResponseStruct &response = _responses[i];
+		ResponseStruct &response = _responses.back();
 		response.conditionFlags.read(stream);
-		stream.read(rawText, 400);
+		ser.syncBytes((byte*)rawText, 400);
 		UI::Textbox::assembleTextLine(rawText, response.text, 400);
 		readFilename(stream, response.soundName);
-		stream.skip(1);
+		ser.skip(1);
 		response.sceneChange.readData(stream);
-		response.flagDesc.label = stream.readSint16LE();
-		response.flagDesc.flag = (NancyFlag)stream.readByte();
-
-		stream.skip(0x32);
+		ser.skip(3, kGameTypeVampire, kGameTypeVampire);
+		ser.syncAsSint16LE(response.flagDesc.label);
+		ser.syncAsByte(response.flagDesc.flag);
+		ser.skip(0x32);
 	}
 
 	delete[] rawText;
@@ -218,12 +245,13 @@ void PlayPrimaryVideoChan0::readData(Common::SeekableReadStream &stream) {
 }
 
 void PlayPrimaryVideoChan0::execute() {
-	if (_activePrimaryVideo != this && _activePrimaryVideo != nullptr) {
+	PlayPrimaryVideoChan0 *activeVideo = NancySceneState.getActivePrimaryVideo();
+	if (activeVideo != this && activeVideo != nullptr) {
 		return;
 	}
 
 	switch (_state) {
-	case kBegin:
+	case kBegin: {
 		init();
 		registerGraphics();
 		g_nancy->_sound->loadSound(_sound);
@@ -232,8 +260,27 @@ void PlayPrimaryVideoChan0::execute() {
 			g_nancy->_sound->playSound(_sound);
 		}
 
+		// Remove held item and re-add it to inventory
+		int heldItem = NancySceneState.getHeldItem();
+		if (heldItem != -1) {
+			NancySceneState.addItemToInventory(heldItem);
+			NancySceneState.setHeldItem(-1);
+		}
+
+		// Move the mouse to the default position defined in CURS
+		const Common::Point initialMousePos = g_nancy->_cursorManager->getPrimaryVideoInitialPos();
+		const Common::Point cursorHotspot = g_nancy->_cursorManager->getCurrentCursorHotspot();
+		Common::Point adjustedMousePos = g_nancy->_input->getInput().mousePos;
+		adjustedMousePos.x -= cursorHotspot.x;
+		adjustedMousePos.y -= cursorHotspot.y - 1;
+		if (g_nancy->_cursorManager->getPrimaryVideoInactiveZone().bottom > adjustedMousePos.y) {
+			g_system->warpMouse(initialMousePos.x + cursorHotspot.x, initialMousePos.y + cursorHotspot.y);
+			g_nancy->_cursorManager->setCursorType(CursorManager::kNormalArrow);
+		}
+
 		_state = kRun;
-		_activePrimaryVideo = this;
+		NancySceneState.setActivePrimaryVideo(this);
+	}
 		// fall through
 	case kRun:
 		if (!_hasDrawnTextbox) {
@@ -324,6 +371,18 @@ void PlayPrimaryVideoChan0::execute() {
 		}
 
 		break;
+	}
+}
+
+void PlayPrimaryVideoChan0::handleInput(NancyInput &input) {
+	const Common::Rect &inactiveZone = g_nancy->_cursorManager->getPrimaryVideoInactiveZone();
+	const Common::Point cursorHotspot = g_nancy->_cursorManager->getCurrentCursorHotspot();
+	Common::Point adjustedMousePos = input.mousePos;
+	adjustedMousePos.y -= cursorHotspot.y;
+
+	if (inactiveZone.bottom > adjustedMousePos.y) {
+		input.mousePos.y = inactiveZone.bottom + cursorHotspot.y;
+		g_system->warpMouse(input.mousePos.x, input.mousePos.y);
 	}
 }
 

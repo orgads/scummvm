@@ -71,6 +71,7 @@ class GraphicsManager;
 class CursorManager;
 class CheatDialog;
 class NancyConsole;
+struct GameConstants;
 
 namespace State {
 class State;
@@ -91,12 +92,15 @@ public:
 	virtual Common::Error saveGameStream(Common::WriteStream *stream, bool isAutosave = false) override;
 	virtual bool canLoadGameStateCurrently() override;
 	virtual bool canSaveGameStateCurrently() override;
+	virtual bool canSaveAutosaveCurrently() override;
 
 	const char *getCopyrightString() const;
 	uint32 getGameFlags() const;
 	const char *getGameId() const;
 	GameType getGameType() const;
 	Common::Platform getPlatform() const;
+
+	const GameConstants &getConstants() const;
 
 	void setState(NancyState::NancyState state, NancyState::NancyState overridePrevious = NancyState::kNone);
 	NancyState::NancyState getState() { return _gameFlow.curState; }
@@ -118,6 +122,7 @@ public:
 
 	Common::RandomSource *_randomSource;
 
+	// BSUM data
 	uint16 _firstSceneID;
 	uint16 _startTimeHours;
 
@@ -125,6 +130,11 @@ public:
 	Time _slowMovementTimeDelta;
 	Time _fastMovementTimeDelta;
 	Time _playerTimeMinuteLength;
+
+	uint _horizontalEdgesSize;
+	uint _verticalEdgesSize;
+
+	Common::Rect _textboxScreenPosition;
 
 private:
 	struct GameFlow {

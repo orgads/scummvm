@@ -117,7 +117,9 @@ const char *gScummVMFeatures = ""
 	"MPEG2 "
 #endif
 
-#ifdef USE_FLUIDSYNTH
+#ifdef USE_FLUIDLITE
+	"FluidLite "
+#elif defined(USE_FLUIDSYNTH)
 	"FluidSynth "
 #endif
 
@@ -159,6 +161,10 @@ const char *gScummVMFeatures = ""
 
 #ifdef ENABLE_EVENTRECORDER
 	"EventRecorder "
+#endif
+
+#ifdef USE_TASKBAR
+	"taskbar "
 #endif
 
 #ifdef USE_CLOUD

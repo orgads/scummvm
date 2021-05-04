@@ -36,6 +36,8 @@
 #include "engines/nancy/graphics.h"
 #include "engines/nancy/dialogs.h"
 #include "engines/nancy/console.h"
+#include "engines/nancy/constants.h"
+#include "engines/nancy/util.h"
 
 #include "engines/nancy/action/primaryvideo.h"
 
@@ -70,6 +72,8 @@ NancyEngine::NancyEngine(OSystem *syst, const NancyGameDescription *gd) : Engine
 	_startTimeHours = 0;
 	_overrideMovementTimeDeltas = false;
 	_cheatTypeIsEventFlag = false;
+	_horizontalEdgesSize = 0;
+	_verticalEdgesSize = 0;
 }
 
 NancyEngine::~NancyEngine() {
@@ -115,7 +119,15 @@ bool NancyEngine::canLoadGameStateCurrently()  {
 
 bool NancyEngine::canSaveGameStateCurrently() {
 	// TODO also disable during secondary movie
-	return Action::PlayPrimaryVideoChan0::_activePrimaryVideo == nullptr;
+	return State::Scene::hasInstance() && NancySceneState.getActivePrimaryVideo() == nullptr;
+}
+
+bool NancyEngine::canSaveAutosaveCurrently() {
+	if (ConfMan.getBool("second_chance")) {
+		return false;
+	} else {
+		return Engine::canSaveAutosaveCurrently();
+	}
 }
 
 bool NancyEngine::hasFeature(EngineFeature f) const {
@@ -144,6 +156,10 @@ GameType NancyEngine::getGameType() const {
 
 Common::Platform NancyEngine::getPlatform() const {
 	return _gameDescription->desc.platform;
+}
+
+const GameConstants &NancyEngine::getConstants() const {
+	return gameConstants[getGameType() - 1];
 }
 
 void NancyEngine::setState(NancyState::NancyState state, NancyState::NancyState overridePrevious) {
@@ -293,6 +309,7 @@ void NancyEngine::bootGameEngine() {
 	ConfMan.registerDefault("player_speech", true);
 	ConfMan.registerDefault("character_speech", true);
 	ConfMan.registerDefault("original_menus", false);
+	ConfMan.registerDefault("second_chance", false);
 
 	// Load archive
 	Common::SeekableReadStream *stream = SearchMan.createReadStreamForMember("data1.cab");
@@ -451,17 +468,25 @@ void NancyEngine::readBootSummary(const IFF &boot) {
 		readChunkList(boot, ser, "OB");
 	}
 
-	ser.skip(0x99, kGameTypeNancy1, kGameTypeNancy1);
+	ser.skip(0x28, kGameTypeVampire, kGameTypeVampire);
+	ser.skip(0x10, kGameTypeNancy1, kGameTypeNancy1);
+	readRect(*bsum, _textboxScreenPosition);
+
+	ser.skip(0x5E, kGameTypeVampire, kGameTypeVampire);
+	ser.skip(0x59, kGameTypeNancy1, kGameTypeNancy1);
+	ser.syncAsUint16LE(_horizontalEdgesSize, kGameTypeVampire, kGameTypeNancy1);
+	ser.syncAsUint16LE(_verticalEdgesSize, kGameTypeVampire, kGameTypeNancy1);
+	ser.skip(0x1C, kGameTypeVampire, kGameTypeNancy1);
 	int16 time = 0;
-	ser.syncAsSint16LE(time, kGameTypeNancy1, kGameTypeNancy1);
+	ser.syncAsSint16LE(time, kGameTypeVampire, kGameTypeNancy1);
 	_playerTimeMinuteLength = time;
 	ser.skip(2, kGameTypeNancy1, kGameTypeNancy1);
-	ser.syncAsByte(_overrideMovementTimeDeltas, kGameTypeNancy1, kGameTypeNancy1);
+	ser.syncAsByte(_overrideMovementTimeDeltas, kGameTypeVampire, kGameTypeNancy1);
 
 	if (_overrideMovementTimeDeltas) {
-		ser.syncAsSint16LE(time, kGameTypeNancy1, kGameTypeNancy1);
+		ser.syncAsSint16LE(time, kGameTypeVampire, kGameTypeNancy1);
 		_slowMovementTimeDelta = time;
-		ser.syncAsSint16LE(time, kGameTypeNancy1, kGameTypeNancy1);
+		ser.syncAsSint16LE(time, kGameTypeVampire, kGameTypeNancy1);
 		_fastMovementTimeDelta = time;
 	}
 }

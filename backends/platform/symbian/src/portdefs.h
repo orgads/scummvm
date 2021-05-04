@@ -175,9 +175,9 @@ namespace std
 
 #ifndef signbit
 #define signbit(x)     \
-    ((sizeof (x) == sizeof (float)) ? __signbitf(x) \
-    : (sizeof (x) == sizeof (double)) ? __signbit(x) \
-    : __signbitl(x))
+	((sizeof (x) == sizeof (float)) ? __signbitf(x) \
+	: (sizeof (x) == sizeof (double)) ? __signbit(x) \
+	: __signbitl(x))
 #endif 
 
 // Functions from openlibm not declared in Symbian math.h
@@ -211,7 +211,6 @@ extern "C"{
 #define USE_ARM_GFX_ASM
 #define USE_ARM_SMUSH_ASM
 #define USE_ARM_COSTUME_ASM
-//#define USE_ARM_SOUND_ASM //it broken now
 #endif
 
 // Symbian bsearch implementation is flawed

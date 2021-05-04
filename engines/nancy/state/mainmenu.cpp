@@ -93,7 +93,6 @@ void MainMenu::init() {
 	}
 
 	_buttonDown.registerGraphics();
-	_buttonDown._redrawFrom = &_background;
 
 	_state = kRun;
 }
@@ -117,7 +116,7 @@ void MainMenu::run() {
 				_selected = i;
 				_state = kStop;
 
-				_buttonDown._drawSurface.create(_background.getDrawSurface(), _srcRects[i]);
+				_buttonDown._drawSurface.create(_background._drawSurface, _srcRects[i]);
 				_buttonDown._screenPosition = _destRects[i];
 				_buttonDown.setVisible(true);
 
@@ -155,8 +154,13 @@ void MainMenu::stop() {
 			}
 			break;
 		case 4:
-			// Second Chance, TODO
-			_state = kRun;
+			// Second Chance
+			if (!Scene::hasInstance()) {
+				NancySceneState.process(); // run once to init the state
+			}
+
+			g_nancy->loadGameState(g_nancy->getAutosaveSlot());
+			g_nancy->setState(NancyState::kScene);
 			break;
 		case 5:
 			// Game Setup, TODO
@@ -164,7 +168,7 @@ void MainMenu::stop() {
 			break;
 		case 6: 
 			// Exit Game
-			g_nancy->quitGame(); // Consider returning to launcher instead?
+			g_nancy->quitGame();
 			break;
 		case 7:
 			// Help

@@ -29,6 +29,7 @@ MODULE_OBJS = \
   state/scene.o \
   commontypes.o \
   console.o \
+  constants.o \
   cursor.o \
   decompress.o \
   dialogs.o \
@@ -41,6 +42,7 @@ MODULE_OBJS = \
   renderobject.o \
   resource.o \
   sound.o \
+  util.o \
   video.o
 
 # This module can be built as a plugin

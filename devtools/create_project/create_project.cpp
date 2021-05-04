@@ -312,6 +312,11 @@ int main(int argc, char *argv[]) {
 		setFeatureBuildState("vorbis", setup.features, false);
 	}
 
+	// HACK: Fluidsynth and Fluidlite can not be enabled simultaneously
+	if (getFeatureBuildState("fluidsynth", setup.features)) {
+		setFeatureBuildState("fluidlite", setup.features, false);
+	}
+
 	// HACK: These features depend on OpenGL
 	if (!getFeatureBuildState("opengl", setup.features)) {
 		setFeatureBuildState("opengl_game", setup.features, false);
@@ -1050,6 +1055,7 @@ const Feature s_features[] = {
 	{  "freetype",   "USE_FREETYPE2", true, true,  "FreeType support" },
 	{      "jpeg",        "USE_JPEG", true, true,  "libjpeg support" },
 	{"fluidsynth",  "USE_FLUIDSYNTH", true, true,  "FluidSynth support" },
+	{ "fluidlite",   "USE_FLUIDLITE", true, false, "FluidLite support" },
 	{   "libcurl",     "USE_LIBCURL", true, true,  "libcurl support" },
 	{    "sdlnet",     "USE_SDL_NET", true, true,  "SDL_net support" },
 	{   "discord",     "USE_DISCORD", true, false, "Discord support" },
@@ -1512,7 +1518,7 @@ FileNode *scanFiles(const std::string &dir, const StringList &includeList, const
 // Project Provider methods
 //////////////////////////////////////////////////////////////////////////
 ProjectProvider::ProjectProvider(StringList &global_warnings, std::map<std::string, StringList> &project_warnings, const int version)
-    : _version(version), _globalWarnings(global_warnings), _projectWarnings(project_warnings) {
+	: _version(version), _globalWarnings(global_warnings), _projectWarnings(project_warnings) {
 }
 
 void ProjectProvider::createProject(BuildSetup &setup) {
@@ -1765,8 +1771,8 @@ std::string ProjectProvider::getLastPathComponent(const std::string &path) {
 }
 
 void ProjectProvider::addFilesToProject(const std::string &dir, std::ofstream &projectFile,
-                                        const StringList &includeList, const StringList &excludeList,
-                                        const std::string &filePrefix) {
+										const StringList &includeList, const StringList &excludeList,
+										const std::string &filePrefix) {
 	FileNode *files = scanFiles(dir, includeList, excludeList);
 
 	writeFileListToProject(*files, projectFile, 0, std::string(), filePrefix + '/');

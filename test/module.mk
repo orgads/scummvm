@@ -68,7 +68,7 @@ test: test/runner
 	./test/runner
 test/runner: test/runner.cpp $(TEST_LIBS) copy-dat
 	+$(QUIET_CXX)$(LD) $(TEST_CXXFLAGS) $(CPPFLAGS) $(TEST_CFLAGS) -o $@ test/runner.cpp $(TEST_LIBS) $(TEST_LDFLAGS)
-test/runner.cpp: $(TESTS)
+test/runner.cpp: $(TESTS) $(srcdir)/test/module.mk
 	@mkdir -p test
 	$(srcdir)/test/cxxtest/cxxtestgen.py $(TEST_FLAGS) -o $@ $+
 
@@ -77,8 +77,10 @@ clean-test:
 	-$(RM) test/runner.cpp test/runner test/engine-data/encoding.dat
 	-rmdir test/engine-data
 
-copy-dat:
+test/engine-data/encoding.dat: $(srcdir)/dists/engine-data/encoding.dat
 	$(MKDIR) test/engine-data
 	$(CP) $(srcdir)/dists/engine-data/encoding.dat test/engine-data/encoding.dat
+
+copy-dat: test/engine-data/encoding.dat
 
 .PHONY: test clean-test copy-dat
