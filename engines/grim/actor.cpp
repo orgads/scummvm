@@ -748,7 +748,7 @@ void Actor::walkTo(const Math::Vector3d &p, bool force_walk) {
 			if (!pathFound) {
 				warning("Actor::walkTo(): No path found for %s", _name.c_str());
 				if (g_grim->getGameType() == GType_MONKEY4) {
-                    _walking = false;
+					_walking = false;
 					return;
 				}
 				if (!force_walk && getName() == "Manny") {
