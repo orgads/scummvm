@@ -479,7 +479,7 @@ void GfxOpenGL::getScreenBoundingBox(const EMIModel *model, int *x1, int *y1, in
 		*y2 = -1;
 		return;
 	}
-	
+
 	*x1 = (int)left;
 	*y1 = (int)top;
 	*x2 = (int)right;
@@ -929,7 +929,7 @@ void GfxOpenGL::drawOverlay(const Overlay *overlay) {
 	glEnable(GL_TEXTURE_2D);
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	
+
 
 	glDisable(GL_LIGHTING);
 
@@ -940,7 +940,7 @@ void GfxOpenGL::drawOverlay(const Overlay *overlay) {
 
 
 	glDisable(GL_DEPTH_TEST);
-	
+
 
 	float height = overlay->getHeight() * _globalScaleH;
 	float width = overlay->getWidth() * _globalScaleW;
@@ -1914,7 +1914,7 @@ void GfxOpenGL::drawEmergString(int x, int y, const char *text, const Color &fgC
 	glColor3f(1.0f, 1.0f, 1.0f);
 
 	glListBase(_emergFont);
-	
+
 	char *list = const_cast<char *>(text);
 	glCallLists(strlen(text), GL_UNSIGNED_BYTE, (void *)list);
 

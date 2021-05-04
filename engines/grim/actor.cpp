@@ -95,7 +95,7 @@ Actor::Actor() :
 		_attachedActor(0), _attachedJoint(""),
 		_globalAlpha(1.f), _alphaMode(AlphaOff),
 		 _mustPlaceText(false),
-		_puckOrient(false), _talking(false), 
+		_puckOrient(false), _talking(false),
 		_inOverworld(false), _drawnToClean(false), _backgroundTalk(false),
 		_sortOrder(0), _useParentSortOrder(false),
 		_sectorSortOrder(-1), _fakeUnbound(false), _lightMode(LightFastDyn),
