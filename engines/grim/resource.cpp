@@ -127,7 +127,7 @@ ResourceLoader::ResourceLoader() {
 			if (!SearchMan.hasFile("grim-patch.lab"))
 				error("%s", "grim-patch.lab not found");
 			if (!SearchMan.hasFile("mouse.lab"))
-				error("%s", _("mouse.lab not found"));
+				error("mouse.lab not found");
 
 			// SearchMan.listMatchingMembers(files, "grim-patch.lab");
 			SearchMan.listMatchingMembers(files, "mouse.lab");

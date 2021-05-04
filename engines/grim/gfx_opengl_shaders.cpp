@@ -394,8 +394,8 @@ void GfxOpenGLS::setupShaders() {
 
 		_dimProgram = OpenGL::ShaderGL::fromFiles("grim_dim", commonAttributes);
 		_dimRegionProgram = _dimProgram->clone();
-		_shadowPlaneProgram = Graphics::Shader::fromFiles("grim_shadowplane", primAttributes);
-		_rotProgram = Graphics::Shader::fromFiles("grim_rot", commonAttributes);
+		_shadowPlaneProgram = OpenGL::ShaderGL::fromFiles("grim_shadowplane", primAttributes);
+		_rotProgram = OpenGL::ShaderGL::fromFiles("grim_rot", commonAttributes);
 	} else {
 		_dimPlaneProgram = OpenGL::ShaderGL::fromFiles("emi_dimplane", primAttributes);
 	}

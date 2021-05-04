@@ -238,7 +238,7 @@ private:
 	OpenGL::ShaderGL* _primitiveProgram;
 	OpenGL::ShaderGL* _irisProgram;
 	OpenGL::ShaderGL* _shadowPlaneProgram;
-	Graphics::Shader* _rotProgram;
+	OpenGL::ShaderGL* _rotProgram;
 
 	int _smushWidth;
 	int _smushHeight;
