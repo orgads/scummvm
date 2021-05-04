@@ -38,7 +38,7 @@
 	#include <zlib.h>
 	#undef _NO_PPCINLINE
   #else
-	#include "zlib/zlib.h"
+	#include <zlib.h>
   #endif
 
   #if ZLIB_VERNUM < 0x1204
