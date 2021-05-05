@@ -141,7 +141,7 @@ void CruAvatarMoverProcess::handleCombatMode() {
 				nextanim = Animation::combatRunSmallWeapon;
 			else
 				nextanim = Animation::startRunSmallWeapon;
-		} else if (hasMovementFlags(MOVE_JUMP)) {
+		} else if (hasMovementFlags(MOVE_JUMP) && avatar->hasAnim(Animation::jumpForward)) {
 			if (lastanim == Animation::walk || lastanim == Animation::run || lastanim == Animation::combatRunSmallWeapon)
 				nextanim = Animation::jumpForward;
 			else
@@ -537,11 +537,13 @@ void CruAvatarMoverProcess::tryAttack() {
 void CruAvatarMoverProcess::saveData(Common::WriteStream *ws) {
 	AvatarMoverProcess::saveData(ws);
 	ws->writeSint32LE(_avatarAngle);
+	ws->writeByte(_SGA1Loaded ? 1 : 0);
 }
 
 bool CruAvatarMoverProcess::loadData(Common::ReadStream *rs, uint32 version) {
 	if (!AvatarMoverProcess::loadData(rs, version)) return false;
 	_avatarAngle = rs->readSint32LE();
+	_SGA1Loaded = (rs->readByte() != 0);
 	return true;
 }
 

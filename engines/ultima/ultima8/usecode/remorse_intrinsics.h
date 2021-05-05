@@ -42,7 +42,7 @@ Intrinsic RemorseIntrinsics[] = {
 	Item::I_getStatus,
 	Item::I_orStatus,
 	Item::I_equip, // void Intrinsic006(6 bytes)
-	Item::I_isOnScreen, //
+	Item::I_isPartlyOnScreen, //
 	Actor::I_isNPC, // byte Intrinsic008(Item *)
 	Item::I_getZ, // byte Intrinsic009(Item *)
 	Item::I_destroy, // void Intrinsic00A(Item *)
@@ -196,7 +196,7 @@ Intrinsic RemorseIntrinsics[] = {
 	Ultima8Engine::I_moveKeyDownRecently,
 	MainActor::I_teleportToEgg, // void Intrinsic096(4 bytes)
 	PaletteFaderProcess::I_jumpToGreyScale,
-	0, // void Intrinsic098(void) // TODO: reset vargas health to 500.. weird.
+	World::I_resetVargasShield, // void Intrinsic098(void)
 	Item::I_andStatus, // void Intrinsic099(6 bytes)
 	PaletteFaderProcess::I_jumpToNormalPalette, // TODO: should also stop cycle process?
 	PaletteFaderProcess::I_fadeFromBlack, // fade to game pal with number of steps
@@ -211,12 +211,12 @@ Intrinsic RemorseIntrinsics[] = {
 	Egg::I_setEggXRange, // void Intrinsic0A3(6 bytes)
 	Item::I_overlaps,
 	Item::I_isOn,
-	0, // TODO: I_getAnimationsDisabled -> default to 0 (fine for now..)
+	UCMachine::I_true, // I_getAnimationsEnabled -> default to true (animations enabled)
 	Egg::I_getEggXRange, // void Intrinsic0A7(4 bytes)
 	Actor::I_setDead,
 	MovieGump::I_playMovieCutsceneAlt, // TODO: not exactly the same, Alt includes a fade.
 	AudioProcess::I_playSFX, // void Intrinsic0AA(2 bytes)
-	0, // int Actor::I_getFlag0x59Field1  Intrinsic0AB(4 bytes)
+	Actor::I_isFalling, // int Actor::I_getFlag0x59Field1  Intrinsic0AB(4 bytes)
 	Item::I_getFamilyOfType, // void Intrinsic0AC(2 bytes)
 	Item::I_getNpcNum, // based on same coff as 102 (-> variable name in TRIGGER::ordinal21)
 	Item::I_getQLo, // based on same coff set as 02B

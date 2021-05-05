@@ -118,7 +118,7 @@ void Item::dumpInfo() const {
 
 Container *Item::getParentAsContainer() const {
 	// No parent, no container
-	if (!_parent)
+	if (!_parent || getObject(_parent) == nullptr)
 		return nullptr;
 
 	Container *p = getContainer(_parent);
@@ -3901,11 +3901,11 @@ uint32 Item::I_inFastArea(const uint8 *args, unsigned int /*argsize*/) {
 	return item->hasFlags(FLG_FASTAREA);
 }
 
-uint32 Item::I_isOnScreen(const uint8 *args, unsigned int /*argsize*/) {
+uint32 Item::I_isPartlyOnScreen(const uint8 *args, unsigned int /*argsize*/) {
 	ARG_ITEM_FROM_PTR(item);
 	if (!item) return 0;
 
-	return item->isOnScreen();
+	return item->isPartlyOnScreen();
 }
 
 uint32 Item::I_fireWeapon(const uint8 *args, unsigned int /*argsize*/) {

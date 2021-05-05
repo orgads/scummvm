@@ -2215,10 +2215,10 @@ bool UCMachine::assignPointer(uint32 ptr, const uint8 *data, uint32 size) {
 			CANT_HAPPEN_MSG("Global pointers not supported in U8");
 
 		if (size == 1) {
-			_globals->setEntries(offset, data[0], 1);
+			_globals->setEntries(offset, 1, data[0]);
 		} else if (size == 2) {
 			uint16 val = ((data[0] << 8) | data[1]);
-			_globals->setEntries(offset, val, 2);
+			_globals->setEntries(offset, 2, val);
 		} else {
 			CANT_HAPPEN_MSG("Global pointers must be size 1 or 2");
 		}
@@ -2411,6 +2411,12 @@ bool UCMachine::loadLists(Common::ReadStream *rs, uint32 version) {
 	if (!_listIDs->load(rs, version)) return false;
 
 	uint32 listcount = rs->readUint32LE();
+
+	if (listcount > 65536) {
+		warning("Improbable number of UC lists %d in save, corrupt save?", listcount);
+		return false;
+	}
+
 	for (unsigned int i = 0; i < listcount; ++i) {
 		uint16 lid = rs->readUint16LE();
 		UCList *l = new UCList(2); // the "2" will be ignored by load()

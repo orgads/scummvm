@@ -20,17 +20,20 @@
  *
  */
 
-#ifndef WORLD_ACTORS_AVATARDEATHPROCESS_H
-#define WORLD_ACTORS_AVATARDEATHPROCESS_H
+#ifndef WORLD_ACTORS_AUTOFIRERPROCESS_H
+#define WORLD_ACTORS_AUTOFIRERPROCESS_H
 
 #include "ultima/ultima8/kernel/process.h"
 
 namespace Ultima {
 namespace Ultima8 {
 
-class AvatarDeathProcess : public Process {
+/**
+ * A process which fires another shot after a short delay, then terminates
+ */
+class AutoFirerProcess : public Process {
 public:
-	AvatarDeathProcess();
+	AutoFirerProcess();
 
 	ENABLE_RUNTIME_CLASSTYPE()
 
@@ -38,6 +41,9 @@ public:
 
 	bool loadData(Common::ReadStream *rs, uint32 version);
 	void saveData(Common::WriteStream *ws) override;
+
+private:
+	uint32 _startTicks;
 };
 
 } // End of namespace Ultima8

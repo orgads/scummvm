@@ -202,7 +202,7 @@ const char* const ConvertUsecodeCrusader::_intrinsics[] = {
 	"byte Kernel::I_getCurrentKeyDown(void)", // get global - something about keyboard (by disasm)
 	"int16 MainActor::I_teleportToEgg(int, int)", // a bit different to the U8 one - uses main actor map by default.
 	"void PaletteFaderProcess:I_jumpToGreyScale(void)",
-	"void I_resetVargasHealthTo500(void)", // TODO: look how this is used in disasm and usecode .. seems weird.
+	"void I_resetVargasShieldTo500(void)",
 	"void Item::I_andStatus(Item *, uint16 status)", // part of same coff set 01A, 031, 069, 06E, 099, 0B2, 0BF, 0C1, 0C3, 0E9, 0FC, 101, 104, 106, 108, 10A, 10C, 10E, 110, 114, 117, 11A, 128, 132
 	"void PaletteFaderProcess::I_jumpToNormalPalette(void)",
 	"int16 PaletteFaderProcess::I_fadeFromBlack(nsteps)",
@@ -217,12 +217,12 @@ const char* const ConvertUsecodeCrusader::_intrinsics[] = {
 	"void Egg::I_setEggXRange(Egg *, int)", // based on disasm
 	"byte Item::I_overlaps(Item *, uint16 unk)", // same disasm as U8
 	"byte Item::I_isOn(Item *, itemno)", // part of same coff set 044, 046, 048, 04A, 04C, 04E, 0A5, 0BC, 0C5, 0DC, 0F1, 0FA, 12C
-	"int16 I_getAnimationsDisabled(void)", // From disasm. Not implemented, that's ok..
+	"int16 I_getAnimationsEnabled(void)",
 	"int16 Egg::I_getEggXRange(Egg *)", // based on disasm
 	"void Actor::I_setDead(Actor *)", // part of same coff set 021, 060, 073, 0A0, 0A8, 0D8, 0E7, 135
 	"void I_playMovieCutsceneFullscreen(char *)", // same coff as 092
 	"void AudioProcess::I_playSFX(2 bytes)", // same coff as 0D4
-	"byte Actor::I_getField0x59Bit1(Actor *)",
+	"byte Actor::I_isFalling(Actor *)",
 	"int16 Item::I_getFamilyOfType(Item *)", // per pentagram notes, matches disasm.
 	"int16 Item::I_getNPCNum(Item *)", // part of same coff set 067, 06D, 089, 08E, 0AD, 0F8, 100, 102, 105, 107, 109, 10B, 10D, 10F, 111, 115, 11C, 123, 129
 	"int16 Item::I_getQLo(Item *)", // same as 02B based on same coff set 010, 02B, 066, 084, 0A1, 0AE, 0D9, 0EA

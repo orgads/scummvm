@@ -109,12 +109,14 @@ void CruStatusGump::saveData(Common::WriteStream *ws) {
 }
 
 bool CruStatusGump::loadData(Common::ReadStream *rs, uint32 version) {
-	if (Gump::loadData(rs, version)) {
-		createStatusItems();
-		return true;
-	} else {
+	if (!Gump::loadData(rs, version))
 		return false;
-	}
+
+	if (_instance && _instance != this)
+		delete _instance;
+	createStatusItems();
+	_instance = this;
+	return true;
 }
 
 uint32 CruStatusGump::I_hideStatusGump(const uint8 * /*args*/,
@@ -131,8 +133,9 @@ uint32 CruStatusGump::I_showStatusGump(const uint8 * /*args*/,
 	unsigned int /*argsize*/) {
 	CruStatusGump *instance = get_instance();
 	if (!instance) {
-		instance = new CruStatusGump();
+		instance = new CruStatusGump(true);
 		instance->InitGump(nullptr, false);
+		assert(_instance);
 	}
 	return 0;
 }
