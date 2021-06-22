@@ -35,6 +35,7 @@ namespace Grim {
 
 void Lua_V1::GetImage() {
 	lua_Object nameObj = lua_getparam(1);
+	lua_Object transObj = lua_getparam(2);
 	if (!lua_isstring(nameObj)) {
 		lua_pushnil();
 		return;
@@ -42,6 +43,10 @@ void Lua_V1::GetImage() {
 	const char *bitmapName = lua_getstring(nameObj);
 	Bitmap *b = Bitmap::create(bitmapName);
 	lua_pushusertag(b->getId(), MKTAG('V','B','U','F'));
+	if (lua_isnumber(transObj) && lua_getnumber(transObj) > 0) {
+		b->_data->load();
+		b->_data->_hasTransparency = true;
+	}
 }
 
 void Lua_V1::FreeImage() {
@@ -506,6 +511,8 @@ void Lua_V1::SetGamma() {
 }
 
 void Lua_V1::Display() {
+	if (!g_grim->isRemastered())
+		g_grim->drawCursor();
 	if (g_grim->getFlipEnable()) {
 		g_driver->flipBuffer();
 	}

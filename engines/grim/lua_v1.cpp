@@ -801,6 +801,8 @@ STUB_FUNC(Lua_V1::GetCameraRoll)
 STUB_FUNC(Lua_V1::GetMemoryUsage)
 STUB_FUNC(Lua_V1::GetFontDimensions)
 STUB_FUNC(Lua_V1::PurgeText)
+STUB_FUNC(Lua_V1::NotifyWalk)
+STUB_FUNC(Lua_V1::InteractMode)
 
 struct luaL_reg grimMainOpcodes[] = {
 	{ "EngineDisplay", LUA_OPCODE(Lua_V1, EngineDisplay) },
@@ -1010,6 +1012,18 @@ struct luaL_reg grimMainOpcodes[] = {
 	{ "RestoreIMuse", LUA_OPCODE(Lua_V1, RestoreIMuse) },
 	{ "GetMemoryUsage", LUA_OPCODE(Lua_V1, GetMemoryUsage) },
 	{ "dofile", LUA_OPCODE(Lua_V1, new_dofile) },
+	// extensions
+	{ "RegisterHotspot", LUA_OPCODE(Lua_V1, RegisterHotspot) },
+	{ "ActivateHotspot", LUA_OPCODE(Lua_V1, ActivateHotspot) },
+	{ "UpdateHotspot", LUA_OPCODE(Lua_V1, UpdateHotspot) },
+	{ "SwitchControlMode", LUA_OPCODE(Lua_V1, SwitchControlMode) },
+	{ "NotifyWalk", LUA_OPCODE(Lua_V1, NotifyWalk) },
+	{ "RegisterInventory", LUA_OPCODE(Lua_V1, RegisterInventory) },
+	{ "MouseDown", LUA_OPCODE(Lua_V1, MouseDown) },
+	{ "InteractMode", LUA_OPCODE(Lua_V1, InteractMode) },
+	{ "RenameHotspot", LUA_OPCODE(Lua_V1, RenameHotspot) },
+	{ "GetControlMode", LUA_OPCODE(Lua_V1, GetControlMode) },
+	{ "SetOptionMode", LUA_OPCODE(Lua_V1, SetOptionMode) }
 };
 
 static struct luaL_reg grimTextOpcodes[] = {

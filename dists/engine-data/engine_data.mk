@@ -79,6 +79,7 @@ DIST_FILES_LIST += dists/engine-data/fonts.dat
 endif
 ifdef ENABLE_GRIM
 DIST_FILES_LIST += dists/engine-data/grim-patch.lab
+DIST_FILES_LIST += dists/engine-data/mouse.lab
 endif
 ifdef ENABLE_MONKEY4
 DIST_FILES_LIST += dists/engine-data/monkey4-patch.m4b
