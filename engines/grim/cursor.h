@@ -62,14 +62,14 @@ public:
 private:
 
 	float _scaleX, _scaleY;
-    int _curCursor;
+	int _curCursor;
 	int _persistentCursor[2];
 
 	Common::Point _position;
 	Common::Point _persistentPosition[2];
 
 	void loadAvailableCursors();
-    CursorData** _data;
+	CursorData** _data;
 };
 
 } /* namespace  */

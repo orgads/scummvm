@@ -48,7 +48,7 @@ void Lua_V1::GetImage() {
 	lua_pushusertag(b->getId(), MKTAG('V','B','U','F'));
 	if (lua_isnumber(transObj) && lua_getnumber(transObj) > 0) {
 		b->_data->load();
-        b->_data->_hasTransparency = true;
+		b->_data->_hasTransparency = true;
 	}
 }
 

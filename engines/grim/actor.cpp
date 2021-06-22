@@ -753,8 +753,8 @@ void Actor::walkTo(const Math::Vector3d &p, bool force_walk) {
 				}
 				if (!force_walk && getName() == "Manny") {
 					_walking = false;
-    	            return;
-    	        }
+					return;
+				}
 			}
 		}
 

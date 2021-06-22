@@ -33,20 +33,20 @@ namespace Graphics {
  * See http://www.opengl.org/sdk/docs/man2/xhtml/gluProject.xml
  */
 bool project(const Math::Vector3d &objPos,
-        const Math::Matrix4 &modelMatrix,
-        const Math::Matrix4 &projMatrix,
-        const int viewport[4],
-        Math::Vector3d &winPos);
+			 const Math::Matrix4 &modelMatrix,
+			 const Math::Matrix4 &projMatrix,
+			 const int viewport[4],
+Math::Vector3d &winPos);
 
 /**
  * Maps window coordinates to object coordinates.
  * See http://www.opengl.org/sdk/docs/man2/xhtml/gluUnProject.xml
  */
 bool unProject(const Math::Vector3d &winPos,
-        const Math::Matrix4 &modelMatrix,
-        const Math::Matrix4 &projMatrix,
-        const int viewport[4],
-        Math::Vector3d &objPos);
+			   const Math::Matrix4 &modelMatrix,
+			   const Math::Matrix4 &projMatrix,
+			   const int viewport[4],
+			   Math::Vector3d &objPos);
 
 } // End of namespace Graphics
 

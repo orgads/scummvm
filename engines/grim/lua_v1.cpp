@@ -967,16 +967,16 @@ struct luaL_reg grimMainOpcodes[] = {
 	{ "dofile", LUA_OPCODE(Lua_V1, new_dofile) },
 	// extensions
 	{ "RegisterHotspot", LUA_OPCODE(Lua_V1, RegisterHotspot) },
-    { "ActivateHotspot", LUA_OPCODE(Lua_V1, ActivateHotspot) },
-    { "UpdateHotspot", LUA_OPCODE(Lua_V1, UpdateHotspot) },
-    { "SwitchControlMode", LUA_OPCODE(Lua_V1, SwitchControlMode) },
-    { "NotifyWalk", LUA_OPCODE(Lua_V1, NotifyWalk) },
-    { "RegisterInventory", LUA_OPCODE(Lua_V1, RegisterInventory) },
-    { "MouseDown", LUA_OPCODE(Lua_V1, MouseDown) },
-    { "InteractMode", LUA_OPCODE(Lua_V1, InteractMode) },
-    { "RenameHotspot", LUA_OPCODE(Lua_V1, RenameHotspot) },
-    { "GetControlMode", LUA_OPCODE(Lua_V1, GetControlMode) },
-    { "SetOptionMode", LUA_OPCODE(Lua_V1, SetOptionMode) }
+	{ "ActivateHotspot", LUA_OPCODE(Lua_V1, ActivateHotspot) },
+	{ "UpdateHotspot", LUA_OPCODE(Lua_V1, UpdateHotspot) },
+	{ "SwitchControlMode", LUA_OPCODE(Lua_V1, SwitchControlMode) },
+	{ "NotifyWalk", LUA_OPCODE(Lua_V1, NotifyWalk) },
+	{ "RegisterInventory", LUA_OPCODE(Lua_V1, RegisterInventory) },
+	{ "MouseDown", LUA_OPCODE(Lua_V1, MouseDown) },
+	{ "InteractMode", LUA_OPCODE(Lua_V1, InteractMode) },
+	{ "RenameHotspot", LUA_OPCODE(Lua_V1, RenameHotspot) },
+	{ "GetControlMode", LUA_OPCODE(Lua_V1, GetControlMode) },
+	{ "SetOptionMode", LUA_OPCODE(Lua_V1, SetOptionMode) }
 };
 
 static struct luaL_reg grimTextOpcodes[] = {

@@ -2134,13 +2134,13 @@ void GfxOpenGL::blackbox(int x0, int y0, int x1, int y1, float opacity) {
 	glColor4f(0,0,0, opacity);
 
 	glBegin(GL_QUADS);
-    glVertex2f(x0 * _scaleW,y0 * _scaleH);
-    glVertex2f(x1 * _scaleW,y0 * _scaleH);
-    glVertex2f(x1 * _scaleW,y1 * _scaleH);
-    glVertex2f(x0 * _scaleW,y1 * _scaleH);
-    glEnd();
+	glVertex2f(x0 * _scaleW,y0 * _scaleH);
+	glVertex2f(x1 * _scaleW,y0 * _scaleH);
+	glVertex2f(x1 * _scaleW,y1 * _scaleH);
+	glVertex2f(x0 * _scaleW,y1 * _scaleH);
+	glEnd();
 
-    glColor4f(1,1,1,1);
+	glColor4f(1,1,1,1);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
@@ -2323,14 +2323,14 @@ void GfxOpenGL::setBlendMode(bool additive) {
 }
 
 bool GfxOpenGL::worldToScreen(const Math::Vector3d &vec, int& x, int &y) {
-    if (_currentShadowArray) return false;
+	if (_currentShadowArray) return false;
 
-    GLdouble modelView[16], projection[16];
-    GLint viewPort[4];
+	GLdouble modelView[16], projection[16];
+	GLint viewPort[4];
 
-    glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
-    glGetDoublev(GL_PROJECTION_MATRIX, projection);
-    glGetIntegerv(GL_VIEWPORT, viewPort);
+	glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
+	glGetDoublev(GL_PROJECTION_MATRIX, projection);
+	glGetIntegerv(GL_VIEWPORT, viewPort);
 
 	Math::Vector3d win;
 	Math::gluMathProject<GLdouble, GLint>(vec, modelView, projection, viewPort, win);

@@ -119,7 +119,7 @@ enum EventType {
 	EVENT_FOCUS_GAINED = 36,
 	EVENT_FOCUS_LOST = 37
 
-    ,
+	,
 	// special events for touch interaction
 	EVENT_DOUBLETAP = 100,
 	EVENT_SCROLL = 101,

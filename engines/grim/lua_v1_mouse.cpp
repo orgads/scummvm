@@ -35,22 +35,22 @@
 namespace Grim {
 
 void Lua_V1::RegisterHotspot() {
-    Math::Vector3d pos (lua_getnumber(lua_getparam(2)),
-                        lua_getnumber(lua_getparam(3)),
-                        lua_getnumber(lua_getparam(4)));
-    Common::String scene = lua_getstring(lua_getparam(5));
-    int n = g_grim->getHotspotMan()->addHotspot(lua_getstring(lua_getparam(1)),pos, scene);
-    lua_pushnumber(n);
+	Math::Vector3d pos (lua_getnumber(lua_getparam(2)),
+						lua_getnumber(lua_getparam(3)),
+						lua_getnumber(lua_getparam(4)));
+	Common::String scene = lua_getstring(lua_getparam(5));
+	int n = g_grim->getHotspotMan()->addHotspot(lua_getstring(lua_getparam(1)),pos, scene);
+	lua_pushnumber(n);
 }
 
 void Lua_V1::ActivateHotspot() {
-    int num = lua_getnumber(lua_getparam(1));
-    if (num < 0) {
-        g_grim->getHotspotMan()->disableAll();
-    } else {
-        HotObject& hs = g_grim->getHotspotMan()->getObject(num);
-        hs._active = getbool(2);
-    }
+	int num = lua_getnumber(lua_getparam(1));
+	if (num < 0) {
+		g_grim->getHotspotMan()->disableAll();
+	} else {
+		HotObject& hs = g_grim->getHotspotMan()->getObject(num);
+		hs._active = getbool(2);
+	}
 }
 
 void Lua_V1::UpdateHotspot() {
@@ -63,30 +63,30 @@ void Lua_V1::UpdateHotspot() {
 }
 
 void Lua_V1::SwitchControlMode() {
-    int mode = lua_getnumber(lua_getparam(1));
-    g_grim->getHotspotMan()->switchMode(mode);
-    if (mode == 1 || mode == 5) {
-        if (!lua_isnumber(lua_getparam(2))) return;
-        int lines = lua_getnumber(lua_getparam(2));
-        int x0 = lua_getnumber(lua_getparam(3));
-        int y0 = lua_getnumber(lua_getparam(4));
-        int width = lua_getnumber(lua_getparam(5));
-        int height = lua_getnumber(lua_getparam(6));
-        g_grim->getHotspotMan()->setupDialog(x0,y0,width,height,lines,1);
-    } else if (mode == 3) {
-    	if (!lua_isnumber(lua_getparam(2))) return;
-        Math::Vector3d axis(lua_getnumber(lua_getparam(2)),
-				    		lua_getnumber(lua_getparam(3)),
-				    		lua_getnumber(lua_getparam(4)));
-    	g_grim->getHotspotMan()->setAxis(axis, lua_getnumber(lua_getparam(5)));
-    } else if (mode == 4) {
-    	g_grim->getHotspotMan()->setupDialog(20,40,100,100,4,6);
-    }
+	int mode = lua_getnumber(lua_getparam(1));
+	g_grim->getHotspotMan()->switchMode(mode);
+	if (mode == 1 || mode == 5) {
+		if (!lua_isnumber(lua_getparam(2))) return;
+		int lines = lua_getnumber(lua_getparam(2));
+		int x0 = lua_getnumber(lua_getparam(3));
+		int y0 = lua_getnumber(lua_getparam(4));
+		int width = lua_getnumber(lua_getparam(5));
+		int height = lua_getnumber(lua_getparam(6));
+		g_grim->getHotspotMan()->setupDialog(x0,y0,width,height,lines,1);
+	} else if (mode == 3) {
+		if (!lua_isnumber(lua_getparam(2))) return;
+		Math::Vector3d axis(lua_getnumber(lua_getparam(2)),
+							lua_getnumber(lua_getparam(3)),
+							lua_getnumber(lua_getparam(4)));
+		g_grim->getHotspotMan()->setAxis(axis, lua_getnumber(lua_getparam(5)));
+	} else if (mode == 4) {
+		g_grim->getHotspotMan()->setupDialog(20,40,100,100,4,6);
+	}
 }
 
 void Lua_V1::NotifyWalk() {
-    int id = lua_getnumber(lua_getparam(1));
-    g_grim->getHotspotMan()->notifyWalk(id);
+	int id = lua_getnumber(lua_getparam(1));
+	g_grim->getHotspotMan()->notifyWalk(id);
 }
 
 void Lua_V1::RegisterInventory() {
@@ -111,20 +111,20 @@ void Lua_V1::InteractMode() {
 void Lua_V1::RenameHotspot() {
 	int id = lua_getnumber(lua_getparam(1));
 	Common::String name = lua_getstring(lua_getparam(2));
-    g_grim->getHotspotMan()->renameHotspot(id,name);
+	g_grim->getHotspotMan()->renameHotspot(id,name);
 }
 
 void Lua_V1::GetControlMode() {
 	int mode = g_grim->getHotspotMan()->getCtrlMode();
-    lua_pushnumber(mode);
+	lua_pushnumber(mode);
 }
 
 void Lua_V1::SetOptionMode() {
 	Common::String name = lua_getstring(lua_getparam(1));
 	Common::String old = g_grim->getHotspotMan()->getOptionMode();
 
-    g_grim->getHotspotMan()->setOptionMode(name);
-    lua_pushstring(old.c_str());
+	g_grim->getHotspotMan()->setOptionMode(name);
+	lua_pushstring(old.c_str());
 }
 
 } // end of namespace Grim

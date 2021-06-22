@@ -26,48 +26,48 @@
 namespace Graphics {
 
 bool project(const Math::Vector3d &objPos,
-           const Math::Matrix4 &modelMatrix,
-           const Math::Matrix4 &projMatrix,
-           const int viewport[4],
-           Math::Vector3d &winPos)
+			 const Math::Matrix4 &modelMatrix,
+			 const Math::Matrix4 &projMatrix,
+			 const int viewport[4],
+Math::Vector3d &winPos)
 {
-    Math::Vector4d tmp(objPos.x(), objPos.y(), objPos.z(), 1.0);
-    tmp = projMatrix * (modelMatrix * tmp);
-    if (tmp.w() == 0.0)
-        return false;
+	Math::Vector4d tmp(objPos.x(), objPos.y(), objPos.z(), 1.0);
+	tmp = projMatrix * (modelMatrix * tmp);
+	if (tmp.w() == 0.0)
+		return false;
 
-    /* scale normalized x,y,z to range [0.0 .. 1.0] and map x,y to viewport */
-    winPos.x() = viewport[0] + viewport[2] * ((tmp.x()/tmp.w() + 1.0f) * 0.5f);
-    winPos.y() = viewport[1] + viewport[3] * ((tmp.y()/tmp.w() + 1.0f) * 0.5f);
-    winPos.z() = (tmp.z()/tmp.w() + 1.0f) * 0.5f;
+	/* scale normalized x,y,z to range [0.0 .. 1.0] and map x,y to viewport */
+	winPos.x() = viewport[0] + viewport[2] * ((tmp.x()/tmp.w() + 1.0f) * 0.5f);
+	winPos.y() = viewport[1] + viewport[3] * ((tmp.y()/tmp.w() + 1.0f) * 0.5f);
+	winPos.z() = (tmp.z()/tmp.w() + 1.0f) * 0.5f;
 
-    return true;
+	return true;
 }
 
 bool unProject(const Math::Vector3d &winPos,
-             const Math::Matrix4 &modelMatrix,
-             const Math::Matrix4 &projMatrix,
-             const int viewport[4],
-             Math::Vector3d &objPos)
+			   const Math::Matrix4 &modelMatrix,
+			   const Math::Matrix4 &projMatrix,
+			   const int viewport[4],
+Math::Vector3d &objPos)
 {
-    Math::Matrix4 finalMatrix(projMatrix * modelMatrix);
-    if (!finalMatrix.invert())
-        return false;
+	Math::Matrix4 finalMatrix(projMatrix * modelMatrix);
+	if (!finalMatrix.invert())
+		return false;
 
-    /* map x,y from window coordinates and scale to range [-1.0 .. 1.0] */
-    Math::Vector4d tmp(
-        /*x*/ 2 * (winPos.x() - viewport[0]) / viewport[2] - 1,
-        /*y*/ 2 * (winPos.y() - viewport[1]) / viewport[3] - 1,
-        /*z*/ 2 * winPos.z() - 1,
-        /*w*/ 1.0);
+	/* map x,y from window coordinates and scale to range [-1.0 .. 1.0] */
+	Math::Vector4d tmp(
+				/*x*/ 2 * (winPos.x() - viewport[0]) / viewport[2] - 1,
+			/*y*/ 2 * (winPos.y() - viewport[1]) / viewport[3] - 1,
+			/*z*/ 2 * winPos.z() - 1,
+			/*w*/ 1.0);
 
-    tmp = finalMatrix * tmp;
-    if (tmp.w() == 0.0)
-        return false;
+	tmp = finalMatrix * tmp;
+	if (tmp.w() == 0.0)
+		return false;
 
-    /* copy normalized x,y,z to output */
-    objPos.set(tmp.x()/tmp.w(), tmp.y()/tmp.w(), tmp.z()/tmp.w());
-    return true;
+	/* copy normalized x,y,z to output */
+	objPos.set(tmp.x()/tmp.w(), tmp.y()/tmp.w(), tmp.z()/tmp.w());
+	return true;
 }
 
 } // End of namespace Graphics

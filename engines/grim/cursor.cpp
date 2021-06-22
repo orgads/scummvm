@@ -127,9 +127,9 @@ Cursor::Cursor(GrimEngine *vm) :
 	_data = new CursorData*[numCursors];
 	for(int i=0; i<numCursors; i++)
 		_data[i] = nullptr;
-    loadAvailableCursors();
-    _scaleX = 1.0f/g_driver->getScaleW();
-    _scaleY = 1.0f/g_driver->getScaleH();
+	loadAvailableCursors();
+	_scaleX = 1.0f/g_driver->getScaleW();
+	_scaleY = 1.0f/g_driver->getScaleH();
 }
 
 Cursor::~Cursor() {
@@ -140,20 +140,20 @@ Cursor::~Cursor() {
 }
 
 void Cursor::updatePosition(Common::Point& mouse) {
-    _position.x = mouse.x * _scaleX;
-    _position.y = mouse.y * _scaleY;
+	_position.x = mouse.x * _scaleX;
+	_position.y = mouse.y * _scaleY;
 }
 
 void Cursor::loadAvailableCursors() {
-    for(int i=0; i<numCursors; i++) {
+	for(int i=0; i<numCursors; i++) {
 		if (_data[i]) delete _data[i];
 		_data[i] = new CursorData(cursorName[i]);
 	}
-    CursorMan.showMouse(false);
+	CursorMan.showMouse(false);
 }
 
 void Cursor::reload() {
-    loadAvailableCursors();
+	loadAvailableCursors();
 }
 
 void Cursor::setCursor(int id) {

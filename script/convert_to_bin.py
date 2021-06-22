@@ -43,7 +43,7 @@ for file in glob.glob(srcpath+'/hs/*.set.hot'):
 		sname.append(set)
 
 if not os.path.exists(patchpath):
-    os.makedirs(patchpath)
+	os.makedirs(patchpath)
 
 with open(patchpath+'/set.bin','wb') as fout:
 	fout.write(struct.pack('i',len(dset)))

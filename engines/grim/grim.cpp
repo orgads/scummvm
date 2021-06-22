@@ -126,9 +126,9 @@ GrimEngine::GrimEngine(OSystem *syst, uint32 gameFlags, GrimGameType gameType, C
 	_mixer->setVolumeForSoundType(Audio::Mixer::kSpeechSoundType, ConfMan.getInt("speech_volume"));
 	_mixer->setVolumeForSoundType(Audio::Mixer::kMusicSoundType, ConfMan.getInt("music_volume"));
 
-    _cursor = nullptr;
-    _hotspotManager = nullptr;
-//
+	_cursor = nullptr;
+	_hotspotManager = nullptr;
+
 	_currSet = nullptr;
 	_selectedActor = nullptr;
 	_controlsEnabled = new bool[KEYCODE_EXTRA_LAST];
@@ -238,8 +238,8 @@ GrimEngine::~GrimEngine() {
 	delete g_driver;
 	g_driver = nullptr;
 	delete _iris;
-    delete _hotspotManager;
-    delete _cursor;
+	delete _hotspotManager;
+	delete _cursor;
 
 	// Remastered:
 	delete _commentary;
@@ -410,8 +410,8 @@ Common::Error GrimEngine::run() {
 	}
 
 	_cursor = new Cursor(this);
-    _hotspotManager = new HotspotMan;
-    _hotspotManager->initialize();
+	_hotspotManager = new HotspotMan;
+	_hotspotManager->initialize();
 
 	Bitmap *splash_bm = nullptr;
 	if (!(_gameFlags & ADGF_DEMO) && getGameType() == GType_GRIM)
@@ -796,7 +796,7 @@ void GrimEngine::luaUpdate() {
 	}
 
 	int cutsceneMode = LuaBase::instance()->queryVariable("cutSceneLevel", true);
-    g_grim->getHotspotMan()->cutSceneMode(cutsceneMode);
+	g_grim->getHotspotMan()->cutSceneMode(cutsceneMode);
 
 	LuaBase::instance()->update(_frameTime, _movieTime);
 
@@ -955,7 +955,7 @@ void GrimEngine::drawNormalMode() {
 }
 
 void GrimEngine::drawCursor() {
-    _hotspotManager->drawActive(_opMode);
+	_hotspotManager->drawActive(_opMode);
 	_cursor->draw();
 }
 
@@ -1161,31 +1161,31 @@ void GrimEngine::mainLoop() {
 						_devMode = !_devMode;
 						handleChars(type, event.kbd);
 					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_h) {
-                        _hotspotManager->getName(_cursor->getPosition());
-                        break;
-                    } else if (_devMode && _opMode > 0 && event.kbd.keycode == Common::KEYCODE_RETURN) {
-                        _hotspotManager->okKey(event.kbd.hasFlags(Common::KBD_SHIFT));
-                        break;
-                    } else if (_devMode && event.kbd.keycode == Common::KEYCODE_LEFTBRACKET) {
-                        _opMode = (_opMode+1) % 3;
-                        _hotspotManager->cancel();
-                        warning("set opMode %d %d",_opMode,_hotspotManager->getCtrlMode());
-                    } else if (_devMode && event.kbd.keycode == Common::KEYCODE_RIGHTBRACKET) {
+						_hotspotManager->getName(_cursor->getPosition());
+						break;
+					} else if (_devMode && _opMode > 0 && event.kbd.keycode == Common::KEYCODE_RETURN) {
+						_hotspotManager->okKey(event.kbd.hasFlags(Common::KBD_SHIFT));
+						break;
+					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_LEFTBRACKET) {
+						_opMode = (_opMode+1) % 3;
+						_hotspotManager->cancel();
+						warning("set opMode %d %d",_opMode,_hotspotManager->getCtrlMode());
+					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_RIGHTBRACKET) {
 						_opMode = (_opMode-1+3) % 3;
-		                _hotspotManager->cancel();
-                        warning("set opMode %d %d",_opMode,_hotspotManager->getCtrlMode());
-                    } else if (_devMode && event.kbd.keycode == Common::KEYCODE_F5) {
-                        _hotspotManager->initialize();
-                    } else if (_devMode && event.kbd.keycode == Common::KEYCODE_F6) {
-                        _hotspotManager->debug(1);
-                    } else if (_devMode && event.kbd.keycode == Common::KEYCODE_F7) {
-                        _hotspotManager->debug(2);
-                    } else if (_devMode && _opMode > 0 && event.kbd.keycode == Common::KEYCODE_ESCAPE) {
-                        _hotspotManager->cancel();
-                        break;
+						_hotspotManager->cancel();
+						warning("set opMode %d %d",_opMode,_hotspotManager->getCtrlMode());
+					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_F5) {
+						_hotspotManager->initialize();
+					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_F6) {
+						_hotspotManager->debug(1);
+					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_F7) {
+						_hotspotManager->debug(2);
+					} else if (_devMode && _opMode > 0 && event.kbd.keycode == Common::KEYCODE_ESCAPE) {
+						_hotspotManager->cancel();
+						break;
 
 
-                    } else {
+					} else {
 						handleChars(type, event.kbd);
 					}
 				}
@@ -1665,7 +1665,7 @@ void GrimEngine::makeCurrentSetup(int num) {
 		// here should be set sound position
 
 		_setupChanged = true;
-        _hotspotManager->updatePerspective();
+		_hotspotManager->updatePerspective();
 	}
 }
 
