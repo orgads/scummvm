@@ -1140,10 +1140,11 @@ void GfxOpenGL::createBitmap(BitmapData *bitmap) {
 				texOut = (byte *)bitmap->getImageData(pic).getRawBuffer();
 			}
 
+			bool smooth = bitmap->_smoothInterpolation && (_scaleW != 1 || _scaleH != 1);
 			for (int i = 0; i < bitmap->_numTex; i++) {
 				glBindTexture(GL_TEXTURE_2D, textures[bitmap->_numTex * pic + i]);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, smooth ? GL_LINEAR : GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, smooth ? GL_LINEAR : GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 				glTexImage2D(GL_TEXTURE_2D, 0, format, BITMAP_TEXTURE_SIZE, BITMAP_TEXTURE_SIZE, 0, format, type, nullptr);
@@ -1170,7 +1171,7 @@ void GfxOpenGL::createBitmap(BitmapData *bitmap) {
 	}
 }
 
-void GfxOpenGL::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer) {
+void GfxOpenGL::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, float rot) {
 	// The PS2 version of EMI uses a TGA for it's splash-screen
 	// avoid using the TIL-code below for that, by checking
 	// for texture coordinates set by BitmapData::loadTile
@@ -1276,8 +1277,12 @@ void GfxOpenGL::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer) {
 #endif
 	}
 
+	bool smooth = bitmap->_data->_smoothInterpolation && (_scaleW != 1 || _scaleH != 1);
+	int scaledWidth = (int)((bitmap->getWidth()) * _scaleW);
+	int scaledHeight = (int)((bitmap->getHeight()) * _scaleH);
+	float upper = smooth ? 0.999f : 1.0f;
 	glEnable(GL_SCISSOR_TEST);
-	glScissor((int)(dx * _scaleW), _screenHeight - (int)(((dy + bitmap->getHeight())) * _scaleH), (int)(bitmap->getWidth() * _scaleW), (int)(bitmap->getHeight() * _scaleH));
+	glScissor((int)(dx * _scaleW), _screenHeight - (int)(((dy + bitmap->getHeight())) * _scaleH), scaledWidth, scaledHeight);
 	int cur_tex_idx = bitmap->getNumTex() * (bitmap->getActiveImage() - 1);
 	for (int y = dy; y < (dy + bitmap->getHeight()); y += BITMAP_TEXTURE_SIZE) {
 		for (int x = dx; x < (dx + bitmap->getWidth()); x += BITMAP_TEXTURE_SIZE) {
@@ -1286,11 +1291,11 @@ void GfxOpenGL::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer) {
 			glBegin(GL_QUADS);
 			glTexCoord2f(0.0f, 0.0f);
 			glVertex2f(x * _scaleW, y * _scaleH);
-			glTexCoord2f(1.0f, 0.0f);
+			glTexCoord2f(upper, 0.0f);
 			glVertex2f((x + BITMAP_TEXTURE_SIZE) * _scaleW, y * _scaleH);
-			glTexCoord2f(1.0f, 1.0f);
+			glTexCoord2f(upper, upper);
 			glVertex2f((x + BITMAP_TEXTURE_SIZE) * _scaleW, (y + BITMAP_TEXTURE_SIZE)  * _scaleH);
-			glTexCoord2f(0.0f, 1.0f);
+			glTexCoord2f(0.0f, upper);
 			glVertex2f(x * _scaleW, (y + BITMAP_TEXTURE_SIZE) * _scaleH);
 			glEnd();
 			cur_tex_idx++;
@@ -1961,7 +1966,7 @@ void GfxOpenGL::dimScreen() {
 		uint8 r = (pixel & 0xFF0000) >> 16;
 		uint8 g = (pixel & 0x00FF00) >> 8;
 		uint8 b = (pixel & 0x0000FF);
-		uint32 color = (r + g + b) / 10;
+		uint32 color = (uint32)(((float)r + (float)g + (float)b) / 3.0f * _dimLevel);
 		data[l] = ((color & 0xFF) << 16) | ((color & 0xFF) << 8) | (color & 0xFF);
 	}
 }
@@ -2111,6 +2116,36 @@ void GfxOpenGL::irisAroundRegion(int x1, int y1, int x2, int y2) {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glDepthMask(GL_TRUE);
+}
+
+void GfxOpenGL::blackbox(int x0, int y0, int x1, int y1, float opacity) {
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, _screenWidth, _screenHeight, 0, 0, 1);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	glDisable(GL_LIGHTING);
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glColor4f(0, 0, 0, opacity);
+
+	glBegin(GL_QUADS);
+	glVertex2f(x0 * _scaleW, y0 * _scaleH);
+	glVertex2f(x1 * _scaleW, y0 * _scaleH);
+	glVertex2f(x1 * _scaleW, y1 * _scaleH);
+	glVertex2f(x0 * _scaleW, y1 * _scaleH);
+	glEnd();
+
+	glColor4f(1, 1, 1, 1);
+	glDepthMask(GL_TRUE);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_LIGHTING);
+	glDisable(GL_BLEND);
 }
 
 void GfxOpenGL::drawRectangle(const PrimitiveObject *primitive) {
@@ -2286,6 +2321,47 @@ void GfxOpenGL::setBlendMode(bool additive) {
 	} else {
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
+}
+
+bool GfxOpenGL::worldToScreen(const Math::Vector3d &vec, int &x, int &y) {
+	if (_currentShadowArray)
+		return false;
+
+	GLdouble modelView[16], projection[16];
+	GLint viewPort[4];
+
+	glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
+	glGetDoublev(GL_PROJECTION_MATRIX, projection);
+	glGetIntegerv(GL_VIEWPORT, viewPort);
+
+	Math::Vector3d win;
+	Math::gluMathProject<GLdouble, GLint>(vec, modelView, projection, viewPort, win);
+
+	if (win.x() < 0)
+		x = 0;
+	else if (win.x() >= _gameWidth)
+		x = _gameWidth - 1;
+	if (win.y() < 0)
+		y = 0;
+	else if (win.y() >= _gameHeight)
+		y = _gameHeight - 1;
+
+	return x > 0 && y > 0 && x < _gameWidth - 1 && y < _gameHeight - 1;
+}
+
+bool GfxOpenGL::raycast(int x, int y, Math::Vector3d &r0, Math::Vector3d &r1) {
+	GLint viewPortInd[4];
+
+	GLdouble winX = x, winY = _gameHeight - y;
+	glGetIntegerv(GL_VIEWPORT, viewPortInd);
+	Common::Rect viewPort(viewPortInd[0], viewPortInd[1], viewPortInd[2], viewPortInd[3]);
+	Math::Matrix4 modelMatrix = getModelView();
+	Math::Matrix4 projMatrix = getProjection();
+	Math::Matrix4 mvpMatrix = modelMatrix * projMatrix;
+	Math::gluMathUnProject(Math::Vector3d(winX, winY, 0.0), mvpMatrix, viewPort, r0);
+	Math::gluMathUnProject(Math::Vector3d(winX, winY, 1.0), mvpMatrix, viewPort, r1);
+	r1 -= r0;
+	return true;
 }
 
 } // end of namespace Grim
