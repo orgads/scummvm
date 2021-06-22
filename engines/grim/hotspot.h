@@ -88,7 +88,10 @@ public:
 	HotObject &getObject(int idx) { return _hotobject[idx]; }
 
 	void initialize();
+	void okKey(bool shift);
+	void cancel();
 	void event(const Common::Point &cursor, const Common::Event &ev, bool doubleClick);
+	void getName(const Common::Point &cursor);
 	void hover(const Common::Point &cursor);
 	void updatePerspective();
 	void drawActive();
@@ -103,6 +106,8 @@ public:
 		_cols = cols;
 		_rows = rows;
 	}
+	void notifyWalk(int id);
+	void debug(int num);
 	void update();
 	void resetInventory();
 	void addInventory(const Common::String &id, const Common::String &pic);
@@ -121,6 +126,7 @@ public:
 	Common::Point mannyPos2D(float zOffset);
 
 protected:
+	void append_hotspot(const Common::String &id, const Common::String &name, int type);
 	int inBox(const Common::Point &p);
 	void freeClick(const Common::Point &cursor, int button, bool doubleClick, bool climbing);
 	void loadFlashBitmaps();
@@ -152,6 +158,12 @@ protected:
 	bool _flashHS;
 	unsigned int _flashStart;
 	Bitmap *_flashBitmaps[8];
+
+	// hotspot editing
+	int _selectMode, _lastSetup;
+	Polygon _selectPoly;
+	Common::String _lastName;
+	Common::Array<Math::Vector3d> _selectPath;
 
 	// active hotspot
 	Hotspot *_activeHS;

@@ -969,8 +969,10 @@ struct luaL_reg grimMainOpcodes[] = {
 	{ "ActivateHotspot", LUA_OPCODE(Lua_V1, ActivateHotspot) },
 	{ "UpdateHotspot", LUA_OPCODE(Lua_V1, UpdateHotspot) },
 	{ "SwitchControlMode", LUA_OPCODE(Lua_V1, SwitchControlMode) },
+	{ "NotifyWalk", LUA_OPCODE(Lua_V1, NotifyWalk) },
 	{ "RegisterInventory", LUA_OPCODE(Lua_V1, RegisterInventory) },
 	{ "MouseDown", LUA_OPCODE(Lua_V1, MouseDown) },
+	{ "InteractMode", LUA_OPCODE(Lua_V1, InteractMode) },
 	{ "RenameHotspot", LUA_OPCODE(Lua_V1, RenameHotspot) },
 	{ "GetControlMode", LUA_OPCODE(Lua_V1, GetControlMode) },
 	{ "SetOptionMode", LUA_OPCODE(Lua_V1, SetOptionMode) }

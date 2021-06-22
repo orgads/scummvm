@@ -8,6 +8,9 @@
 scummvm.dwp
 lib*.a
 .deps
+*.so
+*.apk
+/build
 
 /config.log
 /scummvm
@@ -286,3 +289,6 @@ android_project
 dists/emscripten/libs/
 dists/emscripten/games/
 dists/emscripten/emsdk-*
+
+lua.tgz
+dists/engine-data/patches/grim_pnc

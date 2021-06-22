@@ -20,6 +20,12 @@
  *
  */
 
+#define FORBIDDEN_SYMBOL_ALLOW_ALL
+
+#ifndef ANDROID
+#include "engines/grim/gfx_opengl.h"
+#endif
+
 #include "engines/grim/bitmap.h"
 #include "common/foreach.h"
 #include "engines/grim/hotspot.h"
@@ -38,6 +44,9 @@
 #include "common/system.h"
 
 namespace Grim {
+
+inline int16 max(int16 a, int16 b) { return a > b ? a : b; }
+inline int16 min(int16 a, int16 b) { return a < b ? a : b; }
 
 void Polygon::draw(const Color &col) {
 	PrimitiveObject line;
@@ -89,7 +98,16 @@ void Polygon::fixBorders() {
 			p.y = 0;
 		if (p.y >= 480 - fixBorder && p.y > c.y)
 			p.y = 480;
+#ifdef ANDROID
+	const int WIDEN_BORDERS = 22;
+	for (size_t i = 0; i < _pnts.size(); i++) {
+		Common::Point& p = _pnts[i];
+		if (c.x <= WIDEN_BORDERS && p.x > c.x) p.x = max(p.x, c.x + WIDEN_BORDERS);
+		if (c.x >= 640 - WIDEN_BORDERS && p.x < c.x) p.x = min(p.x, c.x - WIDEN_BORDERS);
+		if (c.y <= WIDEN_BORDERS && p.y > c.y) p.y = max(p.y, c.y + WIDEN_BORDERS);
+		if (c.y >= 480 - WIDEN_BORDERS && p.y < c.y) p.y = min(p.y, c.y - WIDEN_BORDERS);
 	}
+#endif
 }
 
 static Actor *getManny() {
@@ -227,6 +245,51 @@ void HotspotMan::drawActive() {
 			}
 		}
 	}
+	if (debugMode > 0) {
+		PrimitiveObject prim;
+		for (size_t i=0; i<_hotobject.size(); i++) {
+			if (_hotobject[i]._active) {
+				Common::Point p1(_hotobject[i]._rect.left, _hotobject[i]._rect.top);
+				Common::Point p2(_hotobject[i]._rect.right, _hotobject[i]._rect.bottom);
+				prim.createRectangle(p1,p2,Color(200,0,200),false);
+				prim.draw();
+
+			}
+		}
+		Common::Array<Hotspot>& hotspots = _hotspots[active_set()];
+		int setup = g_grim->getCurrSet()->getSetup();
+		for (size_t i=0; i<hotspots.size(); i++) {
+			if (hotspots[i]._setup == setup || _ctrlMode == Options)
+				hotspots[i]._region.draw(Color(0,200,200));
+		}
+		if (_selectMode > 0)
+			_selectPoly.draw(Color(200,200,200));
+	}
+	if(debugMode==2) {
+		g_grim->getCurrSet()->setupCamera();
+		Set *set = g_grim->getCurrSet();
+		for (int s=0; s<set->getSectorCount(); s++) {
+			Sector* sector = set->getSectorBase(s);
+			if ((sector->getType() & Sector::WalkType) != Sector::WalkType &&
+				(sector->getType() & Sector::HotType) != Sector::HotType)
+				continue;
+			int num = sector->getNumVertices();
+			for (int j=0; j<num; j++) {
+				int d0=j, d1=(j+1)%num;
+				int x0,x1,y0,y1;
+				Math::Vector3d v0 = sector->getVertices()[d0];
+				Math::Vector3d v1 = sector->getVertices()[d1];
+				g_driver->worldToScreen(v0, x0, y0);
+				g_driver->worldToScreen(v1, x1, y1);
+				PrimitiveObject p;
+				Color col = Color(0,200,0);
+				if ((sector->getType() & Sector::HotType) == Sector::HotType)
+					col = Color(200,0,0);
+				p.createLine(Common::Point(x0,y0),Common::Point(x1,y1),col);
+				p.draw();
+			}
+		}
+	}
 }
 
 void HotspotMan::updatePerspective() {
@@ -239,9 +302,205 @@ void HotspotMan::updatePerspective() {
 	restoreCursor();
 }
 
+void HotspotMan::notifyWalk(int id) {
+	/*if (_selectMode < 0)
+		okKey(false);*/
+
+#ifdef ANDROID
+	Common::Array<Hotspot>& hotspots = _hotspots[active_set()];
+	int setup = g_grim->getCurrSet()->getSetup();
+	for (size_t i=0; i<hotspots.size(); i++) {
+		Hotspot& hs = hotspots[i];
+		if (hs._setup == setup && hs._objId == id) {
+			Common::Point pnt = hs._region.center();
+			g_grim->getCursor()->setPersistent(1, 1, pnt.x, pnt.y);
+			_activeHS = &hs;
+			return;
+		}
+	}
+#endif
+}
+
+void HotspotMan::debug(int num) {
+	for (size_t i=0; i<_hotobject.size(); i++) {
+		if (!_hotobject[i]._active) continue;
+		warning("hobj %c %s",_hotobject[i]._active ? 'A':'D',(_hotobject[i]._id + "/" + _hotobject[i]._desc).c_str());
+	}
+	Common::Array<Hotspot>& hotspots = _hotspots[active_set()];
+	for (size_t i=0; i<hotspots.size(); i++) {
+		char c = (hotspots[i]._objId>=0 && _hotobject[hotspots[i]._objId]._active) ? 'A' : 'D';
+		warning("hspt %c %s",c,(hotspots[i]._id + "/" + hotspots[i]._desc).c_str());
+	}
+	warning("manny at %g,%g,%g",getManny()->getPos().x(), getManny()->getPos().y(), getManny()->getPos().z());
+}
+
+/*
+void HotspotMan::reload(bool always) {
+	_initialized = true;
+	Common::String scene = g_grim->getCurrSet()->getName();
+	if (_curScene != scene || always) {
+		_curScene = scene;
+		_hotspot.clear();
+
+		char fname[256];
+		sprintf(fname, "/Users/tpfaff/code/residualvm/hs/%s.hot",scene.c_str());
+		FILE *fp = fopen(fname, "r");
+		if (!fp) return;
+
+		int setup, type, num, x, y;
+		char id[256], name[256];
+		while(fscanf(fp,"%d %s \"%100[^\"]\" %d %d", &setup, id, name, &type, &num) > 0) {
+			Hotspot hs;
+			hs._id = id;
+			hs._setup = setup;
+			hs._desc = name;
+			hs._type = type;
+			hs._objId = -1;
+			for (int i=0; i<num; i++) {
+				float p[3];
+				fscanf(fp,"%g %g %g",&p[0],&p[1],&p[2]);
+				Math::Vector3d v(p[0],p[1],p[2]);
+				hs._path.push_back(v);
+			}
+			fscanf(fp,"%d",&num);
+			for (int i=0; i<num; i++) {
+				fscanf(fp,"%d %d", &x, &y);
+				hs._region._pnts.push_back(Common::Point(x,y));
+			}
+			for (size_t j=0; j<_hotobject.size(); j++) {
+				if (_hotobject[j]._id == hs._id)
+					hs._objId = j;
+			}
+			_hotspot.push_back(hs);
+		}
+		fclose(fp);
+	}
+}*/
+
+inline int min(int a, int b) { return a<b ? a : b; }
+inline int max(int a, int b) { return a>b ? a : b; }
+
+void HotspotMan::cancel() {
+	_selectMode = 0;
+	_selectPoly._pnts.clear();
+}
+
+Common::String get_scene_id() {
+	Common::String scene = g_grim->getCurrSet()->getName();
+	for(int i=0; i<4; i++) scene.deleteLastChar();
+	return scene;
+}
+
 Common::String HotspotMan::activeSet() {
 	return (_curOption.empty() || _ctrlMode != Options) ?
 				g_grim->getCurrSet()->getName() : _curOption;
+}
+
+void split_string(const Common::String& str, char split, Common::String& left, Common::String& right) {
+	left = ""; right = "";
+	bool useleft = true;
+	for (size_t i=0; i<str.size(); i++) {
+		if (str[i]==split)
+			useleft = false;
+		else if (useleft)
+			left += str[i];
+		else
+			right += str[i];
+	}
+}
+
+void HotspotMan::append_hotspot(const Common::String& id, const Common::String& name, int type) {
+	Common::String scene = get_scene_id();
+	char fname[256];
+	sprintf(fname, "/Users/tpfaff/code/residualvm/hs/%s.set.hot",scene.c_str());
+	warning("saving to %s",fname);
+	FILE *fp = fopen(fname,"a");
+	if (!fp) error("cant open hostpot file");
+	fprintf(fp, "%d %s \"%s\" %d %d",_lastSetup, id.c_str(), name.c_str(),type,_selectPath.size());
+	for (size_t i=0; i<_selectPath.size();i++) {
+		Math::Vector3d v = _selectPath[i];
+		fprintf(fp, " %g %g %g", v.x(), v.y(), v.z());
+	}
+	fprintf(fp, " %d", _selectPoly._pnts.size()-1);
+	for (size_t i=0; i<_selectPoly._pnts.size()-1; i++)
+		fprintf(fp," %d %d",_selectPoly._pnts[i].x, _selectPoly._pnts[i].y);
+	fprintf(fp,"\n");
+	fclose(fp);
+}
+
+void HotspotMan::okKey(bool shift) {
+	if (_selectMode > 0) {
+		Common::String defaultText = "", desc="";
+
+		// find possible object defaults
+		for (size_t i=0; i<_hotobject.size(); i++) {
+			if (!_hotobject[i]._active) continue;
+			Common::Point p ((_hotobject[i]._rect.left + _hotobject[i]._rect.right)/2,
+							 (_hotobject[i]._rect.top + _hotobject[i]._rect.bottom)/2);
+			if (_selectPoly.contains(p)) {
+				defaultText = _hotobject[i]._id;
+				desc = "[default: " + _hotobject[i]._desc + " ]";
+				defaultText.erase(0,3);
+				break;
+			}
+		}
+
+		// object id
+		InputDialog dlg("Object ID " +desc, defaultText);
+		int res = dlg.runModal();
+		Common::String id = dlg.getString();
+
+		// The KeyUp event for CTRL has been eat by the gui loop, so we
+		// need to reset it manually.
+		g_grim->clearEventQueue();
+		if (res && !id.empty()) {
+			_lastSetup = g_grim->getCurrSet()->getSetup();
+			_selectPath.clear();
+			if (id[0] == 's' && id[1] == 'x') {
+				int type = 10;
+				Common::String code,name;
+				split_string(id,'_',code,name);
+				if (name == "star") type = 11;
+				if (name == "go") type = 12;
+				if (name == "right") type = 13;
+				if (name == "left") type = 14;
+				if (name == "up") type = 15;
+				if (name == "down") type = 16;
+				_selectPath.push_back(Math::Vector3d(0,0,0));
+				append_hotspot(id,name, type);
+			} else if (id[0] == 't' && id[1] == 'x') {
+				Common::String name = "_";
+				int type = 1;
+				id = "/" + get_scene_id() + id;
+				for (size_t i=0; i<_hotobject.size(); i++) {
+					if (_hotobject[i]._id == id)
+						name = _hotobject[i]._desc;
+				}
+				if (name=="door")
+					type = 2;
+				_selectPath.push_back(Math::Vector3d(0,0,0));
+				append_hotspot(id,name, type);
+			} else {
+				_selectMode = -1;
+				_lastName = id;
+				warning("ok, walk to position and hit ENTER / Shift+ENTER");
+				return;
+			}
+		}
+		_selectMode = 0;
+		_selectPoly._pnts.clear();
+	} else if (_selectMode < 0) {
+		warning("ok, saving position");
+		Actor* manny = getManny();
+		if (manny) {
+			_selectPath.push_back(manny->getPos());
+			if (!shift) {
+				append_hotspot("to",_lastName, 3);
+				_selectMode = 0;
+				_selectPoly._pnts.clear();
+			}
+		}
+	}
 }
 
 // get min distance s for x0 + s * x1, y0 + t * y1
@@ -263,6 +522,10 @@ void HotspotMan::event(const Common::Point &cursor, const Common::Event &ev, boo
 		button = 2;
 	else if (ev.type == Common::EVENT_MBUTTONDOWN)
 		button = 3;
+	else if (ev.type == Common::EVENT_SCROLL_UP)
+		button = 4;
+	else if (ev.type == Common::EVENT_SCROLL)
+		button = 4;
 	if (ev.kbd.hasFlags(Common::KBD_ALT))
 		button = 2;
 	if (ev.kbd.hasFlags(Common::KBD_CTRL))
@@ -284,6 +547,12 @@ void HotspotMan::event(const Common::Point &cursor, const Common::Event &ev, boo
 	}
 
 	_lastCursor = cursor;
+#ifdef ANDROID
+	restoreCursor();
+	if (_cutScene == 0 && _ctrlMode == Normal && ev.type != Common::EVENT_SCROLL) {
+		g_grim->getCursor()->setPersistent(0, 8, cursor.x, cursor.y);
+	}
+#endif
 
 	if (_ctrlMode == Dialog && button > 0) {
 		// dialog mode
@@ -313,6 +582,18 @@ void HotspotMan::event(const Common::Point &cursor, const Common::Event &ev, boo
 		LuaBase::instance()->callback("mouseInventory", objects);
 		return;
 	}
+
+	if (debugMode > 0 && button == 1 && _selectMode >=0) {
+		Common::Point pnt(cursor.x, cursor.y);
+		if (_selectMode == 0)
+			_selectPoly._pnts.push_back(pnt);
+		else
+			_selectPoly._pnts[_selectMode] = pnt;
+		_selectPoly._pnts.push_back(pnt);
+		_selectMode++;
+	}
+
+	if (debugMode==0) {
 
 	// ------- click on hot spots ------------
 	Common::Array<Hotspot> &hotspots = _hotspots[activeSet()];
@@ -388,6 +669,7 @@ void HotspotMan::event(const Common::Point &cursor, const Common::Event &ev, boo
 			LuaBase::instance()->callback("mouseNowalk", objects);
 		}
 	}
+	}
 
 	if (_ctrlMode == Linear && button > 0) {
 		// linear mode
@@ -410,6 +692,14 @@ void HotspotMan::event(const Common::Point &cursor, const Common::Event &ev, boo
 		return;
 	}
 }
+void HotspotMan::getName(const Common::Point& pos) {
+	for (size_t i=0; i<_hotobject.size(); i++) {
+		if (_hotobject[i]._active && _hotobject[i]._rect.contains(pos)) {
+			//cursor->setCursor(1);
+			warning("current obj %s %s",_hotobject[i]._id.c_str(),_hotobject[i]._desc.c_str());
+		}
+	}
+}
 
 void HotspotMan::hover(const Common::Point &pos) {
 	if (g_grim->getCurrSet() == NULL) return;
@@ -420,7 +710,11 @@ void HotspotMan::hover(const Common::Point &pos) {
 	cursor->setCursor(0);
 
 	if (_cutScene > 0 && _ctrlMode != Dialog && _ctrlMode != Options) {
+#ifdef ANDROID
+		cursor->setPersistent(0, 7, 320, 240);
+#else
 		cursor->setCursor(7);
+#endif
 		return;
 	}
 
@@ -451,6 +745,9 @@ void HotspotMan::hover(const Common::Point &pos) {
 			}
 		}
 	}
+	if (_selectMode > 0)
+		_selectPoly._pnts[_selectMode] = Common::Point(pos.x, pos.y);
+
 	if (_ctrlMode == Dialog) {
 		// dialog mode
 		int dialog = inBox(pos), click = 0;
@@ -704,7 +1001,15 @@ void HotspotMan::cutSceneMode(int mode) {
 void HotspotMan::restoreCursor() {
 	_activeHS = nullptr;
 	g_grim->getCursor()->setPersistent(1, -1);
+#ifdef ANDROID
+	g_grim->getCursor()->setCursor(-1);
+	if (_cutScene > 0 && _ctrlMode != Dialog && _ctrlMode != Options)
+		g_grim->getCursor()->setPersistent(0, 7, 320, 240);
+	else
+		g_grim->getCursor()->setPersistent(0, -1);
+#else
 	hover(_lastCursor);
+#endif
 }
 
 void HotspotMan::renameHotspot(int num, const Common::String &name) {
@@ -726,6 +1031,7 @@ void HotspotMan::renameHotspot(int num, const Common::String &name) {
 		id += Common::String::format("_%d", n);
 	_hotobject[num]._id = id;
 	_hotobject[num]._desc = desc;
+	//warning("renaming to %s / %s",id.c_str(),desc.c_str() );
 
 	// re-link to hotspots
 	for (HotDict::iterator it = _hotspots.begin(), end = _hotspots.end(); it != end; ++it) {
