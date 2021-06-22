@@ -26,7 +26,9 @@
 #include "engines/grim/actor.h"
 #include "engines/grim/grim.h"
 #include "engines/grim/set.h"
+#include "engines/grim/hotspot.h"
 #include "engines/grim/lua/lauxlib.h"
+#include "engines/grim/lua/lapi.h"
 
 namespace Grim {
 
@@ -250,6 +252,8 @@ void Lua_V1::MakeCurrentSet() {
 	const char *name = lua_getstring(nameObj);
 	Debug::debug(Debug::Engine, "Entered new scene '%s'.", name);
 	g_grim->setSet(name);
+	if (!g_grim->isRemastered())
+		g_grim->getHotspotMan()->updatePerspective();
 }
 
 void Lua_V1::MakeCurrentSetup() {
