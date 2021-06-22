@@ -63,6 +63,7 @@ struct SceneInfo {
 	uint16 sceneID = 0;
 	uint16 frameID = 0;
 	uint16 verticalOffset = 0;
+	uint16 paletteID = 0;
 };
 
 // The game state that handles all of the gameplay
@@ -90,12 +91,15 @@ public:
 		Common::String videoFile;
 		//
 		uint16 videoFormat;
-		Common::String videoPaletteFile;
+		Common::Array<Common::String> palettes;
 		Common::String audioFile;
 		SoundDescription sound;
 		//
 		NancyFlag dontWrap;
-		//
+		uint16 soundWrapAroundPan;
+		uint16 soundPanPerFrame;
+		uint16 totalViewAngle;
+		uint16 horizontalScrollDelta;
 		uint16 verticalScrollDelta;
 		uint16 horizontalEdgeSize;
 		uint16 verticalEdgeSize;
@@ -165,6 +169,7 @@ public:
 	Action::ActionManager &getActionManager() { return _actionManager; }
 
 	SceneInfo &getSceneInfo() { return _sceneState.currentScene; }
+	SceneInfo &getNextSceneInfo() { return _sceneState.nextScene; }
 	const SceneSummary &getSceneSummary() const { return _sceneState.summary; }
 
 	void setActivePrimaryVideo(Action::PlayPrimaryVideoChan0 *activeVideo);

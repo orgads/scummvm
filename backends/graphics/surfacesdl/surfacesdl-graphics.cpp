@@ -140,7 +140,8 @@ SurfaceSdlGraphicsManager::SurfaceSdlGraphicsManager(SdlEventSource *sdlEventSou
 	_enableFocusRectDebugCode(false), _enableFocusRect(false), _focusRect(),
 #endif
 	_transactionMode(kTransactionNone),
-	_scalerPlugins(ScalerMan.getPlugins()) {
+	_scalerPlugins(ScalerMan.getPlugins()),
+	_needRestoreAfterOverlay(false) {
 
 	// allocate palette storage
 	_currentPalette = (SDL_Color *)calloc(sizeof(SDL_Color), 256);
@@ -302,27 +303,8 @@ static void initGraphicsModes() {
 	s_supportedGraphicsModes->push_back(gm);
 }
 
-const OSystem::GraphicsMode *SurfaceSdlGraphicsManager::supportedGraphicsModes() const {
-	if (!s_supportedGraphicsModes)
-		initGraphicsModes();
-
-	int size = s_supportedGraphicsModes->size();
-	OSystem::GraphicsMode *modes = new OSystem::GraphicsMode[size];
-	memcpy(modes, &(*s_supportedGraphicsModes)[0], size * sizeof(OSystem::GraphicsMode));
-
-	// Do deep copy. Each can be freed independently of the other.
-	OSystem::GraphicsMode *gm = modes;
-	while (gm->name) {
-		gm->name = scumm_strdup(gm->name);
-		gm->description = scumm_strdup(gm->description);
-		++gm;
-	}
-
-	return modes;
-}
-
 const OSystem::GraphicsMode *SurfaceSdlGraphicsManager::getSupportedGraphicsModes() const {
-	return supportedGraphicsModes();
+	return s_supportedGraphicsModes->begin();
 }
 
 int SurfaceSdlGraphicsManager::getDefaultGraphicsMode() const {
@@ -1169,12 +1151,24 @@ void SurfaceSdlGraphicsManager::internUpdateScreen() {
 	}
 
 	int oldScaleFactor;
+
 	if (!_overlayVisible) {
+		if (_needRestoreAfterOverlay) {
+			// This is needed for the Edge scaler which seems to be the only scaler to use the "_useOldSrc" feature.
+			// Otherwise the screen will not be properly restored after removing the overlay. We need to trigger a
+			// regeneration of SourceScaler::_bufferedOutput. The call to _scalerPlugin->setFactor() down below could
+			// do that in theory, but it won't unless the factor actually changes (which it doesn't). Now, the code
+			// in SourceScaler::setSource() looks a bit fishy, e. g. the *src argument isn't even used. But otherwise
+			// it does what we want here at least...
+			_scalerPlugin->setSource(0, _tmpscreen->pitch, _videoMode.screenWidth, _videoMode.screenHeight, _maxExtraPixels);
+		}
+
 		origSurf = _screen;
 		srcSurf = _tmpscreen;
 		width = _videoMode.screenWidth;
 		height = _videoMode.screenHeight;
 		oldScaleFactor = scale1 = _videoMode.scaleFactor;
+		_needRestoreAfterOverlay = false;
 	} else {
 		origSurf = _overlayscreen;
 		srcSurf = _tmpscreen2;
@@ -1182,6 +1176,7 @@ void SurfaceSdlGraphicsManager::internUpdateScreen() {
 		height = _videoMode.overlayHeight;
 		scale1 = 1;
 		oldScaleFactor = _scalerPlugin->setFactor(1);
+		_needRestoreAfterOverlay = _useOldSrc;
 	}
 
 	// Add the area covered by the mouse cursor to the list of dirty rects if
@@ -1744,7 +1739,7 @@ void SurfaceSdlGraphicsManager::clearOverlay() {
 	_forceRedraw = true;
 }
 
-void SurfaceSdlGraphicsManager::grabOverlay(void *buf, int pitch) const {
+void SurfaceSdlGraphicsManager::grabOverlay(Graphics::Surface &surface) const {
 	assert(_transactionMode == kTransactionNone);
 
 	if (_overlayscreen == NULL)
@@ -1754,12 +1749,13 @@ void SurfaceSdlGraphicsManager::grabOverlay(void *buf, int pitch) const {
 		error("SDL_LockSurface failed: %s", SDL_GetError());
 
 	byte *src = (byte *)_overlayscreen->pixels;
-	byte *dst = (byte *)buf;
-	int h = _videoMode.overlayHeight;
+	byte *dst = (byte *)surface.getPixels();
+	int h = MIN<int>(surface.h, _videoMode.overlayHeight);
+	int pitch = MIN<int>(surface.w, _videoMode.overlayWidth * 2);
 	do {
-		memcpy(dst, src, _videoMode.overlayWidth * 2);
+		memcpy(dst, src, pitch);
 		src += _overlayscreen->pitch;
-		dst += pitch;
+		dst += surface.pitch;
 	} while (--h);
 
 	SDL_UnlockSurface(_overlayscreen);

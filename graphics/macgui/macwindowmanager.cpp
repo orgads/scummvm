@@ -188,6 +188,7 @@ MacWindowManager::MacWindowManager(uint32 mode, MacPatterns *patterns) {
 	_colorGreen2 = kColorGreen2;
 
 	_fullRefresh = true;
+	_inEditableArea = false;
 
 	if (mode & kWMMode32bpp)
 		_pixelformat = Graphics::PixelFormat(4, 8, 8, 8, 8, 24, 16, 8, 0);
@@ -264,6 +265,14 @@ void MacWindowManager::setScreen(int w, int h) {
 	_screenDims = Common::Rect(w, h);
 	_desktop->create(w, h, _pixelformat);
 	drawDesktop();
+}
+
+void MacWindowManager::resizeScreen(int w, int h) {
+	if (!_screen)
+		error("MacWindowManager::resizeScreen(): Trying to creating surface on non-existing screen");
+	_screenDims = Common::Rect(w, h);
+	_screen->free();
+	_screen->create(w, h, _pixelformat);
 }
 
 void MacWindowManager::setMode(uint32 mode) {
@@ -389,10 +398,117 @@ void MacWindowManager::disableScreenCopy() {
 		_screenCopyPauseToken = nullptr;
 	}
 
+	// add a check, we may not get the _screenCopy because we may not activate the menu
+	if (!_screenCopy)
+		return;
+
 	if (_screen)
 		*_screen = *_screenCopy; // restore screen
 
 	g_system->copyRectToScreen(_screenCopy->getBasePtr(0, 0), _screenCopy->pitch, 0, 0, _screenCopy->w, _screenCopy->h);
+}
+
+// this is refer to how we deal U32String in splitString in mactext
+// maybe we can optimize this specifically
+Common::U32String stripFormat(const Common::U32String &str) {
+	Common::U32String res, paragraph, tmp;
+	// calc the size of str
+	const Common::U32String::value_type *l = str.c_str();
+	while (*l) {
+		// split paragraph first
+		paragraph.clear();
+		while (*l) {
+			if (*l == '\r') {
+				l++;
+				if (*l == '\n')
+					l++;
+				break;
+			}
+			if (*l == '\n') {
+				l++;
+				break;
+			}
+			paragraph += *l++;
+		}
+		const Common::U32String::value_type *s = paragraph.c_str();
+		tmp.clear();
+		while (*s) {
+			if (*s == '\001') {
+				s++;
+				// if there are two \001, then we regard it as one character
+				if (*s == '\001') {
+					tmp += *s++;
+				}
+			} else if (*s == '\015') {	// binary format
+				// we are skipping the formatting stuffs
+				// this number 12, and the number 23, is the size of our format
+				s += 12;
+			} else if (*s == '\016') {	// human-readable format
+				s += 23;
+			} else {
+				tmp += *s++;
+			}
+		}
+		res += tmp;
+		if (*l)
+			res += '\n';
+	}
+	return res;
+}
+
+void MacWindowManager::setTextInClipboard(const Common::U32String &str) {
+	_clipboard = str;
+	g_system->setTextInClipboard(stripFormat(str));
+}
+
+// get the text size ignoring \n
+int getPureTextSize(const Common::U32String &str, bool global) {
+	const Common::U32String::value_type *l = str.c_str();
+	int res = 0;
+	if (global) {
+		// if we are in global, then we have no format in str. thus, we ignore all \r \n
+		while (*l) {
+			if (*l != '\n' && *l != '\r')
+				res++;
+			l++;
+		}
+	} else {
+		// if we are not in global, then we are using the wm clipboard, which use \n for new line
+		// i think that if statement can be optimized to, like if (*l != '\n' && (!global || *l != '\r'))
+		// but for the sake of readability, we keep codes here
+		while (*l) {
+			if (*l != '\n')
+				res++;
+			l++;
+		}
+	}
+	return res;
+}
+
+Common::U32String MacWindowManager::getTextFromClipboard(const Common::U32String &format, int *size) {
+	Common::U32String global_str = g_system->getTextFromClipboard();
+	// str is what we need
+	Common::U32String str;
+	if (_clipboard.empty()) {
+		// if wm clipboard is empty, then we use the global clipboard, which won't contain the format
+		str = format + global_str;
+		if (size)
+			*size = getPureTextSize(global_str, true);
+	} else {
+		Common::U32String tmp = stripFormat(_clipboard);
+		if (tmp == global_str) {
+			// if the text is equal, then we use wm one which contains the format
+			str = _clipboard;
+			if (size)
+				*size = getPureTextSize(tmp, false);
+		} else {
+			// otherwise, we prefer the global one
+			str = format + global_str;
+			if (size)
+				*size = getPureTextSize(global_str, true);
+		}
+	}
+	return str;
 }
 
 bool MacWindowManager::isMenuActive() {
@@ -657,7 +773,19 @@ void MacWindowManager::draw() {
 
 	// Menu is drawn on top of everything and always
 	if (_menu && !(_mode & kWMModeFullscreen)) {
-		_menu->draw(_screen, _fullRefresh);
+		if (_fullRefresh)
+			_menu->draw(_screen, _fullRefresh);
+		else {
+			// add intersection check with menu
+			bool menuRedraw = false;
+			for (Common::Array<Common::Rect>::iterator dirty = dirtyRects.begin(); dirty != dirtyRects.end(); dirty++) {
+				if (_menu->checkIntersects(*dirty)) {
+					menuRedraw = true;
+					break;
+				}
+			}
+			_menu->draw(_screen, menuRedraw);
+		}
 	}
 
 	_fullRefresh = false;
@@ -712,11 +840,16 @@ bool MacWindowManager::processEvent(Common::Event &event) {
 				 _activeWidget->getDimensions().contains(event.mouse.x, event.mouse.y))) {
 			if (_cursorType != kMacCursorBeam) {
 				_tempType = _cursorType;
+				_inEditableArea = true;
 				replaceCursor(kMacCursorBeam);
 			}
 		} else {
-			if (_cursorType == kMacCursorBeam)
+			// here, we use _inEditableArea is distinguish whether the current Beam cursor is set by director or ourself
+			// if we are not in the editable area but we are drawing the Beam cursor, then the cursor is set by director, thus we don't replace it
+			if (_cursorType == kMacCursorBeam && _inEditableArea) {
 				replaceCursor(_tempType, _cursor);
+				_inEditableArea = false;
+			}
 		}
 	}
 
@@ -725,8 +858,7 @@ bool MacWindowManager::processEvent(Common::Event &event) {
 		BaseMacWindow *w = *it;
 
 		if (w->hasAllFocus() || (w->isEditable() && event.type == Common::EVENT_KEYDOWN) ||
-				w->getDimensions().contains(event.mouse.x, event.mouse.y)
-				|| (_activeWidget && _activeWidget->isEditable())) {
+				w->getDimensions().contains(event.mouse.x, event.mouse.y)) {
 			if (event.type == Common::EVENT_LBUTTONDOWN || event.type == Common::EVENT_LBUTTONUP)
 				setActiveWindow(w->getId());
 
@@ -988,6 +1120,8 @@ void MacWindowManager::popCursor() {
 	} else {
 		CursorMan.popCursor();
 		CursorMan.popCursorPalette();
+		// since we may only have one cursor available when we using macCursor, so we restore the cursorType when we pop the cursor
+		_cursorType = kMacCursorArrow;
 	}
 }
 

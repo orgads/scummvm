@@ -161,6 +161,14 @@ struct ADGameDescription {
 };
 
 /**
+ * struct which saved extra information for detected games
+ */
+struct ADDetectedGameExtraInfo {
+	Common::String gameName;			/*!< Extra info which saved game name */
+	Common::String targetID;			/*!< targetID which will be used on preferred target id */
+};
+
+/**
  * A game installation matching an AD game description.
  */
 struct ADDetectedGame {
@@ -378,7 +386,7 @@ protected:
 	 * An (optional) generic fallback detection function that is invoked
 	 * if the regular MD5-based detection failed to detect anything.
 	 */
-	virtual ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist) const {
+	virtual ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra = nullptr) const {
 		return ADDetectedGame();
 	}
 
@@ -432,7 +440,7 @@ protected:
 	bool getFileProperties(const FileMap &allFiles, const ADGameDescription &game, const Common::String fname, FileProperties &fileProps) const;
 
 	/** Convert an AD game description into the shared game description format. */
-	virtual DetectedGame toDetectedGame(const ADDetectedGame &adGame) const;
+	virtual DetectedGame toDetectedGame(const ADDetectedGame &adGame, ADDetectedGameExtraInfo *extraInfo = nullptr) const;
 
 	/** Check for pirated games in the given detected games */
 	bool cleanupPirated(ADDetectedGames &matched) const;
@@ -489,7 +497,7 @@ public:
 	 *
 	 * An example of how this is implemented can be found in the Wintermute Engine.
 	 */
-	virtual ADDetectedGame fallbackDetectExtern(uint md5Bytes, const FileMap &allFiles, const Common::FSList &fslist) const {
+	virtual ADDetectedGame fallbackDetectExtern(uint md5Bytes, const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra = nullptr) const {
 		return ADDetectedGame();
 	}
 
@@ -500,5 +508,51 @@ public:
 	 */
 	bool getFilePropertiesExtern(uint md5Bytes, const FileMap &allFiles, const ADGameDescription &game, const Common::String fname, FileProperties &fileProps) const;
 };
+
+/**
+ * Singleton Cache Storage for Computed MD5s
+ */
+class MD5CacheManager : public Common::Singleton<MD5CacheManager> {
+public:
+	void setMD5(Common::String fname, Common::String md5) {
+		md5HashMap.setVal(fname, md5);
+	}
+
+	Common::String getMD5(Common::String fname) {
+		return md5HashMap.getVal(fname);
+	}
+
+	void setSize(Common::String fname, int32 size) {
+		sizeHashMap.setVal(fname, size);
+	}
+
+	int32 getSize(Common::String fname) {
+		return sizeHashMap.getVal(fname);
+	}
+
+	bool contains(Common::String fname) {
+		return (md5HashMap.contains(fname) && sizeHashMap.contains(fname));
+	}
+
+	MD5CacheManager() {
+		clear();
+	}
+
+	void clear() {
+		md5HashMap.clear(true);
+		sizeHashMap.clear(true);
+	}
+
+private:
+	friend class Common::Singleton<MD5CacheManager>;
+
+	typedef Common::HashMap<Common::String, Common::String, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> FileHashMap;
+	typedef Common::HashMap<Common::String, int32, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> SizeHashMap;
+	FileHashMap md5HashMap;
+	SizeHashMap sizeHashMap;
+};
+
+/** Convenience shortcut for accessing the MD5CacheManager. */
+#define MD5Man MD5CacheManager::instance()
 /** @} */
 #endif

@@ -25,17 +25,19 @@
 
 #include "ags/shared/ac/game_version.h"
 #include "ags/shared/util/string.h"
+#include "ags/shared/util/string_types.h"
 #include "ags/shared/util/version.h"
-#include "ags/shared/gui/guimain.h"
+#include "ags/shared/gui/gui_main.h"
 #include "ags/shared/script/cc_script.h"
 #include "ags/engine/ac/runtime_defines.h"
-#include "ags/engine/ac/walkbehind.h"
+#include "ags/engine/ac/walk_behind.h"
 #include "ags/engine/main/engine.h"
-#include "ags/engine/media/audio/audiodefines.h"
+#include "ags/engine/media/audio/audio_defines.h"
 #include "ags/engine/script/script.h"
 #include "ags/engine/script/script_runtime.h"
 #include "ags/lib/std/array.h"
 #include "ags/lib/std/chrono.h"
+#include "ags/lib/std/memory.h"
 #include "ags/lib/std/set.h"
 #include "ags/lib/allegro/color.h"
 #include "ags/lib/allegro/fixed.h"
@@ -52,10 +54,12 @@ namespace AGS3 {
 
 using String = AGS::Shared::String;
 using Version = AGS::Shared::Version;
+using StringMap = AGS::Shared::StringMap;
 
 namespace AGS {
 namespace Shared {
 
+class AssetManager;
 class Bitmap;
 class DebugManager;
 struct Font;
@@ -66,7 +70,9 @@ class GUIListBox;
 class GUISlider;
 class GUITextBox;
 struct InteractionVariable;
+struct PlaneScaling;
 class RoomStruct;
+struct Translation;
 
 } // namespace Shared
 
@@ -79,7 +85,6 @@ class IGfxDriverFactory;
 class IGraphicsDriver;
 class LogFile;
 class MessageBuffer;
-struct PlaneScaling;
 
 } // namespace Engine
 } // namespace AGS
@@ -153,7 +158,6 @@ struct ScriptPosition;
 struct ScriptRegion;
 struct ScriptString;
 struct ScriptSystem;
-struct sound_cache_entry_t;
 struct SOUNDCLIP;
 struct SpeechLipSyncLine;
 struct SpriteListEntry;
@@ -161,13 +165,19 @@ struct StaticArray;
 struct StaticGame;
 struct SystemImports;
 struct TopBarSettings;
-struct TreeMap;
 struct ViewStruct;
 
 class Globals {
 public:
 	/**
-	 * \defgroup Allegro globals
+	 * @defgroup agsglobals AGS Globals
+	 * @ingroup agsengine
+	 * @brief Globals for the AGS engine
+	 */
+
+	/**
+	 * @defgroup agsallegroglobals Allegro globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -202,18 +212,36 @@ public:
 	PALETTE _current_palette;
 	PALETTE _prev_current_palette;
 
-	volatile int _mouse_x = 0;	// X position
-	volatile int _mouse_y = 0;	// Y position
-	volatile int _mouse_z = 0;	// Mouse wheel vertical
-	volatile int _mouse_b = 0;	// Mouse buttons bitflags
-	volatile int _mouse_pos = 0;	// X position in upper 16 bits, Y in lower 16
+	volatile int _mouse_x = 0;  // X position
+	volatile int _mouse_y = 0;  // Y position
+	volatile int _mouse_z = 0;  // Mouse wheel vertical
+	volatile int _mouse_b = 0;  // Mouse buttons bitflags
+	volatile int _mouse_pos = 0;    // X position in upper 16 bits, Y in lower 16
+	volatile int _sys_mouse_x = 0; // mouse x position
+	volatile int _sys_mouse_y = 0; // mouse y position
+	volatile int _sys_mouse_z = 0; // mouse wheel position
+	volatile int _freeze_mouse_flag = 0;
 
-	volatile int freeze_mouse_flag;
+	int _mouse_button_state = 0;
+	int _mouse_accum_button_state = 0;
+	uint32 _mouse_clear_at_time = 0;
+	int _mouse_accum_relx = 0, _mouse_accum_rely = 0;
 
 	/**@}*/
 
 	/**
-	 * \defgroup agsplatformdriver globals
+	 * @defgroup agsstaticobjectglobals agsstaticobject globals
+	 * @ingroup agsglobals
+	 * @{
+	 */
+
+	std::unique_ptr<Shared::AssetManager> *_AssetMgr;
+
+	/**@}*/
+
+	/**
+	 * @defgroup agsplatformdriverglobals agsplatformdriver globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -225,7 +253,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup agsplugin globals
+	 * @defgroup agspluginglobals agsplugin globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -234,7 +263,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup agsstaticobject globals
+	 * @defgroup agsstaticobjectglobals agsstaticobject globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -244,7 +274,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup audio globals
+	 * @defgroup agsaudioglobals audio globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -273,7 +304,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup button globals
+	 * @defgroup agsbuttonglobals button globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -283,7 +315,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup cc_dynamicarray globals
+	 * @defgroup agscc_dynamicarrayglobals cc_dynamicarray globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -292,7 +325,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup cc_dynamicobject globals
+	 * @defgroup agscc_dynamicobjectglobals cc_dynamicobject globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -301,7 +335,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup cc_error globals
+	 * @defgroup agscc_errorglobals cc_error globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -315,7 +350,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup cc_instance globals
+	 * @defgroup agscc_instanceglobals cc_instance globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -330,7 +366,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup cc_options globals
+	 * @defgroup agscc_optionsglobals cc_options globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -339,7 +376,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup cc_script globals
+	 * @defgroup agscc_scriptglobals cc_script globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -351,7 +389,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup cc_serializer globals
+	 * @defgroup agscc_serializerglobals cc_serializer globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -360,7 +399,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup character globals
+	 * @defgroup agscharacterglobals character globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -371,7 +411,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup character globals
+	 * @defgroup agscharacterglobals character globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -390,7 +431,7 @@ public:
 	bool _facetalk_qfg4_override_placement_y = false;
 
 	// lip-sync speech settings
-	int _loops_per_character, _text_lips_offset, _char_speaking = -1;
+	int _loops_per_character = 0, _text_lips_offset = 0, _char_speaking = -1;
 	int _char_thinking = -1;
 	const char *_text_lips_text = nullptr;
 	SpeechLipSyncLine *_splipsync = nullptr;
@@ -399,7 +440,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup cscdialog globals
+	 * @defgroup agscscdialogglobals cscdialog globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -413,12 +455,14 @@ public:
 	NewControl **_vobjs;
 	OnScreenWindow *_oswi;
 
-	int controlid = 0;
+	int _windowcount = 0, _curswas = 0;
+	int _win_x = 0, _win_y = 0, _win_width = 0, _win_height = 0;
 
 	/**@}*/
 
 	/**
-	 * \defgroup debug globals
+	 * @defgroup agsdebugglobals debug globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -451,7 +495,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup debug globals
+	 * @defgroup agsdebugglobals debug globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -460,11 +505,12 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup dialog globals
+	 * @defgroup agsdialogglobals dialog globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
-	DialogTopic *_dialog;
+	DialogTopic *_dialog = nullptr;
 	ScriptDialogOptionsRendering *_ccDialogOptionsRendering;
 	ScriptDrawingSurface *_dialogOptionsRenderingSurface = nullptr;
 
@@ -478,7 +524,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup display globals
+	 * @defgroup agsdisplayglobals display globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -495,7 +542,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup draw globals
+	 * @defgroup agsdrawglobals draw globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -534,7 +582,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup draw_software globals
+	 * @defgroup agsdraw_softwareglobals draw_software globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -551,7 +600,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup engine globals
+	 * @defgroup agsengineglobals engine globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -560,7 +610,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup engine globals
+	 * @defgroup agsengineglobals engine globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -570,7 +621,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup engine_setup globals
+	 * @defgroup agsengine_setupglobals engine_setup globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -580,7 +632,8 @@ public:
 
 
 	/**
-	 * \defgroup event globals
+	 * @defgroup agseventglobals event globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -601,7 +654,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup file globals
+	 * @defgroup agsfileglobals file globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -617,7 +671,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup fonts globals
+	 * @defgroup agsfontsglobals fonts globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -629,7 +684,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup game globals
+	 * @defgroup agsgameglobals game globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -675,7 +731,7 @@ public:
 	bool _abort_engine = false;
 	AGSPlatformDriver *_platform = nullptr;
 
-	RoomObject *_objs;
+	RoomObject *_objs = nullptr;
 	RoomStatus *_croom = nullptr;
 
 	volatile int _switching_away_from_game = 0;
@@ -700,11 +756,13 @@ public:
 	char _gamefilenamebuf[200] = { 0 };
 	int _gameHasBeenRestored = 0;
 	int _oldeip = 0;
+	int _game_update_suspend = 0;
 
-	 /**@}*/
+	/**@}*/
 
 	/**
-	 * \defgroup game_init globals
+	 * @defgroup agsgame_initglobals game_init globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -719,12 +777,13 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup game_run globals
+	 * @defgroup agsgame_runglobals game_run globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
-	 // Following 3 parameters instruct the engine to run game loops until
-	 // certain condition is not fullfilled.
+	// Following 3 parameters instruct the engine to run game loops until
+	// certain condition is not fullfilled.
 	int _restrict_until = 0;
 	int _user_disabled_for = 0;
 	const void *_user_disabled_data = nullptr;
@@ -735,10 +794,11 @@ public:
 	uint32 _t1 = 0; // timer for FPS
 	int _old_key_shifts = 0; // for saving shift modes
 
-	 /**@}*/
+	/**@}*/
 
 	/**
-	 * \defgroup gfxfilter_aad3d globals
+	 * @defgroup agsgfxfilter_aad3dglobals gfxfilter_aad3d globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -747,7 +807,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup gfxfilter_allegro globals
+	 * @defgroup agsgfxfilter_allegroglobals gfxfilter_allegro globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -756,7 +817,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup gfxfilter_allegro globals
+	 * @defgroup agsgfxfilter_allegroglobals gfxfilter_allegro globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -765,7 +827,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup gfxfilter_d3d globals
+	 * @defgroup agsgfxfilter_d3dglobals gfxfilter_d3d globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -774,7 +837,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup global_dialog globals
+	 * @defgroup agsglobal_dialogglobals global_dialog globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -783,7 +847,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup global_object globals
+	 * @defgroup agsglobal_objectglobals global_object globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -793,7 +858,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup graphics_mode globals
+	 * @defgroup agsgraphics_modeglobals graphics_mode globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -807,12 +873,13 @@ public:
 	// Current frame scaling setup
 	GameFrameSetup *_CurFrameSetup;
 	// The game-to-screen transformation
-	AGS::Engine::PlaneScaling *_GameScaling;
+	AGS::Shared::PlaneScaling *_GameScaling;
 
 	/**@}*/
 
 	/**
-	 * \defgroup gui globals
+	 * @defgroup agsguiglobals gui globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -824,7 +891,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup guibutton globals
+	 * @defgroup agsguibuttonglobals guibutton globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -834,7 +902,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup guidialog globals
+	 * @defgroup agsguidialogglobals guidialog globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -843,7 +912,7 @@ public:
 	AGS::Shared::Bitmap *_windowBuffer = nullptr;
 	AGS::Engine::IDriverDependantBitmap *_dialogDDB = nullptr;
 
-	#define MAXSAVEGAMES_20 20
+#define MAXSAVEGAMES_20 20
 	int _myscrnwid = 320, _myscrnhit = 200;
 	char *_lpTemp = nullptr, *_lpTemp2 = nullptr;
 	int _numsaves = 0, _toomanygames = 0;
@@ -856,7 +925,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup guiinv globals
+	 * @defgroup agsguiinvglobals guiinv globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -866,7 +936,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup guilabel globals
+	 * @defgroup agsguilabelglobals guilabel globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -876,7 +947,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup guilistbox globals
+	 * @defgroup agsguilistboxglobals guilistbox globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -886,7 +958,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup guimain globals
+	 * @defgroup agsguimainglobals guimain globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -897,7 +970,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup guislider globals
+	 * @defgroup agsguisliderglobals guislider globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -907,7 +981,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup guitextbox globals
+	 * @defgroup agsguitextboxglobals guitextbox globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -917,7 +992,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup interactions globals
+	 * @defgroup agsinteractionsglobals interactions globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -927,7 +1003,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup invwindow globals
+	 * @defgroup agsinvwindowglobals invwindow globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -936,7 +1013,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup lzw globals
+	 * @defgroup agslzwglobals lzw globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -948,10 +1026,12 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup main globals
+	 * @defgroup agsmainglobals main globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
+	String _appPath;
 	String _appDirectory; // Needed for library loading
 	String _cmdGameDataPath;
 
@@ -998,7 +1078,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup managedobjectpool globals
+	 * @defgroup agsmanagedobjectpoolglobals managedobjectpool globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1007,7 +1088,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup mouse globals
+	 * @defgroup agsmouseglobals mouse globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1033,7 +1115,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup mousew32 globals
+	 * @defgroup agsmousew32globals mousew32 globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1044,17 +1127,20 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup overlay globals
+	 * @defgroup agsoverlayglobals overlay globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
-	std::vector<ScreenOverlay> *_screenover;
+	ScreenOverlay *_screenover;
 	int _is_complete_overlay = 0, _is_text_overlay = 0;
+	int _numscreenover = 0;
 
 	/**@}*/
 
 	/**
-	 * \defgroup quit globals
+	 * @defgroup agsquitglobals quit globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1064,7 +1150,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup quit globals
+	 * @defgroup agsquitglobals quit globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1073,10 +1160,11 @@ public:
 	char _return_to_room[150] = { '\0' };
 	char _quit_message[256] = { '\0' };
 
-	 /**@}*/
+	/**@}*/
 
 	/**
-	 * \defgroup room globals
+	 * @defgroup agsroomglobals room globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1088,7 +1176,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup route_finder_impl globals
+	 * @defgroup agsroute_finder_implglobals route_finder_impl globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1099,10 +1188,11 @@ public:
 	AGS::Shared::Bitmap *_wallscreen = nullptr;
 	int _lastcx = 0, _lastcy = 0;
 
-	 /**@}*/
+	/**@}*/
 
 	/**
-	 * \defgroup screen globals
+	 * @defgroup agsscreenglobals screen globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1113,7 +1203,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup script globals
+	 * @defgroup agsscriptglobal script globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1158,7 +1249,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup script_runtime globals
+	 * @defgroup agsscript_runtimeglobals script_runtime globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1169,17 +1261,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup soundcache globals
-	 * @{
-	 */
-
-	sound_cache_entry_t *_sound_cache_entries = nullptr;
-	unsigned int _sound_cache_counter = 0;
-
-	/**@}*/
-
-	/**
-	 * \defgroup string globals
+	 * @defgroup agsstringglobals string globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1188,7 +1271,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup systemimports globals
+	 * @defgroup agssystemimportsglobals systemimports globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1198,7 +1282,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup sys_events globals
+	 * @defgroup agssys_eventsglobals sys_events globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1208,7 +1293,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup timer globals
+	 * @defgroup agstimerglobals timer globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1221,18 +1307,22 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup translation globals
+	 * @defgroup agstranslationglobals translation globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
-	TreeMap *_transtree = nullptr;
+	AGS::Shared::Translation *_trans;
+	StringMap *_transtree = nullptr;
+	String _trans_name, _trans_filename;
 	long _lang_offs_start = 0;
 	char _transFileName[MAX_PATH] = { 0 };
 
 	/**@}*/
 
 	/**
-	 * \defgroup walkablearea globals
+	 * @defgroup agswalkableareaglobals walkablearea globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1241,7 +1331,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup walkbehind globals
+	 * @defgroup agswalkbehindglobals walkbehind globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 
@@ -1258,7 +1349,8 @@ public:
 	/**@}*/
 
 	/**
-	 * \defgroup wordsdictionary globals
+	 * @defgroup agswordsdictionaryglobals wordsdictionary globals
+	 * @ingroup agsglobals
 	 * @{
 	 */
 

@@ -233,14 +233,14 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 					plusenergy = 0x9c4;
 				}
 			} else if (shapeno == 0x3a4) {
-				if (oldbattery < FusionBattery) {
-					setBatteryType(FusionBattery);
+				if (oldbattery < FissionBattery) {
+					setBatteryType(FissionBattery);
 				} else {
 					plusenergy = 5000;
 				}
 			} else if (shapeno == 0x3a3) {
-				if (oldbattery < FissionBattery) {
-					setBatteryType(FissionBattery);
+				if (oldbattery < FusionBattery) {
+					setBatteryType(FusionBattery);
 				} else {
 					plusenergy = 10000;
 				}
@@ -257,7 +257,7 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 			if (!existing) {
 				// Shields. Note, these are the same in Remorse and Regret.
 				if ((shapeno == 0x52e) || (shapeno == 0x52f) || (shapeno == 0x530)) {
-					int shieldtype;
+					uint16 shieldtype;
 					switch (shapeno) {
 						default:
 						case 0x52e:
@@ -352,6 +352,8 @@ const ShapeInfo *MainActor::getShapeInfoFromGameInstance() const {
 void MainActor::teleport(int mapNum, int32 x, int32 y, int32 z) {
 	World *world = World::get_instance();
 
+	uint16 oldmap = getMapNum();
+
 	// (attempt to) load the new map
 	if (!world->switchMap(mapNum)) {
 		perr << "MainActor::teleport(): switchMap(" << mapNum << ") failed!" << Std::endl;
@@ -360,9 +362,9 @@ void MainActor::teleport(int mapNum, int32 x, int32 y, int32 z) {
 
 	Actor::teleport(mapNum, x, y, z);
 
-	if (GAME_IS_CRUSADER && (x || y)) {
+	if (GAME_IS_CRUSADER && (x || y) && oldmap == mapNum) {
 		// Keep the camera on the avatar (the snap process will update on next move)
-		CameraProcess::SetCameraProcess(new CameraProcess(x, y, z));
+		CameraProcess::GetCameraProcess()->moveToLocation(x, y, z);
 	}
 
 	_justTeleported = true;
@@ -405,12 +407,14 @@ void MainActor::teleport(int mapNum, int teleport_id) {
 	pout << "Found destination: " << xv << "," << yv << "," << zv << Std::endl;
 	egg->dumpInfo();
 
-	Actor::teleport(mapNum, xv, yv, zv);
-
 	if (GAME_IS_CRUSADER) {
 		// Keep the camera on the avatar (the snap process will update on next move)
-		CameraProcess::SetCameraProcess(new CameraProcess(xv, yv, zv));
+		// We don't add a new camera process here, as that would update the fast area
+		// before the cachein calls above have run.
+		CameraProcess::GetCameraProcess()->moveToLocation(xv, yv, zv);
 	}
+
+	Actor::teleport(mapNum, xv, yv, zv);
 
 	_justTeleported = true;
 }
@@ -946,7 +950,7 @@ void MainActor::useInventoryItem(Item *item) {
 }
 
 int MainActor::receiveShieldHit(int damage, uint16 damage_type) {
-	uint8 shieldtype = getShieldType();
+	uint16 shieldtype = getShieldType();
 	if (shieldtype == 3) {
 		shieldtype = 4;
 	}
@@ -1019,6 +1023,8 @@ void MainActor::detonateBomb() {
 							0x800, true, _x, _y);
 	for (unsigned int i = 0; i < uclist.getSize(); ++i) {
 		Item *founditem = getItem(uclist.getuint16(i));
+		if (founditem->hasFlags(FLG_CONTAINED))
+			continue;
 		founditem->callUsecodeEvent_use();
 	}
 	return;

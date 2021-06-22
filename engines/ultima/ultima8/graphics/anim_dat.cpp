@@ -116,7 +116,7 @@ uint32 AnimDat::getActionNumberForSequence(Animation::Sequence action, const Act
 		case Animation::fallBackwards:
 			return Animation::fallBackwardsCru;
 		case Animation::die:
-			return Animation::fallBackwardsCru; // by default fall over backwards. TODO: randomly use Animation::fallForwardsCru for some deaths.
+			return Animation::fallBackwardsCru; // by default fall over backwards.
 		case Animation::advance:
 			return (smallwpn ? Animation::advanceSmallWeapon : Animation::advanceLargeWeapon);
 		// Kneel start/end never used in code - mover process uses correct ones.
@@ -199,6 +199,13 @@ void AnimDat::load(Common::SeekableReadStream *rs) {
 			if (GAME_IS_U8 && (repeatAndRotateFlag & 0xf0)) {
 				// This should never happen..
 				error("Anim data: frame repeat byte should never be > 0xf");
+			} else if (GAME_IS_CRUSADER) {
+				// WORKAROUND: In Crusader, the process wait semantics changed so
+				// wait of 1 frame was the same as no wait.  The frame repeat
+				// is implemented as a process wait, so this effectively reduced
+				// all frame repeats by 1.
+				if (a->_actions[action]->_frameRepeat)
+					a->_actions[action]->_frameRepeat--;
 			}
 			// byte 3: flags high byte
 			rawflags |= rs->readByte() << 8;

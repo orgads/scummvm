@@ -65,7 +65,6 @@ public:
 	virtual void setFeatureState(OSystem::Feature f, bool enable) override;
 	virtual bool getFeatureState(OSystem::Feature f) const override;
 
-	const OSystem::GraphicsMode *supportedGraphicsModes() const;
 	virtual const OSystem::GraphicsMode *getSupportedGraphicsModes() const override;
 	virtual int getDefaultGraphicsMode() const override;
 	virtual bool setGraphicsMode(int mode, uint flags = OSystem::kGfxModeNoFlags) override;
@@ -111,7 +110,7 @@ public:
 
 	virtual Graphics::PixelFormat getOverlayFormat() const override { return _overlayFormat; }
 	virtual void clearOverlay() override;
-	virtual void grabOverlay(void *buf, int pitch) const override;
+	virtual void grabOverlay(Graphics::Surface &surface) const override;
 	virtual void copyRectToOverlay(const void *buf, int pitch, int x, int y, int w, int h) override;
 	virtual int16 getOverlayHeight() const override { return _videoMode.overlayHeight; }
 	virtual int16 getOverlayWidth() const override { return _videoMode.overlayWidth; }
@@ -444,6 +443,14 @@ private:
 		return Common::Point(x * getOverlayWidth() / getWidth(),
 							 y * getOverlayHeight() / getHeight());
 	}
+
+	/**
+	 * Special case for scalers that use the useOldSrc feature (currently
+	 * only the Edge scalers). The variable is checked after closing the
+	 * overlay, so that the creation of a new output buffer for the scaler
+	 * can be triggered.
+	 */
+	bool _needRestoreAfterOverlay;
 };
 
 #endif

@@ -172,6 +172,7 @@ public:
 	MacWindow *addWindow(bool scrollable, bool resizable, bool editable);
 	MacTextWindow *addTextWindow(const MacFont *font, int fgcolor, int bgcolor, int maxWidth, TextAlign textAlignment, MacMenu *menu, bool cursorHandler = true);
 	MacTextWindow *addTextWindow(const Font *font, int fgcolor, int bgcolor, int maxWidth, TextAlign textAlignment, MacMenu *menu, bool cursorHandler = true);
+	void resizeScreen(int w, int h);
 
 	/**
 	 * Adds a window that has already been initialized to the registry.
@@ -315,6 +316,14 @@ public:
 	Common::SeekableReadStream *getBorderFile(byte windowType, uint32 flags);
 	Common::SeekableReadStream *getFile(const Common::String &filename);
 
+	void setTextInClipboard(const Common::U32String &str);
+	/**
+	 * get text from WM clipboard or the global clipboard
+	 * @param size will change to the length of real text in clipboard
+	 * @return the text in clipboard, which may contained the format
+	 */
+	Common::U32String getTextFromClipboard(const Common::U32String &format = Common::U32String(), int *size = nullptr);
+
 public:
 	MacFontManager *_fontMan;
 	uint32 _mode;
@@ -363,6 +372,8 @@ private:
 
 	bool _fullRefresh;
 
+	bool _inEditableArea;
+
 	MacPatterns _patterns;
 	byte *_palette;
 	uint _paletteSize;
@@ -386,6 +397,8 @@ private:
 	Common::HashMap<uint32, uint> _colorHash;
 
 	Common::Archive *_dataBundle;
+
+	Common::U32String _clipboard;
 };
 
 } // End of namespace Graphics

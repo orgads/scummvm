@@ -23,10 +23,21 @@
 #include "engines/advancedDetector.h"
 
 #include "base/plugins.h"
+#include "touche/touche.h"
 
 static const PlainGameDescriptor toucheGames[] = {
 	{ "touche", "Touche: The Adventures of the Fifth Musketeer" },
 	{ 0, 0 }
+};
+
+static const DebugChannelDef debugFlagList[] = {
+	{Touche::kDebugEngine,   "Engine",   "Engine debug level"},
+	{Touche::kDebugGraphics, "Graphics", "Graphics debug level"},
+	{Touche::kDebugResource, "Resource", "Resource debug level"},
+	{Touche::kDebugOpcodes,  "Opcodes",  "Opcodes debug level"},
+	{Touche::kDebugMenu,     "Menu",     "Menu debug level"},
+	{Touche::kDebugCharset,  "Charset",   "Charset debug level"},
+	DEBUG_CHANNEL_END
 };
 
 namespace Touche {
@@ -127,7 +138,7 @@ public:
 		_directoryGlobs = directoryGlobs;
 	}
 
-	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist) const override {
+	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const override {
 		return detectGameFilebased(allFiles, Touche::fileBasedFallback);
 	}
 
@@ -141,6 +152,10 @@ public:
 
 	const char *getOriginalCopyright() const override {
 		return "Touche: The Adventures of the Fifth Musketeer (C) Clipper Software";
+	}
+
+	const DebugChannelDef *getDebugChannels() const override {
+		return debugFlagList;
 	}
 };
 

@@ -117,7 +117,6 @@ static const char *const selectorNameTable[] = {
 	"solvePuzzle",  // Quest For Glory 3
 	"curIcon",      // Quest For Glory 3, QFG4
 	"curInvIcon",   // Quest For Glory 3, QFG4
-	"timesShownID", // Space Quest 1 VGA
 	"startText",    // King's Quest 6 CD / Laura Bow 2 CD for audio+text support
 	"startAudio",   // King's Quest 6 CD / Laura Bow 2 CD for audio+text support
 	"modNum",       // King's Quest 6 CD / Laura Bow 2 CD for audio+text support
@@ -242,7 +241,6 @@ enum ScriptPatcherSelectors {
 	SELECTOR_solvePuzzle,
 	SELECTOR_curIcon,
 	SELECTOR_curInvIcon,
-	SELECTOR_timesShownID,
 	SELECTOR_startText,
 	SELECTOR_startAudio,
 	SELECTOR_modNum,
@@ -3761,6 +3759,102 @@ static const uint16 gk1BayouRitualAviPatch[] = {
 	PATCH_END
 };
 
+// The comic-book cartoon scenes have timing problems. Many delays are too fast,
+//  instantaneous, or random. As with other GK1 timing bugs, these scripts were
+//  written against CPUs that couldn't run the interpreter at full speed.
+//
+// Most cartoon delays are implemented by setting Script:seconds to one or two.
+//  At slower CPU speeds, Sierra's interpreter lagged enough that it appeared to
+//  deliver the requested durations. But without that lag, the real behavior is
+//  exposed. When Script:seconds is set, the first second is deducted on the
+//  next doit except in some cases when there are stale values from a previous
+//  delay. A one second delay is usually no delay at all. Subsequent seconds
+//  are deducted whenever the seconds value of the system clock changes. This
+//  means that the duration of the 2nd "second" depends on the system clock's
+//  subsecond value when the delay was requested. A script that requests a two
+//  second delay usually gets a random delay between zero and one second.
+//
+// We fix this by replacing all the one and two second cartoon delays with the
+//  equivalent in ticks. This makes the durations match the requested values and
+//  removes the inconsistencies due to subseconds. These correct timings expose
+//  broken animation in one of the bayou cartoon panels due to the script
+//  specifying the wrong view number, so we fix that too.
+//
+// There is still room for improvement in the bayou cartoons. Several delays are
+//  implemented by waiting on disabled messages that instantly cue. All fades
+//  are done by unthrottled inner loops and the scene timing implicitly depends
+//  on those going slowly. This is why several panels only appear for an instant
+//  before the entire screen changes.
+//
+// Applies to: All versions
+// Responsible methods: doTheCloseUp:changeState, roomScript:changeState (480),
+//                      cutToTheHeart:changeState, sCutPanel1:changeState,
+//                      sCutPanel2:changeState, sCutPanel4:changeState
+static const uint16 gk1CartoonTimingPcSignature1[] = {
+	SIG_MAGICDWORD,
+	0x35, 0x01,                         // ldi 01
+	0x65, 0x1c,                         // aTop seconds [ seconds = 1 ]
+	SIG_END
+};
+
+static const uint16 gk1CartoonTimingMacSignature1[] = {
+	SIG_MAGICDWORD,
+	0x35, 0x01,                         // ldi 01
+	0x65, 0x1e,                         // aTop seconds [ seconds = 1 ]
+	SIG_END
+};
+
+static const uint16 gk1CartoonTimingPatch1[] = {
+	0x35, 0x3c,                                // ldi 3c
+	0x65, PATCH_GETORIGINALBYTEADJUST(+3, +4), // aTop ticks [ ticks = 60 ]
+	PATCH_END
+};
+
+static const uint16 gk1CartoonTimingPcSignature2[] = {
+	SIG_MAGICDWORD,
+	0x35, 0x02,                         // ldi 02
+	0x65, 0x1c,                         // aTop seconds [ seconds = 2 ]
+	SIG_END
+};
+
+static const uint16 gk1CartoonTimingMacSignature2[] = {
+	SIG_MAGICDWORD,
+	0x35, 0x02,                         // ldi 02
+	0x65, 0x1e,                         // aTop seconds [ seconds = 2 ]
+	SIG_END
+};
+
+static const uint16 gk1CartoonTimingPatch2[] = {
+	0x35, 0x78,                                // ldi 78
+	0x65, PATCH_GETORIGINALBYTEADJUST(+3, +4), // aTop ticks [ ticks = 120 ]
+	PATCH_END
+};
+
+// During the bayou cartoon when Malia recognizes Gabriel, the third panel's
+//  animation is broken. The script attempts to animate Gabriel's face but it
+//  instead it specifies the wrong view and draws a fragment of Malia's face.
+//  This wasn't noticed because of the broken timing (see above patch notes)
+//  that immediately overwrote the wrong first view with the correct second.
+//  Now that we've fixed the timing, we fix this view as well so that the panel
+//  animates correctly. We know that 6142 is the correct view because the script
+//  attempts to unload it afterwards.
+//
+// Applies to: All versions
+// Responsible method: roomScript:changeState(64)
+static const uint16 gk1BayouCartoonViewSignature[] = {
+	0x39, SIG_SELECTOR8(view),          // pushi view
+	SIG_MAGICDWORD,
+	0x78,                               // push1
+	0x38, SIG_UINT16(0x17fd),           // pushi 17fd [ view 6141: Malia ]
+	SIG_END
+};
+
+static const uint16 gk1BayouCartoonViewPatch[] = {
+	PATCH_ADDTOOFFSET(+3),
+	0x38, PATCH_UINT16(0x17fe),         // pushi 17fe [ view 6142: Gabriel ]
+	PATCH_END
+};
+
 // On day 6, an envelope is dropped off in the bookstore after 20 seconds, but
 //  if the game is in the middle of a message sequence then it can lockup.
 //  When a timer expires, bookstore:cue tests a number of properties to make
@@ -3830,6 +3924,27 @@ static const uint16 gk1MacTalismanInsetPatch[] = {
 	PATCH_END
 };
 
+// In the final scene before the credits the wrong font is used and the 'a' with
+//  an umlaut in "Schattenjager" isn't displayed. endTalker:font is set to 999
+//  which doesn't include decorated characters. Font 40 has the same glyphs as
+//  999 plus the decorated characters, so we use that instead. This patch is
+//  only to be applied to English versions; localized ones have different fonts.
+//
+// Applies to: English CD versions
+// Responsible method: heap in script 670
+static const uint16 gk1EndGameFontSignature[] = {
+	SIG_MAGICDWORD,                     // endTalker
+	SIG_UINT16(0x0002),                 // modeless = 2
+	SIG_UINT16(0x03e7),                 // font = 999
+	SIG_END
+};
+
+static const uint16 gk1EndGameFontPatch[] = {
+	PATCH_ADDTOOFFSET(+2),
+	PATCH_UINT16(0x0028),               // font = 40
+	PATCH_END
+};
+
 // Narrator lockup fix for GK1 CD / Mac, see sciNarratorLockupSignature.
 //  The custom code in these versions overlaps with the generic patch signature
 //  so we enable the correct one based on game version and platform.
@@ -3889,7 +4004,27 @@ static const SciScriptPatcherEntry gk1Signatures[] = {
 	{  true,   410, "fix day 2 binoculars lockup",                 1, gk1Day2BinocularsLockupSignature, gk1Day2BinocularsLockupPatch },
 	{  true,   420, "fix day 6 empty booth message",               6, gk1EmptyBoothMessageSignature,    gk1EmptyBoothMessagePatch },
 	{  true,   420, "fix lorelei dance timer",                     1, gk1LoreleiDanceTimerSignature,    gk1LoreleiDanceTimerPatch },
+	{ false,   471, "pc: fix cartoon timing",                      4, gk1CartoonTimingPcSignature1,     gk1CartoonTimingPatch1 },
+	{ false,   471, "pc: fix cartoon timing",                      3, gk1CartoonTimingPcSignature2,     gk1CartoonTimingPatch2 },
+	{ false,   471, "mac: fix cartoon timing",                     4, gk1CartoonTimingMacSignature1,    gk1CartoonTimingPatch1 },
+	{ false,   471, "mac: fix cartoon timing",                     3, gk1CartoonTimingMacSignature2,    gk1CartoonTimingPatch2 },
+	{ false,   480, "pc: fix cartoon timing",                     10, gk1CartoonTimingPcSignature1,     gk1CartoonTimingPatch1 },
+	{ false,   480, "pc: fix cartoon timing",                      7, gk1CartoonTimingPcSignature2,     gk1CartoonTimingPatch2 },
+	{ false,   480, "mac: fix cartoon timing",                    10, gk1CartoonTimingMacSignature1,    gk1CartoonTimingPatch1 },
+	{ false,   480, "mac: fix cartoon timing",                     7, gk1CartoonTimingMacSignature2,    gk1CartoonTimingPatch2 },
+	{  true,   480, "fix bayou cartoon view",                      1, gk1BayouCartoonViewSignature,     gk1BayouCartoonViewPatch },
 	{  true,   480, "win: play day 6 bayou ritual avi videos",     3, gk1BayouRitualAviSignature,       gk1BayouRitualAviPatch },
+	{ false,   720, "pc: fix cartoon timing",                      2, gk1CartoonTimingPcSignature1,     gk1CartoonTimingPatch1 },
+	{ false,   720, "pc: fix cartoon timing",                      6, gk1CartoonTimingPcSignature2,     gk1CartoonTimingPatch2 },
+	{ false,   720, "mac: fix cartoon timing",                     2, gk1CartoonTimingMacSignature1,    gk1CartoonTimingPatch1 },
+	{ false,   720, "mac: fix cartoon timing",                     6, gk1CartoonTimingMacSignature2,    gk1CartoonTimingPatch2 },
+	{ false,   891, "pc: fix cartoon timing",                      1, gk1CartoonTimingPcSignature1,     gk1CartoonTimingPatch1 },
+	{ false,   891, "mac: fix cartoon timing",                     1, gk1CartoonTimingMacSignature1,    gk1CartoonTimingPatch1 },
+	{ false,   892, "pc: fix cartoon timing",                      1, gk1CartoonTimingPcSignature2,     gk1CartoonTimingPatch2 },
+	{ false,   892, "mac: fix cartoon timing",                     1, gk1CartoonTimingMacSignature2,    gk1CartoonTimingPatch2 },
+	{ false,   894, "pc: fix cartoon timing",                      1, gk1CartoonTimingPcSignature2,     gk1CartoonTimingPatch2 },
+	{ false,   894, "mac: fix cartoon timing",                     1, gk1CartoonTimingMacSignature2,    gk1CartoonTimingPatch2 },
+	{ false,   670, "fix end game font",                           1, gk1EndGameFontSignature,          gk1EndGameFontPatch },
 	{  true,   710, "fix day 9 vine swing speech playing",         1, gk1Day9VineSwingSignature,        gk1Day9VineSwingPatch },
 	{  true,   710, "fix day 9 mummy animation (floppy)",          1, gk1MummyAnimateFloppySignature,   gk1MummyAnimateFloppyPatch },
 	{  true,   710, "fix day 9 mummy animation (cd)",              1, gk1MummyAnimateCDSignature,       gk1MummyAnimateCDPatch },
@@ -18804,19 +18939,23 @@ static const uint16 sq4CdPatchSocksDoor[] = {
 //   This is patched to add the "Both" text resource (i.e. we end up with
 //   "Speech", "Text" and "Both")
 static const uint16 sq4CdSignatureTextOptionsButton[] = {
+	0x3c,                               // dup
+	0x35, 0x02,                         // ldi 02
+	0x1a,                               // eq?
+	0x31, 0x20,                         // bnt 20
 	SIG_MAGICDWORD,
-	0x35, 0x01,                         // ldi 0x01
-	0xa1, 0x53,                         // sag global[0x53]
-	0x39, 0x03,                         // pushi 0x03
+	0x35, 0x01,                         // ldi 01
+	0xa1, 0x53,                         // sag global[53]
+	0x39, SIG_SELECTOR8(loop),          // pushi loop
 	0x78,                               // push1
-	0x39, 0x09,                         // pushi 0x09
-	0x54, 0x06,                         // self 0x06
+	0x39, 0x09,                         // pushi 09 "Text"
+	0x54, 0x06,                         // self 06 [ self loop: 9 ]
 	SIG_END
 };
 
 static const uint16 sq4CdPatchTextOptionsButton[] = {
-	PATCH_ADDTOOFFSET(+7),
-	0x39, 0x0b,                         // pushi 0x0b
+	PATCH_ADDTOOFFSET(+13),
+	0x39, 0x0b,                         // pushi 0b "Both"
 	PATCH_END
 };
 
@@ -19260,6 +19399,38 @@ static const uint16 sq4FloppyPatchSoftwareClerkMessage[] = {
 	PATCH_END
 };
 
+// Floppy versions have two easter eggs in the software store which can lockup
+//  the game if run at the same time. One is activated by smelling an area in
+//  the upper left of room 397 and the other by tasting the same area on the
+//  right side. Both eggs are room scripts and the latter can interrupt the
+//  former and prevent the player from regaining control.
+//
+// We fix this as Sierra did in the English Amiga version by switching the
+//  taste easter egg from a room script to an ego script.
+//
+// Applies to: English PC Floppy, German PC Floppy, Macintosh, PC-98
+// Responsible method: box:doVerb
+static const uint16 sq4FloppySignatureSoftwareStoreEasterEggs[] = {
+	0x35, SIG_MAGICDWORD, 0x0a,         // ldi 0a [ taste ]
+	0x1a,                               // eq?
+	0x30, SIG_UINT16(0x0018),           // bnt 0018
+	0x38, SIG_SELECTOR16(script),       // pushi script
+	0x76,                               // push0
+	0x81, 0x02,                         // lag 02  [ rm397 ]
+	0x4a, 0x04,                         // send 04 [ rm397 script? ]
+	SIG_ADDTOOFFSET(+12),
+	0x81, 0x02,                         // lag 02  [ rm397 ]
+	SIG_END
+};
+
+static const uint16 sq4FloppyPatchSoftwareStoreEasterEggs[] = {
+	PATCH_ADDTOOFFSET(+10),
+	0x81, 0x00,                         // lag 00 [ ego ]
+	PATCH_ADDTOOFFSET(+14),
+	0x81, 0x00,                         // lag 00 [ ego ]
+	PATCH_END
+};
+
 //          script, description,                                      signature                                      patch
 static const SciScriptPatcherEntry sq4Signatures[] = {
 	{  true,     1, "Floppy: EGA intro delay fix",                    2, sq4SignatureEgaIntroDelay,                     sq4PatchEgaIntroDelay },
@@ -19291,6 +19462,7 @@ static const SciScriptPatcherEntry sq4Signatures[] = {
 	{  true,   391, "CD: missing Audio for universal remote control", 1, sq4CdSignatureMissingAudioUniversalRemote,     sq4CdPatchMissingAudioUniversalRemote },
 	{  true,   396, "CD: get points for changing back clothes fix",   1, sq4CdSignatureGetPointsForChangingBackClothes, sq4CdPatchGetPointsForChangingBackClothes },
 	{  true,   397, "Floppy: software clerk message fix",             1, sq4FloppySignatureSoftwareClerkMessage,        sq4FloppyPatchSoftwareClerkMessage },
+	{  true,   397, "Floppy: software store easter eggs fix",         1, sq4FloppySignatureSoftwareStoreEasterEggs,     sq4FloppyPatchSoftwareStoreEasterEggs },
 	{  true,   405, "CD/Floppy: zero gravity blast fix",              1, sq4SignatureZeroGravityBlast,                  sq4PatchZeroGravityBlast },
 	{  true,   406, "CD/Floppy: zero gravity blast fix",              1, sq4SignatureZeroGravityBlast,                  sq4PatchZeroGravityBlast },
 	{  true,   410, "CD/Floppy: zero gravity blast fix",              1, sq4SignatureZeroGravityBlast,                  sq4PatchZeroGravityBlast },
@@ -19364,12 +19536,21 @@ static const uint16 sq1vgaPatchUlenceFlatsGeneratorGlitch[] = {
 	PATCH_END
 };
 
-// No documentation for this patch (TODO)
+// Showing the Sarien droid the ID card three times is supposed to kill you,
+//  but the script is missing a line and compares the number three against the
+//  DeltaurRegion class instead of its timesShownID property. In SSCI this
+//  comparison happened to pass and you would never be killed. In ScummVM,
+//  comparing this object to an integer fails and you're killed the first time.
+//
+// We fix this by re-ordering the instructions so that timesShownID is tested
+//  correctly. Sierra fixed this in later versions.
+//
+// Applies to at least: English PC VGA
+// Responsible method: egoShowsCard:changeState(2)
 static const uint16 sq1vgaSignatureEgoShowsCard[] = {
-	SIG_MAGICDWORD,
-	0x38, SIG_SELECTOR16(timesShownID), // pushi timesShownID
+	0x38, SIG_ADDTOOFFSET(+2),          // pushi timesShownID
 	0x78,                               // push1
-	0x38, SIG_SELECTOR16(timesShownID), // pushi timesShownID
+	0x38, SIG_ADDTOOFFSET(+2),          // pushi timesShownID
 	0x76,                               // push0
 	0x51, 0x7c,                         // class DeltaurRegion
 	0x4a, 0x04,                         // send 0x04 (get timesShownID)
@@ -19378,17 +19559,15 @@ static const uint16 sq1vgaSignatureEgoShowsCard[] = {
 	0x02,                               // add
 	0x36,                               // push
 	0x51, 0x7c,                         // class DeltaurRegion
-	0x4a, 0x06,                         // send 0x06 (set timesShownID)
+	0x4a, SIG_MAGICDWORD, 0x06,         // send 0x06 (set timesShownID)
 	0x36,                               // push      (wrong, acc clobbered by class, above)
 	0x35, 0x03,                         // ldi 0x03
 	0x22,                               // lt?
 	SIG_END
 };
 
-// Note that this script patch is merely a reordering of the
-// instructions in the original script.
 static const uint16 sq1vgaPatchEgoShowsCard[] = {
-	0x38, PATCH_SELECTOR16(timesShownID), // pushi timesShownID
+	0x38, PATCH_GETORIGINALUINT16(+1),  // pushi timesShownID
 	0x76,                               // push0
 	0x51, 0x7c,                         // class DeltaurRegion
 	0x4a, 0x04,                         // send 0x04 (get timesShownID)
@@ -19396,7 +19575,7 @@ static const uint16 sq1vgaPatchEgoShowsCard[] = {
 	0x35, 0x01,                         // ldi 1
 	0x02,                               // add
 	0x36,                               // push (this push corresponds to the wrong one above)
-	0x38, PATCH_SELECTOR16(timesShownID), // pushi timesShownID
+	0x38, PATCH_GETORIGINALUINT16(+1),  // pushi timesShownID
 	0x78,                               // push1
 	0x36,                               // push
 	0x51, 0x7c,                         // class DeltaurRegion
@@ -19497,6 +19676,262 @@ static const uint16 sq1vgaPatchSpiderDroidTiming[] = {
 	PATCH_END
 };
 
+// In room 28, Orat's sounds are re-played on every game cycle and interrupt
+//  themselves, causing stuttering effects. There are two sounds that doit
+//  methods play depending on their actor's current cel: Orat growling and ego
+//  getting bounced. orat:doit and noticeEgo:doit attempt to only play their
+//  sounds once per cel change but they both use the same local variable to
+//  store the previous cel and overwrite each other's value on every cycle.
+//
+// We fix this by patching noticeEgo to use its register property instead of the
+//  local variable that orat also uses.
+//
+// Applies to: All versions
+// Responsible method: noticeEgo::doit
+static const uint16 sq1vgaSignatureOratSounds[] = {
+	SIG_MAGICDWORD,
+	0x8b, 0x07,                         // lsl 07
+	0x39, SIG_SELECTOR8(cel),           // pushi cel
+	0x76,                               // push0
+	0x81, 0x00,                         // lag 00
+	0x4a, 0x04,                         // send 04 [ ego cel? ]
+	0x1c,                               // ne?
+	SIG_ADDTOOFFSET(+177),
+	0x39, SIG_SELECTOR8(cel),           // pushi cel
+	0x76,                               // push0
+	0x81, 0x00,                         // lag 00
+	0x4a, 0x04,                         // send 04 [ ego cel? ]
+	0xa3, 0x07,                         // sal 07
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchOratSounds[] = {
+	0x67, 0x1a,                         // pTos register
+	PATCH_ADDTOOFFSET(+192),
+	0x65, 0x1a,                         // aTop register
+	PATCH_END
+};
+
+// In room 64 on the Sarien ship with the star generator, most objects don't
+//  display their Look messages. Their doVerb methods have a structure that
+//  fails to call super:doVerb when the verb isn't inventory.
+//
+// We fix this by patching out the inventory tests in the broken doVerb methods.
+//  Note that this technique only works because these doVerb methods don't have
+//  handlers for item zero: the data cartridge. This patch must not be applied
+//  to the Spanish version as it doesn't use the lookStr properties and instead
+//  displays messages with extra code.
+//
+// Applies to: All versions except Spanish
+// Responsible methods: rm64:doVerb, upperLanding:doVerb, emitter:doVerb, tubes:doVerb,
+//                      space:doVerb, leftShieldEmitter:doVerb, rightShieldEmitter:doVerb
+static const uint16 sq1vgaSignatureRoom64Verbs[] = {
+	SIG_MAGICDWORD,
+	0x8f, 0x01,                         // lsp 01 [ verb ]
+	0x35, 0x04,                         // ldi 04 [ inventory ]
+	0x1a,                               // eq?
+	0x30, SIG_ADDTOOFFSET(+2),          // bnt    [ end of method ]
+	0x8f, 0x02,                         // lsp 02 [ item number ]
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchRoom64Verbs[] = {
+	0x33, 0x06,                         // jmp 06 [ skip inventory verb check ]
+	PATCH_END
+};
+
+// Room 46 at the back of Droids B Us doesn't display the Look messages for its
+//  building or or signs. All three of these objects omit passing the verb to
+//  super:doVerb. store:doVerb has an extra bug and does this even after
+//  responding to other verbs, causing the red X cursor after their message.
+//
+// We fix this by patching the &rest instructions to include all the parameters
+//  and patching store:doVerb to only call super:doVerb if it hasn't already
+//  printed a message.
+//
+// Applies to: All versions, although the store and giraffe were later fixed.
+// Responsible methods: store:doVerb, giraffe:doVerb, pickupSign:doVerb
+static const uint16 sq1vgaSignatureRoom46Verbs1[] = {
+	SIG_MAGICDWORD,
+	0x32, SIG_UINT16(0x0009),           // jmp 0009
+	0x38, SIG_SELECTOR16(doVerb),       // pushi doVerb
+	0x76,                               // push0
+	0x59, 0x02,                         // &rest 02 [ bug: skips first parameter ]
+	0x57, SIG_ADDTOOFFSET(+1), 0x04,    // super Feature 04
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchRoom46Verbs1[] = {
+	PATCH_ADDTOOFFSET(+7),
+	0x59, 0x01,                         // &rest 01 [ include all parameters ]
+	PATCH_END
+};
+
+static const uint16 sq1vgaSignatureRoom46Verbs2[] = {
+	0x30, SIG_UINT16(0x0009),           // bnt 0009
+	SIG_ADDTOOFFSET(+9),
+	SIG_MAGICDWORD,
+	0x3a,                               // toss
+	0x38, SIG_SELECTOR16(doVerb),       // pushi doVerb [ bug: always called ]
+	0x76,                               // push0
+	0x59, 0x02,                         // &rest 02 [ bug: skips first parameter ]
+	0x57, SIG_ADDTOOFFSET(+1), 0x04,    // super Feature 04
+	0x48,                               // ret
+	SIG_ADDTOOFFSET(+0xb4),
+	0x38, SIG_SELECTOR16(doVerb),       // pushi doVerb
+	0x76,                               // push0
+	0x59, 0x01,                         // &rest 01 [ patched ]
+	0x57, SIG_ADDTOOFFSET(+1), 0x04,    // super Feature 04
+	0x3a,                               // toss
+	0x48,                               // ret
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchRoom46Verbs2[] = {
+	0x30, PATCH_UINT16(0x00c8),         // bnt 00c8 [ super doVerb: &rest, toss, ret ]
+	PATCH_ADDTOOFFSET(+10),
+	0x48,                               // ret
+	PATCH_END
+};
+
+// Clicking Do on the smallest of the three boxes of robot parts outside of
+//  Droids B Us will sometimes send ego walking off into the forcefield instead
+//  of opening the box. The script sets box1:approachVerbs on the second click
+//  for no reason. We fix this as Sierra did by removing the approachVerbs.
+//
+// Applies to: English PC VGA
+// Responsible method: box1:doVerb
+static const uint16 sq1vgaSignatureRobotBoxApproachVerbs[] = {
+	SIG_MAGICDWORD,
+	0x38, SIG_SELECTOR16(approachVerbs),// pushi approachVerbs
+	0x7a,                               // push2
+	0x39, 0x03,                         // pushi 03 [ Do ]
+	0x39, 0x04,                         // pushi 04 [ Inventory ]
+	0x54, 0x08,                         // self 08  [ self approachVerbs: 3 4 ]
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchRobotBoxApproachVerbs[] = {
+	0x32, PATCH_UINT16(0x0007),         // jmp 0007 [ skip setting approachVerbs ]
+	PATCH_END
+};
+
+// The message for tasting the pink ship in room 40 doesn't display because the
+//  function name was forgotten in the script. This was fixed in later versions.
+//
+// Applies to: English PC VGA
+// Responsible method: pinkShip:doVerb
+static const uint16 sq1vgaSignatureTastePinkShip[] = {
+	0x47, 0xff, 0x00, 0x04,             // calle proc255_0 04 [ Print ]
+	SIG_ADDTOOFFSET(+10),
+	SIG_MAGICDWORD,
+	0x39, 0x28,                         // pushi 28
+	0x35, 0x10,                         // ldi 10
+	0x32, SIG_UINT16(0x000b),           // jmp 000b
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchTastePinkShip[] = {
+	PATCH_ADDTOOFFSET(+14),
+	0x7a,                               // push2
+	0x39, 0x28,                         // pushi 28
+	0x39, 0x10,                         // pushi 10
+	0x33, 0xeb,                         // jmp eb [ Print ]
+	PATCH_END
+};
+
+// Looking at Tiny's sign causes the animated part of the sign to teleport to
+//  the cursor position. The Features in this game that are defined by control
+//  areas tend to update their coordinates to the click position so that ego
+//  will always turn to face the exact spot that was clicked. tinysign is a Prop
+//  with a view and shouldn't have this code in its doVerb method.
+//
+// We fix this as Sierra did by removing the coordinate code from tinysign.
+//
+// Applies to: English PC VGA
+// Responsible method: tinysign:doVerb
+static const uint16 sq1vgaSignatureTinysSign[] = {
+	0x39, SIG_SELECTOR8(x),             // pushi x
+	0x76,                               // push0
+	0x38, SIG_SELECTOR16(curEvent),     // pushi curEvent
+	SIG_ADDTOOFFSET(+20),
+	0x4a, 0x04,                         // send 04 [ Event y? ]
+	0x65, 0x0a,                         // aTop y
+	SIG_ADDTOOFFSET(+10),
+	SIG_MAGICDWORD,
+	0x39, 0x28,                         // pushi 28
+	0x76,                               // push0
+	0x47, 0xff, 0x00, 0x04,             // calle proc0_255 04 [ Print 28 0 ]
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchTinysSign[] = {
+	0x33, 0x1c,                         // jmp 1c [ skip changing coordinates ]
+	PATCH_END
+};
+
+// The two bar patrons on the right are supposed to animate when the detail
+//  slider is set to highest, but the detail test is wrong. Instead they do
+//  the opposite and animate at every detail setting except highest.
+//
+// We fix the test to match the detailLevel of triGirl and slugGuy (three).
+//
+// Applies to: All versions
+// Responsible method: rm43:init
+static const uint16 sq1vgaSignatureBarPatronAnimation[] = {
+	0x38, SIG_ADDTOOFFSET(+2),          // pushi detailLevel
+	0x76,                               // push0
+	0x81, 0x01,                         // lag 01
+	0x4a, 0x04,                         // send 04 [ sq1 detailLevel? ]
+	SIG_MAGICDWORD,
+	0x36,                               // push
+	0x35, 0x02,                         // ldi 02
+	0x24,                               // le? [ sq1:detailLevel <= 2 ]
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchBarPatronAnimation[] = {
+	PATCH_ADDTOOFFSET(+11),
+	0x1e,                               // gt? [ sq1:detailLevel > 2 ]
+	PATCH_END
+};
+
+// On the Deltaur, clicking Look or Do or Taste on various things cycles through
+//  a different message each time, but repeated off-by-one errors prevent the
+//  last message from displaying. We fix the off-by-one errors.
+//
+// Applies to: All versions
+// Responsible method: RegionFeature:doVerb
+static const uint16 sq1vgaSignatureDeltaurMessages1[] = {
+	SIG_MAGICDWORD,
+	0xc3, 0xc3,                         // +al c3
+	0x36,                               // push
+	0x35, 0x06,                         // ldi 06 [ should be 7 ]
+	SIG_END
+};
+
+static const uint16 sq1vgaSignatureDeltaurMessages2[] = {
+	SIG_MAGICDWORD,
+	0xc3, 0xc6,                         // +al c6
+	0x36,                               // push
+	0x35, 0x04,                         // ldi 04 [ should be 5 ]
+	SIG_END
+};
+
+static const uint16 sq1vgaSignatureDeltaurMessages3[] = {
+	SIG_MAGICDWORD,
+	0xc3, 0xc2,                         // +al c2
+	0x36,                               // push
+	0x35, 0x05,                         // ldi 05 [ should be 6 ]
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchDeltaurMessages[] = {
+	PATCH_ADDTOOFFSET(+3),
+	0x35, PATCH_GETORIGINALBYTEADJUST(+4, +1), // ldi XX + 1
+	PATCH_END
+};
+
 // The Russian version of SQ1VGA has mangled class names in its scripts. This
 //  isn't a problem in Sierra's interpreter since this is just metadata, but our
 //  feature detection code looks up several classes by name and requires them to
@@ -19517,6 +19952,7 @@ static const uint16 sq1vgaPatchRussianMotionName[] = {
 	0x6E, 0x00,
 	PATCH_END
 };
+
 static const uint16 sq1vgaSignatureRussianRmName[] = {
 	SIG_MAGICDWORD,
 	0x2a, 0x52, 0x6d, 0x00,             // *Rm
@@ -19539,15 +19975,181 @@ static const uint16 sq1vgaPatchRussianSoundName[] = {
 	PATCH_END
 };
 
+// The Spanish version of SQ1VGA introduces the same script bug forty times.
+//  Clicking Look on things throughout the game displays their message followed
+//  by the wrong message or a red X cursor.
+//
+// Originally, SQ1VGA stored most Look messages in the lookStr property of each
+//  Feature. These messages are automatically shown by Feature:doVerb and don't
+//  require explicit handling in individual doVerb methods, unlike other verbs.
+//  In the Spanish version almost every Look message was removed from lookStr.
+//  Explicit checks were added to the doVerbs to test for Look and print the
+//  message. Forty of these were done incorrectly. Instead of integrating a Look
+//  handler into the existing code, "if Look then Print" was added to the start
+//  of the doVerb method without returning, allowing the rest of the existing
+//  code to run as if nothing had happened. This results in default handlers
+//  being called after the Look message and displaying a second message that
+//  doesn't apply, or some other unexpected behavior.
+//
+// We fix this by adding the missing return statement to every broken doVerb.
+//  This is a messy problem because some of these were written with switch
+//  statements, others with if, and different instruction sizes necessitate
+//  different versions of each signature and patch. Still, we can narrow this
+//  down to five patches: three for switch statements and two for if statements.
+//  Out of caution, we only enable these patches on the Spanish version since
+//  the signatures are somewhat generic and touch a lot of scripts.
+//
+// Applies to: Spanish PC only
+// Responsible methods: Far too many doVerb methods to list
+static const uint16 sq1vgaSignatureSpanishMessages1[] = {
+	0x8f, 0x01,                         // lsp 01
+	0x3c,                               // dup
+	0x35, 0x02,                         // ldi 02
+	0x1a,                               // eq?
+	0x30, SIG_UINT16(0x0008),           // bnt 0008
+	0x7a,                               // push2
+	SIG_ADDTOOFFSET(+3),
+	0x47, SIG_MAGICDWORD, 0xff, 0x00, 0x04, // calle proc255_0 04 [ Print ]
+	0x3a,                               // toss
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchSpanishMessages1[] = {
+	0x8e, PATCH_UINT16(0x0001),         // lsp 0001
+	PATCH_ADDTOOFFSET(+3),
+	0x30, PATCH_UINT16(0x0009),         // bnt 0009
+	PATCH_ADDTOOFFSET(+8),
+	0x48,                               // ret [ return after Print ]
+	PATCH_END
+};
+
+static const uint16 sq1vgaSignatureSpanishMessages2[] = {
+	0x8f, 0x01,                         // lsp 01
+	0x3c,                               // dup
+	0x35, 0x02,                         // ldi 02
+	0x1a,                               // eq?
+	0x30, SIG_UINT16(0x0009),           // bnt 0009
+	0x7a,                               // push2
+	SIG_ADDTOOFFSET(+4),
+	0x47, SIG_MAGICDWORD, 0xff, 0x00, 0x04, // calle proc255_0 04 [ Print ]
+	0x3a,                               // toss
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchSpanishMessages2[] = {
+	0x8e, PATCH_UINT16(0x0001),         // lsp 0001
+	PATCH_ADDTOOFFSET(+3),
+	0x30, PATCH_UINT16(0x000a),         // bnt 000a
+	PATCH_ADDTOOFFSET(+9),
+	0x48,                               // ret [ return after Print ]
+	PATCH_END
+};
+
+static const uint16 sq1vgaSignatureSpanishMessages3[] = {
+	0x8f, 0x01,                         // lsp 01
+	0x3c,                               // dup
+	0x35, 0x02,                         // ldi 02
+	0x1a,                               // eq?
+	0x30, SIG_UINT16(0x000a),           // bnt 000a
+	0x7a,                               // push2
+	SIG_ADDTOOFFSET(+5),
+	0x47, SIG_MAGICDWORD, 0xff, 0x00, 0x04, // calle proc255_0 04 [ Print ]
+	0x3a,                               // toss
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchSpanishMessages3[] = {
+	0x8e, PATCH_UINT16(0x0001),         // lsp 0001
+	PATCH_ADDTOOFFSET(+3),
+	0x30, PATCH_UINT16(0x000b),         // bnt 000b
+	PATCH_ADDTOOFFSET(+10),
+	0x48,                               // ret [ return after Print ]
+	PATCH_END
+};
+
+static const uint16 sq1vgaSignatureSpanishMessages4[] = {
+	SIG_MAGICDWORD,
+	0x8f, 0x01,                         // lsp 01
+	0x35, 0x02,                         // ldi 02
+	0x1a,                               // eq?
+	0x30, SIG_UINT16(0x0008),           // bnt 0008
+	0x7a,                               // push2
+	SIG_ADDTOOFFSET(+3),
+	0x47, 0xff, 0x00, 0x04,             // calle proc255_0 04 [ Print ]
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchSpanishMessages4[] = {
+	PATCH_ADDTOOFFSET(+5),
+	0x31, 0x09,                         // bnt 09
+	0x7a,                               // push2
+	PATCH_GETORIGINALBYTE(+9),
+	PATCH_GETORIGINALBYTE(+10),
+	PATCH_GETORIGINALBYTE(+11),
+	0x47, 0xff, 0x00, 0x04,             // calle proc255_0 04 [ Print ]
+	0x48,                               // ret [ return after Print ]
+	PATCH_END
+};
+
+static const uint16 sq1vgaSignatureSpanishMessages5[] = {
+	SIG_MAGICDWORD,
+	0x8f, 0x01,                         // lsp 01
+	0x35, 0x02,                         // ldi 02
+	0x1a,                               // eq?
+	0x30, SIG_UINT16(0x0009),           // bnt 0009
+	0x7a,                               // push2
+	SIG_ADDTOOFFSET(+4),
+	0x47, 0xff, 0x00, 0x04,             // calle proc255_0 04 [ Print ]
+	SIG_END
+};
+
+static const uint16 sq1vgaPatchSpanishMessages5[] = {
+	PATCH_ADDTOOFFSET(+5),
+	0x31, 0x0a,                         // bnt 0a
+	0x7a,                               // push2
+	PATCH_GETORIGINALBYTE(+9),
+	PATCH_GETORIGINALBYTE(+10),
+	PATCH_GETORIGINALBYTE(+11),
+	PATCH_GETORIGINALBYTE(+12),
+	0x47, 0xff, 0x00, 0x04,             // calle proc255_0 04 [ Print ]
+	0x48,                               // ret [ return after Print ]
+	PATCH_END
+};
+
 //          script, description,                                      signature                                   patch
 static const SciScriptPatcherEntry sq1vgaSignatures[] = {
+	{  true,    28, "orat sounds",                                 1, sq1vgaSignatureOratSounds,                  sq1vgaPatchOratSounds },
+	{  true,    40, "taste pink ship",                             1, sq1vgaSignatureTastePinkShip,               sq1vgaPatchTastePinkShip },
+	{  true,    40, "tiny's sign",                                 1, sq1vgaSignatureTinysSign,                   sq1vgaPatchTinysSign },
+	{  true,    43, "bar patron animation",                        1, sq1vgaSignatureBarPatronAnimation,          sq1vgaPatchBarPatronAnimation },
 	{  true,    45, "Ulence Flats: timepod graphic glitch",        1, sq1vgaSignatureUlenceFlatsTimepodGfxGlitch, sq1vgaPatchUlenceFlatsTimepodGfxGlitch },
 	{  true,    45, "Ulence Flats: force field generator glitch",  1, sq1vgaSignatureUlenceFlatsGeneratorGlitch,  sq1vgaPatchUlenceFlatsGeneratorGlitch },
+	{  true,    46, "room 46 verbs",                               2, sq1vgaSignatureRoom46Verbs1,                sq1vgaPatchRoom46Verbs1 },
+	{  true,    46, "room 46 verbs",                               1, sq1vgaSignatureRoom46Verbs2,                sq1vgaPatchRoom46Verbs2 },
+	{  true,    46, "robot box approach verbs",                    1, sq1vgaSignatureRobotBoxApproachVerbs,       sq1vgaPatchRobotBoxApproachVerbs },
 	{  true,    58, "Sarien armory droid zapping ego first time",  1, sq1vgaSignatureEgoShowsCard,                sq1vgaPatchEgoShowsCard },
+	{  true,    64, "room 64 verbs",                               7, sq1vgaSignatureRoom64Verbs,                 sq1vgaPatchRoom64Verbs },
+	{  true,   703, "deltaur messages",                            1, sq1vgaSignatureDeltaurMessages1,            sq1vgaPatchDeltaurMessages },
+	{  true,   703, "deltaur messages",                            1, sq1vgaSignatureDeltaurMessages2,            sq1vgaPatchDeltaurMessages },
+	{  true,   703, "deltaur messages",                            1, sq1vgaSignatureDeltaurMessages3,            sq1vgaPatchDeltaurMessages },
 	{  true,   704, "spider droid timing issue",                   1, sq1vgaSignatureSpiderDroidTiming,           sq1vgaPatchSpiderDroidTiming },
 	{  true,   989, "rename russian Sound class",                  1, sq1vgaSignatureRussianSoundName,            sq1vgaPatchRussianSoundName },
 	{  true,   992, "rename russian Motion class",                 1, sq1vgaSignatureRussianMotionName,           sq1vgaPatchRussianMotionName },
 	{  true,   994, "rename russian Rm class",                     1, sq1vgaSignatureRussianRmName,               sq1vgaPatchRussianRmName },
+	{ false,     3, "spanish messages",                            7, sq1vgaSignatureSpanishMessages2,            sq1vgaPatchSpanishMessages2 },
+	{ false,    13, "spanish messages",                            1, sq1vgaSignatureSpanishMessages1,            sq1vgaPatchSpanishMessages1 },
+	{ false,    13, "spanish messages",                            5, sq1vgaSignatureSpanishMessages2,            sq1vgaPatchSpanishMessages2 },
+	{ false,    37, "spanish messages",                            2, sq1vgaSignatureSpanishMessages2,            sq1vgaPatchSpanishMessages2 },
+	{ false,    40, "spanish messages",                            1, sq1vgaSignatureSpanishMessages5,            sq1vgaPatchSpanishMessages5 },
+	{ false,    41, "spanish messages",                            1, sq1vgaSignatureSpanishMessages2,            sq1vgaPatchSpanishMessages2 },
+	{ false,    46, "spanish messages",                            1, sq1vgaSignatureSpanishMessages5,            sq1vgaPatchSpanishMessages5 },
+	{ false,    58, "spanish messages",                            1, sq1vgaSignatureSpanishMessages4,            sq1vgaPatchSpanishMessages4 },
+	{ false,    60, "spanish messages",                            3, sq1vgaSignatureSpanishMessages5,            sq1vgaPatchSpanishMessages5 },
+	{ false,    64, "spanish messages",                            2, sq1vgaSignatureSpanishMessages4,            sq1vgaPatchSpanishMessages4 },
+	{ false,    64, "spanish messages",                            6, sq1vgaSignatureSpanishMessages5,            sq1vgaPatchSpanishMessages5 },
+	{ false,   702, "spanish messages",                            3, sq1vgaSignatureSpanishMessages3,            sq1vgaPatchSpanishMessages3 },
+	{ false,   704, "spanish messages",                            1, sq1vgaSignatureSpanishMessages2,            sq1vgaPatchSpanishMessages2 },
+	{ false,   704, "spanish messages",                            6, sq1vgaSignatureSpanishMessages3,            sq1vgaPatchSpanishMessages3 },
 	SCI_SIGNATUREENTRY_TERMINATOR
 };
 
@@ -21381,6 +21983,17 @@ void ScriptPatcher::processScript(uint16 scriptNr, SciSpan<byte> scriptData) {
 				if (_isMacSci11 && !g_sci->getResMan()->testResource(ResourceId(kResourceTypeView, 56))) {
 					enablePatch(signatureTable, "mac: fix missing talisman view");
 				}
+
+				if (!_isMacSci11) {
+					enablePatch(signatureTable, "pc: fix cartoon timing");
+				} else {
+					enablePatch(signatureTable, "mac: fix cartoon timing");
+				}
+
+				if (g_sci->getLanguage() == Common::EN_ANY &&
+					g_sci->getResMan()->testResource(ResourceId(kResourceTypeFont, 40))) {
+					enablePatch(signatureTable, "fix end game font");
+				}
 				break;
 			case GID_GK2:
 				// Enable subtitle compatibility if a sync resource is present
@@ -21437,6 +22050,11 @@ void ScriptPatcher::processScript(uint16 scriptNr, SciSpan<byte> scriptData) {
 					enablePatch(signatureTable, "Floppy: fix guild tunnel access (3/3)");
 					enablePatch(signatureTable, "Floppy: fix crest bookshelf");
 					enablePatch(signatureTable, "Floppy: fix peer bats, upper door (2/2)");
+				}
+				break;
+			case GID_SQ1:
+				if (g_sci->getLanguage() == Common::ES_ESP) {
+					enablePatch(signatureTable, "spanish messages");
 				}
 				break;
 			case GID_SQ3:

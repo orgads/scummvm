@@ -32,6 +32,17 @@
 
 #include "wintermute/detection.h"
 #include "wintermute/detection_tables.h"
+#include "wintermute/wintermute.h"
+
+static const DebugChannelDef debugFlagList[] = {
+	{Wintermute::kWintermuteDebugLog, "enginelog", "Covers the same output as the log-file in WME"},
+	{Wintermute::kWintermuteDebugSaveGame, "savegame", "Savegames"},
+	{Wintermute::kWintermuteDebugFont, "font", "Text-drawing-related messages"},
+	{Wintermute::kWintermuteDebugFileAccess, "file-access", "Non-critical problems like missing files"},
+	{Wintermute::kWintermuteDebugAudio, "audio", "audio-playback-related issues"},
+	{Wintermute::kWintermuteDebugGeneral, "general", "various issues not covered by any of the above"},
+	DEBUG_CHANNEL_END
+};
 
 namespace Wintermute {
 
@@ -89,7 +100,11 @@ public:
 		return "Copyright (C) 2011 Jan Nedoma";
 	}
 
-	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist) const override {
+	const DebugChannelDef *getDebugChannels() const override {
+		return debugFlagList;
+	}
+
+	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const override {
 		/**
 		 * Fallback detection for Wintermute heavily depends on engine resources, so it's not possible
 		 * to use them without the engine present in a clean way.

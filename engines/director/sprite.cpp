@@ -114,15 +114,28 @@ bool Sprite::respondsToMouse() {
 }
 
 bool Sprite::isActive() {
-	return _movie->getScriptContext(kScoreScript, _scriptId) != nullptr;
+	return _movie->getScriptContext(kScoreScript, _scriptId) != nullptr
+			|| _movie->getScriptContext(kCastScript, _castId) != nullptr;
 }
 
 bool Sprite::shouldHilite() {
-	if ((_cast && _cast->_autoHilite) || (isQDShape() && _ink == kInkTypeMatte))
-		if (g_director->getVersion() < 400 && !_moveable)
-			if (_movie->getScriptContext(kScoreScript, _scriptId) ||
-					_movie->getScriptContext(kCastScript, _castId))
-				return true;
+	if (!isActive())
+		return false;
+
+	if (_moveable)
+		return false;
+
+	if (g_director->getVersion() < 400 && _ink == kInkTypeMatte)
+		return true;
+
+	if (_cast) {
+		// we have our own check for button, thus we don't need it here
+		if (_cast->_type == kCastButton)
+			return false;
+		CastMemberInfo *castInfo = _cast->getInfo();
+		if (castInfo)
+			return castInfo->autoHilite;
+	}
 
 	return false;
 }
@@ -187,8 +200,20 @@ void Sprite::setCast(uint16 castId) {
 		// them properly.
 		if (_cast->_type != kCastShape) {
 			Common::Rect dims = _cast->getInitialRect();
-			_width = dims.width();
-			_height = dims.height();
+			//for the text cast members, we use the max number of size of the first sprite we saw and the initialRect, and we reset that cast too
+			// quite strange logic, but it's useful for now, but still we need to figure out the correct solution
+			if (_cast->_type == kCastButton || _cast->_type == kCastText) {
+				if (_cast->_boundingRect.isEmpty()) {
+					warning("Sprite::setCast(): trying to modify initialRect of cast with the first sprite size");
+					_cast->_boundingRect = Common::Rect(MAX<int>(_width, dims.width()), MAX<int>(_height, dims.height()));
+					_cast->_initialRect = _cast->_boundingRect;
+				}
+				_width = _cast->_initialRect.width();
+				_height = _cast->_initialRect.height();
+			} else {
+				_width = dims.width();
+				_height = dims.height();
+			}
 		}
 	} else {
 		warning("Sprite::setCast(): CastMember id %d(%s) has null member", castId, numToCastNum(castId));

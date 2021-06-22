@@ -174,7 +174,8 @@ private:
 	bool cmdStopMoveRun(int argc, const char **argv);
 	bool cmdStartMoveStep(int argc, const char **argv);
 	bool cmdStopMoveStep(int argc, const char **argv);
-	bool cmdAttack(int argc, const char **argv);
+	bool cmdStartAttack(int argc, const char **argv);
+	bool cmdStopAttack(int argc, const char **argv);
 
 	bool cmdCameraOnAvatar(int argc, const char **argv);
 
@@ -222,9 +223,11 @@ private:
 	bool cmdToggleCombat(int argc, const char **argv);
 	bool cmdUseInventoryItem(int argc, const char **argv);
 	bool cmdUseMedikit(int argc, const char **argv);
+	bool cmdUseEnergyCube(int argc, const char **argv);
 	bool cmdDetonateBomb(int argc, const char **argv);
 	bool cmdStartSelection(int argc, const char **argv);
 	bool cmdUseSelection(int argc, const char **argv);
+	bool cmdGrabItems(int argc, const char **argv);
 
 	// Object Manager
 	bool cmdObjectTypes(int argc, const char **argv);

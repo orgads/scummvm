@@ -58,6 +58,8 @@ static const PlainGameDescriptor mohawkGames[] = {
 	{"bearfight", "The Berenstain Bears Get in a Fight"},
 	{"beardark", "The Berenstain Bears In The Dark"},
 	{"arthurcomp", "Arthur's Computer Adventure"},
+	{"create", "The Story of Creation"},
+	{"daniel", "Daniel in the Lions' Den"},
 	{"harryhh","Harry and the Haunted House"},
 	{"stellaluna", "Stellaluna"},
 	{"sheila", "Sheila Rae, the Brave"},
@@ -84,7 +86,7 @@ public:
 		_directoryGlobs = directoryGlobs;
 	}
 
-	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist) const override {
+	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const override {
 		return detectGameFilebased(allFiles, Mohawk::fileBased);
 	}
 
@@ -100,12 +102,12 @@ public:
 		return "Myst and Riven (C) Cyan Worlds\nMohawk OS (C) Ubisoft";
 	}
 
-	DetectedGame toDetectedGame(const ADDetectedGame &adGame) const override;
+	DetectedGame toDetectedGame(const ADDetectedGame &adGame, ADDetectedGameExtraInfo *extraInfo) const override;
 
 	void registerDefaultSettings(const Common::String &target) const override;
 };
 
-DetectedGame MohawkMetaEngineDetection::toDetectedGame(const ADDetectedGame &adGame) const {
+DetectedGame MohawkMetaEngineDetection::toDetectedGame(const ADDetectedGame &adGame, ADDetectedGameExtraInfo *extraInfo) const {
 	DetectedGame game = AdvancedMetaEngineDetection::toDetectedGame(adGame);
 
 	// The AdvancedDetector model only allows specifying a single supported

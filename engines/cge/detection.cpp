@@ -27,6 +27,14 @@
 #include "common/translation.h"
 
 #include "cge/fileio.h"
+#include "cge/cge.h"
+
+static const DebugChannelDef debugFlagList[] = {
+	{CGE::kCGEDebugBitmap, "bitmap", "CGE Bitmap debug channel"},
+	{CGE::kCGEDebugFile, "file", "CGE IO debug channel"},
+	{CGE::kCGEDebugEngine, "engine", "CGE Engine debug channel"},
+	DEBUG_CHANNEL_END
+};
 
 namespace CGE {
 
@@ -123,7 +131,11 @@ public:
 		return "Soltys (C) 1994-1996 L.K. Avalon";
 	}
 
-	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist) const override;
+	const DebugChannelDef *getDebugChannels() const override {
+		return debugFlagList;
+	}
+
+	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const override;
 };
 
 static ADGameDescription s_fallbackDesc = {
@@ -141,7 +153,7 @@ static const ADFileBasedFallback fileBasedFallback[] = {
 	{ 0, { 0 } }
 };
 
-ADDetectedGame CGEMetaEngineDetection::fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist) const {
+ADDetectedGame CGEMetaEngineDetection::fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const {
 	ADDetectedGame game = detectGameFilebased(allFiles, CGE::fileBasedFallback);
 
 	if (!game.desc)

@@ -46,12 +46,18 @@ DEFINE_RUNTIME_CLASSTYPE_CODE(ItemSelectionProcess)
 ItemSelectionProcess::ItemSelectionProcess() : Process(), _selectedItem(0),
 _ax(0), _ay(0), _az(0) {
 	_instance = this;
+	_type = 1; // persistent
+}
+
+ItemSelectionProcess::~ItemSelectionProcess() {
+	if (_instance == this)
+		_instance = nullptr;
 }
 
 void ItemSelectionProcess::run() {
 }
 
-bool ItemSelectionProcess::selectNextItem() {
+bool ItemSelectionProcess::selectNextItem(bool grab) {
 	MainActor *mainactor = getMainActor();
 	CurrentMap *currentmap = World::get_instance()->getCurrentMap();
 
@@ -94,7 +100,20 @@ bool ItemSelectionProcess::selectNextItem() {
 				continue;
 
 			candidates.push_back(item);
+			if (grab) {
+				const ShapeInfo *info_g = item->getShapeInfo();
+				if (!info_g || !(info_g->_flags & ShapeInfo::SI_CRU_SELECTABLE)) {
+					MainActor *actor = getMainActor();
+					if (actor)
+						actor->addItemCru(item, true);
+				}
+			}
 		}
+	}
+
+	if (grab) {
+		clearSelection();
+		return false;
 	}
 
 	if (candidates.size() < 1) {
@@ -111,10 +130,10 @@ bool ItemSelectionProcess::selectNextItem() {
 	if (_selectedItem) {
 		// Pick the next item
 		int offset = 0;
-		for (Std::vector<Item *>::iterator iter = candidates.begin();
+		for (Std::vector<Item *>::const_iterator iter = candidates.begin();
 			 iter != candidates.end();
 			 offset++, iter++) {
-			ObjId num = item->getObjId();
+			ObjId num = (*iter)->getObjId();
 			if (_selectedItem == num) {
 				offset++;
 				break;

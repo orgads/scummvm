@@ -102,7 +102,7 @@ public:
 	~Movie();
 
 	static Common::Rect readRect(Common::ReadStreamEndian &stream);
-	static InfoEntries loadInfoEntries(Common::SeekableReadStreamEndian &stream);
+	static InfoEntries loadInfoEntries(Common::SeekableReadStreamEndian &stream, uint16 version);
 
 	bool loadArchive();
 	void setArchive(Archive *archive);
@@ -146,6 +146,7 @@ private:
 
 public:
 	Archive *_movieArchive;
+	uint16 _version;
 	Common::Rect _movieRect;
 	uint16 _currentClickOnSpriteId;
 	uint16 _currentEditableTextChannel;
@@ -168,6 +169,11 @@ public:
 	int _keyCode;
 	byte _keyFlags;
 
+	int _selStart;
+	int _selEnd;
+
+	int _checkBoxType;
+
 private:
 	Window *_window;
 	DirectorEngine *_vm;
@@ -183,6 +189,8 @@ private:
 	Common::String _script;
 	Common::String _directory;
 
+	uint16 _currentHiliteChannelId;
+	uint16 _currentHandlingChannelId;
 	Channel *_currentDraggedChannel;
 	Common::Point _draggingSpritePos;
 };

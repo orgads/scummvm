@@ -270,7 +270,8 @@ public:
 
 	//! Turn one step toward the given direction. If the current direction is already the same,
 	//! do nothing. Returns an anim process or 0 if no move needed.
-	uint16 turnTowardDir(Direction dir);
+	//! If a previous pid is specified, wait for that process.
+	uint16 turnTowardDir(Direction dir, ProcId prevpid = 0);
 
 	//! create an actor, assign objid, make it ethereal and load monster stats.
 	static Actor *createActor(uint32 shape, uint32 frame);
@@ -285,14 +286,6 @@ public:
 	//! take a hit and optionally adjust it with the shields for this NPC.
 	virtual int receiveShieldHit(int damage, uint16 damage_type) {
 		return damage;
-	}
-
-	uint8 getShieldType() const {
-		return _shieldType;
-	}
-
-	void setShieldType(uint8 type) {
-		_shieldType = type;
 	}
 
 	uint16 getActiveWeapon() const {
@@ -338,6 +331,7 @@ public:
 	INTRINSIC(I_getDex);
 	INTRINSIC(I_getInt);
 	INTRINSIC(I_getHp);
+	INTRINSIC(I_getMaxHp);
 	INTRINSIC(I_getMana);
 	INTRINSIC(I_getAlignment);
 	INTRINSIC(I_getEnemyAlignment);
@@ -459,9 +453,6 @@ protected:
 
 	//! Kernel timer last time NPC was hit (only used in Crusader)
 	int32 _lastTimeWasHit;
-
-	//! Type of shield (only used in Crusader)
-	uint8 _shieldType;
 
 	//! The frame certain animations last happened (for Crusader).
 	//! Used in calcualting how hard controlled actor is to hit.

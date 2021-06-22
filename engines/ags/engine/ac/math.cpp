@@ -27,6 +27,7 @@
 #include "ags/engine/script/script_api.h"
 #include "ags/engine/script/script_runtime.h"
 #include "ags/ags.h"
+#include "ags/globals.h"
 
 namespace AGS3 {
 
@@ -138,10 +139,9 @@ float Math_Sqrt(float value) {
 }
 
 int __Rand(int upto) {
-	upto++;
-	if (upto < 1)
-		quit("!Random: invalid parameter passed -- must be at least 1.");
-	return ::AGS::g_vm->getRandomNumber(upto - 1);
+	if (upto < 0)
+		quit("!Random: invalid parameter passed -- must be at least 0.");
+	return ::AGS::g_vm->getRandomNumber(upto);
 }
 
 

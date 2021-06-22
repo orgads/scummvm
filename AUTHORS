@@ -108,6 +108,15 @@ ScummVM Team
        rofl0r                         - AGS
        Berian Williams                - AgsCreditz
 
+    Asylum:
+       Alex Bevilacqua
+       Alex Fontoura
+       Alexander Panov
+       Benjamin Haisch
+       Filippos Karapetis
+       Joseph Davies
+       Julien Templier
+
     Avalanche:
        Peter Bozso
        Arnaud Boutonne
@@ -437,6 +446,12 @@ ScummVM Team
     Touche:
        Gregory Montoir                - (retired)
 
+    Trecision:
+       Daniel Albano
+       Arnaud Boutonne
+       Thomas Fach-Pedersen           - Smacker video support
+       Filippos Karapetis
+
     TsAGE:
        Arnaud Boutonne
        Paul Gilbert
@@ -645,6 +660,7 @@ ScummVM Team
                                       (retired)
      Matthew Hoops                  - Numerous contributions to documentation
                                       (retired)
+     Cadi Howley                    - User documentation (GSOD 2020)
 
   Retired Team Members
   --------------------
@@ -784,7 +800,7 @@ Other contributions
        Marcel Souza Lemes
 
     Portuguese:
-       Daniel
+       Daniel Albano
 
     Russian:
        Eugene Sandulenko
@@ -1113,4 +1129,7 @@ Special thanks to
 
    Benjamin Haisch, for emimeshviewer, which our EMI code borrows heavily
    from.
+
+   Fabrizio Lagorio from Trecision S.p.A., for finding and providing the
+   source code of many of their games.
 

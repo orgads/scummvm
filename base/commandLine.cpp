@@ -73,6 +73,9 @@ static const char HELP_STRING[] =
 	"  -t, --list-targets       Display list of configured targets and exit\n"
 	"  --list-engines           Display list of suppported engines and exit\n"
 	"  --list-all-engines       Display list of all detection engines and exit\n"
+	"  --list-debugflags=engine Display list of engine specified debugflags\n"
+	"                           if engine=global or engine is not specified, then it will list global debugflags\n"
+	"  --list-all-debugflags    Display list of all engine specified debugflags\n"
 	"  --list-saves             Display a list of saved games for the target specified\n"
 	"                           with --game=TARGET, or all targets if none is specified\n"
 	"  -a, --add                Add all games from current or specified directory.\n"
@@ -83,6 +86,8 @@ static const char HELP_STRING[] =
 	"                           Use --path=PATH to specify a directory.\n"
 	"  --game=ID                In combination with --add or --detect only adds or attempts to\n"
 	"                           detect the game with id ID.\n"
+	"  --engine=ID              In combination with --list-games or --list-all-games only lists\n"
+	"                           games for this engine.\n"
 	"  --auto-detect            Display a list of games from current or specified directory\n"
 	"                           and start the first one. Use --path=PATH to specify a directory.\n"
 	"  --recursive              In combination with --add or --detect recurse down all subdirectories\n"
@@ -205,7 +210,7 @@ static const char HELP_STRING[] =
 
 static const char *s_appName = "scummvm";
 
-static void NORETURN_PRE usage(const char *s, ...) GCC_PRINTF(1, 2) NORETURN_POST;
+static void NORETURN_PRE usage(MSVC_PRINTF const char *s, ...) GCC_PRINTF(1, 2) NORETURN_POST;
 
 static void usage(const char *s, ...) {
 	char buf[STRINGBUFLEN];
@@ -546,6 +551,14 @@ Common::String parseCommandLine(Common::StringMap &settings, int argc, const cha
 			DO_LONG_COMMAND("list-all-games")
 			END_COMMAND
 
+			DO_LONG_COMMAND("list-all-debugflags")
+			END_COMMAND
+
+			DO_OPTION_OPT(0, "list-debugflags", "global")
+				ensureFirstCommand(command, "list-debugflags");
+				command = "list-debugflags";
+			END_OPTION
+
 			DO_LONG_COMMAND("list-engines")
 			END_COMMAND
 
@@ -780,6 +793,9 @@ Common::String parseCommandLine(Common::StringMap &settings, int argc, const cha
 			DO_LONG_OPTION("game")
 			END_OPTION
 
+			DO_LONG_OPTION("engine")
+			END_OPTION
+
 			DO_LONG_OPTION_BOOL("recursive")
 			END_OPTION
 
@@ -845,39 +861,51 @@ unknownOption:
 	return command;
 }
 
-/** List all supported game IDs, i.e. all games which any loaded plugin supports. */
-static void listGames() {
+/** List all available game IDs, i.e. all games which any loaded plugin supports. */
+static void listGames(const Common::String &engineID) {
+	const bool all = engineID.empty();
+
 	printf("Game ID                        Full Title                                                 \n"
 	       "------------------------------ -----------------------------------------------------------\n");
 
 	const PluginList &plugins = EngineMan.getPlugins(PLUGIN_TYPE_ENGINE);
 	for (PluginList::const_iterator iter = plugins.begin(); iter != plugins.end(); ++iter) {
 		const Plugin *p = EngineMan.findPlugin((*iter)->getName());
+		/* If for some reason, we can't find the MetaEngine for this Engine, just ignore it */
+		if (!p) {
+			continue;
+		}
 
-		PlainGameList list = p->get<MetaEngineDetection>().getSupportedGames();
-		for (PlainGameList::const_iterator v = list.begin(); v != list.end(); ++v) {
-			printf("%-30s %s\n", buildQualifiedGameName(p->get<MetaEngineDetection>().getEngineId(), v->gameId).c_str(), v->description);
+		if (all || (p->getEngineId() == engineID)) {
+			PlainGameList list = p->get<MetaEngineDetection>().getSupportedGames();
+			for (PlainGameList::const_iterator v = list.begin(); v != list.end(); ++v) {
+				printf("%-30s %s\n", buildQualifiedGameName(p->get<MetaEngineDetection>().getEngineId(), v->gameId).c_str(), v->description);
+			}
 		}
 	}
 }
 
-/** List all detected game IDs, i.e. all games which any loaded plugin supports. */
-static void listAllGames() {
+/** List all known game IDs, i.e. all games which can be detected. */
+static void listAllGames(const Common::String &engineID) {
+	const bool any = engineID.empty();
+
 	printf("Game ID                        Full Title                                                 \n"
 	       "------------------------------ -----------------------------------------------------------\n");
 
 	const PluginList &plugins = EngineMan.getPlugins();
 	for (PluginList::const_iterator iter = plugins.begin(); iter != plugins.end(); ++iter) {
-		const MetaEngineDetection &metaengine = (*iter)->get<MetaEngineDetection>();
+		const MetaEngineDetection &metaEngine = (*iter)->get<MetaEngineDetection>();
 
-		PlainGameList list = metaengine.getSupportedGames();
-		for (PlainGameList::const_iterator v = list.begin(); v != list.end(); ++v) {
-			printf("%-30s %s\n", buildQualifiedGameName(metaengine.getEngineId(), v->gameId).c_str(), v->description);
+		if (any || (metaEngine.getEngineId() == engineID)) {
+			PlainGameList list = metaEngine.getSupportedGames();
+			for (PlainGameList::const_iterator v = list.begin(); v != list.end(); ++v) {
+				printf("%-30s %s\n", buildQualifiedGameName(metaEngine.getEngineId(), v->gameId).c_str(), v->description);
+			}
 		}
 	}
 }
 
-/** List all supported engines, i.e. all loaded plugins. */
+/** List all supported engines, i.e. all loaded engine plugins. */
 static void listEngines() {
 	printf("Engine ID       Engine Name                                           \n"
 	       "--------------- ------------------------------------------------------\n");
@@ -885,12 +913,16 @@ static void listEngines() {
 	const PluginList &plugins = EngineMan.getPlugins(PLUGIN_TYPE_ENGINE);
 	for (PluginList::const_iterator iter = plugins.begin(); iter != plugins.end(); ++iter) {
 		const Plugin *p = EngineMan.findPlugin((*iter)->getName());
+		/* If for some reason, we can't find the MetaEngine for this Engine, just ignore it */
+		if (!p) {
+			continue;
+		}
 
 		printf("%-15s %s\n", p->get<MetaEngineDetection>().getEngineId(), p->get<MetaEngineDetection>().getName());
 	}
 }
 
-/** List all detection engines, i.e. all loaded plugins. */
+/** List all detection engines, i.e. all loaded detection plugins. */
 static void listAllEngines() {
 	printf("Engine ID       Engine Name                                           \n"
 	       "--------------- ------------------------------------------------------\n");
@@ -934,6 +966,48 @@ static void listTargets() {
 
 	for (Common::Array<Common::String>::const_iterator i = targets.begin(), end = targets.end(); i != end; ++i)
 		printf("%s\n", i->c_str());
+}
+
+static void printDebugFlags(const DebugChannelDef *debugChannels) {
+	if (!debugChannels)
+		return;
+	for (uint i = 0; debugChannels[i].channel != 0; i++) {
+		printf("%-15s %s\n", debugChannels[i].name, debugChannels[i].description);
+	}
+}
+
+/** List debug flags*/
+static void listDebugFlags(const Common::String &engineID) {
+	if (engineID == "global")
+		printDebugFlags(gDebugChannels);
+	else {
+		const PluginList &plugins = EngineMan.getPlugins();
+		for (PluginList::const_iterator iter = plugins.begin(); iter != plugins.end(); ++iter) {
+			const MetaEngineDetection &metaEngine = (*iter)->get<MetaEngineDetection>();
+			if (metaEngine.getEngineId() == engineID) {
+				printf("Flag name       Flag description                                           \n");
+				printf("--------------- ------------------------------------------------------\n");
+				printf("ID=%-12s Name=%s\n", metaEngine.getEngineId(), metaEngine.getName());
+				printDebugFlags(metaEngine.getDebugChannels());
+				return;
+			}
+		}
+		printf("Cannot find engine %s\n", engineID.c_str());
+	}
+}
+
+/** List all engine specified debug channels */
+static void listAllEngineDebugFlags() {
+	printf("Flag name       Flag description                                           \n");
+
+	const PluginList &plugins = EngineMan.getPlugins();
+	for (PluginList::const_iterator iter = plugins.begin(); iter != plugins.end(); ++iter) {
+		const MetaEngineDetection &metaEngine = (*iter)->get<MetaEngineDetection>();
+		printf("--------------- ------------------------------------------------------\n");
+		printf("ID=%-12s Name=%s\n", metaEngine.getEngineId(), metaEngine.getName());
+		printDebugFlags(metaEngine.getDebugChannels());
+	}
+
 }
 
 /** List all saves states for the given target. */
@@ -1419,11 +1493,17 @@ bool processSettings(Common::String &command, Common::StringMap &settings, Commo
 	if (command == "list-targets") {
 		listTargets();
 		return true;
+	} else if (command == "list-all-debugflags") {
+		listAllEngineDebugFlags();
+		return true;
+	} else if (command == "list-debugflags") {
+		listDebugFlags(settings["list-debugflags"]);
+		return true;
 	} else if (command == "list-games") {
-		listGames();
+		listGames(settings["engine"]);
 		return true;
 	} else if (command == "list-all-games") {
-		listAllGames();
+		listAllGames(settings["engine"]);
 		return true;
 	} else if (command == "list-engines") {
 		listEngines();

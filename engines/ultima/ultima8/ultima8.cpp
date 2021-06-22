@@ -83,6 +83,8 @@
 #include "ultima/ultima8/world/actors/attack_process.h"
 #include "ultima/ultima8/world/actors/auto_firer_process.h"
 #include "ultima/ultima8/world/actors/pace_process.h"
+#include "ultima/ultima8/world/actors/rolling_thunder_process.h"
+#include "ultima/ultima8/world/bobo_boomer_process.h"
 #include "ultima/ultima8/world/super_sprite_process.h"
 #include "ultima/ultima8/world/destroy_item_process.h"
 #include "ultima/ultima8/world/actors/ambush_process.h"
@@ -125,7 +127,7 @@ Ultima8Engine::Ultima8Engine(OSystem *syst, const Ultima::UltimaGameDescription 
 		_screen(nullptr), _fontManager(nullptr), _paletteManager(nullptr), _gameData(nullptr),
 		_world(nullptr), _desktopGump(nullptr), _gameMapGump(nullptr), _avatarMoverProcess(nullptr),
 		_frameSkip(false), _frameLimit(true), _interpolate(true), _animationRate(100),
-		_avatarInStasis(false), _paintEditorItems(false), _inversion(0),
+		_avatarInStasis(false), _cruStasis(false), _paintEditorItems(false), _inversion(0),
 		_showTouching(false), _timeOffset(0), _hasCheated(false), _cheatsEnabled(false),
 		_fontOverride(false), _fontAntialiasing(false), _audioMixer(0), _inverterGump(nullptr),
 	    _lerpFactor(256), _inBetweenFrame(false), _unkCrusaderFlag(false), _moveKeyFrame(0) {
@@ -303,6 +305,10 @@ bool Ultima8Engine::startup() {
 		ProcessLoader<AttackProcess>::load);
 	_kernel->addProcessLoader("AutoFirerProcess",
 		ProcessLoader<AutoFirerProcess>::load);
+	_kernel->addProcessLoader("BoboBoomerProcess",
+		ProcessLoader<BoboBoomerProcess>::load);
+	_kernel->addProcessLoader("RollingThunderProcess",
+		ProcessLoader<RollingThunderProcess>::load);
 
 	_objectManager = new ObjectManager();
 	_mouse = new Mouse();
@@ -864,7 +870,7 @@ void Ultima8Engine::writeSaveInfo(Common::WriteStream *ws) {
 
 bool Ultima8Engine::canSaveGameStateCurrently(bool isAutosave) {
 	// Can't save when avatar in stasis during cutscenes
-	if (_avatarInStasis)
+	if (_avatarInStasis || _cruStasis)
 		return false;
 
 	// Check for gumps that prevent saving
@@ -1334,6 +1340,20 @@ Common::Error Ultima8Engine::loadGameStream(Common::SeekableReadStream *stream) 
 	_mouse->popAllCursors();
 	_mouse->pushMouseCursor();
 
+	/*
+	// In case of bugs, ensure persistent processes are around?
+	if (!TargetReticleProcess::get_instance())
+		_kernel->addProcess(new TargetReticleProcess());
+	if (!ItemSelectionProcess::get_instance())
+		_kernel->addProcess(new ItemSelectionProcess());
+	if (!CrosshairProcess::get_instance())
+		_kernel->addProcess(new CrosshairProcess());
+	if (!CycleProcess::get_instance())
+		_kernel->addProcess(new CycleProcess());
+	if (!SnapProcess::get_instance())
+		_kernel->addProcess(new SnapProcess());
+	 */
+
 	if (!totalok) {
 		Error(message, "Error Loading savegame");
 		delete sg;
@@ -1429,6 +1449,7 @@ bool Ultima8Engine::load(Common::ReadStream *rs, uint32 version) {
 
 	if (GAME_IS_CRUSADER) {
 		_unkCrusaderFlag  = (rs->readByte() != 0);
+		_cruStasis = false;
 	}
 
 	// no gump should be moused over after load
@@ -1507,13 +1528,12 @@ uint32 Ultima8Engine::I_getAvatarInStasis(const uint8 * /*args*/, unsigned int /
 }
 
 uint32 Ultima8Engine::I_setCruStasis(const uint8 *args, unsigned int argsize) {
-	// This is like avatar stasis, but stops a lot of other keyboard inputs too.
-	warning("I_setCruStasis: TODO: implement me");
+	get_instance()->setCruStasis(true);
 	return 0;
 }
 
 uint32 Ultima8Engine::I_clrCruStasis(const uint8 *args, unsigned int argsize) {
-	warning("I_clrCruStasis: TODO: implement me");
+	get_instance()->setCruStasis(false);
 	return 0;
 }
 

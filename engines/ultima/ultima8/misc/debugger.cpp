@@ -112,7 +112,8 @@ Debugger::Debugger() : Shared::Debugger() {
 	registerCmd("AvatarMoverProcess::stopMoveRun", WRAP_METHOD(Debugger, cmdStopMoveRun));
 	registerCmd("AvatarMoverProcess::startMoveStep", WRAP_METHOD(Debugger, cmdStartMoveStep));
 	registerCmd("AvatarMoverProcess::stopMoveStep", WRAP_METHOD(Debugger, cmdStopMoveStep));
-	registerCmd("AvatarMoverProcess::tryAttack", WRAP_METHOD(Debugger, cmdAttack));
+	registerCmd("AvatarMoverProcess::startAttack", WRAP_METHOD(Debugger, cmdStartAttack));
+	registerCmd("AvatarMoverProcess::stopAttack", WRAP_METHOD(Debugger, cmdStopAttack));
 
 	registerCmd("CameraProcess::moveToAvatar", WRAP_METHOD(Debugger, cmdCameraOnAvatar));
 
@@ -154,10 +155,12 @@ Debugger::Debugger() : Shared::Debugger() {
 	registerCmd("MainActor::nextInvItem", WRAP_METHOD(Debugger, cmdNextInventory));
 	registerCmd("MainActor::useInventoryItem", WRAP_METHOD(Debugger, cmdUseInventoryItem));
 	registerCmd("MainActor::useMedikit", WRAP_METHOD(Debugger, cmdUseMedikit));
+	registerCmd("MainActor::useEnergyCube", WRAP_METHOD(Debugger, cmdUseEnergyCube));
 	registerCmd("MainActor::detonateBomb", WRAP_METHOD(Debugger, cmdDetonateBomb));
 	registerCmd("MainActor::toggleCombat", WRAP_METHOD(Debugger, cmdToggleCombat));
 	registerCmd("ItemSelectionProcess::startSelection", WRAP_METHOD(Debugger, cmdStartSelection));
 	registerCmd("ItemSelectionProcess::useSelectedItem", WRAP_METHOD(Debugger, cmdUseSelection));
+	registerCmd("ItemSelectionProcess::grabItems", WRAP_METHOD(Debugger, cmdGrabItems));
 
 	registerCmd("ObjectManager::objectTypes", WRAP_METHOD(Debugger, cmdObjectTypes));
 	registerCmd("ObjectManager::objectInfo", WRAP_METHOD(Debugger, cmdObjectInfo));
@@ -390,16 +393,21 @@ bool Debugger::cmdMaxStats(int argc, const char **argv) {
 	}
 	MainActor *mainActor = getMainActor();
 
-	// constants!!
-	mainActor->setStr(25);
-	mainActor->setDex(25);
-	mainActor->setInt(25);
-	mainActor->setHP(mainActor->getMaxHP());
-	mainActor->setMana(mainActor->getMaxMana());
+	if (GAME_IS_CRUSADER) {
+		mainActor->setHP(mainActor->getMaxHP());
+		mainActor->setMana(mainActor->getMaxMana());
+	} else {
+		// constants!!
+		mainActor->setStr(25);
+		mainActor->setDex(25);
+		mainActor->setInt(25);
+		mainActor->setHP(mainActor->getMaxHP());
+		mainActor->setMana(mainActor->getMaxMana());
 
-	AudioProcess *audioproc = AudioProcess::get_instance();
-	if (audioproc)
-		audioproc->playSFX(0x36, 0x60, 1, 0); //constants!!
+		AudioProcess *audioproc = AudioProcess::get_instance();
+		if (audioproc)
+			audioproc->playSFX(0x36, 0x60, 1, 0); //constants!!
+	}
 	return false;
 }
 
@@ -1096,6 +1104,22 @@ bool Debugger::cmdUseMedikit(int argc, const char **argv) {
 	return false;
 }
 
+bool Debugger::cmdUseEnergyCube(int argc, const char **argv) {
+	if (Ultima8Engine::get_instance()->isAvatarInStasis()) {
+		debugPrintf("Can't use energy cube: avatarInStasis\n");
+		return false;
+	}
+
+	// Only if controlling avatar.
+	if (!_isAvatarControlled()) {
+		return false;
+	}
+
+	MainActor *av = getMainActor();
+	av->useInventoryItem(0x582);
+	return false;
+}
+
 bool Debugger::cmdDetonateBomb(int argc, const char **argv) {
 	if (Ultima8Engine::get_instance()->isAvatarInStasis()) {
 		debugPrintf("Can't detonate bomb: avatarInStasis\n");
@@ -1147,7 +1171,7 @@ bool Debugger::cmdUseKeyring(int argc, const char **argv) {
 	return false;
 }
 
-bool Debugger::cmdAttack(int argc, const char **argv) {
+bool Debugger::cmdStartAttack(int argc, const char **argv) {
 	Ultima8Engine *engine = Ultima8Engine::get_instance();
 	if (engine->isAvatarInStasis()) {
 		debugPrintf("Can't attack: avatarInStasis\n");
@@ -1155,17 +1179,31 @@ bool Debugger::cmdAttack(int argc, const char **argv) {
 	}
 	AvatarMoverProcess *proc = engine->getAvatarMoverProcess();
 	if (proc) {
-		proc->tryAttack();
+		proc->setMovementFlag(AvatarMoverProcess::MOVE_ATTACKING);
+	}
+	return false;
+}
+
+bool Debugger::cmdStopAttack(int argc, const char **argv) {
+	Ultima8Engine *engine = Ultima8Engine::get_instance();
+	AvatarMoverProcess *proc = engine->getAvatarMoverProcess();
+	if (proc) {
+		proc->clearMovementFlag(AvatarMoverProcess::MOVE_ATTACKING);
 	}
 	return false;
 }
 
 bool Debugger::cmdCameraOnAvatar(int argc, const char **argv) {
+	if (Ultima8Engine::get_instance()->isCruStasis()) {
+		debugPrintf("Can't move camera: cruStasis\n");
+		return false;
+	}
 	Actor *actor = getControlledActor();
 	if (actor) {
 		int32 x, y, z;
-		actor->getLocation(x, y, z);
-		CameraProcess::SetCameraProcess(new CameraProcess(x, y, z));
+		actor->getCentre(x, y, z);
+		if (x || y || z)
+			CameraProcess::SetCameraProcess(new CameraProcess(x, y, z));
 	}
 	return false;
 }
@@ -1481,7 +1519,7 @@ bool Debugger::cmdStartSelection(int argc, const char **argv) {
 
 	ItemSelectionProcess *proc = ItemSelectionProcess::get_instance();
 	if (proc)
-		proc->selectNextItem();
+		proc->selectNextItem(false);
 	return false;
 }
 
@@ -1499,6 +1537,23 @@ bool Debugger::cmdUseSelection(int argc, const char **argv) {
 	ItemSelectionProcess *proc = ItemSelectionProcess::get_instance();
 	if (proc)
 		proc->useSelectedItem();
+	return false;
+}
+
+bool Debugger::cmdGrabItems(int argc, const char **argv) {
+	if (Ultima8Engine::get_instance()->isAvatarInStasis()) {
+		debugPrintf("Can't grab items: avatarInStasis\n");
+		return false;
+	}
+
+	// Only if controlling avatar.
+	if (!_isAvatarControlled()) {
+		return false;
+	}
+
+	ItemSelectionProcess *proc = ItemSelectionProcess::get_instance();
+	if (proc)
+		proc->selectNextItem(true);
 	return false;
 }
 
@@ -1768,8 +1823,14 @@ bool Debugger::cmdU8ShapeViewer(int argc, const char **argv) {
 
 bool Debugger::cmdShowMenu(int argc, const char **argv) {
 	World *world = World::get_instance();
+	// In Crusader escape is also used to stop controlling another NPC
 	if (world && world->getControlledNPCNum() != 1) {
 		world->setControlledNPCNum(1);
+		return false;
+	}
+	if (Ultima8Engine::get_instance()->isCruStasis()) {
+		Ultima8Engine::get_instance()->moveKeyEvent();
+		debugPrintf("Not opening menu: cruStasis\n");
 		return false;
 	}
 	MenuGump::showMenu();

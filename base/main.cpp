@@ -133,7 +133,9 @@ static const Plugin *detectPlugin() {
 
 	// Query the plugin for the game descriptor
 	printf("   Looking for a plugin supporting this target... %s\n", plugin->getName());
-	PlainGameDescriptor game = plugin->get<MetaEngineDetection>().findGame(gameId.c_str());
+	const MetaEngineDetection &metaEngine = plugin->get<MetaEngineDetection>();
+	DebugMan.addAllDebugChannels(metaEngine.getDebugChannels());
+	PlainGameDescriptor game = metaEngine.findGame(gameId.c_str());
 	if (!game.gameId) {
 		warning("'%s' is an invalid game ID for the engine '%s'. Use the --list-games option to list supported game IDs", gameId.c_str(), engineId.c_str());
 		return 0;
@@ -152,7 +154,7 @@ void saveLastLaunchedTarget(const Common::String &target) {
 }
 
 // TODO: specify the possible return values here
-static Common::Error runGame(const Plugin *plugin, const Plugin *enginePlugin, OSystem &system, const Common::String &edebuglevels) {
+static Common::Error runGame(const Plugin *plugin, const Plugin *enginePlugin, OSystem &system, const Common::String &debugLevels) {
 	assert(plugin);
 	assert(enginePlugin);
 
@@ -191,6 +193,9 @@ static Common::Error runGame(const Plugin *plugin, const Plugin *enginePlugin, O
 		metaEngineDetection.registerDefaultSettings(target);
 	}
 
+	// before we instantiate the engine, we register debug channels for it
+	DebugMan.addAllDebugChannels(metaEngineDetection.getDebugChannels());
+
 	// Create the game's MetaEngine.
 	MetaEngine &metaEngine = enginePlugin->get<MetaEngine>();
 	err = metaEngine.createInstance(&system, &engine);
@@ -214,6 +219,7 @@ static Common::Error runGame(const Plugin *plugin, const Plugin *enginePlugin, O
 			ConfMan.removeGameDomain(target.c_str());
 		}
 
+		DebugMan.removeAllDebugChannels();
 		return err;
 	}
 
@@ -224,6 +230,7 @@ static Common::Error runGame(const Plugin *plugin, const Plugin *enginePlugin, O
 	Common::String caption(ConfMan.get("description"));
 
 	if (caption.empty()) {
+		// here, we don't need to set the debug channels because it has been set earlier
 		PlainGameDescriptor game = metaEngineDetection.findGame(ConfMan.get("gameid").c_str());
 		if (game.description) {
 			caption = game.description;
@@ -262,7 +269,7 @@ static Common::Error runGame(const Plugin *plugin, const Plugin *enginePlugin, O
 
 	// On creation the engine should have set up all debug levels so we can use
 	// the command line arguments here
-	Common::StringTokenizer tokenizer(edebuglevels, " ,");
+	Common::StringTokenizer tokenizer(debugLevels, " ,");
 	while (!tokenizer.empty()) {
 		Common::String token = tokenizer.nextToken();
 		if (token.equalsIgnoreCase("all"))
@@ -312,8 +319,7 @@ static Common::Error runGame(const Plugin *plugin, const Plugin *enginePlugin, O
 	// Free up memory
 	delete engine;
 
-	// We clear all debug levels again even though the engine should do it
-	DebugMan.clearAllDebugChannels();
+	DebugMan.removeAllDebugChannels();
 
 	// Reset the file/directory mappings
 	SearchMan.clear();
@@ -457,6 +463,11 @@ extern "C" int scummvm_main(int argc, const char * const argv[]) {
 	if (Base::processSettings(command, settings, res)) {
 		if (res.getCode() != Common::kNoError)
 			warning("%s", res.getDesc().c_str());
+
+		PluginManager::instance().unloadDetectionPlugin();
+		PluginManager::instance().unloadAllPlugins();
+		PluginManager::destroy();
+
 		return res.getCode();
 	}
 

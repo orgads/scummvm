@@ -229,7 +229,6 @@ _as="as"
 _dwp=dwp
 _windres=windres
 _stagingpath="staging"
-_win32path="c:/scummvm"
 _amigaospath="install"
 _morphospath="PROGDIR:"
 _staticlibpath=
@@ -2359,11 +2358,11 @@ fi
 #
 echo_n "Checking endianness... "
 cat > tmp_endianness_check.cpp << EOF
-unsigned short ascii_mm[] = { 0x4249, 0x4765, 0x6E44, 0x6961, 0x6E53, 0x7953, 0 };
-unsigned short ascii_ii[] = { 0x694C, 0x5454, 0x656C, 0x6E45, 0x6944, 0x6E61, 0 };
+__attribute__ ((used)) unsigned short ascii_mm[] = { 0x4249, 0x4765, 0x6E44, 0x6961, 0x6E53, 0x7953, 0 };
+__attribute__ ((used)) unsigned short ascii_ii[] = { 0x694C, 0x5454, 0x656C, 0x6E45, 0x6944, 0x6E61, 0 };
 const char * _ascii() { char* s = (char*) ascii_mm; s = (char*) ascii_ii; return s; }
-unsigned short ebcdic_ii[] = { 0x89D3, 0xE3E3, 0x8593, 0x95C5, 0x89C4, 0x9581, 0 };
-unsigned short ebcdic_mm[] = { 0xC2C9, 0xC785, 0x95C4, 0x8981, 0x95E2, 0xA8E2, 0 };
+__attribute__ ((used)) unsigned short ebcdic_ii[] = { 0x89D3, 0xE3E3, 0x8593, 0x95C5, 0x89C4, 0x9581, 0 };
+__attribute__ ((used)) unsigned short ebcdic_mm[] = { 0xC2C9, 0xC785, 0x95C4, 0x8981, 0x95E2, 0xA8E2, 0 };
 const char * _ebcdic() { char* s = (char*) ebcdic_mm; s = (char*) ebcdic_ii; return s; }
 int main() { _ascii (); _ebcdic (); return 0; }
 EOF
@@ -5468,6 +5467,19 @@ define_in_config_if_yes "$_opengl_game_classic" "USE_OPENGL_GAME"
 define_in_config_if_yes "$_opengl_game_shaders" "USE_OPENGL_SHADERS"
 define_in_config_if_yes "$_opengl_game_es2" "USE_GLES2"
 
+if test "$_dynamic_modules" = yes ; then
+	case $_host_os in
+		amigaos*)
+			# miniGL on AmigaOS is a static library so don't link with it in plugins
+			# instead link against it and include all symbols
+			append_var LIBS "-Wl,-whole-archive $LIBS_3D -Wl,-no-whole-archive"
+			LIBS_3D=
+			;;
+		*)
+			;;
+	esac
+fi
+
 # If we have OpenGL libraries, then add them to plugins
 # so they could link
 if test -n "$LIBS_3D" ; then
@@ -6108,7 +6120,6 @@ DWP := $_dwp
 WINDRES := $_windres
 WINDRESFLAGS := $WINDRESFLAGS
 STAGINGPATH=$_stagingpath
-WIN32PATH=$_win32path
 AMIGAOSPATH=$_amigaospath
 MORPHOSPATH=$_morphospath
 STATICLIBPATH=$_staticlibpath

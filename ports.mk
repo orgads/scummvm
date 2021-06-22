@@ -5,9 +5,7 @@
 #
 # POSIX specific
 #
-install:
-	$(INSTALL) -d "$(DESTDIR)$(bindir)"
-	$(INSTALL) -c -m 755 "./$(EXECUTABLE)" "$(DESTDIR)$(bindir)/$(EXECUTABLE)"
+install-data:
 	$(INSTALL) -d "$(DESTDIR)$(mandir)/man6/"
 	$(INSTALL) -c -m 644 "$(srcdir)/dists/scummvm.6" "$(DESTDIR)$(mandir)/man6/scummvm.6"
 	$(INSTALL) -d "$(DESTDIR)$(datarootdir)/pixmaps/"
@@ -26,32 +24,18 @@ ifneq ($(DIST_FILES_SHADERS),)
 	$(INSTALL) -d "$(DESTDIR)$(datadir)/shaders"
 	$(INSTALL) -c -m 644 $(DIST_FILES_SHADERS) "$(DESTDIR)$(datadir)/shaders"
 endif
+
+install: install-data
+	$(INSTALL) -d "$(DESTDIR)$(bindir)"
+	$(INSTALL) -c -m 755 "./$(EXECUTABLE)" "$(DESTDIR)$(bindir)/$(EXECUTABLE)"
 ifdef DYNAMIC_MODULES
 	$(INSTALL) -d "$(DESTDIR)$(libdir)/scummvm/"
 	$(INSTALL) -c -m 644 $(PLUGINS) "$(DESTDIR)$(libdir)/scummvm/"
 endif
 
-install-strip:
+install-strip: install-data
 	$(INSTALL) -d "$(DESTDIR)$(bindir)"
 	$(INSTALL) -c -s -m 755 "./$(EXECUTABLE)" "$(DESTDIR)$(bindir)/$(EXECUTABLE)"
-	$(INSTALL) -d "$(DESTDIR)$(mandir)/man6/"
-	$(INSTALL) -c -m 644 "$(srcdir)/dists/scummvm.6" "$(DESTDIR)$(mandir)/man6/scummvm.6"
-	$(INSTALL) -d "$(DESTDIR)$(datarootdir)/pixmaps/"
-	$(INSTALL) -c -m 644 "$(srcdir)/icons/scummvm.xpm" "$(DESTDIR)$(datarootdir)/pixmaps/scummvm.xpm"
-	$(INSTALL) -d "$(DESTDIR)$(datarootdir)/icons/hicolor/scalable/apps/"
-	$(INSTALL) -c -m 644 "$(srcdir)/icons/scummvm.svg" "$(DESTDIR)$(datarootdir)/icons/hicolor/scalable/apps/scummvm.svg"
-	$(INSTALL) -d "$(DESTDIR)$(docdir)"
-	$(INSTALL) -c -m 644 $(DIST_FILES_DOCS) "$(DESTDIR)$(docdir)"
-	$(INSTALL) -d "$(DESTDIR)$(datadir)"
-	$(INSTALL) -c -m 644 $(DIST_FILES_THEMES) $(DIST_FILES_NETWORKING) $(DIST_FILES_VKEYBD) $(DIST_FILES_ENGINEDATA) "$(DESTDIR)$(datadir)/"
-	$(INSTALL) -d "$(DESTDIR)$(datarootdir)/applications"
-	$(INSTALL) -c -m 644 "$(srcdir)/dists/scummvm.desktop" "$(DESTDIR)$(datarootdir)/applications/scummvm.desktop"
-	$(INSTALL) -d "$(DESTDIR)$(datarootdir)/metainfo"
-	$(INSTALL) -c -m 644 "$(srcdir)/dists/scummvm.appdata.xml" "$(DESTDIR)$(datarootdir)/metainfo/scummvm.appdata.xml"
-ifneq ($(DIST_FILES_SHADERS),)
-	$(INSTALL) -d "$(DESTDIR)$(datadir)/shaders"
-	$(INSTALL) -c -m 644 $(DIST_FILES_SHADERS) "$(DESTDIR)$(datadir)/shaders"
-endif
 ifdef DYNAMIC_MODULES
 	$(INSTALL) -d "$(DESTDIR)$(libdir)/scummvm/"
 	$(INSTALL) -c -s -m 644 $(PLUGINS) "$(DESTDIR)$(libdir)/scummvm/"
@@ -182,6 +166,7 @@ ifdef USE_DOCKTILEPLUGIN
 	mkdir -p $(bundle_name)/Contents/PlugIns
 	cp -r scummvm.docktileplugin $(bundle_name)/Contents/PlugIns/
 endif
+	codesign -s - --deep --force $(bundle_name)
 
 ifdef USE_DOCKTILEPLUGIN
 bundle: scummvm-static scummvm.docktileplugin bundle-pack
@@ -204,12 +189,12 @@ ifdef DIST_FILES_VKEYBD
 	cp $(DIST_FILES_VKEYBD) $(bundle_name)/
 endif
 	$(STRIP) scummvm
-	ldid -S scummvm
 	chmod 755 scummvm
 	cp scummvm $(bundle_name)/ScummVM
 	cp $(srcdir)/dists/iphone/icon.png $(bundle_name)/
 	cp $(srcdir)/dists/iphone/icon-72.png $(bundle_name)/
 	cp $(srcdir)/dists/iphone/Default.png $(bundle_name)/
+	codesign -s - --deep --force $(bundle_name)
 
 ios7bundle: iphone
 	mkdir -p $(bundle_name)
@@ -319,7 +304,6 @@ ifdef DIST_FILES_VKEYBD
 	cp $(DIST_FILES_VKEYBD) $(bundle_name)/
 endif
 	$(STRIP) scummvm
-	ldid -S scummvm
 	chmod 755 scummvm
 	cp scummvm $(bundle_name)/ScummVM
 	cp $(srcdir)/dists/ios7/Images.xcassets/AppIcon.appiconset/icon4-29@2x.png $(bundle_name)/AppIcon29x29@2x.png
@@ -343,6 +327,7 @@ endif
 	cp $(srcdir)/dists/ios7/Images.xcassets/LaunchImage.launchimage/ScummVM-splash-1242x2208.png $(bundle_name)/LaunchImage-800-Portrait-736h@3x.png
 	cp $(srcdir)/dists/ios7/Images.xcassets/LaunchImage.launchimage/ScummVM-splash-2208x1242.png $(bundle_name)/LaunchImage-800-Landscape-736h@3x.png
 	cp $(srcdir)/dists/ios7/Images.xcassets/LaunchImage.launchimage/ScummVM-splash-750x1334.png $(bundle_name)/LaunchImage-800-667h@2x.png
+	codesign -s - --deep --force $(bundle_name)
 
 
 ifndef WITHOUT_SDL

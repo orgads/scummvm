@@ -78,7 +78,7 @@ struct LegacyGraphicsMode {
 };
 
 // Table for using old names for scalers in the configuration
-// to keep compatibiblity with old config files.
+// to keep compatibility with old config files.
 static const LegacyGraphicsMode s_legacyGraphicsModes[] = {
 	{ "supereagle2x", "supereagle" },
 	{ "dotmatrix2x", "dotmatrix" },
@@ -111,6 +111,10 @@ OSystem_SDL::OSystem_SDL()
 
 OSystem_SDL::~OSystem_SDL() {
 	SDL_ShowCursor(SDL_ENABLE);
+
+#ifdef USE_OPENGL
+	clearGraphicsModes();
+#endif
 
 	// Delete the various managers here. Note that the ModularBackend
 	// destructors would also take care of this for us. However, various
@@ -284,7 +288,7 @@ void OSystem_SDL::initBackend() {
 		// subclass does not want any switching of graphics managers anyway.
 		setupGraphicsModes();
 
-		if (ConfMan.hasKey("gfx_mode")) {
+		if (!ConfMan.get("gfx_mode").empty()) {
 			// If the gfx_mode is from OpenGL, create the OpenGL graphics manager
 			Common::String gfxMode(ConfMan.get("gfx_mode"));
 			for (uint i = _firstGLMode; i < _graphicsModeIds.size(); ++i) {
@@ -848,7 +852,7 @@ int OSystem_SDL::getGraphicsMode() const {
 }
 
 void OSystem_SDL::setupGraphicsModes() {
-	_graphicsModes.clear();
+	clearGraphicsModes();
 	_graphicsModeIds.clear();
 	_defaultSDLMode = _defaultGLMode = -1;
 
@@ -857,13 +861,18 @@ void OSystem_SDL::setupGraphicsModes() {
 	int defaultMode;
 
 	GraphicsManager *manager = new SurfaceSdlGraphicsManager(_eventSource, _window);
-	srcMode = manager->getSupportedGraphicsModes();
 	defaultMode = manager->getDefaultGraphicsMode();
+	srcMode = manager->getSupportedGraphicsModes();
 	while (srcMode->name) {
 		if (defaultMode == srcMode->id) {
 			_defaultSDLMode = _graphicsModes.size();
 		}
-		_graphicsModes.push_back(*srcMode);
+		OSystem::GraphicsMode mode = *srcMode;
+		// Do deep copy as we are going to delete the GraphicsManager and this may free
+		// the memory used for its graphics modes.
+		mode.name = scumm_strdup(srcMode->name);
+		mode.description = scumm_strdup(srcMode->description);
+		_graphicsModes.push_back(mode);
 		srcMode++;
 	}
 	delete manager;
@@ -877,11 +886,15 @@ void OSystem_SDL::setupGraphicsModes() {
 		if (defaultMode == srcMode->id) {
 			_defaultGLMode = _graphicsModes.size();
 		}
-		_graphicsModes.push_back(*srcMode);
+		OSystem::GraphicsMode mode = *srcMode;
+		// Do deep copy as we are going to delete the GraphicsManager and this may free
+		// the memory used for its graphics modes.
+		mode.name = scumm_strdup(srcMode->name);
+		mode.description = scumm_strdup(srcMode->description);
+		_graphicsModes.push_back(mode);
 		srcMode++;
 	}
 	delete manager;
-	manager = nullptr;
 	assert(_defaultGLMode != -1);
 
 	// Set a null mode at the end
@@ -898,5 +911,16 @@ void OSystem_SDL::setupGraphicsModes() {
 		mode++;
 	}
 }
-#endif
 
+void OSystem_SDL::clearGraphicsModes() {
+	if (!_graphicsModes.empty()) {
+		OSystem::GraphicsMode *mode = _graphicsModes.begin();
+		while (mode->name) {
+			free(const_cast<char *>(mode->name));
+			free(const_cast<char *>(mode->description));
+			mode++;
+		}
+		_graphicsModes.clear();
+	}
+}
+#endif

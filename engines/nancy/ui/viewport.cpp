@@ -58,7 +58,9 @@ void Viewport::handleInput(NancyInput &input) {
 	byte direction = 0;
 
 	// Make cursor sticky when scrolling the viewport
-	if (input.input & (NancyInput::kLeftMouseButton | NancyInput::kRightMouseButton) && _stickyCursorPos.x > -1) {
+	if (	g_nancy->getGameType() != kGameTypeVampire &&
+			input.input & (NancyInput::kLeftMouseButton | NancyInput::kRightMouseButton)
+			&& _stickyCursorPos.x > -1) {
 		g_system->warpMouse(_stickyCursorPos.x, _stickyCursorPos.y);
 		input.mousePos = _stickyCursorPos;
 	}
@@ -197,12 +199,24 @@ void Viewport::loadVideo(const Common::String &filename, uint frameNr, uint vert
 
 	if (palette.size()) {
 		GraphicsManager::loadSurfacePalette(_drawSurface, palette);
-		GraphicsManager::loadSurfacePalette(_fullFrame, palette);
+		_fullFrame.setPalette(_drawSurface.getPalette(), 0, 256);
 	}
 
 	_movementLastFrame = 0;
 	_nextMovementTime = 0;
 	_dontWrap = dontWrap;
+}
+
+void Viewport::setPalette(const Common::String &paletteName) {
+	GraphicsManager::loadSurfacePalette(_drawSurface, paletteName);
+	_fullFrame.setPalette(_drawSurface.getPalette(), 0, 256);
+	_needsRedraw = true;
+}
+
+void Viewport::setPalette(const Common::String &paletteName, uint paletteStart, uint paletteSize) {
+	GraphicsManager::loadSurfacePalette(_drawSurface, paletteName, paletteStart, paletteSize);
+	_fullFrame.setPalette(_drawSurface.getPalette(), 0, 256);
+	_needsRedraw = true;
 }
 
 void Viewport::setFrame(uint frameNr) {

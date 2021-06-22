@@ -28,6 +28,7 @@
 #include "common/textconsole.h"
 #include "common/translation.h"
 #ifdef ENABLE_SCI32
+#include "common/installshield_cab.h"
 #include "common/memstream.h"
 #endif
 
@@ -266,7 +267,6 @@ ResourceSource::~ResourceSource() {
 MacResourceForkResourceSource::MacResourceForkResourceSource(const Common::String &name, int volNum)
  : ResourceSource(kSourceMacResourceFork, name, volNum) {
 	_macResMan = new Common::MacResManager();
-	assert(_macResMan);
 }
 
 MacResourceForkResourceSource::~MacResourceForkResourceSource() {
@@ -731,6 +731,18 @@ int ResourceManager::addAppropriateSources() {
 
 	if (Common::File::exists("altres.map"))
 		addSource(new VolumeResourceSource("altres.000", addExternalMap("altres.map"), 0));
+
+#ifdef ENABLE_SCI32
+	// Some LSL7 Polish CDs have all of the patch files in InstallShield cabinet files
+	//  (data1.cab/hdr) while the rest of the game is in normal SCI files. Trac #10066
+	if (g_sci &&
+		g_sci->getGameId() == GID_LSL7 && g_sci->getLanguage() == Common::PL_POL) {
+		Common::Archive *archive = Common::makeInstallShieldArchive("data");
+		if (archive != nullptr) {
+			SearchMan.add("data1.cab", archive);
+		}
+	}
+#endif
 
 	return 1;
 }
@@ -1711,9 +1723,7 @@ void ResourceManager::readResourcePatchesBase36() {
 	// whereas sync36 start with a '#'. Mac versions begin with 'A' (probably meaning AIFF). Torin
 	// has several that begin with 'B'.
 
-	Common::String name, inputName;
 	Common::ArchiveMemberList files;
-	ResourceSource *psrcPatch;
 
 	for (int i = kResourceTypeAudio36; i <= kResourceTypeSync36; ++i) {
 		files.clear();
@@ -1733,7 +1743,7 @@ void ResourceManager::readResourcePatchesBase36() {
 		}
 
 		for (Common::ArchiveMemberList::const_iterator x = files.begin(); x != files.end(); ++x) {
-			name = (*x)->getName();
+			Common::String name = (*x)->getName();
 			name.toUppercase();
 
 			// The S/T prefixes often conflict with non-patch files and generate
@@ -1774,7 +1784,7 @@ void ResourceManager::readResourcePatchesBase36() {
 				delete stream;
 			}
 
-			psrcPatch = new PatchResourceSource(name);
+			ResourceSource *psrcPatch = new PatchResourceSource(name);
 			processPatch(psrcPatch, (ResourceType)i, resource36.getNumber(), resource36.getTuple());
 		}
 	}

@@ -399,7 +399,7 @@ bool ScummEngine::loadState(int slot, bool compat, Common::String &filename) {
 	// Thus, we should probably not stop music when restoring from one of
 	// these saves. This change stops the Mole Man theme from going quiet in
 	// Sam & Max when Doug tells you about the Ball of Twine, as mentioned in
-	// patch #886058.
+	// patch #8316.
 	//
 	// If we don't have iMUSE at all we may as well stop the sounds. The previous
 	// default behavior here was to stopAllSounds on all state restores.
@@ -465,7 +465,7 @@ bool ScummEngine::loadState(int slot, bool compat, Common::String &filename) {
 	if (_screenTop < 0)
 		_screenTop = 0;
 
-	// WORKAROUND bug #795214: For unknown reasons, object 819 sometimes is in
+	// WORKAROUND bug #1191: For unknown reasons, object 819 sometimes is in
 	// state 1 in old save games, implying it should be drawn. This in turn
 	// results in a crash when entering the church, as object 819 is part of the
 	// exitof the church and there are no graphics assigned to it.
@@ -555,6 +555,8 @@ bool ScummEngine::loadState(int slot, bool compat, Common::String &filename) {
 
 	// Reset charset mask
 	_charset->_hasMask = false;
+	if (_macScreen)
+		_macScreen->fillRect(Common::Rect(_macScreen->w, _macScreen->h), 0);
 	clearTextSurface();
 
 	_lastCodePtr = NULL;
@@ -814,8 +816,8 @@ static void syncWithSerializer(Common::Serializer &s, ObjectData &od) {
 	s.syncAsByte(od.flags, VER(46));
 }
 
-static void syncWithSerializer(Common::Serializer &s, VerbSlot &vs) {
-	s.syncAsSint16LE(vs.origLeft, VER(8));
+static void syncWithSerializer(Common::Serializer &s, VerbSlot &vs, bool isISR) {
+	s.syncAsSint16LE(!isISR ? vs.curRect.left : vs.origLeft, VER(8));
 	s.syncAsSint16LE(vs.curRect.top, VER(8));
 	s.syncAsSint16LE(vs.curRect.right, VER(8));
 	s.syncAsSint16LE(vs.curRect.bottom, VER(8));
@@ -837,8 +839,16 @@ static void syncWithSerializer(Common::Serializer &s, VerbSlot &vs) {
 	s.syncAsByte(vs.center, VER(8));
 	s.syncAsByte(vs.prep, VER(8));
 	s.syncAsUint16LE(vs.imgindex, VER(8));
-	if (s.isLoading() && s.getVersion() >= 8)
+	if (isISR && s.isLoading() && s.getVersion() >= 8)
 		vs.curRect.left = vs.origLeft;
+}
+
+static void syncWithSerializerNonISR(Common::Serializer &s, VerbSlot &vs) {
+	syncWithSerializer(s, vs, false);
+}
+
+static void syncWithSerializerISR(Common::Serializer &s, VerbSlot &vs) {
+	syncWithSerializer(s, vs, true);
 }
 
 static void syncWithSerializer(Common::Serializer &s, ScriptSlot &ss) {
@@ -1224,7 +1234,7 @@ void ScummEngine::saveLoadWithSerializer(Common::Serializer &s) {
 	//
 	// Save/load misc stuff
 	//
-	s.syncArray(_verbs, _numVerbs, syncWithSerializer);
+	s.syncArray(_verbs, _numVerbs, _language != Common::HE_ISR ? syncWithSerializerNonISR : syncWithSerializerISR);
 	s.syncArray(vm.nest, 16, syncWithSerializer);
 	s.syncArray(_sentence, 6, syncWithSerializer);
 	s.syncArray(_string, 6, syncWithSerializer);
@@ -1474,7 +1484,7 @@ void ScummEngine::saveLoadWithSerializer(Common::Serializer &s) {
 		syncWithSerializer(s, info);
 		// If we are loading, and the music being loaded was supposed to loop
 		// forever, then resume playing it. This helps a lot when the audio CD
-		// is used to provide ambient music (see bug #788195).
+		// is used to provide ambient music (see bug #1150).
 		if (s.isLoading() && info.playing && info.numLoops < 0)
 			_sound->playCDTrackInternal(info.track, info.numLoops, info.start, info.duration);
 	}
@@ -1705,7 +1715,7 @@ void ScummEngine::loadResourceOLD(Common::Serializer &ser, ResType type, ResId i
 			}
 			if (type == rtObjectName && ser.getVersion() >= VER(25)) {
 				// Paranoia: We increased the possible number of new names
-				// to fix bugs #933610 and #936323. The savegame format
+				// to fix bugs #1591 and #1600. The savegame format
 				// didn't change, but at least during the transition
 				// period there is a slight chance that we try to load
 				// more names than we have allocated space for. If so,

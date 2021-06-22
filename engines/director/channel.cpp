@@ -30,6 +30,7 @@
 #include "director/castmember.h"
 
 #include "graphics/macgui/mactext.h"
+#include "graphics/macgui/macbutton.h"
 
 namespace Director {
 
@@ -308,19 +309,45 @@ void Channel::setClean(Sprite *nextSprite, int spriteId, bool partial) {
 	}
 
 	setEditable(_sprite->_editable);
+	updateGlobalAttr();
 
 	_dirty = false;
 }
 
 void Channel::setEditable(bool editable) {
 	if (_sprite->_cast && _sprite->_cast->_type == kCastText) {
+		// if the sprite is editable, then we refresh the selEnd and setStart
+		if (_sprite->_cast->isEditable() == editable)
+			return;
 		_sprite->_cast->setEditable(editable);
 
 		if (_widget) {
-			_widget->_editable = editable;
-			g_director->_wm->setActiveWidget(_widget);
+			// since this method may called after the widget is created
+			// so we better also set the attributes which may affected by editable
+			((Graphics::MacText *)_widget)->_focusable = editable;
+			((Graphics::MacText *)_widget)->setEditable(editable);
+			((Graphics::MacText *)_widget)->_selectable = editable;
+			// we only set the first editable text member in score active
+			if (editable) {
+				Graphics::MacWidget *activewidget = g_director->_wm->getActiveWidget();
+				if (activewidget == nullptr || !activewidget->isEditable())
+					g_director->_wm->setActiveWidget(_widget);
+			}
 		}
 	}
+}
+
+// we may optimize this by only update those attributes when we are changing them
+// but not to pass them to widgets everytime
+void Channel::updateGlobalAttr() {
+	if (!_sprite->_cast)
+		return;
+	// update text info, including selEnd and selStart
+	if (_sprite->_cast->_type == kCastText && _sprite->_editable && _widget)
+		((Graphics::MacText *)_widget)->setSelRange(g_director->getCurrentMovie()->_selStart, g_director->getCurrentMovie()->_selEnd);
+	// update button info, including checkBoxType
+	if (_sprite->_cast->_type == kCastButton && _widget)
+		((Graphics::MacButton *)_widget)->setCheckBoxType(g_director->getCurrentMovie()->_checkBoxType);
 }
 
 void Channel::replaceSprite(Sprite *nextSprite) {
@@ -365,6 +392,8 @@ void Channel::setBbox(int l, int t, int r, int b) {
 	}
 }
 
+// currently, when we are setting hilite, we delete the widget and the re-create it
+// so we may optimize this if this operation takes much time
 void Channel::replaceWidget() {
 	if (_widget) {
 		delete _widget;
@@ -375,12 +404,13 @@ void Channel::replaceWidget() {
 		Common::Rect bbox(getBbox());
 		_sprite->_cast->_modified = false;
 
+//		if (_sprite->_cast->_type == kCastText)
+//			debug("%s %d\n", ((TextCastMember *)_sprite->_cast)->_ftext.c_str(), ((TextCastMember *)_sprite->_cast)->_editable);
 		_widget = _sprite->_cast->createWidget(bbox, this);
 		if (_widget) {
 			_widget->_priority = _priority;
 			_widget->draw();
 
-			// HACK: Account for the added dimensions for borders, etc.
 			if (_sprite->_cast->_type == kCastText || _sprite->_cast->_type == kCastButton) {
 				_sprite->_width = _widget->_dims.width();
 				_sprite->_height = _widget->_dims.height();

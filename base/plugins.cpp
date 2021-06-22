@@ -24,6 +24,7 @@
 
 #include "common/func.h"
 #include "common/debug.h"
+#include "common/debug-channels.h"
 #include "common/config-manager.h"
 
 #ifdef DYNAMIC_MODULES
@@ -31,6 +32,8 @@
 #endif
 
 #include "base/detection/detection.h"
+
+#include "engines/advancedDetector.h"
 
 // Plugin versioning
 
@@ -544,6 +547,22 @@ void PluginManager::loadAllPlugins() {
 		PluginList pl((*pp)->getPlugins());
 		Common::for_each(pl.begin(), pl.end(), Common::bind1st(Common::mem_fun(&PluginManager::tryLoadPlugin), this));
 	}
+
+#ifndef DETECTION_STATIC
+	/*
+	 * When detection is dynamic, loading above only gets us a PLUGIN_TYPE_DETECTION plugin
+	 * We must register all plugins linked in it in order to use them
+	 */
+	PluginList dpl = getPlugins(PLUGIN_TYPE_DETECTION);
+	_pluginsInMem[PLUGIN_TYPE_ENGINE_DETECTION].clear();
+	for (PluginList::iterator it = dpl.begin();
+	                            it != dpl.end();
+	                            ++it) {
+		const Detection &detectionConnect = (*it)->get<Detection>();
+		const PluginList &pl = detectionConnect.getPlugins();
+		Common::for_each(pl.begin(), pl.end(), Common::bind1st(Common::mem_fun(&PluginManager::tryLoadPlugin), this));
+	}
+#endif
 }
 
 void PluginManager::loadAllPluginsOfType(PluginType type) {
@@ -622,6 +641,7 @@ void PluginManager::addToPluginsInMemList(Plugin *plugin) {
 		if (!strcmp(plugin->getName(), (*pl)->getName())) {
 			// Found a duplicated module. Replace the old one.
 			found = true;
+			(*pl)->unloadPlugin();
 			delete *pl;
 			*pl = plugin;
 			debug(1, "Replaced the duplicated plugin: '%s'", plugin->getName());
@@ -658,6 +678,7 @@ QualifiedGameList EngineManager::findGamesMatching(const Common::String &engineI
 		const Plugin *p = EngineMan.findPlugin(engineId);
 		if (p) {
 			const MetaEngineDetection &engine = p->get<MetaEngineDetection>();
+			DebugMan.addAllDebugChannels(engine.getDebugChannels());
 
 			PlainGameDescriptor pluginResult = engine.findGame(gameId.c_str());
 			if (pluginResult.gameId) {
@@ -687,6 +708,7 @@ QualifiedGameList EngineManager::findGameInLoadedPlugins(const Common::String &g
 
 	for (iter = plugins.begin(); iter != plugins.end(); ++iter) {
 		const MetaEngineDetection &engine = (*iter)->get<MetaEngineDetection>();
+		DebugMan.addAllDebugChannels(engine.getDebugChannels());
 		PlainGameDescriptor pluginResult = engine.findGame(gameId.c_str());
 
 		if (pluginResult.gameId) {
@@ -706,10 +728,15 @@ DetectionResults EngineManager::detectGames(const Common::FSList &fslist) const 
 	// run detection for all of them.
 	plugins = getPlugins(PLUGIN_TYPE_ENGINE_DETECTION);
 
+	// Clear md5 cache before each detection starts, just in case.
+	MD5Man.clear();
+
 	// Iterate over all known games and for each check if it might be
 	// the game in the presented directory.
 	for (iter = plugins.begin(); iter != plugins.end(); ++iter) {
 		const MetaEngineDetection &metaEngine = (*iter)->get<MetaEngineDetection>();
+		// set the debug flags
+		DebugMan.addAllDebugChannels(metaEngine.getDebugChannels());
 		DetectedGames engineCandidates = metaEngine.detectGames(fslist);
 
 		for (uint i = 0; i < engineCandidates.size(); i++) {
@@ -840,6 +867,7 @@ QualifiedGameDescriptor EngineManager::findTarget(const Common::String &target, 
 
 	// Make sure it does support the game ID
 	const MetaEngineDetection &engine = foundPlugin->get<MetaEngineDetection>();
+	DebugMan.addAllDebugChannels(engine.getDebugChannels());
 	PlainGameDescriptor desc = engine.findGame(domain->getVal("gameid").c_str());
 	if (!desc.gameId) {
 		return QualifiedGameDescriptor();
@@ -905,6 +933,8 @@ void EngineManager::upgradeTargetForEngineId(const Common::String &target) const
 
 		// Take the first detection entry
 		const MetaEngineDetection &metaEngine = plugin->get<MetaEngineDetection>();
+		// set debug flags before call detectGames
+		DebugMan.addAllDebugChannels(metaEngine.getDebugChannels());
 		DetectedGames candidates = metaEngine.detectGames(files);
 		if (candidates.empty()) {
 			warning("No games supported by the engine '%s' were found in path '%s' when upgrading target '%s'",

@@ -123,6 +123,14 @@ public:
 		setMana(getMaxEnergy());
 	}
 
+	void setShieldType(uint16 shieldtype) {
+		_shieldType = shieldtype;
+	}
+
+	uint16 getShieldType() {
+		return _shieldType;
+	}
+
 	bool hasKeycard(int num) const;
 	void addKeycard(int bitno);
 
@@ -134,16 +142,16 @@ public:
 		return _activeInvItem;
 	}
 
-	//!< Swap to the next active weapon (in Crusader)
+	//! Swap to the next active weapon (Crusader)
 	void nextWeapon();
 
-	//!< Swap to the next inventory item (in Crusader)
+	//! Swap to the next inventory item (Crusader)
 	void nextInvItem();
 
 	//! Check if we can absorb a hit with the shield. Returns the modified damage value.
 	int receiveShieldHit(int damage, uint16 damage_type) override;
 
-	//! Detonate used bomb
+	//! Detonate used bomb (Crusader)
 	void detonateBomb();
 
 	bool loadData(Common::ReadStream *rs, uint32 version);
@@ -184,7 +192,9 @@ protected:
 
 	Std::string _name;
 
+	//! Process for a shield zap animation sprite
 	uint16 _shieldSpriteProc;
+	//! Type of shield (only used in Crusader)
 	uint16 _shieldType;
 
 	static ShapeInfo *_kneelingShapeInfo;

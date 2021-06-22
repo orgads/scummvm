@@ -241,6 +241,27 @@ AGS
    * - Berian Williams
      - AgsCreditz
 
+Asylum
+^^^^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - Alex Bevilacqua
+     -
+   * - Alex Fontoura
+     -
+   * - Alexander Panov
+     -
+   * - Benjamin Haisch
+     -
+   * - Filippos Karapetis
+     -
+   * - Joseph Davies
+     -
+   * - Julien Templier
+     -
+
 Avalanche
 ^^^^^^^^^
 
@@ -1101,6 +1122,21 @@ Touché
    * - Gregory Montoir
      - (retired)
 
+Trecision
+^^^^^^^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - Daniel Albano
+     -
+   * - Arnaud Boutonné
+     -
+   * - Thomas Fach-Pedersen
+     - Smacker video support
+   * - Filippos Karapetis
+     -
+
 TsAGE
 ^^^^^
 
@@ -1590,6 +1626,8 @@ Documentation
      - Numerous contributions to documentation (retired)
    * - Matthew Hoops
      - Numerous contributions to documentation (retired)
+   * - Cadi Howley
+     - User documentation (GSOD 2020)
 
 Retired Team Members
 ********************
@@ -1970,7 +2008,7 @@ Portuguese
 .. list-table::
    :widths: 35 65
 
-   * - Daniel
+   * - Daniel Albano
      -
 
 Russian
@@ -2466,4 +2504,6 @@ Tim Schafer, for obvious reasons, and everybody else who helped make Grim Fandan
 Bret Mogilefsky, for managing to create a SPUTM-style 3D LUA engine, and avoiding the horrible hack it could have been.
 
 Benjamin Haisch, for emimeshviewer, which our EMI code borrows heavily from.
+
+Fabrizio Lagorio from Trecision S.p.A., for finding and providing the source code of many of their games.
 

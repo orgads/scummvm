@@ -41,13 +41,6 @@ static LureEngine *int_engine = NULL;
 
 LureEngine::LureEngine(OSystem *system, const LureGameDescription *gameDesc)
 	: Engine(system), _gameDescription(gameDesc), _rnd("lure") {
-
-	DebugMan.addDebugChannel(kLureDebugScripts, "scripts", "Scripts debugging");
-	DebugMan.addDebugChannel(kLureDebugAnimations, "animations", "Animations debugging");
-	DebugMan.addDebugChannel(kLureDebugHotspots, "hotspots", "Hotspots debugging");
-	DebugMan.addDebugChannel(kLureDebugFights, "fights", "Fights debugging");
-	DebugMan.addDebugChannel(kLureDebugSounds, "sounds", "Sounds debugging");
-	DebugMan.addDebugChannel(kLureDebugStrings, "strings", "Strings debugging");
 }
 
 Common::Error LureEngine::init() {
@@ -100,9 +93,6 @@ Common::Error LureEngine::init() {
 }
 
 LureEngine::~LureEngine() {
-	// Remove all of our debug levels here
-	DebugMan.clearAllDebugChannels();
-
 	if (_initialized) {
 		// Delete and deinitialize subsystems
 		Surface::deinitialize();

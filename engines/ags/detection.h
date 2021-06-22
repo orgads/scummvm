@@ -27,6 +27,14 @@
 
 namespace AGS {
 
+enum AGSDebugChannels {
+	kDebugGraphics = 1 << 0,
+	kDebugPath     = 1 << 1,
+	kDebugScan     = 1 << 2,
+	kDebugFilePath = 1 << 3,
+	kDebugScript   = 1 << 4
+};
+
 struct PluginVersion {
 	const char *_plugin;
 	int _version;
@@ -53,6 +61,8 @@ class AGSMetaEngineDetection : public AdvancedMetaEngineDetection {
 	mutable Common::String _filename;
 	mutable Common::String _md5;
 
+	static const DebugChannelDef debugFlagList[];
+
 public:
 	AGSMetaEngineDetection();
 	~AGSMetaEngineDetection() override {}
@@ -69,9 +79,13 @@ public:
 		return "AGS Engine (C) Chris Jones";
 	}
 
+	const DebugChannelDef *getDebugChannels() const override {
+		return debugFlagList;
+	}
+
 	DetectedGames detectGames(const Common::FSList &fslist) const override;
 
-	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist) const override;
+	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra = nullptr) const override;
 
 	bool canPlayUnknownVariants() const override {
 		return true;

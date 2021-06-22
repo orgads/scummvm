@@ -63,15 +63,21 @@ void Scene::SceneSummary::read(Common::SeekableReadStream &stream) {
 
 	// Load the palette data in The Vampire Diaries
 	ser.skip(4, kGameTypeVampire, kGameTypeVampire);
-	ser.syncBytes((byte *)buf, 10, kGameTypeVampire, kGameTypeVampire);
-	videoPaletteFile = buf;
-	ser.skip(0x14, kGameTypeVampire, kGameTypeVampire);
+	if (ser.getVersion() == kGameTypeVampire) {
+		palettes.resize(3);
+		readFilename(stream, palettes[0]);
+		readFilename(stream, palettes[1]);
+		readFilename(stream, palettes[2]);
+	}
 
 	sound.read(stream, SoundDescription::kScene);
 
 	ser.skip(6);
-	ser.syncAsByte(dontWrap);
-	ser.skip(9);
+	ser.syncAsUint16LE(dontWrap);
+	ser.syncAsUint16LE(soundWrapAroundPan);
+	ser.syncAsUint16LE(soundPanPerFrame);
+	ser.syncAsUint16LE(totalViewAngle);
+	ser.syncAsUint16LE(horizontalScrollDelta);
 	ser.syncAsUint16LE(verticalScrollDelta);
 	ser.syncAsUint16LE(horizontalEdgeSize);
 	ser.syncAsUint16LE(verticalEdgeSize);
@@ -125,6 +131,7 @@ void Scene::process() {
 			g_nancy->_sound->loadSound(_sceneState.summary.sound);
 			g_nancy->_sound->playSound(_sceneState.summary.sound);
 		}
+		run(); // Extra run() call to fix the single frame with a wrong palette in TVD
 		// fall through
 	case kRun:
 		run();
@@ -405,7 +412,7 @@ void Scene::init() {
 	_timers.pushedPlayTime = 0;
 	_timers.timeOfDay = Timers::kDay;
 
-	_sceneState.nextScene.sceneID = g_nancy->_firstSceneID;
+	changeScene(g_nancy->_firstScene);
 
 	Common::SeekableReadStream *chunk = g_nancy->getBootChunkStream("HINT");
 
@@ -430,7 +437,6 @@ void Scene::init() {
 		// Load savefile directly from the launcher
 		int saveSlot = ConfMan.getInt("save_slot");
 		if (saveSlot >= 0 && saveSlot <= g_nancy->getMetaEngine()->getMaximumSaveSlot()) {
-			// Set to Scene but do not do the loading yet
 			g_nancy->loadGameState(saveSlot);
 		}
 	} else {
@@ -476,6 +482,8 @@ void Scene::load() {
 				_sceneState.nextScene.verticalOffset,
 				_sceneState.doNotStartSound == true ? "true" : "false");
 
+	_sceneState.currentScene = _sceneState.nextScene;
+
 	// Search for Action Records, maximum for a scene is 30
 	Common::SeekableReadStream *actionRecordChunk = nullptr;
 
@@ -488,18 +496,15 @@ void Scene::load() {
 	}
 
 	_viewport.loadVideo(_sceneState.summary.videoFile,
-						_sceneState.nextScene.frameID,
-						_sceneState.nextScene.verticalOffset,
+						_sceneState.currentScene.frameID,
+						_sceneState.currentScene.verticalOffset,
 						_sceneState.summary.dontWrap,
 						_sceneState.summary.videoFormat,
-						_sceneState.summary.videoPaletteFile);
+						_sceneState.summary.palettes.size() ? _sceneState.summary.palettes[_sceneState.currentScene.paletteID] : Common::String());
 
 	if (_viewport.getFrameCount() <= 1) {
 		_viewport.disableEdges(kLeft | kRight);
 	}
-
-	_sceneState.currentScene.verticalOffset = _sceneState.nextScene.verticalOffset;
-	_sceneState.currentScene.frameID = _sceneState.nextScene.frameID;
 
 	if (_sceneState.summary.videoFormat == 1) {
 		// TODO
@@ -518,8 +523,8 @@ void Scene::load() {
 		}
 	}
 
-	_sceneState.currentScene = _sceneState.nextScene;
 	_timers.sceneTime = 0;
+	_sceneState.nextScene.paletteID = 0;
 
 	_state = kStartSound;
 }
@@ -567,6 +572,14 @@ void Scene::run() {
 	// Update the UI elements and handle input
 	NancyInput input = g_nancy->_input->getInput();
 	_viewport.handleInput(input);
+	
+	_sceneState.currentScene.verticalOffset = _viewport.getCurVerticalScroll();
+
+	if (_sceneState.currentScene.frameID != _viewport.getCurFrame()) {
+		_sceneState.currentScene.frameID = _viewport.getCurFrame();
+		g_nancy->_sound->calculatePanForAllSounds();
+	}
+
 	_actionManager.handleInput(input);
 	_menuButton->handleInput(input);
 	_helpButton->handleInput(input);
@@ -584,9 +597,6 @@ void Scene::run() {
 		g_nancy->_sound->playSound("GLOB");
 		requestStateChange(NancyState::kHelp);
 	}
-
-	_sceneState.currentScene.frameID = _viewport.getCurFrame();
-	_sceneState.currentScene.verticalOffset = _viewport.getCurVerticalScroll();
 
 	// Handle invisible map button
 	for (uint i = 0; i < ARRAYSIZE(g_nancy->getConstants().mapAccessSceneIDs); ++i) {

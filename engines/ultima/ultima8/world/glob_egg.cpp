@@ -40,18 +40,20 @@ GlobEgg::~GlobEgg() {
 
 
 // Called when an item has entered the fast area
-void GlobEgg::enterFastArea() {
+uint32 GlobEgg::enterFastArea() {
 	uint32 coordmask = ~0x1FFU;
 	unsigned int coordshift = 1;
+	unsigned int offset = 1;
 	if (GAME_IS_CRUSADER) {
 		coordmask = ~0x3FFU;
 		coordshift = 2;
+		offset = 2;
 	}
 
 	// Expand it
 	if (!hasFlags(FLG_FASTAREA)) {
 		const MapGlob *glob = GameData::get_instance()->getGlob(_quality);
-		if (!glob) return;
+		if (!glob) return 0;
 
 		Std::vector<GlobItem>::const_iterator iter;
 		for (iter = glob->_contents.begin(); iter != glob->_contents.end(); ++iter) {
@@ -63,15 +65,15 @@ void GlobEgg::enterFastArea() {
 
 
 			// calculate object's world position
-			int32 itemx = (_x & coordmask) + (globitem.x << coordshift) + 1;
-			int32 itemy = (_y & coordmask) + (globitem.y << coordshift) + 1;
+			int32 itemx = (_x & coordmask) + (globitem.x << coordshift) + offset;
+			int32 itemy = (_y & coordmask) + (globitem.y << coordshift) + offset;
 			int32 itemz = _z + globitem.z;
 
 			item->move(itemx, itemy, itemz);
 		}
 	}
 
-	Item::enterFastArea();
+	return Item::enterFastArea();
 }
 
 void GlobEgg::saveData(Common::WriteStream *ws) {

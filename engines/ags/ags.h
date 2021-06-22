@@ -33,6 +33,7 @@
 #include "engines/savestate.h"
 #include "graphics/surface.h"
 
+#include "ags/detection.h"
 #include "ags/shared/gfx/bitmap.h"
 #include "ags/lib/allegro/system.h"
 #include "ags/engine/util/mutex_std.h"
@@ -43,16 +44,17 @@ class Globals;
 
 namespace AGS {
 
+/**
+ * @defgroup agsengine AGS Engine
+ * @brief Engine to run Adventure Game Studio games.
+ */
+
+/* Synced up to upstream:
+ * "Common: removed unused function"
+ * fc6006ca3375ed19f23c8ef1c0b060af7be273d9
+ */
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 200
-
-enum AGSDebugChannels {
-	kDebugGraphics = 1 << 0,
-	kDebugPath     = 1 << 1,
-	kDebugScan     = 1 << 2,
-	kDebugFilePath = 1 << 3,
-	kDebugScript   = 1 << 4
-};
 
 struct AGSGameDescription;
 struct PluginVersion;
@@ -115,15 +117,20 @@ public:
 	}
 
 	/**
-	 * Setse up the graphics mode
+	 * Returns a pixel format for the given color depth.
 	 */
-	void setGraphicsMode(size_t w, size_t h);
+	bool getPixelFormat(int depth, Graphics::PixelFormat &format) const;
+
+	/**
+	 * Sets up the graphics mode
+	 */
+	void setGraphicsMode(size_t w, size_t h, int depth);
 
 	bool hasFeature(EngineFeature f) const override {
 		return
-			(f == kSupportsLoadingDuringRuntime) ||
-			(f == kSupportsSavingDuringRuntime) ||
-			(f == kSupportsReturnToLauncher);
+		    (f == kSupportsLoadingDuringRuntime) ||
+		    (f == kSupportsSavingDuringRuntime) ||
+		    (f == kSupportsReturnToLauncher);
 	};
 
 	/**

@@ -948,6 +948,21 @@ static const MohawkGameDescription gameDescriptions[] = {
 		0
 	},
 
+	{ // Version 2.0, has lots of additional livingbooks_code
+		{
+			"greeneggs",
+			_s("Missing game code"), // Reason for being unsupported
+			AD_ENTRY1s("Outline", "bca2320b800f616118c2be239628a964", 3022),
+			Common::EN_ANY,
+			Common::kPlatformMacintosh,
+			ADGF_UNSUPPORTED,
+			GUIO1(GUIO_NOASPECT)
+		},
+		GType_LIVINGBOOKSV4,
+		0,
+		0
+	},
+
 	{
 		{
 			"greeneggs",
@@ -2911,6 +2926,70 @@ static const MohawkGameDescription gameDescriptions[] = {
 		GType_LIVINGBOOKSV4,
 		0,
 		0
+	},
+
+	// From sev
+	{
+		{
+			"create",
+			"",
+			AD_ENTRY1s("CREATE.LB", "8a94e13093dd3e2f58c220a1f265a7be", 1217),
+			Common::EN_ANY,
+			Common::kPlatformWindows,
+			ADGF_NO_FLAGS,
+			GUIO1(GUIO_NOASPECT)
+		},
+		GType_LIVINGBOOKSV2,
+		0,
+		0,
+	},
+
+	// From sev
+	{
+		{
+			"create",
+			"Demo",
+			AD_ENTRY1s("CREATED.LB", "86165d80189815ada2abd67e55258486", 826),
+			Common::EN_ANY,
+			Common::kPlatformWindows,
+			ADGF_DEMO,
+			GUIO1(GUIO_NOASPECT)
+		},
+		GType_LIVINGBOOKSV2,
+		0,
+		0,
+	},
+
+	// From sev
+	{
+		{
+			"daniel",
+			"",
+			AD_ENTRY1s("DANIEL.LB", "cdea21d55f0ead70c7990d2f1cfbc160", 1300),
+			Common::EN_ANY,
+			Common::kPlatformWindows,
+			ADGF_NO_FLAGS,
+			GUIO1(GUIO_NOASPECT)
+		},
+		GType_LIVINGBOOKSV2,
+		0,
+		0,
+	},
+
+	// From sev
+	{
+		{
+			"daniel",
+			"Demo",
+			AD_ENTRY1s("DANIELD.LB", "4220631d9f677f694fa9d59a7c242dbe", 651),
+			Common::EN_ANY,
+			Common::kPlatformWindows,
+			ADGF_DEMO,
+			GUIO1(GUIO_NOASPECT)
+		},
+		GType_LIVINGBOOKSV2,
+		0,
+		0,
 	},
 
 	{ AD_TABLE_END_MARKER, 0, 0, 0 }

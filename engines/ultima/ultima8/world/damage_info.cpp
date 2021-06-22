@@ -63,11 +63,14 @@ bool DamageInfo::applyToItem(Item *item, uint16 points) const {
 
 	if (explode()) {
 		item->explode(explosionType(), explodeDestroysItem(), explodeWithDamage());
+		if (explodeDestroysItem())
+			item = nullptr;
 	}
 	if (_sound) {
 		AudioProcess *audio = AudioProcess::get_instance();
 		if (audio) {
-			audio->playSFX(_sound, 0x10, item->getObjId(), 1, true);
+			ObjId objid = item ? item->getObjId() : 0;
+			audio->playSFX(_sound, 0x10, objid, 1, true);
 		}
 	}
 	if (replaceItem()) {
@@ -75,8 +78,9 @@ bool DamageInfo::applyToItem(Item *item, uint16 points) const {
 		uint8 replacementFrame = getReplacementFrame();
 		Item *newitem = ItemFactory::createItem(replacementShape, replacementFrame, q, 0, 0, mapnum, 0, true);
 		newitem->move(x, y, z);
+		if (item)
+			item->destroy();
 	} else if (!explodeDestroysItem()) {
-		assert(!explodeDestroysItem());
 		if (frameDataIsAbsolute()) {
 			int frameval = 1;
 			if (_data[1])

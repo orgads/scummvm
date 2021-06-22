@@ -30,6 +30,21 @@
 
 #include "agi/detection.h"
 #include "agi/wagparser.h" // for fallback detection
+#include "agi/agi.h"
+
+static const DebugChannelDef debugFlagList[] = {
+	{Agi::kDebugLevelMain, "Main", "Generic debug level"},
+	{Agi::kDebugLevelResources, "Resources", "Resources debugging"},
+	{Agi::kDebugLevelSprites, "Sprites", "Sprites debugging"},
+	{Agi::kDebugLevelInventory, "Inventory", "Inventory debugging"},
+	{Agi::kDebugLevelInput, "Input", "Input events debugging"},
+	{Agi::kDebugLevelMenu, "Menu", "Menu debugging"},
+	{Agi::kDebugLevelScripts, "Scripts", "Scripts debugging"},
+	{Agi::kDebugLevelSound, "Sound", "Sound debugging"},
+	{Agi::kDebugLevelText, "Text", "Text output debugging"},
+	{Agi::kDebugLevelSavegame, "Savegame", "Saving & restoring game debugging"},
+	DEBUG_CHANNEL_END
+};
 
 static const PlainGameDescriptor agiGames[] = {
 	{"agi", "Sierra AGI game"},
@@ -152,10 +167,14 @@ public:
 		return "Sierra AGI Engine (C) Sierra On-Line Software";
 	}
 
-	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist) const override;
+	const DebugChannelDef *getDebugChannels() const override {
+		return debugFlagList;
+	}
+
+	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const override;
 };
 
-ADDetectedGame AgiMetaEngineDetection::fallbackDetect(const FileMap &allFilesXXX, const Common::FSList &fslist) const {
+ADDetectedGame AgiMetaEngineDetection::fallbackDetect(const FileMap &allFilesXXX, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const {
 	typedef Common::HashMap<Common::String, int32> IntMap;
 	IntMap allFiles;
 	bool matchedUsingFilenames = false;

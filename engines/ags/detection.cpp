@@ -53,13 +53,13 @@ static bool isAGSFile(Common::File &f) {
 	// Check for signature at beginning of file
 	char buffer[16];
 	if (f.read(buffer, HEAD_SIG_SIZE) == HEAD_SIG_SIZE &&
-			!memcmp(buffer, HEAD_SIG, HEAD_SIG_SIZE))
+	        !memcmp(buffer, HEAD_SIG, HEAD_SIG_SIZE))
 		return true;
 
 	// Check for signature at end of EXE files
 	f.seek(-TAIL_SIG_SIZE, SEEK_END);
 	if (f.read(buffer, TAIL_SIG_SIZE) == TAIL_SIG_SIZE &&
-		!memcmp(buffer, TAIL_SIG, TAIL_SIG_SIZE))
+	        !memcmp(buffer, TAIL_SIG, TAIL_SIG_SIZE))
 		return true;
 
 	return false;
@@ -84,14 +84,14 @@ private:
 };
 
 AGSOptionsWidget::AGSOptionsWidget(GuiObject *boss, const Common::String &name, const Common::String &domain) :
-		OptionsContainerWidget(boss, name, "AGSGameOptionsDialog", false, domain) {
+	OptionsContainerWidget(boss, name, "AGSGameOptionsDialog", false, domain) {
 
 	// Language
 	GUI::StaticTextWidget *textWidget = new GUI::StaticTextWidget(widgetsBoss(), _dialogLayout + ".translation_desc", _("Game language:"), _("Language to use for multilingual games"));
 	textWidget->setAlign(Graphics::kTextAlignRight);
 
 	_langPopUp = new GUI::PopUpWidget(widgetsBoss(), _dialogLayout + ".translation");
-	_langPopUp->appendEntry(_("<default>"), (uint32)-1);
+	_langPopUp->appendEntry(_("<default>"), (uint32) - 1);
 
 	Common::String path = ConfMan.get("path", _domain);
 	Common::FSDirectory dir(path);
@@ -128,7 +128,7 @@ void AGSOptionsWidget::load() {
 	if (!gameConfig)
 		return;
 
-	uint32 curLangIndex = (uint32)-1;
+	uint32 curLangIndex = (uint32) - 1;
 	Common::String curLang;
 	gameConfig->tryGetVal("translation", curLang);
 	if (!curLang.empty()) {
@@ -163,6 +163,15 @@ bool AGSOptionsWidget::save() {
 }
 
 } // namespace AGS3
+
+const DebugChannelDef AGSMetaEngineDetection::debugFlagList[] = {
+	{AGS::kDebugGraphics, "Graphics", "Graphics debug level"},
+	{AGS::kDebugPath, "Path", "Pathfinding debug level"},
+	{AGS::kDebugFilePath, "FilePath", "File path debug level"},
+	{AGS::kDebugScan, "Scan", "Scan for unrecognised games"},
+	{AGS::kDebugScript, "Script", "Enable debug script dump"},
+	DEBUG_CHANNEL_END
+};
 
 AGSMetaEngineDetection::AGSMetaEngineDetection() : AdvancedMetaEngineDetection(AGS::GAME_DESCRIPTIONS,
 	        sizeof(AGS::AGSGameDescription), AGS::GAME_NAMES) {
@@ -215,7 +224,7 @@ DetectedGames AGSMetaEngineDetection::detectGames(const Common::FSList &fslist) 
 	return detectedGames;
 }
 
-ADDetectedGame AGSMetaEngineDetection::fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist) const {
+ADDetectedGame AGSMetaEngineDetection::fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const {
 	// Set the default values for the fallback descriptor's ADGameDescription part.
 	AGS::g_fallbackDesc.desc.language = Common::UNK_LANG;
 	AGS::g_fallbackDesc.desc.platform = Common::kPlatformUnknown;
@@ -241,8 +250,8 @@ ADDetectedGame AGSMetaEngineDetection::fallbackDetect(const FileMap &allFiles, c
 
 		Common::String filename = file->getName();
 		if (!filename.hasSuffixIgnoreCase(".exe") &&
-				!filename.hasSuffixIgnoreCase(".ags") &&
-				!filename.equalsIgnoreCase("ac2game.dat"))
+		        !filename.hasSuffixIgnoreCase(".ags") &&
+		        !filename.equalsIgnoreCase("ac2game.dat"))
 			// Neither, so move on
 			continue;
 
@@ -257,9 +266,9 @@ ADDetectedGame AGSMetaEngineDetection::fallbackDetect(const FileMap &allFiles, c
 
 			// Check whether the game is in the detection list with a different filename
 			for (const ::AGS::AGSGameDescription *gameP = ::AGS::GAME_DESCRIPTIONS;
-				gameP->desc.gameId; ++gameP) {
+			        gameP->desc.gameId; ++gameP) {
 				if (_md5 == gameP->desc.filesDescriptions[0].md5 &&
-					f.size() == gameP->desc.filesDescriptions[0].fileSize) {
+				        f.size() == gameP->desc.filesDescriptions[0].fileSize) {
 					hasUnknownFiles = false;
 					_gameid = gameP->desc.gameId;
 					break;

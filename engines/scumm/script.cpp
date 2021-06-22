@@ -651,6 +651,23 @@ void ScummEngine::writeVar(uint var, int value) {
 
 		_scummVars[var] = value;
 
+		// Unlike the PC version, the Macintosh version of Loom appears
+		// to hard-code the drawing of the practice mode box. This is
+		// handled by script 27 in both versions, but wherease the PC
+		// version draws the notes, the the Mac version this just sets
+		// variables 50 and 54.
+		//
+		// In this script, the variables are set to the same value but
+		// it appears that only variable 50 is cleared when the box is
+		// supposed to disappear. I don't know what the purpose of
+		// variable 54 is.
+
+		if (_game.id == GID_LOOM && _game.platform == Common::kPlatformMacintosh) {
+			if (VAR(128) == 0 && var == 50) {
+				mac_drawLoomPracticeMode();
+			}
+		}
+
 		if ((_varwatch == (int)var || _varwatch == 0) && _currentScript < NUM_SCRIPT_SLOT) {
 			if (vm.slot[_currentScript].number < 100)
 				debug(1, "vars[%d] = %d (via script-%d)", var, value, vm.slot[_currentScript].number);
@@ -1019,7 +1036,7 @@ void ScummEngine::killScriptsAndResources() {
 				// no longer in use (i.e. not owned by anyone anymore); or if
 				// it is an object which is owned by a room.
 				if (owner == 0 || (_game.version < 7 && owner == OF_OWNER_ROOM)) {
-					// WORKAROUND for a problem mentioned in bug report #941275:
+					// WORKAROUND for a problem mentioned in bug report #1607:
 					// In FOA in the sentry room, in the chest plate of the statue,
 					// the pegs may be renamed to mouth: this custom name is lost
 					// when leaving the room; this hack prevents this).
@@ -1468,7 +1485,7 @@ int ScummEngine::resStrLen(const byte *src) {
 			chr = *src++;
 			num++;
 
-			// WORKAROUND for bug #985948, a script bug in Indy3. See also
+			// WORKAROUND for bug #1675, a script bug in Indy3. See also
 			// the corresponding code in ScummEngine::convertMessageToString().
 			if (_game.id == GID_INDY3 && chr == 0x2E) {
 				continue;

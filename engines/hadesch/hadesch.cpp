@@ -74,11 +74,6 @@ static const uint32 cursorids[] = {
 HadeschEngine::HadeschEngine(OSystem *system, const ADGameDescription *desc)
 	: Engine(system), _desc(desc), _rnd("hadesch"), _cheatsEnabled(false) {
 
-	DebugMan.addDebugChannel(kHadeschDebugGeneral, "general", "General issues");
-	DebugMan.addDebugChannel(kHadeschDebugMessagingSystem, "resources", "Resources");
-	DebugMan.addDebugChannel(kHadeschDebugMessagingSystem, "message_system", "Engine message system");
-	DebugMan.addDebugChannel(kHadeschDebugDialogs, "dialogs", "Dialogs");
-
 	g_vm = this;
 	_sceneStartTime = _system->getMillis();
 	_currentTime = 0;
@@ -92,7 +87,6 @@ HadeschEngine::HadeschEngine(OSystem *system, const ADGameDescription *desc)
 
 HadeschEngine::~HadeschEngine() {
 	debug("HadeschEngine::dtor");
-	DebugMan.clearAllDebugChannels();
 	for (unsigned i = 0; i < _winCursors.size(); i++) {
 		delete _winCursors[i];
 		_winCursors[i] = nullptr;

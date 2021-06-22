@@ -100,8 +100,6 @@ BladeRunnerEngine::BladeRunnerEngine(OSystem *syst, const ADGameDescription *des
 	: Engine(syst),
 	  _rnd("bladerunner") {
 
-	DebugMan.addDebugChannel(kDebugScript, "Script", "Debug the scripts");
-
 	_windowIsActive     = true;
 	_gameIsRunning      = true;
 	_gameJustLaunched   = true;
@@ -780,8 +778,6 @@ void BladeRunnerEngine::initChapterAndScene() {
 }
 
 void BladeRunnerEngine::shutdown() {
-	DebugMan.clearAllDebugChannels();
-
 	_mixer->stopAll();
 
 	// BLADE.INI as updated here
@@ -1051,7 +1047,6 @@ void BladeRunnerEngine::gameLoop() {
 }
 
 void BladeRunnerEngine::gameTick() {
-
 	handleEvents();
 
 	if (!_gameIsRunning || !_windowIsActive) {
@@ -1130,6 +1125,7 @@ void BladeRunnerEngine::gameTick() {
 	bool backgroundChanged = false;
 	int frame = _scene->advanceFrame();
 	if (frame >= 0) {
+//		debug("_sceneScript->sceneFrameAdvanced(%d)", frame);
 		_sceneScript->sceneFrameAdvanced(frame);
 		backgroundChanged = true;
 	}
@@ -1284,7 +1280,6 @@ void BladeRunnerEngine::handleEvents() {
 		return;
 	}
 
-	uint32 timeNow = _time->currentSystem();
 	Common::Event event;
 	Common::EventManager *eventMan = _system->getEventManager();
 	while (eventMan->pollEvent(event)) {
@@ -1300,7 +1295,7 @@ void BladeRunnerEngine::handleEvents() {
 				// First hit (fire) has a bigger delay (kKeyRepeatInitialDelay) before repeated events are fired from the same key
 				if (event.kbd.keycode == Common::KEYCODE_ESCAPE || event.kbd.keycode == Common::KEYCODE_RETURN) {
 					_currentKeyDown = event.kbd.keycode;
-					_keyRepeatTimeLast = timeNow;
+					_keyRepeatTimeLast =  _time->currentSystem();
 					_keyRepeatTimeDelay = kKeyRepeatInitialDelay;
 				}
 				handleKeyDown(event);
@@ -1340,7 +1335,12 @@ void BladeRunnerEngine::handleEvents() {
 		}
 	}
 
-	if ((_currentKeyDown == Common::KEYCODE_ESCAPE || _currentKeyDown == Common::KEYCODE_RETURN) && (timeNow - _keyRepeatTimeLast >= _keyRepeatTimeDelay)) {
+	// The switch clause above handles multiple events.
+	// Some of those may lead to their own internal gameTick() loops (which will call handleEvents()).
+	// Thus, we need to get a new timeNow value here to ensure we're not comparing with a stale version.
+	uint32 timeNow = _time->currentSystem();
+	if ((_currentKeyDown == Common::KEYCODE_ESCAPE || _currentKeyDown == Common::KEYCODE_RETURN)
+	    && (timeNow - _keyRepeatTimeLast >= _keyRepeatTimeDelay)) {
 		// create a "new" keydown event
 		event.type = Common::EVENT_KEYDOWN;
 		// kbdRepeat field will be unused here since we emulate the kbd repeat behavior anyway, but it's good to set it for consistency
@@ -1369,18 +1369,32 @@ void BladeRunnerEngine::handleKeyUp(Common::Event &event) {
 }
 
 void BladeRunnerEngine::handleKeyDown(Common::Event &event) {
-	if (_vqaIsPlaying && (event.kbd.keycode == Common::KEYCODE_ESCAPE || event.kbd.keycode == Common::KEYCODE_RETURN)) {
+	if (_vqaIsPlaying
+	    && (event.kbd.keycode == Common::KEYCODE_RETURN || event.kbd.keycode == Common::KEYCODE_ESCAPE)) {
+		// Note: Original only uses the Esc key here
 		_vqaStopIsRequested = true;
 		_vqaIsPlaying = false;
 
 		return;
 	}
 
-	if (_actorIsSpeaking && (event.kbd.keycode == Common::KEYCODE_ESCAPE || event.kbd.keycode == Common::KEYCODE_RETURN)) {
+	if (_vqaStopIsRequested
+	    && (event.kbd.keycode == Common::KEYCODE_RETURN || event.kbd.keycode == Common::KEYCODE_ESCAPE)) {
+		 return;
+	}
+
+	if (_actorIsSpeaking
+	    && (event.kbd.keycode == Common::KEYCODE_RETURN || event.kbd.keycode == Common::KEYCODE_ESCAPE)) {
+		// Note: Original only uses the Return key here
 		_actorSpeakStopIsRequested = true;
 		_actorIsSpeaking = false;
 
 		return;
+	}
+
+	if (_actorSpeakStopIsRequested
+	    && (event.kbd.keycode == Common::KEYCODE_RETURN || event.kbd.keycode == Common::KEYCODE_ESCAPE)) {
+		 return;
 	}
 
 	if (!playerHasControl() || _isWalkingInterruptible || _actorIsSpeaking || _vqaIsPlaying) {
@@ -2119,8 +2133,8 @@ void BladeRunnerEngine::playerDied() {
 	_gameFlags->reset(kFlagKIAPrivacyAddon);
 
 	_ambientSounds->removeAllNonLoopingSounds(true);
-	_ambientSounds->removeAllLoopingSounds(4);
-	_music->stop(4);
+	_ambientSounds->removeAllLoopingSounds(4u);
+	_music->stop(4u);
 	_audioSpeech->stopSpeech();
 #endif // BLADERUNNER_ORIGINAL_BUGS
 
@@ -2225,9 +2239,9 @@ bool BladeRunnerEngine::loadGame(Common::SeekableReadStream &stream, int version
 	_music->stop(2);
 #else
 	// loading into another game that also has music would
-	// two music tracks to overlap and none was stopped
-	_ambientSounds->removeAllLoopingSounds(0);
-	_music->stop(0);
+	// cause two music tracks to overlap and none was stopped
+	_ambientSounds->removeAllLoopingSounds(0u);
+	_music->stop(0u);
 #endif // BLADERUNNER_ORIGINAL_BUGS
 	_audioSpeech->stopSpeech();
 	_actorDialogueQueue->flush(true, false);

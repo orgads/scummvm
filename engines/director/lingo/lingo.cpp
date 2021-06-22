@@ -468,7 +468,11 @@ void Lingo::printStack(const char *s, uint pc) {
 }
 
 void Lingo::printCallStack(uint pc) {
-	debugC(5, kDebugLingoExec, "Call stack:");
+	if (g_lingo->_callstack.size() == 0) {
+		debugC(2, kDebugLingoExec, "\nEnd of execution");
+		return;
+	}
+	debugC(2, kDebugLingoExec, "\nCall stack:");
 	for (int i = 0; i < (int)g_lingo->_callstack.size(); i++) {
 		CFrame *frame = g_lingo->_callstack[i];
 		uint framePc = pc;
@@ -476,12 +480,12 @@ void Lingo::printCallStack(uint pc) {
 			framePc = g_lingo->_callstack[i + 1]->retpc;
 
 		if (frame->sp.type != VOIDSYM) {
-			debugC(5, kDebugLingoExec, "#%d %s:%d", i + 1,
+			debugC(2, kDebugLingoExec, "#%d %s:%d", i + 1,
 				g_lingo->_callstack[i]->sp.name->c_str(),
 				framePc
 			);
 		} else {
-			debugC(5, kDebugLingoExec, "#%d [unknown]:%d", i + 1,
+			debugC(2, kDebugLingoExec, "#%d [unknown]:%d", i + 1,
 				framePc
 			);
 		}
@@ -598,7 +602,7 @@ void Lingo::execute(uint pc) {
 				debug("me: %s", _currentMe.asString(true).c_str());
 		}
 
-		debugC(1, kDebugLingoExec, "[%3d]: %s", current, instr.c_str());
+		debugC(3, kDebugLingoExec, "[%3d]: %s", current, instr.c_str());
 
 		_pc++;
 		(*((*_currentScript)[_pc - 1]))();
@@ -851,7 +855,7 @@ void Datum::reset() {
 #endif
 }
 
-Datum Datum::eval() {
+Datum Datum::eval() const {
 	if (type == VAR || type == FIELDREF || type == CHUNKREF) {
 		return g_lingo->varFetch(*this);
 	}
@@ -988,8 +992,24 @@ Common::String Datum::asString(bool printonly) const {
 		break;
 	case CHUNKREF:
 		{
+			Common::String chunkType;
+			switch (u.cref->type) {
+			case kChunkChar:
+				chunkType = "char";
+				break;
+			case kChunkWord:
+				chunkType = "word";
+				break;
+			case kChunkItem:
+				chunkType = "item";
+				break;
+			case kChunkLine:
+				 chunkType = "line";
+				break;
+			}
 			Common::String src = u.cref->source.asString(true);
-			s = Common::String::format("chunk: char %d to %d of %s", u.cref->start, u.cref->end, src.c_str());
+			Common::String chunk = eval().asString(true);
+			s += Common::String::format("chunk: %s %d to %d of %s (%s)", chunkType.c_str(), u.cref->startChunk, u.cref->endChunk, src.c_str(), chunk.c_str());
 		}
 		break;
 	case POINT:
@@ -1268,7 +1288,7 @@ int Lingo::getInt(uint pc) {
 	return (int)READ_UINT32(&((*_currentScript)[pc]));
 }
 
-void Lingo::varAssign(Datum &var, Datum &value, bool global, DatumHash *localvars) {
+void Lingo::varAssign(const Datum &var, Datum &value, bool global, DatumHash *localvars) {
 	if (localvars == nullptr) {
 		localvars = _localvars;
 	}
@@ -1321,7 +1341,7 @@ void Lingo::varAssign(Datum &var, Datum &value, bool global, DatumHash *localvar
 	}
 }
 
-Datum Lingo::varFetch(Datum &var, bool global, DatumHash *localvars, bool silent) {
+Datum Lingo::varFetch(const Datum &var, bool global, DatumHash *localvars, bool silent) {
 	if (localvars == nullptr) {
 		localvars = _localvars;
 	}
@@ -1375,7 +1395,11 @@ Datum Lingo::varFetch(Datum &var, bool global, DatumHash *localvars, bool silent
 	} else if (var.type == CHUNKREF) {
 		Common::String src = var.u.cref->source.eval().asString();
 		result.type = STRING;
-		result.u.s = new Common::String(src.substr(var.u.cref->start, var.u.cref->end - var.u.cref->start));
+		if (var.u.cref->start == -1) {
+			result.u.s = new Common::String("");
+		} else {
+			result.u.s = new Common::String(src.substr(var.u.cref->start, var.u.cref->end - var.u.cref->start));
+		}
 	} else {
 		warning("varFetch: fetch from non-variable");
 	}

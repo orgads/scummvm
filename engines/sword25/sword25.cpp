@@ -65,15 +65,10 @@ Sword25Engine::Sword25Engine(OSystem *syst, const ADGameDescription *gameDesc):
 	// Setup mixer
 	syncSoundSettings();
 
-	DebugMan.addDebugChannel(kDebugScript, "Script", "Script debug level");
-	DebugMan.addDebugChannel(kDebugScript, "Scripts", "Script debug level");
-	DebugMan.addDebugChannel(kDebugSound, "Sound", "Sound debug level");
-
 	setDebugger(new Sword25Console(this));
 }
 
 Sword25Engine::~Sword25Engine() {
-	DebugMan.clearAllDebugChannels();
 }
 
 Common::Error Sword25Engine::run() {

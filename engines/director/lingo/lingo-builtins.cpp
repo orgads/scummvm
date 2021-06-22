@@ -21,11 +21,13 @@
  */
 
 #include "common/system.h"
+#include "common/tokenizer.h"
 
 #include "gui/message.h"
 
 #include "graphics/macgui/macwindowmanager.h"
 #include "graphics/macgui/macmenu.h"
+#include "graphics/macgui/mactext.h"
 
 #include "director/director.h"
 #include "director/cast.h"
@@ -500,23 +502,83 @@ void LB::b_charToNum(int nargs) {
 }
 
 void LB::b_delete(int nargs) {
-	Datum d = g_lingo->pop();
+	Datum d = g_lingo->pop(false);
 
-	Datum res(d.asInt());
+	Datum field;
+	int start, end;
+	if (d.type == FIELDREF || d.type == VAR) {
+		field = d;
+		start = 0;
+		end = -1;
+	} else if (d.type == CHUNKREF) {
+		TYPECHECK2(d.u.cref->source, FIELDREF, VAR);
+		field = d.u.cref->source;
+		start = d.u.cref->start;
+		end = d.u.cref->end;
+	} else {
+		warning("b_delete: bad field type: %s", d.type2str());
+		return;
+	}
 
-	warning("STUB: b_delete");
+	if (start < 0)
+		return;
 
-	g_lingo->push(res);
+	Common::String text = g_lingo->varFetch(field).asString();
+	if (d.type == CHUNKREF) {
+		switch (d.u.cref->type) {
+		case kChunkChar:
+			break;
+		case kChunkWord:
+			while (end < (int)text.size() && Common::isSpace(text[end]))
+				end++;
+			break;
+		case kChunkItem:
+		case kChunkLine:
+			// last char of the first portion is the delimiter. skip it.
+			if (start > 0)
+				start--;
+			break;
+		}
+	}
+
+	Common::String res = text.substr(0, start) + text.substr(end);
+	Datum s;
+	s.u.s = new Common::String(res);
+	s.type = STRING;
+	g_lingo->varAssign(field, s);
 }
 
 void LB::b_hilite(int nargs) {
-	Datum d = g_lingo->pop();
+	Datum d = g_lingo->pop(false);
 
-	Datum res(d.asInt());
+	int fieldId, start, end;
+	if (d.type == FIELDREF) {
+		fieldId = d.u.i;
+		start = 0;
+		end = -1;
+	} else if (d.type == CHUNKREF) {
+		TYPECHECK(d.u.cref->source, FIELDREF);
+		fieldId = d.u.cref->source.u.i;
+		start = d.u.cref->start;
+		end = d.u.cref->end;
+	} else {
+		warning("b_hilite: bad field type: %s", d.type2str());
+		return;
+	}
 
-	warning("STUB: b_hilite");
+	if (start < 0)
+		return;
 
-	g_lingo->push(res);
+	Score *score = g_director->getCurrentMovie()->getScore();
+	uint16 spriteId = score->getSpriteIdByMemberId(fieldId);
+	if (spriteId == 0)
+		return;
+
+	Channel *channel = score->getChannelById(spriteId);
+	if (channel->_sprite->_cast && channel->_sprite->_cast->_type == kCastText && channel->_widget) {
+		((Graphics::MacText *)channel->_widget)->setSelection(start, true);
+		((Graphics::MacText *)channel->_widget)->setSelection(end, false);
+	}
 }
 
 void LB::b_length(int nargs) {
@@ -1083,7 +1145,26 @@ void LB::b_getNthFileNameInFolder(int nargs) {
 
 	int fileNum = g_lingo->pop().asInt() - 1;
 	Common::String path = pathMakeRelative(g_lingo->pop().asString(), true, false, true);
-	Common::FSNode d = Common::FSNode(*g_director->getGameDataDir()).getChild(path);
+	Common::StringTokenizer directory_list(path, "/");
+
+	Common::FSNode d = Common::FSNode(*g_director->getGameDataDir());
+	if (d.getChild(directory_list.nextToken()).exists()) {
+		// then this part is for the "relative to current directory"
+		// we find the child directory recursively
+		directory_list.reset();
+		while (!directory_list.empty() && d.exists())
+			d = d.getChild(directory_list.nextToken());
+	} else {
+		// we first match the path with game data dir
+		while (!directory_list.empty())
+			if (directory_list.nextToken().equalsIgnoreCase(d.getName()))
+				break;
+		// then we go deep to the end of path
+		// skip the current directory which is the game data directory
+		directory_list.nextToken();
+		while (!directory_list.empty() && d.exists())
+			d = d.getChild(directory_list.nextToken());
+	}
 
 	Datum r;
 	if (d.exists()) {
@@ -1091,8 +1172,14 @@ void LB::b_getNthFileNameInFolder(int nargs) {
 		if (!d.getChildren(f, Common::FSNode::kListAll)) {
 			warning("Cannot acces directory %s", path.c_str());
 		} else {
-			if ((uint)fileNum < f.size())
-				r = Datum(f.operator[](fileNum).getName());
+			if ((uint)fileNum < f.size()) {
+				// here, we sort all the fileNames
+				Common::Array<Common::String> fileNameList;
+				for (uint i = 0; i < f.size(); i++)
+					fileNameList.push_back(f[i].getName());
+				Common::sort(fileNameList.begin(), fileNameList.end());
+				r = Datum(fileNameList[fileNum]);
+			}
 		}
 	}
 
@@ -1549,19 +1636,40 @@ void LB::b_showLocals(int nargs) {
 void LB::b_constrainH(int nargs) {
 	Datum num = g_lingo->pop();
 	Datum sprite = g_lingo->pop();
+	Score *score = g_director->getCurrentMovie()->getScore();
+	int res = 0;
+	if (score) {
+		Channel *ch = score->getChannelById(sprite.asInt());
+		if (ch) {
+			res = CLIP<int> (num.asInt(), ch->getBbox().left, ch->getBbox().right);
+		} else {
+			warning("b_constrainH: cannot find channel %d", sprite.asInt());
+		}
+	} else {
+		warning("b_constrainH: no score");
+	}
 
-	warning("STUB: b_constrainH(%d, %d)", sprite.asInt(), num.asInt());
-
-	g_lingo->push(Datum(0));
+	g_lingo->push(Datum(res));
 }
 
 void LB::b_constrainV(int nargs) {
 	Datum num = g_lingo->pop();
 	Datum sprite = g_lingo->pop();
 
-	warning("STUB: b_constrainV(%d, %d)", sprite.asInt(), num.asInt());
+	Score *score = g_director->getCurrentMovie()->getScore();
+	int res = 0;
+	if (score) {
+		Channel *ch = score->getChannelById(sprite.asInt());
+		if (ch) {
+			res = CLIP<int> (num.asInt(), ch->getBbox().top, ch->getBbox().bottom);
+		} else {
+			warning("b_constrainH: cannot find channel %d", sprite.asInt());
+		}
+	} else {
+		warning("b_constrainV: no score");
+	}
 
-	g_lingo->push(Datum(0));
+	g_lingo->push(Datum(res));
 }
 
 void LB::b_copyToClipBoard(int nargs) {
@@ -2413,112 +2521,50 @@ void LB::b_window(int nargs) {
 
 void LB::b_numberofchars(int nargs) {
 	Datum d = g_lingo->pop();
-
-	int len = strlen(d.asString().c_str());
-
-	Datum res(len);
-	g_lingo->push(res);
+	Datum chunkRef = LC::lastChunk(kChunkChar, d);
+	g_lingo->push(chunkRef.u.cref->startChunk);
 }
 
 void LB::b_numberofitems(int nargs) {
 	Datum d = g_lingo->pop();
-
-	int numberofitems = 1;
-	Common::String contents = d.asString();
-	for (uint32 i = 0;  i < contents.size(); i++) {
-		if (contents[i] == g_lingo->_itemDelimiter)
-			numberofitems++;
-	}
-
-	Datum res(numberofitems);
-	g_lingo->push(res);
+	Datum chunkRef = LC::lastChunk(kChunkItem, d);
+	g_lingo->push(chunkRef.u.cref->startChunk);
 }
 
 void LB::b_numberoflines(int nargs) {
 	Datum d = g_lingo->pop();
-
-	int numberoflines = 1;
-	Common::String contents = d.asString();
-	for (uint32 i = 0; i < contents.size(); i++) {
-		if (contents[i] == '\n')
-			numberoflines++;
-	}
-
-	Datum res(numberoflines);
-	g_lingo->push(res);
+	Datum chunkRef = LC::lastChunk(kChunkLine, d);
+	g_lingo->push(chunkRef.u.cref->startChunk);
 }
 
 void LB::b_numberofwords(int nargs) {
 	Datum d = g_lingo->pop();
-
-	int numberofwords = 0;
-	Common::String contents = d.asString();
-	if (contents.empty()) {
-		g_lingo->push(Datum(0));
-		return;
-	}
-	for (uint32 i = 1; i < contents.size(); i++) {
-		if (Common::isSpace(contents[i]) && !Common::isSpace(contents[i - 1]))
-			numberofwords++;
-	}
-	// Count the last word
-	if (!Common::isSpace(contents[contents.size() - 1]))
-		numberofwords++;
-
-	Datum res(numberofwords);
-	g_lingo->push(res);
+	Datum chunkRef = LC::lastChunk(kChunkWord, d);
+	g_lingo->push(chunkRef.u.cref->startChunk);
 }
 
 void LB::b_lastcharof(int nargs) {
 	Datum d = g_lingo->pop();
-	if (d.type != STRING) {
-		warning("LB::b_lastcharof(): Called with wrong data type: %s", d.type2str());
-		g_lingo->push(Datum(""));
-		return;
-	}
-
-	Common::String contents = d.asString();
-	Common::String res;
-	if (contents.size() != 0)
-		res = contents.lastChar();
-	g_lingo->push(Datum(res));
+	Datum chunkRef = LC::lastChunk(kChunkChar, d);
+	g_lingo->push(chunkRef.eval());
 }
 
 void LB::b_lastitemof(int nargs) {
 	Datum d = g_lingo->pop();
-	if (d.type != STRING) {
-		warning("LB::b_lastitemof(): Called with wrong data type: %s", d.type2str());
-		g_lingo->push(Datum(""));
-		return;
-	}
-
-	Common::String res;
-	Common::String chunkExpr = d.asString();
-	uint pos = chunkExpr.findLastOf(g_lingo->_itemDelimiter);
-	if (pos == Common::String::npos) {
-		res = chunkExpr;
-	} else {
-		pos++; // skip the item delimiter
-		res = chunkExpr.substr(pos , chunkExpr.size() - pos);
-	}
-
-	g_lingo->push(Datum(res));
+	Datum chunkRef = LC::lastChunk(kChunkItem, d);
+	g_lingo->push(chunkRef.eval());
 }
 
 void LB::b_lastlineof(int nargs) {
 	Datum d = g_lingo->pop();
-
-	warning("STUB: b_lastlineof");
-
-	g_lingo->push(Datum(0));
+	Datum chunkRef = LC::lastChunk(kChunkLine, d);
+	g_lingo->push(chunkRef.eval());
 }
 
 void LB::b_lastwordof(int nargs) {
 	Datum d = g_lingo->pop();
-
-	warning("STUB: b_lastwordof");
-
-	g_lingo->push(Datum(0));
+	Datum chunkRef = LC::lastChunk(kChunkWord, d);
+	g_lingo->push(chunkRef.eval());
 }
 
 void LB::b_scummvmassert(int nargs) {

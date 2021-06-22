@@ -77,7 +77,7 @@ typedef struct ExitInfo {
 } ExitInfo;
 
 typedef struct MaskInfo {
-	Graphics::ManagedSurface *surf;
+	Graphics::Surface *surf;
 	Common::String nextSetting;
 	Common::Point point;
 	Symbol *flag1;
@@ -145,6 +145,8 @@ public:
 
 	const ADGameDescription *_gameDescription;
 	bool isDemo() const;
+	Common::Language _language;
+	Common::Platform _platform;
 
 	SymbolMaps maps;
 
@@ -157,6 +159,7 @@ public:
 	void restartGame();
 	void clearAreas();
 	void initializePath(const Common::FSNode &gamePath) override;
+	Common::SeekableReadStream *loadAssets();
 
 	// Functions
 
@@ -186,6 +189,7 @@ public:
 		return true;
 	}
 
+	void ignoreEvents();
 	Common::Error loadGameStream(Common::SeekableReadStream *stream) override;
 	Common::Error saveGameStream(Common::WriteStream *stream, bool isAutosave = false) override;
 	void syncGameStream(Common::Serializer &s);
@@ -198,13 +202,16 @@ public:
 	void loadImage(const Common::String &file, int x, int y);
 	void drawScreenFrame();
 
+	// Cursors
 	void changeCursor(const Common::String &);
+	Common::String getInventoryCursor();
+	Common::String getExitCursor();
 
 	// Rendering
 	Graphics::ManagedSurface *_compositeSurface;
-	Graphics::ManagedSurface *loadMask(const Common::String &, int, int, bool);
-	void drawMask(Graphics::ManagedSurface *);
-	bool inMask(Graphics::ManagedSurface *, Common::Point);
+	Graphics::Surface *loadMask(const Common::String &, int, int, bool);
+	void drawMask(Graphics::Surface *);
+	bool inMask(Graphics::Surface *, Common::Point);
 	uint32 _transparentColor;
 	Common::Rect screenRect;
 	Common::String _framePath;
@@ -217,6 +224,13 @@ public:
 	Common::String _nextSetting;
 	Common::String _pausedSetting;
 	Common::String _currentSetting;
+	Common::String getPauseMovieSetting();
+	Common::String getGoIntroSetting();
+	Common::String getMainDesktopSetting();
+	Common::String getPOGoBustMovieSetting();
+	Common::String getPoliceBustFromMOSetting();
+	Common::String getAlternateGameVariable();
+	Common::String getPoliceIndexVariable();
 
 	// movies
 	Common::String _nextMovie;
@@ -224,8 +238,8 @@ public:
 
 	// Dossiers
 	DossierArray _dossiers;
-	unsigned int _dossierSuspect;
-	unsigned int _dossierPage;
+	uint _dossierSuspect;
+	uint _dossierPage;
 	MaskInfo _dossierNextSuspectMask;
 	MaskInfo _dossierPrevSuspectMask;
 	MaskInfo _dossierNextSheetMask;
@@ -271,6 +285,7 @@ public:
 	// Sounds
 	void playSound(const Common::String &, uint, bool, bool);
 	void stopSound(bool);
+	bool isSoundActive();
 	bool _noStopSounds;
 
 	Common::String getPaperShuffleSound();

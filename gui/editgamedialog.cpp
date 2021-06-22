@@ -361,14 +361,18 @@ EditGameDialog::EditGameDialog(const String &domain)
 	_savePathClearButton = addClearButton(tab, "GameOptions_Paths.SavePathClearButton", kCmdSavePathClear);
 
 	//
-	// 9) The Achievements tab
+	// 9) The Achievements & The Statistics tabs
 	//
 	if (enginePlugin) {
 		const MetaEngine &metaEngine = enginePlugin->get<MetaEngine>();
-		Common::AchievementsInfo achievementsInfo = metaEngine.getAchievementsInfo(domain);
-		if (achievementsInfo.descriptions.size() > 0) {
+		AchMan.setActiveDomain(metaEngine.getAchievementsInfo(domain));
+		if (AchMan.getAchievementCount()) {
 			tab->addTab(_("Achievements"), "GameOptions_Achievements");
-			addAchievementsControls(tab, "GameOptions_Achievements.", achievementsInfo);
+			addAchievementsControls(tab, "GameOptions_Achievements.");
+		}
+		if (AchMan.getStatCount()) {
+			tab->addTab(_("Statistics"), "GameOptions_Achievements");
+			addStatisticsControls(tab, "GameOptions_Achievements.");
 		}
 	}
 
@@ -646,6 +650,9 @@ void EditGameDialog::handleCommand(CommandSender *sender, uint32 cmd, uint32 dat
 			_domain = newDomain;
 			if (_engineOptions) {
 				_engineOptions->setDomain(newDomain);
+			}
+			if (_backendOptions) {
+				_backendOptions->setDomain(newDomain);
 			}
 		}
 	}
