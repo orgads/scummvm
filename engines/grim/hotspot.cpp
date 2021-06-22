@@ -274,7 +274,6 @@ void HotspotMan::drawActive(int debugMode) {
 	if(debugMode==2) {
 		g_grim->getCurrSet()->setupCamera();
 		Set *set = g_grim->getCurrSet();
-		Common::Array<PrimitiveObject> pa;
 		for (int s=0; s<set->getSectorCount(); s++) {
 			Sector* sector = set->getSectorBase(s);
 			if ((sector->getType() & Sector::WalkType) != Sector::WalkType &&
@@ -293,19 +292,9 @@ void HotspotMan::drawActive(int debugMode) {
 				if ((sector->getType() & Sector::HotType) == Sector::HotType)
 					col = Color(200,0,0);
 				p.createLine(Common::Point(x0,y0),Common::Point(x1,y1),col);
-				pa.push_back(p);
+				p.draw();
 			}
 		}
-#ifndef ANDROID
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0, 640,480, 0, 0, 1);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		for (size_t k=0; k<pa.size(); k++) {
-			pa[k].draw();
-		}
-#endif
 	}
 }
 
