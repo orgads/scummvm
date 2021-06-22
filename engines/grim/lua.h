@@ -76,6 +76,7 @@ public:
 	void add(const PoolObjectBase *obj);
 	void add(const char *str);
 	void addNil();
+	void add(const float *ar, int len);
 
 private:
 	/**
@@ -91,13 +92,16 @@ private:
 			Nil,
 			Number,
 			Object,
-			String
+			String,
+			Array
 		} _type;
 		union {
 			float number;
 			const PoolObjectBase *object;
 			const char *string;
+			const float *array;
 		} _value;
+		int _elements;
 	};
 	Common::List<Obj> _objects;
 
@@ -130,6 +134,8 @@ public:
 
 	// Force the demo flag
 	virtual void forceDemo();
+
+	int queryVariable(const Common::String &name, bool direct);
 
 	/**
 	 * Call a Lua function in the system table.
