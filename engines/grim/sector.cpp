@@ -375,11 +375,10 @@ Common::List<Math::Line3d> Sector::getBridgesTo(Sector *sector) const {
 			delta_b2 = bridge.end() - line.begin();
 			Math::Vector3d cross_b1 = Math::Vector3d::crossProduct(edge, delta_b1);
 			Math::Vector3d cross_b2 = Math::Vector3d::crossProduct(edge, delta_b2);
-			bool b1_out = cross_b1.dotProduct(_normal) < 0;
-			bool b2_out = cross_b2.dotProduct(_normal) < 0;
+			bool b1_out = cross_b1.dotProduct(_normal) < -1e-7;
+			bool b2_out = cross_b2.dotProduct(_normal) < -1e-7;
 
 			bool useXZ = (g_grim->getGameType() == GType_MONKEY4);
-
 			if (b1_out && b2_out) {
 				// Both points are outside.
 				it = bridges.erase(it);
@@ -479,6 +478,19 @@ Math::Vector3d Sector::getClosestPoint(const Math::Vector3d &point) const {
 		}
 	}
 	return _vertices[index];
+}
+
+Math::Vector3d Sector::raycast(const Math::Vector3d &v0, const Math::Vector3d &v1) const {
+	if (_normal.getMagnitude() == 0)
+		error("Sector normal is (0, 0, 0)");
+
+	double div = _normal.dotProduct(v1);
+	if (div == 0)
+		error("hitting normal at 90 degrees");
+
+	double s = _normal.dotProduct(_vertices[0] - v0) / div;
+
+	return v0 + s * v1;
 }
 
 void Sector::getExitInfo(const Math::Vector3d &s, const Math::Vector3d &dirVec, struct ExitInfo *result) const {
