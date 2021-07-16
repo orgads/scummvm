@@ -1135,7 +1135,7 @@ protected:
 	virtual void CHARSET_1();
 	bool newLine();
 	void drawString(int a, const byte *msg);
-	void fakeBidiString(byte *ltext, bool ignoreVerb);
+	void fakeBidiString(byte *ltext, bool ignoreVerb) const;
 	void debugMessage(const byte *msg);
 	void showMessageDialog(const byte *msg);
 
@@ -1150,6 +1150,9 @@ public:
 
 	// Used by class ScummDialog:
 	virtual void translateText(const byte *text, byte *trans_buff);
+	// Returns codepage that matches the game for languages that require it.
+	// message is needed for reversing it in some Hebrew games.
+	Common::CodePage getDialogCodePage(Common::String &message) const;
 
 	// Somewhat hackish stuff for 2 byte support (Chinese/Japanese/Korean)
 	bool _useCJKMode;

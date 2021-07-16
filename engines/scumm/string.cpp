@@ -486,7 +486,7 @@ bool ScummEngine::newLine() {
 	return true;
 }
 
-void ScummEngine::fakeBidiString(byte *ltext, bool ignoreVerb) {
+void ScummEngine::fakeBidiString(byte *ltext, bool ignoreVerb) const {
 	// Provides custom made BiDi mechanism.
 	// Reverses texts on each line marked by control characters (considering different control characters used in verbs panel)
 	// While preserving original order of numbers (also negative numbers and comma separated)
@@ -2073,6 +2073,32 @@ void ScummEngine::translateText(const byte *text, byte *trans_buff) {
 
 	// Default: just copy the string
 	memcpy(trans_buff, text, resStrLen(text) + 1);
+}
+
+Common::CodePage ScummEngine::getDialogCodePage(Common::String &message) const
+{
+	switch (_language) {
+	case Common::KO_KOR:
+		return Common::kWindows949;
+	case Common::JA_JPN:
+		return Common::kWindows932;
+	case Common::ZH_TWN:
+	case Common::ZH_CNA:
+		return Common::kWindows950;
+	case Common::RU_RUS:
+		return Common::kDos866;
+	case Common::HE_ISR:
+		switch (_game.id) {
+		case GID_LOOM:
+		case GID_ZAK:
+			fakeBidiString(reinterpret_cast<byte *>(message.begin()), true);
+			return Common::kDos862;
+		default:
+			return Common::kWindows1255;
+		}
+	default:
+		return Common::kCodePageInvalid;
+	}
 }
 
 } // End of namespace Scumm
