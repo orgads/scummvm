@@ -35,6 +35,11 @@ jobs:
           install_dir: C:\ProgramData
           cache_key: ${{ matrix.triplet }}
           upload_buildcache_log: true
+      - name: Clear cache
+        run: |
+          $env:BUILDCACHE_IMPERSONATE = ""
+          buildcache -c
+          $env:BUILDCACHE_IMPERSONATE = "cl.exe"
       - name: Install vcpkg and packages
         uses: lukka/run-vcpkg@v7
         id: runvcpkg
