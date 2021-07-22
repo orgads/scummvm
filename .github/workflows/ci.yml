@@ -33,11 +33,20 @@ jobs:
     env:
       CONFIGURATION: Release
       PLATFORM: ${{ matrix.platform }}
+      BUILDCACHE_IMPERSONATE: cl.exe
+      BUILDCACHE_MAX_CACHE_SIZE: 2500000000
+      BUILDCACHE_HARD_LINKS: true
+      CLToolExe: buildcache.exe
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - uses: ilammy/setup-nasm@v1
         if: ${{ matrix.useNasm }} == 'true'
+      - name: Build cache
+        uses: mikehardy/buildcache-action@v1.2.2
+        with:
+          install_dir: C:\ProgramData
+          cache_key: ${{ matrix.triplet }}
       - name: Install vcpkg and packages
         uses: lukka/run-vcpkg@v7
         id: runvcpkg
@@ -53,7 +62,7 @@ jobs:
       - name: Build create_project
         run: |
           cd devtools/create_project/cmake
-          cmake .
+          cmake -DCMAKE_CXX_COMPILER_LAUNCHER=buildcache .
           cmake --build . -j 2
           ls
           cd ../../../
