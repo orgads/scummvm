@@ -127,7 +127,7 @@ public:
 	 * @see createBitmap
 	 * @see destroyBitmap
 	 */
-	virtual void drawBitmap(const Bitmap *bitmap, int x, int y, uint32 layer = 0, float rot = 0) override;
+	virtual void drawBitmap(const Bitmap *bitmap, int x, int y, uint32 layer = 0) override;
 
 	/**
 	 * Deletes any internal references and representations of a bitmap
@@ -233,12 +233,11 @@ private:
 	OpenGL::ShaderGL* _dimPlaneProgram;
 	OpenGL::ShaderGL* _dimRegionProgram;
 	OpenGL::ShaderGL* _smushProgram;
-	GLuint _smushVBO, _quadEBO, _quadEBO99;
+	GLuint _smushVBO, _quadEBO;
 	OpenGL::ShaderGL* _textProgram;
 	OpenGL::ShaderGL* _primitiveProgram;
 	OpenGL::ShaderGL* _irisProgram;
 	OpenGL::ShaderGL* _shadowPlaneProgram;
-	OpenGL::ShaderGL* _rotProgram;
 
 	int _smushWidth;
 	int _smushHeight;

@@ -76,22 +76,6 @@ void Polygon::move(const Common::Point &c) {
 		_pnts[i] += offset;
 }
 
-void Polygon::fixBorders() {
-	const int fixBorder = 6;
-	Common::Point c = center();
-	for (size_t i = 0, total = _pnts.size(); i < total; ++i) {
-		Common::Point &p = _pnts[i];
-		if (p.x <= fixBorder && p.x < c.x)
-			p.x = 0;
-		if (p.x >= 640 - fixBorder && p.x > c.x)
-			p.x = 640;
-		if (p.y <= fixBorder && p.y < c.y)
-			p.y = 0;
-		if (p.y >= 480 - fixBorder && p.y > c.y)
-			p.y = 480;
-	}
-}
-
 static Actor *getManny() {
 	foreach (Actor *a, g_grim->getActiveActors()) {
 		if (a->getName() == "Manny")
@@ -102,7 +86,7 @@ static Actor *getManny() {
 
 HotspotMan::HotspotMan() :
 	_initialized(false), _ctrlMode(0), _cutScene(0),
-	_flashHS(false), _activeHS(nullptr) {
+	_flashHS(false) {
 }
 
 HotspotMan::~HotspotMan() {
@@ -144,7 +128,6 @@ void HotspotMan::initialize() {
 				int x = data->readSint32LE(), y = data->readSint32LE();
 				hs._region._pnts.push_back(Common::Point(x, y));
 			}
-			hs._region.fixBorders();
 			_hotspots[setID].push_back(hs);
 		}
 	}
@@ -257,6 +240,7 @@ static double lineLineDist(
 
 void HotspotMan::event(const Common::Point &cursor, const Common::Event &ev, bool doubleClick) {
 	bool climbing = LuaBase::instance()->queryVariable("system.currentActor.is_climbing", false) != 0;
+	_lastCursor = cursor;
 
 	int button = 0;
 	if (ev.type == Common::EVENT_LBUTTONDOWN)
@@ -270,22 +254,6 @@ void HotspotMan::event(const Common::Point &cursor, const Common::Event &ev, boo
 	if (ev.kbd.hasFlags(Common::KBD_CTRL))
 		button = 3;
 	update();
-
-	// --- first, try active hotspot
-	if (_activeHS) {
-		Common::Point delta = cursor - _activeHS->_region.center();
-		if (abs(delta.x) < 40 && abs(delta.y) < 40) {
-			LuaObjects objects;
-			objects.add(1);
-			objects.add(_activeHS->_objId);
-			objects.add(0);
-			LuaBase::instance()->callback("mouseCommand", objects);
-			_activeHS = nullptr;
-			return;
-		}
-	}
-
-	_lastCursor = cursor;
 
 	if (_ctrlMode == Dialog && button > 0) {
 		// dialog mode
@@ -424,7 +392,7 @@ void HotspotMan::hover(const Common::Point &pos) {
 	update();
 	_lastCursor = pos;
 	Cursor *cursor = g_grim->getCursor();
-	cursor->setPersistent(0, -1);
+	cursor->setPersistent(-1);
 	cursor->setCursor(0);
 
 	if (_cutScene > 0 && _ctrlMode != Dialog && _ctrlMode != Options) {
@@ -437,8 +405,6 @@ void HotspotMan::hover(const Common::Point &pos) {
 
 	int select = 0;
 	for (size_t i = 0, total = hotspots.size(); i < total; ++i) {
-		if (_activeHS)
-			continue;
 		if ((hotspots[i]._setup == setup || _ctrlMode == Options) &&
 			hotspots[i]._region.contains(pos)) {
 			if (hotspots[i]._objId>=0 && !_hotobject[hotspots[i]._objId]._active)
@@ -489,18 +455,6 @@ void HotspotMan::hover(const Common::Point &pos) {
 		LuaBase::instance()->callback("mouseHover", objects);
 		return;
 	}
-}
-
-Common::Point HotspotMan::mannyPos2D(float zOffset) {
-	int x = 0, y = 0;
-	Actor *manny = getManny();
-	if (g_grim->getCurrSet() && manny) {
-		Math::Vector3d p = manny->getPos();
-		p += Math::Vector3d(0, 0, zOffset);
-		g_grim->getCurrSet()->setupCamera();
-		g_driver->worldToScreen(p, x, y);
-	}
-	return Common::Point(x, y);
 }
 
 void HotspotMan::freeClick(const Common::Point &cursor, int button, bool doubleClick, bool climbing) {
@@ -720,8 +674,6 @@ void HotspotMan::cutSceneMode(int mode) {
 }
 
 void HotspotMan::restoreCursor() {
-	_activeHS = nullptr;
-	g_grim->getCursor()->setPersistent(1, -1);
 	hover(_lastCursor);
 }
 

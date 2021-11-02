@@ -978,10 +978,6 @@ void GrimEngine::doFlip() {
 	}
 }
 
-inline float dist(const Common::Point &a, const Common::Point &b) {
-	return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
-}
-
 void GrimEngine::mainLoop() {
 	_movieTime = 0;
 	_frameTime = 0;
@@ -1050,7 +1046,7 @@ void GrimEngine::mainLoop() {
 		Common::Event event;
 		while (g_system->getEventManager()->pollEvent(event)) {
 			// Handle any buttons, keys and joystick operations
-			Common::EventType &type = event.type;
+			Common::EventType type = event.type;
 
 			bool doubleClick = false;
 			// parse special gestures

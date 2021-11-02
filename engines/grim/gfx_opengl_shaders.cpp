@@ -305,8 +305,6 @@ void GfxOpenGLS::setupTexturedQuad() {
 	if (g_grim->getGameType() == GType_GRIM) {
 		_backgroundProgram->enableVertexAttribute("position", _smushVBO, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
 		_backgroundProgram->enableVertexAttribute("texcoord", _smushVBO, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 2 * sizeof(float));
-		_rotProgram->enableVertexAttribute("position", _smushVBO, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-		_rotProgram->enableVertexAttribute("texcoord", _smushVBO, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 2 * sizeof(float));
 	} else {
 		_dimPlaneProgram->enableVertexAttribute("position", _smushVBO, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
 	}
@@ -395,7 +393,6 @@ void GfxOpenGLS::setupShaders() {
 		_dimProgram = OpenGL::ShaderGL::fromFiles("grim_dim", commonAttributes);
 		_dimRegionProgram = _dimProgram->clone();
 		_shadowPlaneProgram = OpenGL::ShaderGL::fromFiles("grim_shadowplane", primAttributes);
-		_rotProgram = OpenGL::ShaderGL::fromFiles("grim_rot", commonAttributes);
 	} else {
 		_dimPlaneProgram = OpenGL::ShaderGL::fromFiles("emi_dimplane", primAttributes);
 	}
@@ -1374,7 +1371,7 @@ void GfxOpenGLS::createBitmap(BitmapData *bitmap) {
 			delete[] texData;
 		bitmap->freeData();
 
-		OpenGL::ShaderGL *shader = bitmap->_canRotate ? _rotProgram->clone() : _backgroundProgram->clone();
+		OpenGL::ShaderGL *shader = _backgroundProgram->clone();
 		bitmap->_userData = shader;
 
 		if (g_grim->getGameType() == GType_MONKEY4) {
@@ -1389,7 +1386,7 @@ void GfxOpenGLS::createBitmap(BitmapData *bitmap) {
 	}
 }
 
-void GfxOpenGLS::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, float rot) {
+void GfxOpenGLS::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer) {
 	if (g_grim->getGameType() == GType_MONKEY4 && bitmap->_data && bitmap->_data->_texc) {
 		BitmapData *data = bitmap->_data;
 		OpenGL::ShaderGL *shader = (OpenGL::ShaderGL *)data->_userData;
@@ -1441,14 +1438,6 @@ void GfxOpenGLS::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, 
 		shader->setUniform("offsetXY", Math::Vector2d(float(dx) / _gameWidth, float(dy) / _gameHeight));
 		shader->setUniform("sizeWH", Math::Vector2d(width / _gameWidth, height / _gameHeight));
 		shader->setUniform("texcrop", Math::Vector2d(width / nextHigher2((int)width), height / nextHigher2((int)height)));
-		if (bitmap->_data->_canRotate) {
-			float c = cos(rot), s = sin(rot);
-			Math::Matrix3 M;
-			M.getRow(0) << c << -s << 0;
-			M.getRow(1) << s << c << 0;
-			M.getRow(2) << 0 << 0 << 0;
-			shader->setUniform("rot", M);
-		}
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
 		glDisable(GL_BLEND);
@@ -1910,10 +1899,10 @@ void GfxOpenGLS::drawGenericPrimitive(const float *vertices, uint32 numVertices,
 }
 
 void GfxOpenGLS::drawRectangle(const PrimitiveObject *primitive) {
-	float x1 = primitive->getP1().x; //* _scaleW;
-	float y1 = primitive->getP1().y; //* _scaleH;
-	float x2 = primitive->getP2().x; //* _scaleW;
-	float y2 = primitive->getP2().y; //* _scaleH;
+	float x1 = primitive->getP1().x * _scaleW;
+	float y1 = primitive->getP1().y * _scaleH;
+	float x2 = primitive->getP2().x * _scaleW;
+	float y2 = primitive->getP2().y * _scaleH;
 
 	if (primitive->isFilled()) {
 		float data[] = { x1, y1, x2 + 1, y1, x1, y2 + 1, x2 + 1, y2 + 1 };
@@ -1932,10 +1921,10 @@ void GfxOpenGLS::drawRectangle(const PrimitiveObject *primitive) {
 }
 
 void GfxOpenGLS::drawLine(const PrimitiveObject *primitive) {
-	float x1 = primitive->getP1().x;// * _scaleW;
-	float y1 = primitive->getP1().y;// * _scaleH;
-	float x2 = primitive->getP2().x;// * _scaleW;
-	float y2 = primitive->getP2().y;// * _scaleH;
+	float x1 = primitive->getP1().x * _scaleW;
+	float y1 = primitive->getP1().y * _scaleH;
+	float x2 = primitive->getP2().x * _scaleW;
+	float y2 = primitive->getP2().y * _scaleH;
 
 	float data[] = { x1, y1, x2, y2 };
 
@@ -1943,14 +1932,14 @@ void GfxOpenGLS::drawLine(const PrimitiveObject *primitive) {
 }
 
 void GfxOpenGLS::drawPolygon(const PrimitiveObject *primitive) {
-	float x1 = primitive->getP1().x;// * _scaleW;
-	float y1 = primitive->getP1().y;// * _scaleH;
-	float x2 = primitive->getP2().x;// * _scaleW;
-	float y2 = primitive->getP2().y;// * _scaleH;
-	float x3 = primitive->getP3().x;// * _scaleW;
-	float y3 = primitive->getP3().y;// * _scaleH;
-	float x4 = primitive->getP4().x;// * _scaleW;
-	float y4 = primitive->getP4().y;// * _scaleH;
+	float x1 = primitive->getP1().x * _scaleW;
+	float y1 = primitive->getP1().y * _scaleH;
+	float x2 = primitive->getP2().x * _scaleW;
+	float y2 = primitive->getP2().y * _scaleH;
+	float x3 = primitive->getP3().x * _scaleW;
+	float y3 = primitive->getP3().y * _scaleH;
+	float x4 = primitive->getP4().x * _scaleW;
+	float y4 = primitive->getP4().y * _scaleH;
 
 	const float data[] = { x1, y1, x2 + 1, y2 + 1, x3, y3 + 1, x4 + 1, y4 };
 
@@ -2248,8 +2237,8 @@ void GfxOpenGLS::setBlendMode(bool additive) {
 }
 
 void GfxOpenGLS::blackbox(int x0, int y0, int x1, int y1, float opacity) {
-	float px1 = x0, py1 = y0;// * _scaleW, py1 = y0 * _scaleH;
-	float px2 = x1, py2 = y1;// * _scaleW, py2 = y1 * _scaleH;
+	float px1 = x0 * _scaleW, py1 = y0 * _scaleH;
+	float px2 = x1 * _scaleW, py2 = y1 * _scaleH;
 	float data[] = { px1, py1, px1, py2, px2, py1, px2, py2 };
 
 	GLuint prim = nextPrimitive();

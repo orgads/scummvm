@@ -45,7 +45,6 @@ struct Polygon {
 	bool contains(const Common::Point &pos);
 	void move(const Common::Point &center);
 	Common::Point center();
-	void fixBorders();
 };
 
 struct HotObject {
@@ -81,8 +80,7 @@ public:
 		Linear = 3,
 		Inventory = 4,
 		NoWalk = 5,
-		Options = 6,
-		Passive = 10
+		Options = 6
 	};
 
 	int addHotspot(const Common::String &name, const Math::Vector3d &pos, const Common::String &scene);
@@ -110,7 +108,7 @@ public:
 	void addInventory(const Common::String &id, const Common::String &pic);
 	void updateHotspot(const Common::String &id, const Math::Vector3d &pos, int vis);
 	int getCtrlMode() { return _ctrlMode; }
-	bool isDialog() { return _cutScene > 0 || _ctrlMode == Dialog || _ctrlMode == Passive; }
+	bool isDialog() { return _cutScene > 0 || _ctrlMode == Dialog; }
 	void setAxis(const Math::Vector3d &a, float offset) {
 		_axis = a;
 		_offset = offset;
@@ -120,7 +118,6 @@ public:
 	void renameHotspot(int id, const Common::String &name);
 	void setOptionMode(const Common::String &name) { _curOption = name; }
 	Common::String &getOptionMode() { return _curOption; }
-	Common::Point mannyPos2D(float zOffset);
 
 protected:
 	int inBox(const Common::Point &p);
@@ -128,8 +125,6 @@ protected:
 	void loadFlashBitmaps();
 	void restoreCursor();
 	Common::String activeSet();
-
-	int _cutScene;
 
 	// dialog support
 	int _ctrlMode, _rows, _cols;
@@ -149,14 +144,12 @@ protected:
 	Common::String _curScene, _curOption;
 	Common::Array<HotObject> _hotobject;
 	Common::Point _lastCursor;
+	int _cutScene;
 
 	// hotspot display
 	bool _flashHS;
 	unsigned int _flashStart;
 	Bitmap *_flashBitmaps[8];
-
-	// active hotspot
-	Hotspot *_activeHS;
 };
 
 } // namespace Grim

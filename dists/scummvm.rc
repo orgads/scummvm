@@ -138,8 +138,6 @@ shaders/grim_background.fragment     FILE    "engines/grim/shaders/grim_backgrou
 shaders/grim_background.vertex       FILE    "engines/grim/shaders/grim_background.vertex"
 shaders/grim_primitive.fragment      FILE    "engines/grim/shaders/grim_primitive.fragment"
 shaders/grim_primitive.vertex        FILE    "engines/grim/shaders/grim_primitive.vertex"
-shaders/grim_rot.fragment            FILE    "engines/grim/shaders/grim_rot.fragment"
-shaders/grim_rot.vertex              FILE    "engines/grim/shaders/grim_rot.vertex"
 shaders/grim_shadowplane.fragment    FILE    "engines/grim/shaders/grim_shadowplane.fragment"
 shaders/grim_shadowplane.vertex      FILE    "engines/grim/shaders/grim_shadowplane.vertex"
 shaders/grim_smush.fragment          FILE    "engines/grim/shaders/grim_smush.fragment"
