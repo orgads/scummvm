@@ -47,7 +47,6 @@ lib*.a
 /scummvm-conf.cpp
 /tmp_*.cpp
 /*.apk
-/CMakeLists.txt
 
 /README
 /README.html*
