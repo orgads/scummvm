@@ -265,6 +265,16 @@ void CMakeProvider::writeSubEngines(const BuildSetup &setup, std::ofstream &work
 	workspace << "\n";
 }
 
+static std::string filePrefix(const BuildSetup &setup, const std::string &moduleDir) {
+	std::string modulePath;
+	if (!moduleDir.compare(0, setup.srcDir.size(), setup.srcDir)) {
+		modulePath = moduleDir.substr(setup.srcDir.size());
+		if (!modulePath.empty() && modulePath.at(0) == '/')
+			modulePath.erase(0, 1);
+	}
+	return modulePath.empty() ? setup.filePrefix : setup.filePrefix + '/' + modulePath;
+}
+
 void CMakeProvider::createProjectFile(const std::string &name, const std::string &, const BuildSetup &setup, const std::string &moduleDir,
 										   const StringList &includeList, const StringList &excludeList) {
 
@@ -282,17 +292,7 @@ void CMakeProvider::createProjectFile(const std::string &name, const std::string
 		project << "add_engine(" << name << "\n";
 	}
 
-	std::string modulePath;
-	if (!moduleDir.compare(0, setup.srcDir.size(), setup.srcDir)) {
-		modulePath = moduleDir.substr(setup.srcDir.size());
-		if (!modulePath.empty() && modulePath.at(0) == '/')
-			modulePath.erase(0, 1);
-	}
-
-	if (!modulePath.empty())
-		addFilesToProject(moduleDir, project, includeList, excludeList, setup.filePrefix + '/' + modulePath);
-	else
-		addFilesToProject(moduleDir, project, includeList, excludeList, setup.filePrefix);
+	addFilesToProject(moduleDir, project, includeList, excludeList, filePrefix(setup, moduleDir));
 
 	project << ")\n";
 	project << "\n";
