@@ -84,6 +84,7 @@ find_package(PkgConfig QUIET)
 include(CMakeParseArguments)
 
 set(SCUMMVM_LIBS)
+set(SCUMMVM_ENGINES)
 
 macro(find_feature)
 	set(_OPTIONS_ARGS)
@@ -115,7 +116,7 @@ endmacro()
 
 )";
 
-	workspace << R"(function(add_engine engine_name)
+	workspace << R"EOS(function(add_engine engine_name)
 	string(TOUPPER ${engine_name} _engine_var)
 	set(_enable_engine_var "ENABLE_${_engine_var}")
 	if(NOT ${_enable_engine_var})
@@ -128,14 +129,16 @@ endmacro()
 	foreach(SUB_ENGINE IN LISTS SUB_ENGINES_${_engine_var})
 		add_definitions(-DENABLE_${SUB_ENGINE})
 	endforeach(SUB_ENGINE)
-	file(APPEND "engines/plugins_table.h" "#if PLUGIN_ENABLED_STATIC(${_engine_var})\n")
-	file(APPEND "engines/plugins_table.h" "LINK_PLUGIN(${_engine_var})\n")
-	file(APPEND "engines/plugins_table.h" "#endif\n")
+	file(APPEND "../plugins_table.h" "#if PLUGIN_ENABLED_STATIC(${_engine_var})\n")
+	file(APPEND "../plugins_table.h" "LINK_PLUGIN(${_engine_var})\n")
+	file(APPEND "../plugins_table.h" "#endif\n")
 
 	# Enable C++11
-	string(TOLOWER ${engine_name} ENGINE_LIB)
-	set_property(TARGET ${ENGINE_LIB} PROPERTY CXX_STANDARD 11)
-	set_property(TARGET ${ENGINE_LIB} PROPERTY CXX_STANDARD_REQUIRED ON)
+	set_property(TARGET ${engine_name} PROPERTY CXX_STANDARD 11)
+	set_property(TARGET ${engine_name} PROPERTY CXX_STANDARD_REQUIRED ON)
+
+	# Link against the engine
+	target_link_libraries()EOS" << setup.projectName << R"( ${engine_name})
 endfunction()
 
 )";
@@ -279,7 +282,7 @@ void CMakeProvider::createProjectFile(const std::string &name, const std::string
 										   const StringList &includeList, const StringList &excludeList) {
 
 	const std::string projectFile = setup.outputDir + "/CMakeLists.txt";
-	std::ofstream project(projectFile.c_str(), std::ofstream::out | std::ofstream::app);
+	std::ofstream project(projectFile, std::ofstream::out | std::ofstream::app);
 	if (!project)
 		error("Could not open \"" + projectFile + "\" for writing");
 
@@ -289,7 +292,12 @@ void CMakeProvider::createProjectFile(const std::string &name, const std::string
 		project << "list(APPEND SCUMMVM_LIBS " << name << ")\n";
 		project << "add_library(" << name << "\n";
 	} else {
-		project << "add_engine(" << name << "\n";
+		const std::string engineFile = filePrefix(setup, moduleDir) + "/CMakeLists.txt";
+		std::ofstream engine(engineFile, std::ofstream::out);
+		engine << "add_engine(" << name << "\n";
+		addFilesToProject(moduleDir, engine, includeList, excludeList, {});
+		engine << ")\n";
+		return;
 	}
 
 	addFilesToProject(moduleDir, project, includeList, excludeList, filePrefix(setup, moduleDir));
@@ -388,13 +396,9 @@ void CMakeProvider::writeEngineOptions(std::ofstream &workspace) const {
 }
 
 void CMakeProvider::writeEnginesLibrariesHandling(const BuildSetup &setup, std::ofstream &workspace) const {
-	workspace << R"EOS(foreach(ENGINE IN LISTS ENGINES)
-	if (ENABLE_${ENGINE})
-		string(TOLOWER ${ENGINE} ENGINE_LIB)
-
-		# Link against the engine
-		target_link_libraries()EOS" << setup.projectName << R"( ${ENGINE_LIB})
-	endif()
+	workspace << R"(foreach(ENGINE IN LISTS ENGINES)
+	string(TOLOWER ${ENGINE} ENGINE_DIR)
+	add_subdirectory(engines/${ENGINE_DIR})
 endforeach()
 
 )";
