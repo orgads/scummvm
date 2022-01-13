@@ -1,0 +1,63 @@
+add_engine(mutationofjb
+	commands/additemcommand.cpp commands/additemcommand.h
+	commands/bitmapvisibilitycommand.cpp commands/bitmapvisibilitycommand.h
+	commands/callmacrocommand.cpp commands/callmacrocommand.h
+	commands/camefromcommand.cpp commands/camefromcommand.h
+	commands/changecommand.cpp commands/changecommand.h
+	commands/command.cpp commands/command.h
+	commands/conditionalcommand.cpp commands/conditionalcommand.h
+	commands/definestructcommand.cpp commands/definestructcommand.h
+	commands/endblockcommand.cpp commands/endblockcommand.h
+	commands/gotocommand.cpp commands/gotocommand.h
+	commands/ifcommand.cpp commands/ifcommand.h
+	commands/ifitemcommand.cpp commands/ifitemcommand.h
+	commands/ifpiggycommand.cpp commands/ifpiggycommand.h
+	commands/labelcommand.cpp commands/labelcommand.h
+	commands/loadplayercommand.cpp commands/loadplayercommand.h
+	commands/newroomcommand.cpp commands/newroomcommand.h
+	commands/playanimationcommand.cpp commands/playanimationcommand.h
+	commands/randomcommand.cpp commands/randomcommand.h
+	commands/removeallitemscommand.cpp commands/removeallitemscommand.h
+	commands/removeitemcommand.cpp commands/removeitemcommand.h
+	commands/renamecommand.cpp commands/renamecommand.h
+	commands/saycommand.cpp commands/saycommand.h
+	commands/seqcommand.cpp commands/seqcommand.h
+	commands/setcolorcommand.cpp commands/setcolorcommand.h
+	commands/setobjectframecommand.cpp commands/setobjectframecommand.h
+	commands/specialshowcommand.cpp commands/specialshowcommand.h
+	commands/switchpartcommand.cpp commands/switchpartcommand.h
+	commands/talkcommand.cpp commands/talkcommand.h
+	tasks/conversationtask.cpp tasks/conversationtask.h
+	tasks/objectanimationtask.cpp tasks/objectanimationtask.h
+	tasks/saytask.cpp tasks/saytask.h
+	tasks/sequentialtask.cpp tasks/sequentialtask.h
+	tasks/task.h
+	tasks/taskmanager.cpp tasks/taskmanager.h
+	widgets/buttonwidget.cpp widgets/buttonwidget.h
+	widgets/conversationwidget.cpp widgets/conversationwidget.h
+	widgets/gamewidget.cpp widgets/gamewidget.h
+	widgets/imagewidget.cpp widgets/imagewidget.h
+	widgets/inventorywidget.cpp widgets/inventorywidget.h
+	widgets/labelwidget.cpp widgets/labelwidget.h
+	widgets/widget.cpp widgets/widget.h
+	animationdecoder.cpp animationdecoder.h
+	assets.cpp assets.h
+	conversationlinelist.cpp conversationlinelist.h
+	debug.cpp debug.h
+	encryptedfile.cpp encryptedfile.h
+	font.cpp font.h
+	game.cpp game.h
+	gamedata.cpp gamedata.h
+	gamescreen.cpp gamescreen.h
+	guiscreen.cpp guiscreen.h
+	hardcodedstrings.cpp hardcodedstrings.h
+	inventory.cpp inventory.h
+	inventoryitemdefinitionlist.cpp inventoryitemdefinitionlist.h
+	metaengine.cpp
+	module.mk
+	mutationofjb.cpp mutationofjb.h
+	room.cpp room.h
+	script.cpp script.h
+	timer.cpp timer.h
+	util.cpp util.h
+)
