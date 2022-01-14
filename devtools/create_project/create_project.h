@@ -265,6 +265,7 @@ struct BuildSetup {
 
 	bool featureEnabled(std::string feature) const;
 	Feature getFeature(std::string feature) const;
+	bool isInSource() const { return srcDir == "."; }
 };
 
 /**

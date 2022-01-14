@@ -1885,7 +1885,7 @@ void ProjectProvider::addFilesToProject(const std::string &dir, std::ostream &pr
 										const std::string &filePrefix) {
 	FileNode *files = scanFiles(dir, includeList, excludeList);
 
-	writeFileListToProject(*files, projectFile, 0, std::string(), filePrefix + '/', pchIncludeRoot, pchDirs, pchExclude);
+	writeFileListToProject(*files, projectFile, 0, std::string(), filePrefix.empty() ? filePrefix : filePrefix + '/', pchIncludeRoot, pchDirs, pchExclude);
 
 	delete files;
 }
