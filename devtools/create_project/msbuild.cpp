@@ -292,7 +292,7 @@ void MSBuildProvider::outputProjectSettings(std::ofstream &project, const std::s
 
 	// Edit and Continue
 	if ((name == setup.projectName || disableEditAndContinue) && !isRelease)
-		project << "\t\t\t<DebugInformationFormat>ProgramDatabase</DebugInformationFormat>\n";
+		project << "\t\t\t<DebugInformationFormat>OldStyle</DebugInformationFormat>\n";
 
 	// Warnings
 	if (warningsIterator != _projectWarnings.end())
@@ -489,7 +489,7 @@ void MSBuildProvider::createBuildProp(const BuildSetup &setup, bool isRelease, M
 				   << "\t\t\t<TreatWarningAsError>false</TreatWarningAsError>\n";
 		// Since MSVC 2015 Edit and Continue is supported for x86 and x86-64, but not for ARM.
 		if (configuration != "Analysis" && (arch == ARCH_X86 || (arch == ARCH_AMD64 && _version >= 14))) {
-			properties << "\t\t\t<DebugInformationFormat>EditAndContinue</DebugInformationFormat>\n";
+			properties << "\t\t\t<DebugInformationFormat>OldStyle</DebugInformationFormat>\n";
 		} else {
 			properties << "\t\t\t<DebugInformationFormat>ProgramDatabase</DebugInformationFormat>\n";
 		}
