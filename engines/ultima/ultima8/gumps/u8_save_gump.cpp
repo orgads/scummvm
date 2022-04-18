@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -203,9 +202,8 @@ void U8SaveGump::onMouseClick(int button, int32 mx, int32 my) {
 	}
 
 	if (!_save) {
-
 		// If our parent has a notifiy process, we'll put our result in it and wont actually load the game
-		GumpNotifyProcess *p = _parent->GetNotifyProcess();
+		GumpNotifyProcess *p = _parent ? _parent->GetNotifyProcess() : nullptr;
 		if (p) {
 			// Do nothing in this case
 			if (index != 1 && _descriptions[i].empty()) return;
@@ -222,14 +220,14 @@ void U8SaveGump::onMouseClick(int button, int32 mx, int32 my) {
 void U8SaveGump::ChildNotify(Gump *child, uint32 message) {
 	EditWidget *widget = dynamic_cast<EditWidget *>(child);
 	if (widget && message == EditWidget::EDIT_ENTER) {
-		// _save
+		// save
 		assert(_save);
 
 		Std::string name = widget->getText();
 		if (name.empty()) return;
 
-		if (savegame(widget->GetIndex() + 6 * _page, name))
-			_parent->Close(); // close PagedGump (and us)
+		// Note: this might close us, so we should return right after.
+		savegame(widget->GetIndex() + 6 * _page, name);
 
 		return;
 	}
@@ -271,6 +269,10 @@ bool U8SaveGump::savegame(int saveIndex, const Std::string &name) {
 	pout << "Save " << saveIndex << ": \"" << name << "\"" << Std::endl;
 
 	if (name.empty()) return false;
+
+	// We are saving, close parent (and ourselves) first so it doesn't
+	// block the save or appear in the screenshot
+	_parent->Close();
 
 	Ultima8Engine::get_instance()->saveGame(saveIndex, name);
 	return true;

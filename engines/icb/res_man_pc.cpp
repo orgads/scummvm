@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -54,7 +53,7 @@ Common::File *openDiskFileForBinaryRead(const char *filename) {
 	} else {
 		delete result;
 		warning("openDiskFileForBinaryRead(%s) - FAILED", path.c_str());
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -163,7 +162,7 @@ uint32 res_man::Fetch_size(const char * /*url*/, uint32 url_hash, const char *cl
 	HEADER_NORMAL *hn = GetFileHeader(cluster_search, &params);
 
 	// return value of 0 means no such file
-	if (hn == NULL)
+	if (hn == nullptr)
 		return 0;
 
 	return hn->size;
@@ -184,7 +183,7 @@ bool8 res_man::Test_file(const char *url, uint32 url_hash, const char *cluster, 
 
 	HEADER_NORMAL *hn = GetFileHeader(cluster_search, &params);
 
-	if (hn == NULL)
+	if (hn == nullptr)
 		return 0;
 
 	return 1;
@@ -235,7 +234,7 @@ void res_man::ReadFile(const char * /*url*/, RMParams *params) {
 
 		Tdebug("clusters.txt", "  Close handle %x", params->_stream);
 		delete params->_stream; // close the cluster
-		params->_stream = NULL;
+		params->_stream = nullptr;
 
 		mem_list[params->search].protect = 0;
 	}
@@ -259,7 +258,7 @@ const char *res_man::OpenFile(int32 &cluster_search, RMParams *params) {
 		params->_stream = openDiskFileForBinaryStreamRead(clusterPath.c_str());
 		Tdebug("clusters.txt", "  open cluster file %s handle %x", clusterPath.c_str(), params->_stream);
 
-		if (params->_stream == NULL)
+		if (params->_stream == nullptr)
 			Fatal_error("Res_open cannot *OPEN* cluster file %s", clusterPath.c_str());
 
 		// Read in 16 bytes, part of which is the cluster header length
@@ -276,7 +275,7 @@ const char *res_man::OpenFile(int32 &cluster_search, RMParams *params) {
 	}
 
 	HEADER_NORMAL *hn = GetFileHeader(cluster_search, params);
-	if (hn == NULL) {
+	if (hn == nullptr) {
 		// Big error the file wasn't found in the cluster
 		Fatal_error("res_man::OpenFile couldn't find url %X in cluster %s %X", params->url_hash, params->cluster, params->cluster_hash);
 	}
@@ -288,7 +287,7 @@ const char *res_man::OpenFile(int32 &cluster_search, RMParams *params) {
 	params->_stream = openDiskFileForBinaryStreamRead(clusterPath.c_str());
 	Tdebug("clusters.txt", "  open cluster file %s handle %x", clusterPath.c_str(), params->_stream);
 
-	if (params->_stream == NULL)
+	if (params->_stream == nullptr)
 		Fatal_error("Res_open cannot *OPEN* cluster file %s", clusterPath.c_str());
 
 	params->seekpos = hn->offset;
@@ -300,7 +299,7 @@ const char *res_man::OpenFile(int32 &cluster_search, RMParams *params) {
 	} else
 		params->len = hn->size;
 
-	return NULL;
+	return nullptr;
 }
 
 // Get the header infomation for a particular file from a cluster
@@ -352,7 +351,7 @@ HEADER_NORMAL *res_man::GetFileHeader(int32 &cluster_search, RMParams *params) {
 
 	// Check that the file was actually found
 	if (i == clu->ho.noFiles) {
-		return NULL;
+		return nullptr;
 	}
 
 	return hn;
@@ -364,7 +363,7 @@ void res_man::Res_open_mini_cluster(const char *cluster_url, uint32 &cluster_has
 	// open the mini-cluster
 
 	uint32 zeroHash = 0;
-	Cluster_API *clu = (Cluster_API *)Res_open(NULL, zeroHash, cluster_url, cluster_hash);
+	Cluster_API *clu = (Cluster_API *)Res_open(nullptr, zeroHash, cluster_url, cluster_hash);
 
 	int32 numFiles = clu->ho.noFiles;
 
@@ -404,7 +403,7 @@ void res_man::Res_open_mini_cluster(const char *cluster_url, uint32 &cluster_has
 
 	// ensure the header is still in memory
 
-	clu = (Cluster_API *)Res_open(NULL, zeroHash, cluster_url, cluster_hash);
+	clu = (Cluster_API *)Res_open(nullptr, zeroHash, cluster_url, cluster_hash);
 
 	// now load in the body...
 	// from first file upwards

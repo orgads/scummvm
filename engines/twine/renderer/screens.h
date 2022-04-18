@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -49,28 +48,25 @@ public:
 	Screens(TwinEEngine *engine) : _engine(engine) {}
 
 	/** In-game palette (should not be used, except in special case. otherwise use other images functions instead) */
-	uint8 palette[NUMOFCOLORS * 3]{0};
+	uint8 _palette[NUMOFCOLORS * 3]{0};
 
 	/** converted in-game palette */
-	uint32 paletteRGBA[NUMOFCOLORS]{0};
+	uint32 _paletteRGBA[NUMOFCOLORS]{0};
 
 	/** converted custom palette */
-	uint32 paletteRGBACustom[NUMOFCOLORS]{0};
+	uint32 _paletteRGBACustom[NUMOFCOLORS]{0};
 
 	/** flag to check in the game palette was changed */
-	bool palResetted = false;
+	bool _palResetted = false;
 
 	/** flag to check if the main flag is locked */
-	bool lockPalette = false;
+	bool _fadePalette = false;
 
 	/** flag to check if we are using a different palette than the main one */
-	bool useAlternatePalette = false;
-
-	/** main game palette */
-	uint8 *mainPalette = nullptr;
+	bool _useAlternatePalette = false;
 
 	/** converted in-game palette */
-	uint32 mainPaletteRGBA[NUMOFCOLORS]{0};
+	uint32 _mainPaletteRGBA[NUMOFCOLORS]{0};
 
 	/** Load and display Adeline Logo */
 	bool adelineLogo();
@@ -78,10 +74,20 @@ public:
 	void convertPalToRGBA(const uint8 *in, uint32 *out);
 
 	/**
+	 * @sa setNormalPal
+	 */
+	void setDarkPal();
+	/**
+	 * @sa setDarkPal()
+	 * Reset the palette to the main palette after the script changed it via @c setDarkPal()
+	 */
+	void setNormalPal();
+
+	/**
 	 * Load a custom palette
 	 * @param index \a RESS.HQR entry index (starting from 0)
 	 */
-	void loadCustomPalette(int32 index);
+	void loadCustomPalette(const TwineResource &resource);
 
 	/** Load and display Main Menu image */
 	void loadMenuImage(bool fadeIn = true);
@@ -92,15 +98,16 @@ public:
 	 * @param paletteIndex \a RESS.HQR entry index of the palette for the given image. This is often the @c index + 1
 	 * @param fadeIn if we fade in before using the palette
 	 */
-	void loadImage(int32 index, int32 paletteIndex, bool fadeIn = true);
+	void loadImage(TwineImage image, bool fadeIn = true);
 
 	/**
 	 * Load and display a particulary image on \a RESS.HQR file with cross fade effect and delay
 	 * @param index \a RESS.HQR entry index (starting from 0)
 	 * @param paletteIndex \a RESS.HQR entry index of the palette for the given image. This is often the @c index + 1
 	 * @param seconds number of seconds to delay
+	 * @return @c true if aborted
 	 */
-	bool loadImageDelay(int32 index, int32 paletteIndex, int32 seconds);
+	bool loadImageDelay(TwineImage image, int32 seconds);
 
 	/**
 	 * Fade image in
@@ -115,14 +122,15 @@ public:
 	void fadeOut(const uint32 *palette);
 
 	/**
-	 * Calculate a new color component according with an intensity
-	 * @param modifier color compenent
-	 * @param color color value
-	 * @param param unknown
-	 * @param intensity intensity value to adjust
-	 * @return new color component
+	 * Linear interpolation of the given value between start and end
+	 * @param value color component
+	 * @param start lower range
+	 * @param end upper range
+	 * @param t the location in given range
+	 * @return the lerped value
+	 * @note Doesn't clamp
 	 */
-	int32 crossDot(int32 modifier, int32 color, int32 param, int32 intensity);
+	int32 lerp(int32 value, int32 start, int32 end, int32 t);
 
 	/**
 	 * Adjust between two palettes

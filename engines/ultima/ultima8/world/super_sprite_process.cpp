@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -80,7 +79,7 @@ SuperSpriteProcess::SuperSpriteProcess(int shape, int frame, int sx, int sy, int
 			Actor *srcnpc = dynamic_cast<Actor *>(srcitem);
 			Actor *controlled = getControlledActor();
 			const uint32 frameno = Kernel::get_instance()->getFrameNum();
-			const uint32 timeoutfinish = controlled ? controlled->getAttackMoveTimeoutFinish() : 0;
+			const uint32 timeoutfinish = controlled ? controlled->getAttackMoveTimeoutFinishFrame() : 0;
 			if (!srcnpc || !srcnpc->getAttackAimFlag()) {
 				if (!srcnpc || frameno < timeoutfinish) {
 					if (!srcnpc && (controlled && controlled->isKneeling())) {
@@ -414,11 +413,18 @@ void SuperSpriteProcess::advanceFrame() {
 		Item *sprite = getItem(_spriteNo);
 		assert(sprite);
 		sprite->move(_nextpt);
+		uint32 frame = sprite->getFrame() + 1;
 		if (_fireType == 0xe) {
-			uint32 frame = sprite->getFrame();
-			frame++;
 			if (frame > 0x4b)
 				frame = 0x47;
+			sprite->setFrame(frame);
+		} else if (_fireType == 0x11) { // No Regret only
+			if (frame % 6 == 0)
+				frame = frame - 5;
+			sprite->setFrame(frame);
+		} else if (_fireType == 0x14) { // No Regret only
+			if ((frame - 0xdb) % 3 == 0)
+				frame = frame - 2;
 			sprite->setFrame(frame);
 		}
 	}
@@ -486,7 +492,7 @@ bool SuperSpriteProcess::loadData(Common::ReadStream *rs, uint32 version) {
 	if (!Process::loadData(rs, version)) return false;
 
 	_shape = static_cast<int>(rs->readUint32LE());
-	_frame = rs->readUint16LE();
+	_frame = rs->readUint32LE();
 	_nowpt.loadData(rs, version);
 	_nextpt.loadData(rs, version);
 	_pt3.loadData(rs, version);

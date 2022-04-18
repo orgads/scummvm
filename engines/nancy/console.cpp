@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -256,7 +255,7 @@ bool NancyConsole::Cmd_showImage(int argc, const char **argv) {
 	}
 
 	_imageFile = argv[1];
-	return cmdExit(0, 0);
+	return cmdExit(0, nullptr);
 }
 
 bool NancyConsole::Cmd_loadCal(int argc, const char **argv) {
@@ -280,7 +279,7 @@ bool NancyConsole::Cmd_playVideo(int argc, const char **argv) {
 
 	_videoFile = argv[1];
 	_videoFile += ".avf";
-	return cmdExit(0, 0);
+	return cmdExit(0, nullptr);
 }
 
 bool NancyConsole::Cmd_playAudio(int argc, const char **argv) {
@@ -329,7 +328,7 @@ bool NancyConsole::Cmd_loadScene(int argc, const char **argv) {
 
 	NancySceneState.changeScene((uint16)atoi(argv[1]), 0, 0, false);
 	NancySceneState._state = State::Scene::kLoad;
-	return cmdExit(0, 0);
+	return cmdExit(0, nullptr);
 }
 
 bool NancyConsole::Cmd_sceneID(int argc, const char **argv) {

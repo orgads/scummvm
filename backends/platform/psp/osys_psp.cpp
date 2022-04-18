@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -135,7 +134,7 @@ int OSystem_PSP::getDefaultGraphicsMode() const {
 	return _displayManager.getDefaultGraphicsMode();
 }
 
-bool OSystem_PSP::setGraphicsMode(int mode) {
+bool OSystem_PSP::setGraphicsMode(int mode, uint flags) {
 	DEBUG_ENTER_FUNC();
 	_displayManager.waitUntilRenderFinished();
 	_pendingUpdate = false;
@@ -260,6 +259,9 @@ void OSystem_PSP::clearOverlay() {
 
 void OSystem_PSP::grabOverlay(Graphics::Surface &surface) {
 	DEBUG_ENTER_FUNC();
+	assert(surface.w >= _overlay.getWidth());
+	assert(surface.h >= _overlay.getHeight());
+	assert(surface.format.bytesPerPixel == 2);
 	_overlay.copyToArray(surface.getPixels(), surface.pitch);
 }
 
@@ -355,20 +357,8 @@ void OSystem_PSP::delayMillis(uint msecs) {
 	PspThread::delayMillis(msecs);
 }
 
-OSystem::MutexRef OSystem_PSP::createMutex(void) {
-	return (MutexRef) new PspMutex(true);	// start with a full mutex
-}
-
-void OSystem_PSP::lockMutex(MutexRef mutex) {
-	((PspMutex *)mutex)->lock();
-}
-
-void OSystem_PSP::unlockMutex(MutexRef mutex) {
-	((PspMutex *)mutex)->unlock();
-}
-
-void OSystem_PSP::deleteMutex(MutexRef mutex) {
-	delete (PspMutex *)mutex;
+Common::MutexInternal *OSystem_PSP::createMutex(void) {
+	return new PspMutex(true);	// start with a full mutex
 }
 
 void OSystem_PSP::mixCallback(void *sys, byte *samples, int len) {
@@ -429,7 +419,7 @@ void OSystem_PSP::logMessage(LogMessageType::Type type, const char *message) {
 		PspDebugTrace(false, "%s", message);	// write to file
 }
 
-void OSystem_PSP::getTimeAndDate(TimeDate &td) const {
+void OSystem_PSP::getTimeAndDate(TimeDate &td, bool skipRecord) const {
 	time_t curTime = time(0);
 	struct tm t = *localtime(&curTime);
 	td.tm_sec = t.tm_sec;

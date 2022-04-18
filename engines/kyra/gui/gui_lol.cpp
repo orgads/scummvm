@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -2403,9 +2402,6 @@ int GUI_LoL::runMenu(Menu &menu) {
 
 			// Disable keyboard keymap during text input (save menu)
 			lolKeyboardKeymap->setEnabled(false);
-		} else if (_lastMenu == &_savenameMenu) {
-			// Restore keyboard keymap after text input (save menu)
-			lolKeyboardKeymap->setEnabled(true);
 		}
 
 		while (!_newMenu && _displayMenu) {
@@ -2450,8 +2446,13 @@ int GUI_LoL::runMenu(Menu &menu) {
 				_displayMenu = false;
 		}
 
-		if (_newMenu != _currentMenu || !_displayMenu)
+		if (_newMenu != _currentMenu || !_displayMenu) {
+			if (_currentMenu == &_savenameMenu) {
+				// Restore keyboard keymap after text input (save menu)
+				lolKeyboardKeymap->setEnabled(true);
+			}
 			restorePage0();
+		}
 
 		_currentMenu->highlightedItem = hasSpecialButtons;
 
@@ -2527,6 +2528,14 @@ void GUI_LoL::setupSaveMenuSlots(Menu &menu, int num) {
 			while (s[0] && fC >= saveSlotMaxLen) {
 				s[strlen(s) - 1]  = 0;
 				fC = _screen->getTextWidth(s);
+			}
+
+			if (_vm->gameFlags().lang == Common::JA_JPN) {
+				// Strip special characters from GMM save dialog which might get misinterpreted as SJIS
+				for (uint ii = 0; ii < strlen(s); ++ii) {
+					if (s[ii] < 32) // due to the signed char type this will also clean up everything >= 0x80
+						s[ii] = ' ';
+				}
 			}
 
 			menu.item[i].itemString = s;
@@ -2809,7 +2818,7 @@ int GUI_LoL::clickedAudioMenu(Button *button) {
 				vocIndex = (int16)READ_LE_UINT16(&_vm->_ingameSoundIndex[_sliderSfx * 2]);
 				if (vocIndex == -1)
 					continue;
-				if (!scumm_stricmp(_vm->_ingameSoundList[vocIndex], "EMPTY"))
+				if (_vm->_ingameSoundList[vocIndex].equalsIgnoreCase("EMPTY"))
 					continue;
 				break;
 			} while (1);
@@ -2836,7 +2845,7 @@ int GUI_LoL::clickedSavenameMenu(Button *button) {
 	updateMenuButton(button);
 	if (button->arg == _savenameMenu.item[0].itemId) {
 
-		Util::convertDOSToISO(_saveDescription);
+		Util::convertDOSToUTF8(_saveDescription, 5120 - (int)((uint8*)_saveDescription - _vm->_tempBuffer5120));
 
 		int slot = _menuResult == -2 ? getNextSavegameSlot() : _menuResult - 1;
 		Graphics::Surface thumb;

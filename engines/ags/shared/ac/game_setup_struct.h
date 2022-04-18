@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -58,7 +57,7 @@ struct GameSetupStruct : public GameSetupStructBase {
 	// TODO: split into installation params (used only when reading) and runtime params
 	std::vector<FontInfo> fonts;
 	InventoryItemInfo invinfo[MAX_INV];
-	MouseCursor       mcurs[MAX_CURSOR];
+	std::vector<MouseCursor> mcurs;
 	std::vector<PInteraction> intrChar;
 	PInteraction intrInv[MAX_INV];
 	std::vector<PInteractionScripts> charScripts;
@@ -89,6 +88,8 @@ struct GameSetupStruct : public GameSetupStructBase {
 	// A clip to play when player gains score in game
 	// TODO: find out why OPT_SCORESOUND option cannot be used to store this in >=3.2 games
 	int               scoreClipID;
+	// number of allowed game audio channels (the ones under direct user control)
+	int               numGameChannels = 0;
 
 	// TODO: I converted original array of sprite infos to vector here, because
 	// statistically in most games sprites go in long continious sequences with minimal

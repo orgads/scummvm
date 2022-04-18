@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Low level graphics interface.
  */
@@ -56,11 +55,11 @@ static inline uint16 t3getColor(uint8 r, uint8 g, uint8 b) {
 }
 
 /**
- * PSX Block list unwinder.
+ * PSX/Saturn Block list unwinder.
  * Chunk type 0x0003 (CHUNK_CHARPTR) in PSX version of DW 1 & 2 is compressed (original code
  * calls the compression PJCRLE), thus we need to decompress it before passing data to drawing functions
  */
-uint8* psxPJCRLEUnwinder(uint16 imageWidth, uint16 imageHeight, uint8 *srcIdx) {
+uint8* psxSaturnPJCRLEUnwinder(uint16 imageWidth, uint16 imageHeight, uint8 *srcIdx) {
 	uint32 remainingBlocks = 0;
 
 	uint16 compressionType = 0; // Kind of decompression to apply
@@ -84,7 +83,7 @@ uint8* psxPJCRLEUnwinder(uint16 imageWidth, uint16 imageHeight, uint8 *srcIdx) {
 
 	while (remainingBlocks) { // Repeat until all blocks are decompressed
 		if (!controlBits) {
-			controlData = READ_16(srcIdx);
+			controlData = READ_LE_UINT16(srcIdx);
 			srcIdx += 2;
 
 			// If bit 15 of controlData is enabled, compression data is type 1.
@@ -103,7 +102,7 @@ uint8* psxPJCRLEUnwinder(uint16 imageWidth, uint16 imageHeight, uint8 *srcIdx) {
 			// If there is compression, we need to fetch an index
 			// to be treated as "base" for compression.
 			if (compressionType != 0) {
-				controlData = READ_16(srcIdx);
+				controlData = READ_LE_UINT16(srcIdx);
 				srcIdx += 2;
 				baseIndex = controlData;
 			}
@@ -125,7 +124,7 @@ uint8* psxPJCRLEUnwinder(uint16 imageWidth, uint16 imageHeight, uint8 *srcIdx) {
 		switch (compressionType) {
 			case 0: // No compression, plain copy of indexes
 				while (decremTiles) {
-					WRITE_LE_UINT16(dstIdx, READ_16(srcIdx));
+					WRITE_LE_UINT16(dstIdx, READ_LE_UINT16(srcIdx));
 					srcIdx += 2;
 					dstIdx += 2;
 					decremTiles--;
@@ -301,9 +300,9 @@ static void MacDrawTiles(DRAWOBJECT *pObj, uint8 *srcP, uint8 *destP, bool apply
 
 
 /**
- * Straight rendering with transparency support, PSX variant supporting also 4-BIT clut data
+ * Straight rendering with transparency support, PSX/Saturn variant supporting also 4-BIT clut data for PSX
  */
-static void PsxDrawTiles(DRAWOBJECT *pObj, uint8 *srcP, uint8 *destP, bool applyClipping, bool fourBitClut, uint32 psxSkipBytes, byte *psxMapperTable, bool transparency) {
+static void psxSaturnDrawTiles(DRAWOBJECT *pObj, uint8 *srcP, uint8 *destP, bool applyClipping, bool fourBitClut, uint32 psxSkipBytes, byte *psxMapperTable, bool transparency) {
 	// Set up the offset between destination blocks
 	int rightClip = applyClipping ? pObj->rightClip : 0;
 	Common::Rect boxBounds;
@@ -765,7 +764,7 @@ static void t3TransWNZ(DRAWOBJECT *pObj, uint8 *srcP, uint8 *destP) {
 				t3getRGB(dstColor, dstR, dstG, dstB);
 
 				if ((pObj->colorFlags & 4) != 0) { // additive blending
-					// orginal algo:
+					// original algo:
 					// color &= 0b1111011111011111;
 					// color += dstColor & 0b1111011111011111;
 					// if (color > 0xFFFF) {
@@ -1002,6 +1001,38 @@ static void PackedWrtNonZero(DRAWOBJECT *pObj, uint8 *srcP, uint8 *destP,
 	}
 }
 
+static void t3WrtText(DRAWOBJECT *pObj, uint8 *srcP, uint8 *destP) {
+	bool applyClipping = (pObj->flags & DMA_CLIP) != 0;
+
+	if (applyClipping) {
+		srcP += (pObj->topClip * pObj->width * 2);
+
+		pObj->height -= pObj->topClip + pObj->botClip;
+		pObj->width -= pObj->leftClip + pObj->rightClip;
+	}
+
+	uint32 baseColor = t3GetBaseColor();
+
+	for (int y = 0; y < pObj->height; ++y) {
+		// Get the position to start writing out from
+		uint8 *tempP = destP;
+		srcP += pObj->leftClip * 2;
+		for (int x = 0; x < pObj->width; ++x) {
+			uint32 color = READ_LE_UINT16(srcP);
+			if (color != 0xF81F) { // "zero" for Tinsel 3 - magenta in 565
+				if (color == baseColor) {
+					color = pObj->constant;
+				}
+				WRITE_UINT16(tempP, color);
+			}
+			tempP += 2;
+			srcP += 2;
+		}
+		srcP += pObj->rightClip * 2;
+		destP += SCREEN_WIDTH * 2;
+	}
+}
+
 //----------------- MAIN FUNCTIONS ---------------------
 
 /**
@@ -1034,7 +1065,7 @@ void DrawObject(DRAWOBJECT *pObj) {
 	byte psxMapperTable[16];
 
 	bool psxFourBitClut = false; // Used by Tinsel PSX, true if an image using a 4bit CLUT is rendered
-	bool psxRLEindex = false; // Used by Tinsel PSX, true if an image is using PJCRLE compressed indexes
+	bool psxSaturnRLEindex = false; // Used by Tinsel PSX/Saturn, true if an image is using PJCRLE compressed indexes
 	uint32 psxSkipBytes = 0; // Used by Tinsel PSX, number of bytes to skip before counting indexes for image tiles
 
 	if ((pObj->width <= 0) || (pObj->height <= 0))
@@ -1042,7 +1073,7 @@ void DrawObject(DRAWOBJECT *pObj) {
 		return;
 
 	// If writing constant data, don't bother locking the data pointer and reading src details
-	if ((pObj->flags & DMA_CONST) == 0) {
+	if (((pObj->flags & DMA_CONST) == 0) || (TinselV3 && ((pObj->flags & 0x05) == 0x05))) {
 		if (TinselV2) {
 			srcPtr = (byte *)_vm->_handle->LockMem(pObj->hBits);
 			pObj->charBase = nullptr;
@@ -1051,29 +1082,30 @@ void DrawObject(DRAWOBJECT *pObj) {
 			byte *p = (byte *)_vm->_handle->LockMem(pObj->hBits & HANDLEMASK);
 
 			srcPtr = p + (pObj->hBits & OFFSETMASK);
-			pObj->charBase = (char *)p + READ_LE_UINT32(p + 0x10);
-			pObj->transOffset = READ_LE_UINT32(p + 0x14);
+			pObj->charBase = (char *)p + READ_32(p + 0x10);
+			pObj->transOffset = READ_32(p + 0x14);
 
-			// Decompress block indexes for Discworld PSX
-			if (TinselV1PSX) {
-				uint8 paletteType = *(srcPtr); // if 0x88 we are using an 8bit palette type, if 0x44 we are using a 4 bit PSX CLUT
-				uint8 indexType = *(srcPtr + 1); // if 0xCC indexes for this image are compressed with PCJRLE, if 0xDD indexes are not compressed
+			// Decompress block indexes for Discworld PSX/Saturn
+			if (TinselV1PSX || TinselV1Saturn) {
+				uint8 paletteType = TinselV1PSX ? *(srcPtr) : *(srcPtr + 1); // if 0x88 we are using an 8bit palette type, if 0x44 we are using a 4 bit PSX CLUT
+				uint8 indexType = TinselV1PSX ? *(srcPtr + 1) : *(srcPtr); // if 0xCC indexes for this image are compressed with PCJRLE, if 0xDD indexes are not compressed
 
 				switch (paletteType) {
-					case 0x88: // Normal 8-bit palette
+					case 0x00: // Normal 8-bit palette (Saturn)
+					case 0x88: // Normal 8-bit palette (PSX)
 						psxFourBitClut = false;
 						psxSkipBytes = 0;
 						switch (indexType) {
 							case 0xDD: // Normal uncompressed indexes
-								psxRLEindex = false;
+								psxSaturnRLEindex = false;
 								srcPtr += sizeof(uint16); // Get to the beginning of index data
 								break;
 							case 0xCC: // PJCRLE compressed indexes
-								psxRLEindex = true;
-								srcPtr = psxPJCRLEUnwinder(pObj->width, pObj->height, srcPtr + sizeof(uint16));
+								psxSaturnRLEindex = true;
+								srcPtr = psxSaturnPJCRLEUnwinder(pObj->width, pObj->height, srcPtr + sizeof(uint16));
 								break;
 							default:
-								error("Unknown PSX index type 0x%.2X", indexType);
+								error("Unknown PSX/Saturn index type 0x%.2X", indexType);
 								break;
 						}
 						break;
@@ -1081,15 +1113,15 @@ void DrawObject(DRAWOBJECT *pObj) {
 						psxPaletteMapper(pObj->pPal, srcPtr + sizeof(uint16), psxMapperTable);
 
 						psxFourBitClut = true;
-						psxSkipBytes = READ_LE_UINT32(p + sizeof(uint32) * 5) << 4; // Fetch number of bytes we have to skip
+						psxSkipBytes = READ_32(p + sizeof(uint32) * 5) << 4; // Fetch number of bytes we have to skip
 						switch (indexType) {
 							case 0xDD: // Normal uncompressed indexes
-								psxRLEindex = false;
+								psxSaturnRLEindex = false;
 								srcPtr += sizeof(uint16) * 17; // Skip image type and clut, and get to beginning of index data
 								break;
 							case 0xCC: // PJCRLE compressed indexes
-								psxRLEindex = true;
-								srcPtr = psxPJCRLEUnwinder(pObj->width, pObj->height, srcPtr + sizeof(uint16) * 17);
+								psxSaturnRLEindex = true;
+								srcPtr = psxSaturnPJCRLEUnwinder(pObj->width, pObj->height, srcPtr + sizeof(uint16) * 17);
 								break;
 							default:
 								error("Unknown PSX index type 0x%.2X", indexType);
@@ -1097,7 +1129,7 @@ void DrawObject(DRAWOBJECT *pObj) {
 						}
 						break;
 					default:
-						error("Unknown PSX palette type 0x%.2X", paletteType);
+						error("Unknown PSX/Saturn palette type 0x%.2X", paletteType);
 						break;
 				}
 			}
@@ -1137,8 +1169,8 @@ void DrawObject(DRAWOBJECT *pObj) {
 				t3WrtNonZero(pObj, srcPtr, destPtr);
 			else if (TinselV2)
 				t2WrtNonZero(pObj, srcPtr, destPtr, (typeId & DMA_CLIP) != 0, (typeId & DMA_FLIPH) != 0);
-			else if (TinselV1PSX)
-				PsxDrawTiles(pObj, srcPtr, destPtr, typeId == 0x41, psxFourBitClut, psxSkipBytes, psxMapperTable, true);
+			else if (TinselV1PSX || TinselV1Saturn)
+				psxSaturnDrawTiles(pObj, srcPtr, destPtr, typeId == 0x41, psxFourBitClut, psxSkipBytes, psxMapperTable, true);
 			else if (TinselV1Mac)
 				MacDrawTiles(pObj, srcPtr, destPtr, typeId == 0x41);
 			else if (TinselV1)
@@ -1152,8 +1184,8 @@ void DrawObject(DRAWOBJECT *pObj) {
 				t3WrtAll(pObj, srcPtr, destPtr);
 			else if (TinselV2 || TinselV1Mac || TinselV0)
 				WrtAll(pObj, srcPtr, destPtr, typeId == 0x48);
-			else if (TinselV1PSX)
-				PsxDrawTiles(pObj, srcPtr, destPtr, typeId == 0x48, psxFourBitClut, psxSkipBytes, psxMapperTable, false);
+			else if (TinselV1PSX || TinselV1Saturn)
+				psxSaturnDrawTiles(pObj, srcPtr, destPtr, typeId == 0x48, psxFourBitClut, psxSkipBytes, psxMapperTable, false);
 			else if (TinselV1)
 				WrtNonZero(pObj, srcPtr, destPtr, typeId == 0x48);
 			break;
@@ -1172,14 +1204,19 @@ void DrawObject(DRAWOBJECT *pObj) {
 		case 0xC4:	// draw transparent surface with clipping
 			WrtTrans(pObj, destPtr, typeId == 0xC4);
 			break;
+		case 0x05:	// TinselV3, draw text with color replacement without clipping
+		case 0x45:	// TinselV3, draw text with color replacement with clipping
+			assert(TinselV3);
+			t3WrtText(pObj, srcPtr, destPtr);
+			break;
 		default:
 			error("Unknown drawing type %d", typeId);
 		}
 	}
 
-	// If we were using Discworld PSX, free the memory allocated
+	// If we were using Discworld PSX/Saturn, free the memory allocated
 	// for decompressed block indexes.
-	if (TinselV1PSX && psxRLEindex)
+	if ((TinselV1PSX || TinselV1Saturn) && psxSaturnRLEindex)
 		free(srcPtr);
 }
 

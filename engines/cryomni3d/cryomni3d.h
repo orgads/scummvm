@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -181,6 +180,22 @@ private:
 
 	Common::Rect _hnmClipping;
 	bool _hnmHasClip;
+};
+
+class CryOmni3DEngine_HNMPlayer : public CryOmni3DEngine {
+protected:
+	Common::Error run() override;
+
+public:
+	CryOmni3DEngine_HNMPlayer(OSystem *syst, const CryOmni3DGameDescription *gamedesc) : CryOmni3DEngine(syst, gamedesc) {}
+	~CryOmni3DEngine_HNMPlayer() override {}
+
+	bool displayToolbar(const Graphics::Surface *original) override { return false; }
+	bool hasPlaceDocumentation() override { return false; }
+	bool displayPlaceDocumentation() override { return false; }
+	uint displayOptions() override { return 0; }
+	void makeTranslucent(Graphics::Surface &dst, const Graphics::Surface &src) const override {}
+	void setupPalette(const byte *colors, uint start, uint num) override {}
 };
 
 } // End of namespace CryOmni3D

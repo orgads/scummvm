@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -218,11 +217,11 @@ int MidiDriver_FluidSynth::open() {
 	if (_isOpen)
 		return MERR_ALREADY_OPEN;
 
-	fluid_set_log_function(FLUID_PANIC, logHandler, NULL);
-	fluid_set_log_function(FLUID_ERR, logHandler, NULL);
-	fluid_set_log_function(FLUID_WARN, logHandler, NULL);
-	fluid_set_log_function(FLUID_INFO, logHandler, NULL);
-	fluid_set_log_function(FLUID_DBG, logHandler, NULL);
+	fluid_set_log_function(FLUID_PANIC, logHandler, nullptr);
+	fluid_set_log_function(FLUID_ERR, logHandler, nullptr);
+	fluid_set_log_function(FLUID_WARN, logHandler, nullptr);
+	fluid_set_log_function(FLUID_INFO, logHandler, nullptr);
+	fluid_set_log_function(FLUID_DBG, logHandler, nullptr);
 
 #if FS_API_VERSION >= 0x0200
 	// When provided with in-memory SoundFont data, only use the configured
@@ -365,7 +364,7 @@ int MidiDriver_FluidSynth::open() {
 #endif
 
 	if (_soundFont == -1) {
-		GUI::MessageDialog dialog(_("FluidSynth: Failed loading custom SoundFont '%s'. Music is off."), soundfont);
+		GUI::MessageDialog dialog(Common::U32String::format(_("FluidSynth: Failed loading custom SoundFont '%s'. Music is off."), soundfont));
 		dialog.runModal();
 		return MERR_DEVICE_NOT_AVAILABLE;
 	}
@@ -439,7 +438,7 @@ MidiChannel *MidiDriver_FluidSynth::allocateChannel() {
 		if (i != 9 && _midiChannels[i].allocate())
 			return &_midiChannels[i];
 	}
-	return NULL;
+	return nullptr;
 }
 
 MidiChannel *MidiDriver_FluidSynth::getPercussionChannel() {
@@ -459,16 +458,16 @@ void MidiDriver_FluidSynth::setEngineSoundFont(Common::SeekableReadStream *sound
 
 class FluidSynthMusicPlugin : public MusicPluginObject {
 public:
-	const char *getName() const {
+	const char *getName() const override {
 		return "FluidSynth";
 	}
 
-	const char *getId() const {
+	const char *getId() const override {
 		return "fluidsynth";
 	}
 
-	MusicDevices getDevices() const;
-	Common::Error createInstance(MidiDriver **mididriver, MidiDriver::DeviceHandle = 0) const;
+	MusicDevices getDevices() const override;
+	Common::Error createInstance(MidiDriver **mididriver, MidiDriver::DeviceHandle = 0) const override;
 };
 
 MusicDevices FluidSynthMusicPlugin::getDevices() const {

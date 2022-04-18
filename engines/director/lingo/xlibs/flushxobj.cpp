@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -42,7 +41,16 @@
 
 namespace Director {
 
-static const char *xlibName = "FlushXObj";
+const char *FlushXObj::xlibNames[] = {
+	"FlushXObj",
+	"Johnny",
+	nullptr,
+};
+const char *FlushXObj::fileNames[] = {
+	"FlushXObj",
+	"Johnny",
+	nullptr
+};
 
 static MethodProto xlibMethods[] = {
 	{ "new",				FlushXObj::m_new,				 0, 0,	400 },	// D4
@@ -50,17 +58,24 @@ static MethodProto xlibMethods[] = {
 	{ "ClearMask",			FlushXObj::m_clearMask,			 0, 0,	400 },	// D4
 	{ "Flush",				FlushXObj::m_flush,				 0, 0,  400 },	// D4
 	{ "FlushEvents",		FlushXObj::m_flushEvents,		 2, 2,  400 },	// D4
-	{ 0, 0, 0, 0, 0 }
+	{ nullptr, nullptr, 0, 0, 0 }
 };
 
-void FlushXObj::initialize(int type) {
-	FlushXObject::initMethods(xlibMethods);
-	if (type & kXObj) {
-		if (!g_lingo->_globalvars.contains(xlibName)) {
-			FlushXObject *xobj = new FlushXObject(kXObj);
-			g_lingo->_globalvars[xlibName] = xobj;
-		} else {
-			warning("FlushXObject already initialized");
+void FlushXObj::open(int type) {
+	if (type == kXObj) {
+		FlushXObject::initMethods(xlibMethods);
+		FlushXObject *xobj = new FlushXObject(kXObj);
+		for (uint i = 0; xlibNames[i]; i++) {
+			g_lingo->_globalvars[xlibNames[i]] = xobj;
+		}
+	}
+}
+
+void FlushXObj::close(int type) {
+	if (type == kXObj) {
+		FlushXObject::cleanupMethods();
+		for (uint i = 0; xlibNames[i]; i++) {
+			g_lingo->_globalvars[xlibNames[i]] = Datum();
 		}
 	}
 }

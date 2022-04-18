@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -110,6 +109,10 @@ Debugger::Debugger(BladeRunnerEngine *vm) : GUI::Debugger() {
 	_showStatsVk = false;
 	_showMazeScore = false;
 	_showMouseClickInfo = false;
+	_useBetaCrosshairsCursor = false;
+	_useAdditiveDrawModeForMouseCursorMode0 = false;
+	_useAdditiveDrawModeForMouseCursorMode1 = false;
+	resetPendingOuttake();
 
 	registerCmd("anim", WRAP_METHOD(Debugger, cmdAnimation));
 	registerCmd("health", WRAP_METHOD(Debugger, cmdHealth));
@@ -135,8 +138,9 @@ Debugger::Debugger(BladeRunnerEngine *vm) : GUI::Debugger() {
 	registerCmd("object", WRAP_METHOD(Debugger, cmdObject));
 	registerCmd("item", WRAP_METHOD(Debugger, cmdItem));
 	registerCmd("region", WRAP_METHOD(Debugger, cmdRegion));
-	registerCmd("click", WRAP_METHOD(Debugger, cmdClick));
+	registerCmd("mouse", WRAP_METHOD(Debugger, cmdMouse));
 	registerCmd("difficulty", WRAP_METHOD(Debugger, cmdDifficulty));
+	registerCmd("outtake", WRAP_METHOD(Debugger, cmdOuttake));
 #if BLADERUNNER_ORIGINAL_BUGS
 #else
 	registerCmd("effect", WRAP_METHOD(Debugger, cmdEffect));
@@ -636,7 +640,7 @@ bool Debugger::cmdMusic(int argc, const char** argv) {
 	Common::String trackArgStr = argv[1];
 	if (trackArgStr == "list") {
 		for (int i = 0; i < (int)_vm->_gameInfo->getMusicTrackCount(); ++i) {
-			debugPrintf("%2d %s\n", i, kMusicTracksArr[i]);
+			debugPrintf("%2d - %s\n", i, kMusicTracksArr[i]);
 		}
 		return true;
 	} else if (trackArgStr == "stop") {
@@ -748,7 +752,7 @@ const struct SceneList {
 	{ 4, "UG12", 84, 96 },   { 4, "UG13", 85, 97 },  { 4, "UG14", 86, 98 },   { 4, "UG15", 87, 99 },
 	{ 4, "UG16", 16, 100 },  { 4, "UG17", 88, 101 }, { 4, "UG18", 89, 102 },  { 4, "UG19", 90, 103 },
 
-	{ 0, NULL, 0, 0 }
+	{ 0, nullptr, 0, 0 }
 };
 
 // Auxialliary method to validate chapter, set and scene combination
@@ -1136,7 +1140,7 @@ const struct OverlayAndScenesVQAsList {
 	{ 6, "VKKASH", true },   { 6, "PS02ELEV", false },{ 6, "ESPER", false },   { 6, "VKDEKT", true },   { 6, "MA06ELEV", false },
 	{ 6, "VKBOB", true },    { 6, "SCORE", false },
 
-	{ 0, NULL, false }
+	{ 0, nullptr, false }
 };
 
 /**
@@ -1238,7 +1242,7 @@ bool Debugger::cmdOverlay(int argc, const char **argv) {
 
 				_vm->_scene->_vqaPlayer = new VQAPlayer(_vm, &_vm->_surfaceBack, origVqaName);
 				if (!_vm->_scene->_vqaPlayer->open()) {
-					debugPrintf("Error: Could not open player while reseting\nto scene VQA named: %s!\n", (origVqaName + ".VQA").c_str());
+					debugPrintf("Error: Could not open player while resetting\nto scene VQA named: %s!\n", (origVqaName + ".VQA").c_str());
 					return true;
 				}
 				_vm->_scene->startDefaultLoop();
@@ -1323,7 +1327,7 @@ bool Debugger::cmdOverlay(int argc, const char **argv) {
 				// even if it's not already loaded for the scene (in _vm->_overlays->_videos)
 				int overlayVideoIdx = _vm->_overlays->play(overlayName, overlayAnimationId, loopForever, startNowFlag, 0);
 				if ( overlayVideoIdx == -1 ) {
-					debugPrintf("Could not load the overlay animation: %s in this scene. Try reseting overlays first to free up slots!\n", overlayName.c_str());
+					debugPrintf("Could not load the overlay animation: %s in this scene. Try resetting overlays first to free up slots!\n", overlayName.c_str());
 				} else {
 					debugPrintf("Loading overlay animation: %s...\n", overlayName.c_str());
 
@@ -1855,31 +1859,55 @@ bool Debugger::cmdRegion(int argc, const char **argv) {
 }
 
 /**
-* Toggle showing mouse click info in the text console (not the debugger window)
+* click:  Toggle showing mouse click info in the text console (not the debugger window)
+* beta:   Toggle beta crosshairs for aiming in combat mode
+* add0:   Toggle semi-transparent hotspot cursor (additive draw mode 0)
+* add1:   Toggle semi-transparent hotspot cursor (additive draw mode 1)
 */
-bool Debugger::cmdClick(int argc, const char **argv) {
+bool Debugger::cmdMouse(int argc, const char **argv) {
 	bool invalidSyntax = false;
 
-	if (argc != 2) {
-		invalidSyntax = true;
-	} else {
+	if (argc == 2) {
 		//
 		// set a debug variable to enable showing the mouse click info
 		//
 		Common::String argName = argv[1];
 		argName.toLowercase();
-		if (argc == 2 && argName == "toggle") {
+
+		invalidSyntax = false;
+		if (argName == "click") {
 			_showMouseClickInfo = !_showMouseClickInfo;
-			debugPrintf("Showing mouse click info = %s\n", _showMouseClickInfo ? "True":"False");
-			return false; // close the debugger console
+		} else if (argName == "beta") {
+			_useBetaCrosshairsCursor = !_useBetaCrosshairsCursor;
+		} else if (argName == "add0") {
+			_useAdditiveDrawModeForMouseCursorMode0  = !_useAdditiveDrawModeForMouseCursorMode0;
+			_useAdditiveDrawModeForMouseCursorMode1  = false;
+		} else if (argName == "add1") {
+			_useAdditiveDrawModeForMouseCursorMode0  = false;
+			_useAdditiveDrawModeForMouseCursorMode1  = !_useAdditiveDrawModeForMouseCursorMode1;
 		} else {
 			invalidSyntax = true;
 		}
+
+		if (!invalidSyntax) {
+			debugPrintf("Showing mouse click info   = %s\n", _showMouseClickInfo ? "True":"False");
+			debugPrintf("Showing beta crosshairs    = %s\n", _useBetaCrosshairsCursor ? "True":"False");
+			debugPrintf("Mouse draw additive mode 0 = %s\n", _useAdditiveDrawModeForMouseCursorMode0 ? "True":"False");
+			debugPrintf("Mouse draw additive mode 1 = %s\n", _useAdditiveDrawModeForMouseCursorMode1 ? "True":"False");
+		}
+	} else {
+		invalidSyntax = true;
 	}
 
 	if (invalidSyntax) {
-		debugPrintf("Toggle showing mouse info (on mouse click) in the text console\n");
-		debugPrintf("Usage: %s toggle\n", argv[0]);
+		debugPrintf("click: Toggle showing mouse info (on mouse click) in the text console\n");
+		debugPrintf("beta:  Toggle beta crosshairs cursor\n");
+		debugPrintf("add0:  Toggle semi-transparent hotspot cursor (additive mode 0)\n");
+		debugPrintf("add1:  Toggle semi-transparent hotspot cursor (additive mode 1)\n");
+		debugPrintf("Usage 1: %s click\n", argv[0]);
+		debugPrintf("Usage 2: %s beta\n", argv[0]);
+		debugPrintf("Usage 3: %s add0\n", argv[0]);
+		debugPrintf("Usage 4: %s add1\n", argv[0]);
 	}
 	return true;
 }
@@ -2617,12 +2645,11 @@ void Debugger::drawScreenEffects() {
 					Common::Rect r((entry.x + x) * 2, (entry.y + y) * 2, (entry.x + x) * 2 + 2, (entry.y + y) * 2 + 2);
 
 					int ec = entry.data[j++];
-					const int bladeToScummVmConstant = 256 / 16;
-
+					// We need to convert from 5 bits per channel (r,g,b) to 8 bits
 					int color = _vm->_surfaceFront.format.RGBToColor(
-						CLIP(entry.palette[ec].r * bladeToScummVmConstant, 0, 255),
-						CLIP(entry.palette[ec].g * bladeToScummVmConstant, 0, 255),
-						CLIP(entry.palette[ec].b * bladeToScummVmConstant, 0, 255));
+						Color::get8BitColorFrom5Bit(entry.palette[ec].r),
+						Color::get8BitColorFrom5Bit(entry.palette[ec].g),
+						Color::get8BitColorFrom5Bit(entry.palette[ec].b));
 					_vm->_surfaceFront.fillRect(r, color);
 				}
 			}
@@ -2751,6 +2778,139 @@ void Debugger::updateTogglesForDbgDrawListInCurrentSetAndScene() {
 					 || _viewWaypointsCoverToggle || _specificWaypointCoverDrawn
 					 || _viewWalkboxes || _specificWalkboxesDrawn
 					 || !_specificDrawnObjectsList.empty();
+}
+
+// NOTE The Flythrough (FLYTRU_E) outtake has sound only in Restored Content mode.
+const struct OuttakesVQAsList {
+	int resourceId;
+	const char* name;
+	bool notLocalized;
+	int container;
+	const char* description;
+} outtakesList[] = {
+	{  0, "INTRO",   false,  1, "Act 1 Intro - Prologue" },
+	{  1, "MW_A",    false,  1, "Act 2 Intro" },
+	{  2, "MW_B01",  false,  2, "Act 3 Intro - Start" },
+	{  3, "MW_B02",  false,  2, "Act 3 Intro - Mid A" }, // Lucy is Replicant
+	{  4, "MW_B03",  false,  2, "Act 3 Intro - Mid B" }, // Dektora is Replicant
+	{  5, "MW_B04",  false,  2, "Act 3 Intro - Mid C" }, // Lucy and Dektora are Human
+	{  6, "MW_B05",  false,  2, "Act 3 Intro - End" },
+	{  7, "MW_C01",  false,  3, "Act 4 Intro - Start" },
+	{  8, "MW_C02",  false,  3, "Act 4 Intro - End A" }, // Clovis with INCEPT PHOTO - Twins are Humans
+	{  9, "MW_C03",  false,  3, "Act 4 Intro - End B" }, // Clovis without INCEPT PHOTO - Twins are Replicants
+	{ 10, "MW_D",    false,  3, "Act 5 Intro" },
+	{ 11, "INTRGT",  false,  1, "Interrogation scene" },
+	{ 12, "END01A",  false,  4, "Underground Ending - A" }, // with Lucy (Human)
+	{ 13, "END01B",  false,  4, "Underground Ending - B" }, // with Lucy (Replicant) and enough DNA data
+	{ 14, "END01C",  false,  4, "Underground Ending - C" }, // with Lucy (Replicant) but insufficient DNA data
+	{ 15, "END01D",  false,  4, "Underground Ending - D" }, // with Dektora (Human)
+	{ 16, "END01E",  false,  4, "Underground Ending - E" }, // with Dektora (Replicant) and enough DNA data
+	{ 17, "END01F",  false,  4, "Underground Ending - F" }, // with Dektora (Replicant) but insufficient DNA data
+	{ 18, "END02",   false,  4, "Underground Enging - Clovis" }, // Clovis dying alone in Moonbus
+	{ 19, "END03",   false,  4, "Underground Ending - McCoy" },  // McCoy alone
+	{ 20, "END04A",  false,  4, "Moonbus Ending - Start" },
+	{ 21, "END04B",  false,  4, "Moonbus Ending - Mid A" }, // With Lucy
+	{ 22, "END04C",  false,  4, "Moonbus Ending - Mid B" }, // With Dektora
+	{ 23, "END04D",  false,  4, "Moonbus Ending - End" },   // Moonbus take-off
+	{ 24, "END05",   false,  4, "End 5 - Gaff's Origami" },
+	{ 25, "END06",   false,  4, "Kipple Ending - 6" }, // With Steele
+	{ 26, "END07",   false,  4, "Kipple Ending - 7" }, // McCoy picks up dog origami
+	{ 27, "TB_FLY",  false,  2, "Flying to Tyrell Pyramid" },
+	{ 28, "WSTLGO_E", true, -1, "Westwood Studios Partnership Intro"}, // STARTUP.MIX
+	{ 29, "FLYTRU_E", true,  1, "Spinner Fly-Through"},
+	{ 30, "AWAY01_E", true,  2, "Spinner Flying Away 01"},
+	{ 31, "AWAY02_E", true,  1, "Spinner Flying Away 02"},
+	{ 32, "ASCENT_E", true, -1, "Spinner Ascending"},
+	{ 33, "DSCENT_E", true, -1, "Spinner Descending"},
+	{ 34, "INSD01_E", true,  1, "Spinner Flying (Inside Camera) 01"},
+	{ 35, "INSD02_E", true, -1, "Spinner Flying (Inside Camera) 02"},
+	{ 36, "TWRD01_E", true,  1, "Spinner Flying Towards 01"},
+	{ 37, "TWRD02_E", true,  1, "Spinner Flying Towards 02"},
+	{ 38, "TWRD03_E", true, -1, "Spinner Flying Towards 03"},
+	{ 39, "RACHEL_E", true,  2, "Rachael walks in"},
+	{ 40, "DEKTRA_E", true,  2, "Dektora's (Hecuba's) dance"},
+	{ 41, "BRLOGO_E", true, -1, "Blade Runner Logo"}, // STARTUP.MIX
+	{ -1, nullptr,    true, -1, nullptr}
+};
+
+bool Debugger::cmdOuttake(int argc, const char** argv) {
+	bool invalidSyntax = false;
+
+	if (argc != 2) {
+		invalidSyntax = true;
+	} else {
+		if (_vm->_kia->isOpen()
+		    || _vm->_esper->isOpen()
+		    || _vm->_spinner->isOpen()
+		    || _vm->_elevator->isOpen()
+		    || _vm->_vk->isOpen()
+		    || _vm->_scores->isOpen()
+		    ) {
+			debugPrintf("Sorry, playing custom outtakes in KIA, ESPER, Voigt-Kampff, Spinner GPS,\nScores or Elevator mode is not supported\n");
+			return true;
+		}
+
+		if (!_vm->canSaveGameStateCurrently()) {
+			debugPrintf("Sorry, playing custom outtakes while player control is disabled or an in-game script is running, is not supported\n");
+			return true;
+		}
+
+		Common::String outtakeArgStr = argv[1];
+		if (outtakeArgStr == "list") {
+			for (int i = 0; i < (int)_vm->_gameInfo->getOuttakeCount(); ++i) {
+				debugPrintf("%2d - %s\n", outtakesList[i].resourceId, outtakesList[i].description);
+			}
+			return true;
+		} else {
+			int argId = atoi(argv[1]);
+
+			if ((argId == 0 && !isAllZeroes(outtakeArgStr))
+			    || argId < 0
+			    || argId >= (int)_vm->_gameInfo->getOuttakeCount()) {
+				debugPrintf("Invalid outtake id specified.\nPlease choose an integer between 0 and %d.\n", (int)_vm->_gameInfo->getOuttakeCount() - 1);
+				return true;
+			} else {
+				_dbgPendingOuttake.container = outtakesList[argId].container;
+				if (argId == 35 || argId == 38) {
+					// These outtakes exist in containers: OUTTAKE1 and OUTTAKE2
+					if (_vm->_chapters->currentResourceId() != 1
+					    && _vm->_chapters->currentResourceId() != 2) {
+						_dbgPendingOuttake.container = (int)_vm->_rnd.getRandomNumberRng(1, 2);
+					}
+				} else if (argId == 32 || argId == 33) {
+					// These outtakes exist in containers: OUTTAKE1, OUTTAKE3, OUTTAKE4
+					if (_vm->_chapters->currentResourceId() != 1
+					    && _vm->_chapters->currentResourceId() != 3
+					    && _vm->_chapters->currentResourceId() != 4) {
+						_dbgPendingOuttake.container = (int)_vm->_rnd.getRandomNumberRng(2, 4);
+						if (_dbgPendingOuttake.container == 2)
+							_dbgPendingOuttake.container = 1;
+					}
+				}
+				// We need to close the debugger console first before playing back the outtake.
+				// The following prepares the outtake video for playback within BladeRunnerEngine::gameTick()
+				_dbgPendingOuttake.pending = true;
+				_dbgPendingOuttake.outtakeId = outtakesList[argId].resourceId;
+				_dbgPendingOuttake.notLocalized = outtakesList[argId].notLocalized;
+			}
+		}
+	}
+
+	if (invalidSyntax) {
+		debugPrintf("Play an outtake video.\n");
+		debugPrintf("Usage: %s [<outtakeId> | list]\n", argv[0]);
+		debugPrintf("outtakeId can be in [0, %d]\n", (int)_vm->_gameInfo->getOuttakeCount() - 1);
+		return true;
+	}
+	// close debugger (to play the outtake)
+	return false;
+}
+
+void Debugger::resetPendingOuttake() {
+	_dbgPendingOuttake.pending = false;
+	_dbgPendingOuttake.outtakeId = -1;
+	_dbgPendingOuttake.notLocalized = false;
+	_dbgPendingOuttake.container = -1;
 }
 
 } // End of namespace BladeRunner

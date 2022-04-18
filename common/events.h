@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -89,9 +88,7 @@ enum EventType {
 	EVENT_CUSTOM_ENGINE_ACTION_START  = 20,
 	EVENT_CUSTOM_ENGINE_ACTION_END    = 21,
 
-#ifdef ENABLE_VKEYBD
 	EVENT_VIRTUAL_KEYBOARD = 22,
-#endif
 
 	EVENT_DROP_FILE = 23,
 
@@ -146,6 +143,7 @@ struct JoystickState {
  *  The list of named buttons available from a joystick.
  */
 enum JoystickButton {
+	JOYSTICK_BUTTON_INVALID,
 	JOYSTICK_BUTTON_A,
 	JOYSTICK_BUTTON_B,
 	JOYSTICK_BUTTON_X,
@@ -293,7 +291,7 @@ public:
 	}
 
 	bool pollEvent(Event &ev) {
-	if (!_artificialEventQueue.empty()) {
+		if (!_artificialEventQueue.empty()) {
 			ev = _artificialEventQueue.pop();
 			return true;
 		} else {
@@ -403,6 +401,12 @@ public:
 	void unregisterSource(EventSource *source);
 
 	/**
+	 * Ignore some event sources and don't poll them. This is useful for e.g. the EventRecorder
+	 * where you don't want the other EventSource instances to interfer with the serialized events.
+	 */
+	void ignoreSources(bool ignore);
+
+	/**
 	 * Register a new EventObserver with the Dispatcher.
 	 *
 	 * @param listenPolls If set, then all pollEvent() calls are passed to the observer.
@@ -421,6 +425,7 @@ private:
 
 	struct Entry {
 		bool autoFree;
+		bool ignore;
 	};
 
 	struct SourceEntry : public Entry {
@@ -481,6 +486,11 @@ public:
 	 * Purge all unprocessed mouse events already in the event queue.
 	 */
 	virtual void purgeMouseEvents() = 0;
+
+	/**
+	 * Purge all unprocessed keyboard events already in the event queue.
+	 */
+	virtual void purgeKeyboardEvents() = 0;
 
 	/** Return the current mouse position. */
 	virtual Point getMousePos() const = 0;

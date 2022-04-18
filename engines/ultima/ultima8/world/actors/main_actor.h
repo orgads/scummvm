@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -51,9 +50,14 @@ public:
 	//! when Crusader is kneeling.
 	const ShapeInfo *getShapeInfoFromGameInstance() const override;
 
+	void move(int32 X, int32 Y, int32 Z) override;
+
 	//! Add item to avatar's inventory, but with some extra logic to do things like combine
 	//! ammo and credits, use batteries, etc.
 	int16 addItemCru(Item *item, bool showtoast);
+
+	//! Remove a single item - only called from an intrinsic
+	bool removeItemCru(Item *item);
 
 	//! teleport to the given location on the given map
 	void teleport(int mapNum, int32 x, int32 y, int32 z) override;
@@ -148,6 +152,9 @@ public:
 	//! Swap to the next inventory item (Crusader)
 	void nextInvItem();
 
+	//! Drop the current weapon (Crusader)
+	void dropWeapon();
+
 	//! Check if we can absorb a hit with the shield. Returns the modified damage value.
 	int receiveShieldHit(int damage, uint16 damage_type) override;
 
@@ -172,6 +179,7 @@ public:
 	INTRINSIC(I_addItemCru);
 	INTRINSIC(I_getNumberOfCredits);
 	INTRINSIC(I_switchMap);
+	INTRINSIC(I_removeItemCru);
 
 	void getWeaponOverlay(const WeaponOverlayFrame *&frame, uint32 &shape);
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -36,6 +35,7 @@
 #include "director/castmember.h"
 #include "director/cursor.h"
 #include "director/channel.h"
+#include "director/sound.h"
 #include "director/sprite.h"
 #include "director/util.h"
 
@@ -47,6 +47,7 @@ Window::Window(int id, bool scrollable, bool resizable, bool editable, Graphics:
 	_isStage = isStage;
 	_stageColor = _wm->_colorBlack;
 	_puppetTransition = nullptr;
+	_soundManager = new DirectorSound(this);
 
 	_currentMovie = nullptr;
 	_mainArchive = nullptr;
@@ -60,9 +61,16 @@ Window::Window(int id, bool scrollable, bool resizable, bool editable, Graphics:
 	_windowType = -1;
 	_titleVisible = true;
 	updateBorderType();
+
+	_retPC = 0;
+	_retScript = nullptr;
+	_retContext = nullptr;
+	_retFreezeContext = false;
+	_retLocalVars = nullptr;
 }
 
 Window::~Window() {
+	delete _soundManager;
 	delete _currentMovie;
 	if (_macBinary) {
 		delete _macBinary;
@@ -70,29 +78,40 @@ Window::~Window() {
 	}
 }
 
-void Window::invertChannel(Channel *channel) {
-	const Graphics::Surface *mask = channel->getMask(true);
-	Common::Rect destRect = channel->getBbox();
+void Window::invertChannel(Channel *channel, const Common::Rect &destRect) {
+	const Graphics::Surface *mask;
+
+	// in D3, we have inverted QDshape
+	if (channel->_sprite->isQDShape() && channel->_sprite->_ink == kInkTypeMatte)
+		mask = channel->_sprite->getQDMatte();
+	else
+		mask = channel->getMask(true);
+
+	Common::Rect srcRect = channel->getBbox();
+	srcRect.clip(destRect);
+
+	// let compiler to optimize it
+	int xoff = srcRect.left - channel->getBbox().left;
+	int yoff = srcRect.top - channel->getBbox().top;
 
 	if (_wm->_pixelformat.bytesPerPixel == 1) {
-		for (int i = 0; i < destRect.height(); i++) {
-			byte *src = (byte *)_composeSurface->getBasePtr(destRect.left, destRect.top + i);
-			const byte *msk = mask ? (const byte *)mask->getBasePtr(0, i) : nullptr;
+		for (int i = 0; i < srcRect.height(); i++) {
+			byte *src = (byte *)_composeSurface->getBasePtr(srcRect.left, srcRect.top + i);
+			const byte *msk = mask ? (const byte *)mask->getBasePtr(xoff, yoff + i) : nullptr;
 
-			for (int j = 0; j < destRect.width(); j++, src++)
+			for (int j = 0; j < srcRect.width(); j++, src++)
 				if (!mask || (msk && !(*msk++)))
-					*src = ~(*src);
+					*src = _wm->inverter(*src);
 		}
 	} else {
-		uint32 alpha = _wm->_pixelformat.ARGBToColor(255, 0, 0, 0);
 
-		for (int i = 0; i < destRect.height(); i++) {
-			uint32 *src = (uint32 *)_composeSurface->getBasePtr(destRect.left, destRect.top + i);
-			const uint32 *msk = mask ? (const uint32 *)mask->getBasePtr(0, i) : nullptr;
+		for (int i = 0; i < srcRect.height(); i++) {
+			uint32 *src = (uint32 *)_composeSurface->getBasePtr(srcRect.left, srcRect.top + i);
+			const uint32 *msk = mask ? (const uint32 *)mask->getBasePtr(xoff, yoff + i) : nullptr;
 
-			for (int j = 0; j < destRect.width(); j++, src++)
+			for (int j = 0; j < srcRect.width(); j++, src++)
 				if (!mask || (msk && !(*msk++)))
-					*src = ~(*src & ~alpha) | alpha;
+					*src = _wm->inverter(*src);
 		}
 	}
 }
@@ -113,12 +132,23 @@ bool Window::render(bool forceRedraw, Graphics::ManagedSurface *blitTo) {
 
 	if (!blitTo)
 		blitTo = _composeSurface;
+	Channel *hiliteChannel = _currentMovie->getScore()->getChannelById(_currentMovie->_currentHiliteChannelId);
 
 	for (Common::List<Common::Rect>::iterator i = _dirtyRects.begin(); i != _dirtyRects.end(); i++) {
 		const Common::Rect &r = *i;
-		blitTo->fillRect(r, _stageColor);
-
 		_dirtyChannels = _currentMovie->getScore()->getSpriteIntersections(r);
+
+		bool shouldClear = true;
+		for (Common::List<Channel *>::iterator j = _dirtyChannels.begin(); j != _dirtyChannels.end(); j++) {
+			if ((*j)->_visible && r == (*j)->getBbox() && (*j)->isTrail()) {
+				shouldClear = false;
+				break;
+			}
+		}
+
+		if (shouldClear)
+			blitTo->fillRect(r, _stageColor);
+
 		for (int pass = 0; pass < 2; pass++) {
 			for (Common::List<Channel *>::iterator j = _dirtyChannels.begin(); j != _dirtyChannels.end(); j++) {
 				if ((*j)->isActiveVideo() && (*j)->isVideoDirectToStage()) {
@@ -129,8 +159,18 @@ bool Window::render(bool forceRedraw, Graphics::ManagedSurface *blitTo) {
 						continue;
 				}
 
-				if ((*j)->_visible)
-					inkBlitFrom(*j, r, blitTo);
+				if ((*j)->_visible) {
+					if ((*j)->hasSubChannels()) {
+						Common::Array<Channel> *list = (*j)->getSubChannels();
+						for (Common::Array<Channel>::iterator k = list->begin(); k != list->end(); k++) {
+							inkBlitFrom(&(*k), r, blitTo);
+						}
+					} else {
+						inkBlitFrom(*j, r, blitTo);
+						if ((*j) == hiliteChannel)
+							invertChannel(hiliteChannel, r);
+					}
+				}
 			}
 		}
 	}
@@ -149,6 +189,18 @@ void Window::setStageColor(uint32 stageColor, bool forceReset) {
 	}
 }
 
+Datum Window::getStageRect() {
+	Graphics::ManagedSurface *surface = getSurface();
+	Datum d;
+	d.type = RECT;
+	d.u.farr = new FArray;
+	d.u.farr->arr.push_back(0);
+	d.u.farr->arr.push_back(0);
+	d.u.farr->arr.push_back(surface->w);
+	d.u.farr->arr.push_back(surface->h);
+	return d;
+}
+
 void Window::reset() {
 	resize(_composeSurface->w, _composeSurface->h, true);
 	_composeSurface->clear(_stageColor);
@@ -164,188 +216,18 @@ void Window::inkBlitFrom(Channel *channel, Common::Rect destRect, Graphics::Mana
 	pd.dst = blitTo;
 
 	if (pd.ms) {
-		inkBlitShape(&pd, srcRect);
+		pd.inkBlitShape(srcRect);
 	} else if (pd.srf) {
 		if (channel->isStretched()) {
 			srcRect = channel->getBbox(true);
-			inkBlitStretchSurface(&pd, srcRect, channel->getMask());
+			pd.inkBlitStretchSurface(srcRect, channel->getMask());
 		} else {
-			inkBlitSurface(&pd, srcRect, channel->getMask());
+			pd.inkBlitSurface(srcRect, channel->getMask());
 		}
 	} else {
-		warning("Window::inkBlitFrom: No source surface: spriteType: %d, castType: %d, castId: %d", channel->_sprite->_spriteType, channel->_sprite->_cast ? channel->_sprite->_cast->_type : 0, channel->_sprite->_castId);
+		if (debugChannelSet(kDebugImages, 2))
+			warning("Window::inkBlitFrom: No source surface: spriteType: %d, castType: %d, castId: %s", channel->_sprite->_spriteType, channel->_sprite->_cast ? channel->_sprite->_cast->_type : 0, channel->_sprite->_castId.asString().c_str());
 	}
-}
-
-void Window::inkBlitShape(DirectorPlotData *pd, Common::Rect &srcRect) {
-	if (!pd->ms)
-		return;
-
-	// Preprocess shape colours
-	switch (pd->ink) {
-	case kInkTypeNotTrans:
-	case kInkTypeNotReverse:
-	case kInkTypeNotGhost:
-		return;
-	case kInkTypeReverse:
-		pd->ms->foreColor = 0;
-		pd->ms->backColor = 0;
-		break;
-	default:
-		break;
-	}
-
-	Common::Rect fillAreaRect((int)srcRect.width(), (int)srcRect.height());
-	fillAreaRect.moveTo(srcRect.left, srcRect.top);
-	Graphics::MacPlotData plotFill(pd->dst, nullptr, &g_director->getPatterns(), pd->ms->pattern, srcRect.left, srcRect.top, 1, pd->ms->backColor);
-
-	Common::Rect strokeRect(MAX((int)srcRect.width() - pd->ms->lineSize, 0), MAX((int)srcRect.height() - pd->ms->lineSize, 0));
-	strokeRect.moveTo(srcRect.left, srcRect.top);
-	Graphics::MacPlotData plotStroke(pd->dst, nullptr, &g_director->getPatterns(), 1, strokeRect.left, strokeRect.top, pd->ms->lineSize, pd->ms->backColor);
-
-	switch (pd->ms->spriteType) {
-	case kRectangleSprite:
-		pd->ms->pd = &plotFill;
-		Graphics::drawFilledRect(fillAreaRect, pd->ms->foreColor, g_director->getInkDrawPixel(), pd);
-		// fall through
-	case kOutlinedRectangleSprite:
-		pd->ms->pd = &plotStroke;
-		Graphics::drawRect(strokeRect, pd->ms->foreColor, g_director->getInkDrawPixel(), pd);
-		break;
-	case kRoundedRectangleSprite:
-		pd->ms->pd = &plotFill;
-		Graphics::drawRoundRect(fillAreaRect, 12, pd->ms->foreColor, true, g_director->getInkDrawPixel(), pd);
-		// fall through
-	case kOutlinedRoundedRectangleSprite:
-		pd->ms->pd = &plotStroke;
-		Graphics::drawRoundRect(strokeRect, 12, pd->ms->foreColor, false, g_director->getInkDrawPixel(), pd);
-		break;
-	case kOvalSprite:
-		pd->ms->pd = &plotFill;
-		Graphics::drawEllipse(fillAreaRect.left, fillAreaRect.top, fillAreaRect.right, fillAreaRect.bottom, pd->ms->foreColor, true, g_director->getInkDrawPixel(), pd);
-		// fall through
-	case kOutlinedOvalSprite:
-		pd->ms->pd = &plotStroke;
-		Graphics::drawEllipse(strokeRect.left, strokeRect.top, strokeRect.right, strokeRect.bottom, pd->ms->foreColor, false, g_director->getInkDrawPixel(), pd);
-		break;
-	case kLineTopBottomSprite:
-		pd->ms->pd = &plotStroke;
-		Graphics::drawLine(strokeRect.left, strokeRect.top, strokeRect.right, strokeRect.bottom, pd->ms->foreColor, g_director->getInkDrawPixel(), pd);
-		break;
-	case kLineBottomTopSprite:
-		pd->ms->pd = &plotStroke;
-		Graphics::drawLine(strokeRect.left, strokeRect.top, strokeRect.right, strokeRect.bottom, pd->ms->foreColor, g_director->getInkDrawPixel(), pd);
-		break;
-	default:
-		warning("Window::inkBlitFrom: Expected shape type but got type %d", pd->ms->spriteType);
-	}
-}
-
-void Window::inkBlitSurface(DirectorPlotData *pd, Common::Rect &srcRect, const Graphics::Surface *mask) {
-	if (!pd->srf)
-		return;
-
-	// TODO: Determine why colourization causes problems in Warlock
-	if (pd->sprite == kTextSprite)
-		pd->applyColor = false;
-
-	pd->srcPoint.y = abs(srcRect.top - pd->destRect.top);
-	for (int i = 0; i < pd->destRect.height(); i++, pd->srcPoint.y++) {
-		if (_wm->_pixelformat.bytesPerPixel == 1) {
-			pd->srcPoint.x = abs(srcRect.left - pd->destRect.left);
-			const byte *msk = mask ? (const byte *)mask->getBasePtr(pd->srcPoint.x, pd->srcPoint.y) : nullptr;
-
-			for (int j = 0; j < pd->destRect.width(); j++, pd->srcPoint.x++) {
-				if (!mask || (msk && !(*msk++))) {
-					(g_director->getInkDrawPixel())(pd->destRect.left + j, pd->destRect.top + i,
-											preprocessColor(pd, *((byte *)pd->srf->getBasePtr(pd->srcPoint.x, pd->srcPoint.y))), pd);
-				}
-			}
-		} else {
-			pd->srcPoint.x = abs(srcRect.left - pd->destRect.left);
-			const uint32 *msk = mask ? (const uint32 *)mask->getBasePtr(pd->srcPoint.x, pd->srcPoint.y) : nullptr;
-
-			for (int j = 0; j < pd->destRect.width(); j++, pd->srcPoint.x++) {
-				if (!mask || (msk && !(*msk++))) {
-					(g_director->getInkDrawPixel())(pd->destRect.left + j, pd->destRect.top + i,
-											preprocessColor(pd, *((int *)pd->srf->getBasePtr(pd->srcPoint.x, pd->srcPoint.y))), pd);
-				}
-			}
-		}
-	}
-}
-
-void Window::inkBlitStretchSurface(DirectorPlotData *pd, Common::Rect &srcRect, const Graphics::Surface *mask) {
-	if (!pd->srf)
-		return;
-
-	// TODO: Determine why colourization causes problems in Warlock
-	if (pd->sprite == kTextSprite)
-		pd->applyColor = false;
-
-	int scaleX = SCALE_THRESHOLD * srcRect.width() / pd->destRect.width();
-	int scaleY = SCALE_THRESHOLD * srcRect.height() / pd->destRect.height();
-
-	pd->srcPoint.y = abs(srcRect.top - pd->destRect.top);
-
-	for (int i = 0, scaleYCtr = 0; i < pd->destRect.height(); i++, scaleYCtr += scaleY, pd->srcPoint.y++) {
-		if (_wm->_pixelformat.bytesPerPixel == 1) {
-			pd->srcPoint.x = abs(srcRect.left - pd->destRect.left);
-			const byte *msk = mask ? (const byte *)mask->getBasePtr(pd->srcPoint.x, pd->srcPoint.y) : nullptr;
-
-			for (int xCtr = 0, scaleXCtr = 0; xCtr < pd->destRect.width(); xCtr++, scaleXCtr += scaleX, pd->srcPoint.x++) {
-				if (!mask || !(*msk++)) {
-				(g_director->getInkDrawPixel())(pd->destRect.left + xCtr, pd->destRect.top + i,
-										preprocessColor(pd, *((byte *)pd->srf->getBasePtr(scaleXCtr / SCALE_THRESHOLD, scaleYCtr / SCALE_THRESHOLD))), pd);
-				}
-			}
-		} else {
-			pd->srcPoint.x = abs(srcRect.left - pd->destRect.left);
-			const uint32 *msk = mask ? (const uint32 *)mask->getBasePtr(pd->srcPoint.x, pd->srcPoint.y) : nullptr;
-
-			for (int xCtr = 0, scaleXCtr = 0; xCtr < pd->destRect.width(); xCtr++, scaleXCtr += scaleX, pd->srcPoint.x++) {
-				if (!mask || !(*msk++)) {
-				(g_director->getInkDrawPixel())(pd->destRect.left + xCtr, pd->destRect.top + i,
-										preprocessColor(pd, *((int *)pd->srf->getBasePtr(scaleXCtr / SCALE_THRESHOLD, scaleYCtr / SCALE_THRESHOLD))), pd);
-				}
-			}
-		}
-	}
-}
-
-int Window::preprocessColor(DirectorPlotData *p, uint32 src) {
-	// HACK: Right now this method is just used for adjusting the colourization on text
-	// sprites, as it would be costly to colourize the chunks on the fly each
-	// time a section needs drawing. It's ugly but mostly works.
-	if (p->sprite == kTextSprite) {
-		switch(p->ink) {
-		case kInkTypeMask:
-			src = (src == p->backColor ? p->foreColor : 0xff);
-			break;
-		case kInkTypeReverse:
-			src = (src == p->foreColor ? 0 : p->colorWhite);
-			break;
-		case kInkTypeNotReverse:
-			src = (src == p->backColor ? p->colorWhite : 0);
-			break;
-		case kInkTypeGhost:
-			src = (src == p->foreColor ? p->backColor : p->colorWhite);
-			break;
-		case kInkTypeNotGhost:
-			src = (src == p->backColor ? p->colorWhite : p->backColor);
-			break;
-		case kInkTypeNotCopy:
-			src = (src == p->foreColor ? p->backColor : p->foreColor);
-			break;
-		case kInkTypeNotTrans:
-			src = (src == p->foreColor ? p->backColor : p->colorWhite);
-			break;
-		default:
-			break;
-		}
-	}
-
-	return src;
 }
 
 Common::Point Window::getMousePos() {
@@ -367,44 +249,22 @@ void Window::setVisible(bool visible, bool silent) {
 
 bool Window::setNextMovie(Common::String &movieFilenameRaw) {
 	Common::String movieFilename = pathMakeRelative(movieFilenameRaw);
-	Common::String cleanedFilename;
 
 	bool fileExists = false;
-
-	if (_vm->getPlatform() == Common::kPlatformMacintosh) {
-		Common::MacResManager resMan;
-
-		for (const byte *p = (const byte *)movieFilename.c_str(); *p; p++)
-			if (*p >= 0x20 && *p <= 0x7f)
-				cleanedFilename += (char) *p;
-
-		if (resMan.open(movieFilename)) {
-			fileExists = true;
-			cleanedFilename = movieFilename;
-		} else if (!movieFilename.equals(cleanedFilename) && resMan.open(cleanedFilename)) {
-			fileExists = true;
-		}
-	} else {
-		Common::File file;
-		cleanedFilename = movieFilename + ".MMM";
-
-		if (file.open(movieFilename)) {
-			fileExists = true;
-			cleanedFilename = movieFilename;
-		} else if (!movieFilename.equals(cleanedFilename) && file.open(cleanedFilename)) {
-			fileExists = true;
-		}
+	Common::File file;
+	if (file.open(Common::Path(movieFilename, _vm->_dirSeparator))) {
+		fileExists = true;
+		file.close();
 	}
 
-	debug(1, "Window::setNextMovie: '%s' -> '%s' -> '%s' -> '%s'", movieFilenameRaw.c_str(), convertPath(movieFilenameRaw).c_str(),
-			movieFilename.c_str(), cleanedFilename.c_str());
+	debug(1, "Window::setNextMovie: '%s' -> '%s' -> '%s'", movieFilenameRaw.c_str(), convertPath(movieFilenameRaw).c_str(), movieFilename.c_str());
 
 	if (!fileExists) {
 		warning("Movie %s does not exist", movieFilename.c_str());
 		return false;
 	}
 
-	_nextMovie.movie = cleanedFilename;
+	_nextMovie.movie = movieFilename;
 	return true;
 }
 
@@ -422,11 +282,11 @@ bool Window::step() {
 	// finish last movie
 	if (_currentMovie && _currentMovie->getScore()->_playState == kPlayStopped) {
 		debugC(3, kDebugEvents, "\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-		debugC(3, kDebugEvents, "@@@@   Finishing movie '%s' in '%s'", _currentMovie->getMacName().c_str(), _currentPath.c_str());
+		debugC(3, kDebugEvents, "@@@@   Finishing movie '%s' in '%s'", utf8ToPrintable(_currentMovie->getMacName()).c_str(), _currentPath.c_str());
 		debugC(3, kDebugEvents, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 
 		_currentMovie->getScore()->stopPlay();
-		debugC(1, kDebugEvents, "Finished playback of movie '%s'", _currentMovie->getMacName().c_str());
+		debugC(1, kDebugEvents, "Finished playback of movie '%s'", utf8ToPrintable(_currentMovie->getMacName()).c_str());
 
 		if (_vm->getGameGID() == GID_TESTALL) {
 			_nextMovie = getNextMovieFromQueue();
@@ -435,6 +295,8 @@ bool Window::step() {
 
 	// prepare next movie
 	if (!_nextMovie.movie.empty()) {
+		_soundManager->changingMovie();
+
 		_newMovieStarted = true;
 
 		_currentPath = getPath(_nextMovie.movie, _currentPath);
@@ -448,7 +310,7 @@ bool Window::step() {
 		delete _currentMovie;
 		_currentMovie = nullptr;
 
-		Archive *mov = openMainArchive(_currentPath + Common::lastPathComponent(_nextMovie.movie, '/'));
+		Archive *mov = openMainArchive(_currentPath + Common::lastPathComponent(_nextMovie.movie, g_director->_dirSeparator));
 
 		if (!mov) {
 			warning("nextMovie: No movie is loaded");
@@ -464,16 +326,23 @@ bool Window::step() {
 		_currentMovie->setArchive(mov);
 
 		debug(0, "\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-		debug(0, "@@@@   Switching to movie '%s' in '%s'", _currentMovie->getMacName().c_str(), _currentPath.c_str());
+		debug(0, "@@@@   Switching to movie '%s' in '%s'", utf8ToPrintable(_currentMovie->getMacName()).c_str(), _currentPath.c_str());
 		debug(0, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 
 		g_lingo->resetLingo();
-		if (sharedCast && sharedCast->_castArchive
-				&& sharedCast->_castArchive->getPathName().equalsIgnoreCase(_currentPath + _vm->_sharedCastFile)) {
-			_currentMovie->_sharedCast = sharedCast;
+		Common::String sharedCastPath = getSharedCastPath();
+		if (!sharedCastPath.empty()) {
+			if (sharedCast && sharedCast->_castArchive
+					&& sharedCast->_castArchive->getPathName().equalsIgnoreCase(sharedCastPath)) {
+				// if we are not deleting shared cast, then we need to clear those previous widget pointer
+				sharedCast->releaseCastMemberWidget();
+				_currentMovie->_sharedCast = sharedCast;
+			} else {
+				delete sharedCast;
+				_currentMovie->loadSharedCastsFrom(sharedCastPath);
+			}
 		} else {
 			delete sharedCast;
-			_currentMovie->loadSharedCastsFrom(_currentPath + _vm->_sharedCastFile);
 		}
 
 		_nextMovie.movie.clear();
@@ -485,7 +354,7 @@ bool Window::step() {
 		case kPlayNotStarted:
 			{
 				debug(0, "\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-				debug(0, "@@@@   Loading movie '%s' in '%s'", _currentMovie->getMacName().c_str(), _currentPath.c_str());
+				debug(0, "@@@@   Loading movie '%s' in '%s'", utf8ToPrintable(_currentMovie->getMacName()).c_str(), _currentPath.c_str());
 				debug(0, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 
 				bool goodMovie = _currentMovie->loadArchive();
@@ -515,7 +384,7 @@ bool Window::step() {
 			// fall through
 		case kPlayStarted:
 			debugC(3, kDebugEvents, "\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-			debugC(3, kDebugEvents, "@@@@   Stepping movie '%s' in '%s'", _currentMovie->getMacName().c_str(), _currentPath.c_str());
+			debugC(3, kDebugEvents, "@@@@   Stepping movie '%s' in '%s'", utf8ToPrintable(_currentMovie->getMacName()).c_str(), _currentPath.c_str());
 			debugC(3, kDebugEvents, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 			_currentMovie->getScore()->step();
 			return true;
@@ -525,6 +394,34 @@ bool Window::step() {
 	}
 
 	return false;
+}
+
+Common::String Window::getSharedCastPath() {
+	Common::Array<Common::String> namesToTry;
+	if (_vm->getVersion() < 400) {
+		if (g_director->getPlatform() == Common::kPlatformWindows) {
+			namesToTry.push_back("SHARDCST.MMM");
+		} else {
+			namesToTry.push_back("Shared Cast");
+		}
+	} else if (_vm->getVersion() < 500) {
+		namesToTry.push_back("Shared.dir");
+		namesToTry.push_back("Shared.dxr");
+	} else {
+		// TODO: Does D5 actually support D4-style shared cast?
+		namesToTry.push_back("Shared.cst");
+		namesToTry.push_back("Shared.cxt");
+	}
+
+	for (uint i = 0; i < namesToTry.size(); i++) {
+		Common::File f;
+		if (f.open(Common::Path(_currentPath + namesToTry[i], _vm->_dirSeparator))) {
+			f.close();
+			return _currentPath + namesToTry[i];
+		}
+	}
+
+	return Common::String();
 }
 
 } // End of namespace Director

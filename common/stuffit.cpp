@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -43,14 +42,15 @@ public:
 	~StuffItArchive() override;
 
 	bool open(const Common::String &filename);
+	bool open(Common::SeekableReadStream *stream);
 	void close();
-	bool isOpen() const { return _stream != 0; }
+	bool isOpen() const { return _stream != nullptr; }
 
 	// Common::Archive API implementation
-	bool hasFile(const Common::String &name) const override;
+	bool hasFile(const Common::Path &path) const override;
 	int listMembers(Common::ArchiveMemberList &list) const override;
-	const Common::ArchiveMemberPtr getMember(const Common::String &name) const override;
-	Common::SeekableReadStream *createReadStreamForMember(const Common::String &name) const override;
+	const Common::ArchiveMemberPtr getMember(const Common::Path &path) const override;
+	Common::SeekableReadStream *createReadStreamForMember(const Common::Path &path) const override;
 
 private:
 	struct FileEntry {
@@ -90,9 +90,14 @@ static const uint32 s_magicNumbers[] = {
 };
 
 bool StuffItArchive::open(const Common::String &filename) {
+	Common::SeekableReadStream *stream = SearchMan.createReadStreamForMember(filename);
+	return open(stream);
+}
+
+bool StuffItArchive::open(Common::SeekableReadStream *stream) {
 	close();
 
-	_stream = SearchMan.createReadStreamForMember(filename);
+	_stream = stream;
 
 	if (!_stream)
 		return false;
@@ -195,11 +200,13 @@ bool StuffItArchive::open(const Common::String &filename) {
 }
 
 void StuffItArchive::close() {
-	delete _stream; _stream = nullptr;
+	delete _stream;
+	_stream = nullptr;
 	_map.clear();
 }
 
-bool StuffItArchive::hasFile(const Common::String &name) const {
+bool StuffItArchive::hasFile(const Common::Path &path) const {
+	Common::String name = path.toString();
 	return _map.contains(name);
 }
 
@@ -210,11 +217,13 @@ int StuffItArchive::listMembers(Common::ArchiveMemberList &list) const {
 	return _map.size();
 }
 
-const Common::ArchiveMemberPtr StuffItArchive::getMember(const Common::String &name) const {
+const Common::ArchiveMemberPtr StuffItArchive::getMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	return Common::ArchiveMemberPtr(new Common::GenericArchiveMember(name, this));
 }
 
-Common::SeekableReadStream *StuffItArchive::createReadStreamForMember(const Common::String &name) const {
+Common::SeekableReadStream *StuffItArchive::createReadStreamForMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	if (!_stream || !_map.contains(name))
 		return nullptr;
 
@@ -528,7 +537,18 @@ Common::Archive *createStuffItArchive(const Common::String &fileName) {
 
 	if (!archive->open(fileName)) {
 		delete archive;
-		return 0;
+		return nullptr;
+	}
+
+	return archive;
+}
+
+Common::Archive *createStuffItArchive(Common::SeekableReadStream *stream) {
+	StuffItArchive *archive = new StuffItArchive();
+
+	if (!archive->open(stream)) {
+		delete archive;
+		return nullptr;
 	}
 
 	return archive;

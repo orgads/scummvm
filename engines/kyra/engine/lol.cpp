@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -163,7 +162,6 @@ LoLEngine::LoLEngine(OSystem *system, const GameFlags &flags) : KyraRpgEngine(sy
 	_dscDoorMonsterX = _dscDoorMonsterY = 0;
 	_dscDoor4 = 0;
 
-	_ingameSoundList = 0;
 	_ingameSoundIndex = 0;
 	_ingameSoundListSize = 0;
 	_musicTrackMap = 0;
@@ -330,12 +328,6 @@ LoLEngine::~LoLEngine() {
 
 	delete _lvlShpFileHandle;
 
-	if (_ingameSoundList) {
-		for (int i = 0; i < _ingameSoundListSize; i++)
-			delete[] _ingameSoundList[i];
-		delete[] _ingameSoundList;
-	}
-
 	for (int i = 0; i < 3; i++) {
 		for (int ii = 0; ii < 40; ii++)
 			delete[] _characterFaceShapes[ii][i];
@@ -386,37 +378,28 @@ Common::Error LoLEngine::init() {
 	_screen->setAnimBlockPtr(10000);
 	_screen->setScreenDim(0);
 
-	_pageBuffer1 = new uint8[0xFA00];
-	memset(_pageBuffer1, 0, 0xFA00);
-	_pageBuffer2 = new uint8[0xFA00];
-	memset(_pageBuffer2, 0, 0xFA00);
+	_pageBuffer1 = new uint8[0xFA00]();
+	_pageBuffer2 = new uint8[0xFA00]();
 
-	_itemsInPlay = new LoLItem[400];
-	memset(_itemsInPlay, 0, sizeof(LoLItem) * 400);
+	_itemsInPlay = new LoLItem[400]();
 
-	_characters = new LoLCharacter[4];
-	memset(_characters, 0, sizeof(LoLCharacter) * 4);
+	_characters = new LoLCharacter[4]();
 
 	if (!_sound->init())
 		error("Couldn't init sound");
 
 	KyraRpgEngine::init();
 
-	_wllAutomapData = new uint8[80];
-	memset(_wllAutomapData, 0, 80);
+	_wllAutomapData = new uint8[80]();
 
-	_monsters = new LoLMonster[30];
-	memset(_monsters, 0, 30 * sizeof(LoLMonster));
-	_monsterProperties = new LoLMonsterProperty[5];
-	memset(_monsterProperties, 0, 5 * sizeof(LoLMonsterProperty));
+	_monsters = new LoLMonster[30]();
+	_monsterProperties = new LoLMonsterProperty[5]();
 
-	_tempBuffer5120 = new uint8[5120];
-	memset(_tempBuffer5120, 0, 5120);
+	_tempBuffer5120 = new uint8[5120]();
 
-	_flyingObjects = new FlyingObject[_numFlyingObjects];
+	_flyingObjects = new FlyingObject[_numFlyingObjects]();
 	_flyingObjectsPtr = _flyingObjects;
 	_flyingObjectStructSize = sizeof(FlyingObject);
-	memset(_flyingObjects, 0, _numFlyingObjects * sizeof(FlyingObject));
 
 	memset(_globalScriptVars, 0, sizeof(_globalScriptVars));
 
@@ -429,12 +412,9 @@ Common::Error LoLEngine::init() {
 	_clickedShapeYOffs = 8;
 	_clickedSpecialFlag = 0x40;
 
-	_monsterShapes = new uint8*[48];
-	memset(_monsterShapes, 0, 48 * sizeof(uint8 *));
-	_monsterPalettes = new uint8*[48];
-	memset(_monsterPalettes, 0, 48 * sizeof(uint8 *));
-	_monsterDecorationShapes = new uint8*[576];
-	memset(_monsterDecorationShapes, 0, 576 * sizeof(uint8 *));
+	_monsterShapes = new uint8*[48]();
+	_monsterPalettes = new uint8*[48]();
+	_monsterDecorationShapes = new uint8*[576]();
 	memset(&_scriptData, 0, sizeof(EMCData));
 
 	_activeMagicMenu = -1;
@@ -680,15 +660,15 @@ int LoLEngine::mainMenu() {
 		{
 			{ 0, 0, 0, 0, 0 },
 			{ 0x01, 0x04, 0x0C, 0x04, 0x00, 0x3D, 0x9F },
-			{ 0x2C, 0x19, 0x48, 0x2C },
-			Screen::FID_9_FNT, 1
+			{ 0x2C, 0x19, 0x48, 0x2C }, 0,
+			Screen::FID_9_FNT, 0, 1
 		},
 		// 16 color SJIS mode
 		{
 			{ 0, 0, 0, 0, 0 },
 			{ 0x01, 0x04, 0x0C, 0x04, 0x00, 0xC1, 0xE1 },
-			{ 0xCC, 0xDD, 0xDD, 0xDD },
-			Screen::FID_SJIS_TEXTMODE_FNT, 1
+			{ 0xCC, 0xDD, 0xDD, 0xDD }, 0,
+			Screen::FID_SJIS_TEXTMODE_FNT, 1, 1
 		}
 	};
 

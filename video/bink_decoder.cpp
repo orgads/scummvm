@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -293,23 +292,17 @@ BinkDecoder::BinkVideoTrack::BinkVideoTrack(uint32 width, uint32 height, const G
 	_uvBlockHeight = (height + 15) >> 4;
 
 	// The planes are sized according to the number of blocks
-	_curPlanes[0] = new byte[_yBlockWidth  * 8 * _yBlockHeight  * 8]; // Y
-	_curPlanes[1] = new byte[_uvBlockWidth * 8 * _uvBlockHeight * 8]; // U, 1/4 resolution
-	_curPlanes[2] = new byte[_uvBlockWidth * 8 * _uvBlockHeight * 8]; // V, 1/4 resolution
+	_curPlanes[0] = new byte[_yBlockWidth  * 8 * _yBlockHeight  * 8](); // Y
+	_curPlanes[1] = new byte[_uvBlockWidth * 8 * _uvBlockHeight * 8](); // U, 1/4 resolution
+	_curPlanes[2] = new byte[_uvBlockWidth * 8 * _uvBlockHeight * 8](); // V, 1/4 resolution
 	_curPlanes[3] = new byte[_yBlockWidth  * 8 * _yBlockHeight  * 8]; // A
-	_oldPlanes[0] = new byte[_yBlockWidth  * 8 * _yBlockHeight  * 8]; // Y
-	_oldPlanes[1] = new byte[_uvBlockWidth * 8 * _uvBlockHeight * 8]; // U, 1/4 resolution
-	_oldPlanes[2] = new byte[_uvBlockWidth * 8 * _uvBlockHeight * 8]; // V, 1/4 resolution
+	_oldPlanes[0] = new byte[_yBlockWidth  * 8 * _yBlockHeight  * 8](); // Y
+	_oldPlanes[1] = new byte[_uvBlockWidth * 8 * _uvBlockHeight * 8](); // U, 1/4 resolution
+	_oldPlanes[2] = new byte[_uvBlockWidth * 8 * _uvBlockHeight * 8](); // V, 1/4 resolution
 	_oldPlanes[3] = new byte[_yBlockWidth  * 8 * _yBlockHeight  * 8]; // A
 
 	// Initialize the video with solid green
-	memset(_curPlanes[0],   0, _yBlockWidth  * 8 * _yBlockHeight  * 8);
-	memset(_curPlanes[1],   0, _uvBlockWidth * 8 * _uvBlockHeight * 8);
-	memset(_curPlanes[2],   0, _uvBlockWidth * 8 * _uvBlockHeight * 8);
 	memset(_curPlanes[3], 255, _yBlockWidth  * 8 * _yBlockHeight  * 8);
-	memset(_oldPlanes[0],   0, _yBlockWidth  * 8 * _yBlockHeight  * 8);
-	memset(_oldPlanes[1],   0, _uvBlockWidth * 8 * _uvBlockHeight * 8);
-	memset(_oldPlanes[2],   0, _uvBlockWidth * 8 * _uvBlockHeight * 8);
 	memset(_oldPlanes[3], 255, _yBlockWidth  * 8 * _yBlockHeight  * 8);
 
 	initBundles();
@@ -339,14 +332,14 @@ class SilentAudioStream : public Audio::AudioStream {
 public:
 	SilentAudioStream(int rate, bool stereo) : _rate(rate), _isStereo(stereo) {}
 
-	int readBuffer(int16 *buffer, const int numSamples) {
+	int readBuffer(int16 *buffer, const int numSamples) override {
 		memset(buffer, 0, numSamples * 2);
 		return numSamples;
 	}
 
-	bool endOfData() const { return false; } // it never ends!
-	bool isStereo() const { return _isStereo; }
-	int getRate() const { return _rate; }
+	bool endOfData() const override { return false; } // it never ends!
+	bool isStereo() const override { return _isStereo; }
+	int getRate() const override { return _rate; }
 
 private:
 	int _rate;
@@ -1240,7 +1233,7 @@ void BinkDecoder::BinkVideoTrack::readDCTCoeffs(VideoFrame &video, int32 *block,
 	coefList[listEnd] = 3;  modeList[listEnd++] = 3;
 
 	int bits = video.bits->getBits(4) - 1;
-	for (int mask = 1 << bits; bits >= 0; mask >>= 1, bits--) {
+	for (int mask = bits >= 0 ? 1 << bits : 0; bits >= 0; mask >>= 1, bits--) {
 		int listPos = listStart;
 
 		while (listPos < listEnd) {

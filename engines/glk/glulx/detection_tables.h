@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -215,9 +214,11 @@ const PlainGameDescriptor GLULXE_GAME_LIST[] = {
 	{ "samfortunepi", "Sam Fortune - Private Investigator" },
 	{ "scrollthief", "Scroll Thief, an Interactive Heist" },
 	{ "seasonalapocalypse", "Seasonal Apocalypse Disorder" },
+	{ "secretletter", "Jack Toresal and the Secret Letter" },
 	{ "section1awakened", "Section 1 - Awakened" },
 	{ "sensory", "Sensory Jam" },
 	{ "sequitur", "Sequitur" },
+	{ "shadowcathedral", "The Shadow in the Cathedral" },
 	{ "shadowoperative", "Shadow Operative" },
 	{ "shapes", "Shapes: an Interactive Surrealism" },
 	{ "sheephere", "Sheep Here" },
@@ -280,7 +281,7 @@ const PlainGameDescriptor GLULXE_GAME_LIST[] = {
 	{ "turbochesthair", "Turbo Chest Hair Massacre" },
 	{ "uglyoafs", "Ugly Oafs. Save Green Terra! Repel the Wrath Pulse!" },
 	{ "uie", "Under, In Erebus" },
-	{ "umw", "UMW" },
+	{ "umwglulx", "UMW" },
 	{ "uncleclemswill", "Uncle Clem's Will" },
 	{ "underground", "Underground" },
 	{ "undertheythunder", "Under They Thunder" },
@@ -496,6 +497,7 @@ const GlkDetectionEntry GLULXE_GAMES[] = {
 	DT_ENTRY1("counterfeitmonkey", "171224", "340232662aa8e9f4d45726e8ca7f9f5a", 12580166),
 	DT_ENTRY1("counterfeitmonkey", "181204", "c3e41db7aa8642f40b157c51fa91a26b", 12348938),
 	DT_ENTRY1("counterfeitmonkey", "200810", "493169aff19d6c1b42649197b7fbb6e0", 12400746),
+	DT_ENTRY1("counterfeitmonkey", "210312", "dc67e9f95854b3be82ab33522c4db0e9", 11314624),
 	DT_ENTRY1("countingcrabs", "090728", "ffc19674d99b4d6f530bb00287c83c7e", 1508676),
 	DT_ENTRY1("crackcoldone", "170706", "c2d5bf64a0aadaead7640b5750826d55", 627136),
 	DT_ENTRY1("crackcoldone", "170711", "d64bd51d8fe05dc190ac3589e11b6ea6", 627136),
@@ -643,10 +645,12 @@ const GlkDetectionEntry GLULXE_GAMES[] = {
 	DT_ENTRY1("samfortunepi", "090510", "f177d973432b7a27302f1a79c8106f72", 706326),
 	DT_ENTRY1("scrollthief", "150729", "9c26a3dc0f4fb681bf79f681e63c0d76", 2367848),
 	DT_ENTRY0("seasonalapocalypse", "5e951b117302169cdb77e832115937f0", 2207454),
+	DT_ENTRY1("secretletter", "150107 Deluxe", "152f91e432a49c3f61a8ecd7bca1d6c4", 2274048),
 	DT_ENTRY1("section1awakened", "150812", "e05b999f193566771ff08679d5512143", 625112),
 	DT_ENTRY1("sensory", "000329", "7432f9e1d416034acf10e8a499368b9e", 202258),
 	DT_ENTRY1("sensory", "000329", "7c5a00524809e4402ddf0554394e81bc", 132608),
 	DT_ENTRY1("sequitur", "140813", "c7e384b1938915f17cc0b7d50f41d235", 1642480),
+	DT_ENTRY1("shadowcathedral", "150228 Deluxe", "8da968205614859105c89e95179d268c", 2723072),
 	DT_ENTRY1("shadowoperative", "200929", "3bb8da82f1d81e35ee152d5ecd6ba3e4", 1140422),
 	DT_ENTRY1("shapes", "000001", "a011827749eeef8afe6f6b8d5bfb78db", 1254912),
 	DT_ENTRY1("sheephere", "160416", "1de700b758ef6f975150a6bd8926880d", 621466),
@@ -717,7 +721,7 @@ const GlkDetectionEntry GLULXE_GAMES[] = {
 	DT_ENTRY1("turbochesthair", "200928", "420f40b233e4b221e6fff2bec050dc23", 2091802),
 	DT_ENTRY1("uglyoafs", "150403", "39ba113801d9b90d506b356f6b3ba25a", 660078),
 	DT_ENTRY1("uie", "101122", "ed892c12a8b2d65fcda5ba6a228e04ed", 2016322),
-	DT_ENTRY1("umw", "200426", "c843d3a02c0f6862401c13b45a3e85b1", 635558),
+	DT_ENTRY1("umwglulx", "200426", "c843d3a02c0f6862401c13b45a3e85b1", 635558),
 	DT_ENTRY1("uncleclemswill", "200425", "60527f2feb48e14d1fdfa7b94a8838c1", 763614),
 	DT_ENTRY1("underground", "r2/191215", "48966f89d00f4c8ce1fc2946636bd190", 3715706),
 	DT_ENTRY1("undertheythunder", "200928", "bd069d2e3e841cea7a7d2694681b548a", 1070370),
@@ -839,6 +843,8 @@ const GlkDetectionEntry GLULXE_GAMES[] = {
 
 	// Italian games
 	DT_ENTRYL1("beyondglulx", Common::IT_ITA, "100115", "a0cd0a410cc99aa7ff661129b8ec5de8", 1331582),
+	DT_ENTRYL1("beyondglulx", Common::IT_ITA, "210810", "a89d1095e7fc7c6ca72ffd8c3a6bcc67", 1332118),
+	DT_ENTRYL1("beyondglulx", Common::IT_ITA, "210810", "09912bc978bb88459fa1bb8405f5962a", 353192), // zblorb
 	DT_ENTRYL1("pietradellaluna", Common::IT_ITA, "110106", "8834e0273fc730b8f6dcd38bbba2894d", 1060656),
 	DT_ENTRYL1("mancasolo", Common::IT_ITA, "398874", "de6d58b378dee41d273f7bb3c5da4220", 978440),
 	DT_ENTRYL1("schizo", Common::IT_ITA, "180907", "3531f6066802f53f9b095b5221fac4d2", 6198900),

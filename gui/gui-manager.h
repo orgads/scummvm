@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -92,6 +91,8 @@ public:
 
 	ThemeEval *xmlEval() { return _theme->getEvaluator(); }
 
+	Common::SearchSet &getIconsSet() { return _iconsSet; }
+
 	int16 getGUIWidth() const { return _baseWidth; }
 	int16 getGUIHeight() const { return _baseHeight; }
 	float getScaleFactor() const { return _scaleFactor; }
@@ -130,6 +131,8 @@ public:
 
 	void redrawFull();
 
+	void initIconsSet();
+
 protected:
 	enum RedrawStatus {
 		kRedrawDisabled = 0,
@@ -158,6 +161,8 @@ protected:
 
 	int			_topDialogLeftPadding;
 	int			_topDialogRightPadding;
+
+	Common::SearchSet _iconsSet;
 
 	// position and time of last mouse click (used to detect double clicks)
 	struct MousePos {

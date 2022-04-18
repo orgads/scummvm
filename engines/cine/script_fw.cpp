@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -40,7 +39,7 @@ namespace Cine {
 uint16 compareVars(int16 a, int16 b);
 
 
-const Opcode *FWScript::_opcodeTable = 0;
+const Opcode *FWScript::_opcodeTable = nullptr;
 unsigned int FWScript::_numOpcodes = 0;
 
 void FWScript::setupTable() {
@@ -66,9 +65,9 @@ void FWScript::setupTable() {
 		{ &FWScript::o1_compareVar, "bc" },
 		{ &FWScript::o1_modifyObjectParam2, "bbb" },
 		/* 10 */
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_loadMask0, "b" },
 		/* 14 */
 		{ &FWScript::o1_unloadMask0, "b" },
@@ -81,7 +80,7 @@ void FWScript::setupTable() {
 		{ &FWScript::o1_addSpriteFilledToBgList, "b" },
 		{ &FWScript::o1_clearBgIncrustList, "" },
 		/* 1C */
-		{ 0, 0 },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_label, "l" },
 		{ &FWScript::o1_goto, "b" },
 		{ &FWScript::o1_gotoIfSup, "b" },
@@ -94,56 +93,56 @@ void FWScript::setupTable() {
 		{ &FWScript::o1_gotoIfDiff, "b" },
 		{ &FWScript::o1_removeLabel, "b" },
 		{ &FWScript::o1_loop, "bb" },
-		{ 0, 0 },
+		{ nullptr, nullptr },
 		/* 28 */
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
 		/* 2C */
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
 		/* 30 */
-		{ 0, 0 },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_startGlobalScript, "b" },
 		{ &FWScript::o1_endGlobalScript, "b" },
-		{ 0, 0 },
+		{ nullptr, nullptr },
 		/* 34 */
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
 		/* 38 */
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_loadAnim, "s" },
 		/* 3C */
 		{ &FWScript::o1_loadBg, "s" },
 		{ &FWScript::o1_loadCt, "s" },
-		{ 0, 0 },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_loadPart, "s" },
 		/* 40 */
 		{ &FWScript::o1_closePart, "" },
 		{ &FWScript::o1_loadNewPrcName, "bs" },
 		{ &FWScript::o1_requestCheckPendingDataLoad, "" },
-		{ 0, 0 },
+		{ nullptr, nullptr },
 		/* 44 */
-		{ 0, 0 },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_blitAndFade, "" },
 		{ &FWScript::o1_fadeToBlack, "" },
 		{ &FWScript::o1_transformPaletteRange, "bbwww" },
 		/* 48 */
-		{ 0, 0 },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_setDefaultMenuBgColor, "b" },
 		{ &FWScript::o1_palRotate, "bbb" },
-		{ 0, 0 },
+		{ nullptr, nullptr },
 		/* 4C */
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_break, "" },
 		/* 50 */
 		{ &FWScript::o1_endScript, "x" },
@@ -151,24 +150,24 @@ void FWScript::setupTable() {
 		{ &FWScript::o1_loadGlobalVar, "bc" },
 		{ &FWScript::o1_compareGlobalVar, "bc" },
 		/* 54 */
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
 		/* 58 */
-		{ 0, 0 },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_declareFunctionName, "s" },
 		{ &FWScript::o1_freePartRange, "bb" },
 		{ &FWScript::o1_unloadAllMasks, "" },
 		/* 5C */
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
 		/* 60 */
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_setScreenDimensions, "wwww" },
 		/* 64 */
 		{ &FWScript::o1_displayBackground, "" },
@@ -181,7 +180,7 @@ void FWScript::setupTable() {
 		{ &FWScript::o1_disallowPlayerInput, "" },
 		{ &FWScript::o1_changeDataDisk, "b" },
 		/* 6C */
-		{ 0, 0 },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_loadMusic, "s" },
 		{ &FWScript::o1_playMusic, "" },
 		{ &FWScript::o1_fadeOutMusic, "" },
@@ -191,9 +190,9 @@ void FWScript::setupTable() {
 		{ &FWScript::o1_op72, "wbw" },
 		{ &FWScript::o1_op73, "wbw" },
 		/* 74 */
-		{ 0, 0 },
-		{ 0, 0 },
-		{ 0, 0 },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
+		{ nullptr, nullptr },
 		{ &FWScript::o1_playSample, "bbwbww" },
 		/* 78 */
 		{ &FWScript::o1_playSampleSwapped, "bbwbww" },
@@ -206,20 +205,16 @@ void FWScript::setupTable() {
 	FWScript::_numOpcodes = ARRAYSIZE(opcodeTable);
 }
 
-FWScriptInfo *scriptInfo; ///< Script factory
-
 /**
  * @todo replace with script subsystem
  */
-void setupOpcodes() {
-	static FWScriptInfo fw;
-	static OSScriptInfo os;
+FWScriptInfo *setupOpcodes() {
 	if (g_cine->getGameType() == Cine::GType_FW) {
 		FWScript::setupTable();
-		scriptInfo = &fw;
+		return new FWScriptInfo();
 	} else {
 		OSScript::setupTable();
-		scriptInfo = &os;
+		return new OSScriptInfo();
 	}
 }
 
@@ -362,7 +357,7 @@ void ScriptVars::reset() {
  * This constructor _MUST_ be followed by setdata() method call before the
  * instance can be used. It leaves the instance in partially invalid state.
  */
-RawScript::RawScript(uint16 s) : _size(s), _data(NULL),
+RawScript::RawScript(uint16 s) : _size(s), _data(nullptr),
 	_labels(SCRIPT_STACK_SIZE) { }
 
 /**
@@ -371,7 +366,7 @@ RawScript::RawScript(uint16 s) : _size(s), _data(NULL),
  * @param s Bytecode length
  */
 RawScript::RawScript(const FWScriptInfo &info, const byte *data, uint16 s) :
-	_size(s), _data(NULL), _labels(SCRIPT_STACK_SIZE) {
+	_size(s), _data(nullptr), _labels(SCRIPT_STACK_SIZE) {
 
 	setData(info, data);
 }
@@ -741,12 +736,12 @@ void FWScript::save(Common::OutSaveFile &fHandle) const {
  */
 const char *FWScriptInfo::opcodeInfo(byte opcode) const {
 	if (opcode == 0 || opcode > FWScript::_numOpcodes) {
-		return NULL;
+		return nullptr;
 	}
 
 	if (!FWScript::_opcodeTable[opcode - 1].args) {
 		warning("Undefined opcode 0x%02X in FWScriptInfo::opcodeInfo", opcode - 1);
-		return NULL;
+		return nullptr;
 	}
 
 	return FWScript::_opcodeTable[opcode - 1].args;
@@ -758,12 +753,12 @@ const char *FWScriptInfo::opcodeInfo(byte opcode) const {
  */
 OpFunc FWScriptInfo::opcodeHandler(byte opcode) const {
 	if (opcode == 0 || opcode > FWScript::_numOpcodes) {
-		return NULL;
+		return nullptr;
 	}
 
 	if (!FWScript::_opcodeTable[opcode - 1].proc) {
 		warning("Undefined opcode 0x%02X in FWScriptInfo::opcodeHandler", opcode - 1);
-		return NULL;
+		return nullptr;
 	}
 
 	return FWScript::_opcodeTable[opcode - 1].proc;
@@ -2015,7 +2010,7 @@ int FWScript::o1_unloadMask5() {
 //-----------------------------------------------------------------------
 
 void addScriptToGlobalScripts(uint16 idx) {
-	ScriptPtr tmp(scriptInfo->create(*g_cine->_scriptTable[idx], idx));
+	ScriptPtr tmp(g_cine->_scriptInfo->create(*g_cine->_scriptTable[idx], idx));
 	assert(tmp);
 	g_cine->_globalScripts.push_back(tmp);
 }
@@ -2038,7 +2033,7 @@ byte getZoneFromPositionRaw(byte *page, int16 x, int16 y, int16 width) {
 	// Vertical positions outside the 320x200 screen (e.g. in range 200-232)
 	// are accessed after teleporting Lo'Ann to the future using the pendant
 	// and walking down the slope and out of the screen (This causes a crash
-	// at least on Mac OS X). The original PC version of Future Wars doesn't
+	// at least on macOS). The original PC version of Future Wars doesn't
 	// clip its coordinates in this function or in checkCollision-function
 	// according to reverse engineering but instead just happily reads outside
 	// the 320x200 buffer. Not really knowing how to properly fix this I simply

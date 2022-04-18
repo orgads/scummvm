@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,6 +32,7 @@
 #include "scumm/he/intern_he.h"
 #include "scumm/scumm_v0.h"
 #include "scumm/scumm_v8.h"
+#include "scumm/dialogs.h"
 #include "scumm/resource.h"
 
 // Files related for detection.
@@ -228,8 +228,7 @@ bool ScummMetaEngine::hasFeature(MetaEngineFeature f) const {
 		(f == kSavesSupportMetaInfo) ||
 		(f == kSavesSupportThumbnail) ||
 		(f == kSavesSupportCreationDate) ||
-		(f == kSavesSupportPlayTime) ||
-		(f == kSimpleSavesNames);
+		(f == kSavesSupportPlayTime);
 }
 
 bool ScummEngine::hasFeature(EngineFeature f) const {
@@ -246,7 +245,7 @@ bool ScummEngine::hasFeature(EngineFeature f) const {
  *
  * This is heavily based on our MD5 detection scheme.
  */
-Common::Error ScummMetaEngine::createInstance(OSystem *syst, Engine **engine) const {
+Common::Error ScummMetaEngine::createInstance(OSystem *syst, Engine **engine) {
 	assert(syst);
 	assert(engine);
 	const char *gameid = ConfMan.get("gameid").c_str();
@@ -336,6 +335,12 @@ Common::Error ScummMetaEngine::createInstance(OSystem *syst, Engine **engine) co
 	// If the GUI options were updated, we catch this here and update them in the users config
 	// file transparently.
 	Common::updateGameGUIOptions(res.game.guioptions, getGameGUIOptionsDescriptionLanguage(res.language));
+
+	// If the game was added really long ago, it may be missing its "extra"
+	// field. When adding game-specific options, it may be our only way of
+	// telling certain versions apart, so make sure it's updated.
+	if (res.game.variant && res.game.variant[0] && !ConfMan.hasKey("extra"))
+		ConfMan.setAndFlush("extra", res.game.variant);
 
 	// Check for a user override of the platform. We allow the user to override
 	// the platform, to make it possible to add games which are not yet in
@@ -476,7 +481,7 @@ SaveStateList ScummMetaEngine::listSaves(const char *target) const {
 			Common::InSaveFile *in = saveFileMan->openForLoading(*file);
 			if (in) {
 				Scumm::getSavegameName(in, saveDesc, 0);	// FIXME: heversion?!?
-				saveList.push_back(SaveStateDescriptor(slotNum, saveDesc));
+				saveList.push_back(SaveStateDescriptor(this, slotNum, saveDesc));
 				delete in;
 			}
 		}
@@ -504,15 +509,7 @@ SaveStateDescriptor ScummMetaEngine::querySaveMetaInfos(const char *target, int 
 		return SaveStateDescriptor();
 	}
 
-	SaveStateDescriptor desc(slot, saveDesc);
-
-	// Do not allow save slot 0 (used for auto-saving) to be deleted or
-	// overwritten.
-	if (slot == 0) {
-		desc.setWriteProtectedFlag(true);
-		desc.setDeletableFlag(false);
-	}
-
+	SaveStateDescriptor desc(this, slot, saveDesc);
 	desc.setThumbnail(thumbnail);
 
 	if (infoPtr) {
@@ -530,6 +527,25 @@ SaveStateDescriptor ScummMetaEngine::querySaveMetaInfos(const char *target, int 
 	}
 
 	return desc;
+}
+
+GUI::OptionsContainerWidget *ScummMetaEngine::buildEngineOptionsWidgetDynamic(GUI::GuiObject *boss, const Common::String &name, const Common::String &target) const {
+	if (ConfMan.get("gameid", target) != "loom")
+		return nullptr;
+
+	// These Loom settings are only relevant for the EGA version, since
+	// that is the only one that has an overture.
+
+	Common::Platform platform = Common::parsePlatform(ConfMan.get("platform", target));
+	if (platform != Common::kPlatformUnknown && platform != Common::kPlatformDOS)
+		return nullptr;
+
+	Common::String extra = ConfMan.get("extra", target);
+
+	if (extra == "Steam" || extra == "VGA")
+		return nullptr;
+
+	return new Scumm::LoomEgaGameOptionsWidget(boss, name, target);
 }
 
 #if PLUGIN_ENABLED_DYNAMIC(SCUMM)

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -107,21 +106,6 @@ String GetRoomBlockName(RoomFileBlock id) {
 	return "unknown";
 }
 
-// This reader will delegate block reading to the provided user function
-static PfnReadRoomBlock reader_reader;
-static RoomFileVersion reader_ver;
-static HError ReadRoomDataReader(Stream *in, int block_id, const String &ext_id,
-		soff_t block_len, bool &read_next) {
-	return reader_reader(in, (RoomFileBlock)block_id, ext_id, block_len, reader_ver, read_next);
-}
-
-HRoomFileError ReadRoomData(PfnReadRoomBlock reader, Stream *in, RoomFileVersion data_ver) {
-	reader_reader = reader;
-	reader_ver = data_ver;
-	HError err = ReadExtData(ReadRoomDataReader,
-		kDataExt_NumID8 | ((data_ver < kRoomVersion_350) ? kDataExt_File32 : kDataExt_File64), in);
-	return err ? HRoomFileError::None() : new RoomFileError(kRoomFileErr_BlockListFailed, err);
-}
 
 static PfnWriteRoomBlock writer_writer;
 static const RoomStruct *writer_room;

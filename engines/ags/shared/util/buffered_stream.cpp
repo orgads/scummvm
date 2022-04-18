@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,6 +37,7 @@ BufferedStream::BufferedStream(const String &file_name, FileOpenMode open_mode, 
 
 		_end = -1;
 		if (FileStream::Seek(0, kSeekEnd)) {
+			_start = 0;
 			_end = FileStream::GetPosition();
 			if (!FileStream::Seek(0, kSeekBegin))
 				_end = -1;
@@ -126,21 +126,33 @@ int32_t BufferedStream::WriteByte(uint8_t val) {
 bool BufferedStream::Seek(soff_t offset, StreamSeek origin) {
 	soff_t want_pos = -1;
 	switch (origin) {
-	case StreamSeek::kSeekCurrent:
-		want_pos = _position + offset;
-		break;
-	case StreamSeek::kSeekBegin:
-		want_pos = 0 + offset;
-		break;
-	case StreamSeek::kSeekEnd:
-		want_pos = _end + offset;
-		break;
-		break;
+	case StreamSeek::kSeekCurrent:  want_pos = _position + offset; break;
+	case StreamSeek::kSeekBegin:    want_pos = _start + offset; break;
+	case StreamSeek::kSeekEnd:      want_pos = _end + offset; break;
+	default: break;
 	}
 
 	// clamp
-	_position = std::min(std::max(want_pos, (soff_t)0), _end);
+	_position = std::min(std::max(want_pos, (soff_t)_start), _end);
 	return _position == want_pos;
+}
+
+BufferedSectionStream::BufferedSectionStream(const String &file_name, soff_t start_pos, soff_t end_pos,
+	FileOpenMode open_mode, FileWorkMode work_mode, DataEndianess stream_endianess)
+	: BufferedStream(file_name, open_mode, work_mode, stream_endianess) {
+	assert(start_pos <= end_pos);
+	start_pos = std::min(start_pos, end_pos);
+	_start = std::min(start_pos, _end);
+	_end = std::min(end_pos, _end);
+	Seek(0, kSeekBegin);
+}
+
+soff_t BufferedSectionStream::GetPosition() const {
+	return BufferedStream::GetPosition() - _start;
+}
+
+soff_t BufferedSectionStream::GetLength() const {
+	return _end - _start;
 }
 
 } // namespace Shared

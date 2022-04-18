@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -546,7 +545,7 @@ void _barrier_handler::___init() {
 	for (j = 0; j < MAX_slices; j++) {
 		anim_slices[j].num_props_in_slice = 0;
 		for (uint32 l = 0; l < MAX_parents_per_anim_slice; l++)
-			anim_slices[j].anim_parents[l] = 0; // unasigned pointer
+			anim_slices[j].anim_parents[l] = nullptr; // unasigned pointer
 	}
 	for (j = 0; j < MAX_props; j++) {
 		anim_prop_info[j].barriers_per_state = 0;
@@ -630,7 +629,7 @@ void _barrier_handler::Form_route_barrier_list(PXreal x, PXreal y, PXreal z, PXr
 	_rect rb; // rb meaning 'Route-Box'
 	uint32 j;
 	_child_group *clist[MAX_child_groups_per_parent * 2];
-	uint32 total_childs = 0; // seperate total for safety
+	uint32 total_childs = 0; // separate total for safety
 	int32 expanded_this_go;
 	_route_barrier *bar;
 	uint32 k;
@@ -720,32 +719,32 @@ void _barrier_handler::Form_route_barrier_list(PXreal x, PXreal y, PXreal z, PXr
 				} else if (((CHILDR >= RBL) && (CHILDL <= RBR)) && ((CHILDB >= RBT) && (CHILDT <= RBB))) {
 					// child is wholly inside route box - add it and delete child
 					ADD_CHILD
-					clist[j] = NULL; // delete the child now it has been absorbed
+					clist[j] = nullptr; // delete the child now it has been absorbed
 				} else if (((RBR >= CHILDL) && (RBL <= CHILDR)) && ((RBT >= CHILDT) && (RBB <= CHILDB))) {
 					// route box is wholly inside child box - expand route box, add and delete child
 					ADD_CHILD
-					clist[j] = NULL; // delete the child now it has been absorbed
+					clist[j] = nullptr; // delete the child now it has been absorbed
 					EXPAND_ROUTE_BOX
 				} else {
 					if ((CHILDL > RBL) && (CHILDL < RBR) && ((CHILDT > RBT) && (CHILDT < RBB))) {
 						// child top/left is within route box - expand route box, add and delete child
 						ADD_CHILD
-						clist[j] = NULL; // delete the child now it has been absorbed
+						clist[j] = nullptr; // delete the child now it has been absorbed
 						EXPAND_ROUTE_BOX
 					} else if ((CHILDR > RBL) && (CHILDR < RBR) && ((CHILDT > RBT) && (CHILDT < RBB))) {
 						// child top/right is within route box - expand route box, add and delete child
 						ADD_CHILD
-						clist[j] = NULL; // delete the child now it has been absorbed
+						clist[j] = nullptr; // delete the child now it has been absorbed
 						EXPAND_ROUTE_BOX
 					} else if ((CHILDL > RBL) && (CHILDL < RBR) && ((CHILDB > RBT) && (CHILDB < RBB))) {
 						// child bottom/left is within route box - expand route box, add and delete child
 						ADD_CHILD
-						clist[j] = NULL; // delete the child now it has been absorbed
+						clist[j] = nullptr; // delete the child now it has been absorbed
 						EXPAND_ROUTE_BOX
 					} else if ((CHILDR > RBL) && (CHILDR < RBR) && ((CHILDB > RBT) && (CHILDB < RBB))) {
 						// child bottom/right is within route box - expand route box, add and delete child
 						ADD_CHILD
-						clist[j] = NULL; // delete the child now it has been absorbed
+						clist[j] = nullptr; // delete the child now it has been absorbed
 						EXPAND_ROUTE_BOX
 					} else {
 						// we must check for our route line intersecting a horizontal and vertical child box edge
@@ -842,7 +841,7 @@ _parent_box *_barrier_handler::Fetch_parent_num_on_slice_y(uint32 requested_pare
 
 	// reached total?
 	if (requested_parent == slice->num_parent_boxes)
-		return (0);
+		return (nullptr);
 
 	// simply return the pointer
 
@@ -867,8 +866,8 @@ _parent_box *_barrier_handler::Fetch_parent_box_for_xyz(PXreal x, PXreal y, PXre
 	// return a pointer to the parent box of a point in world space
 	// returns 0 if the point does not lie within a parent box
 
-	_routing_slice *slice = NULL;
-	_parent_box *parent = NULL;
+	_routing_slice *slice = nullptr;
+	_parent_box *parent = nullptr;
 
 	// find correct slice according to height
 	// fetch first
@@ -906,7 +905,7 @@ _parent_box *_barrier_handler::Fetch_parent_box_for_xyz(PXreal x, PXreal y, PXre
 		}
 	}
 
-	return (0);
+	return (nullptr);
 }
 
 void _game_session::Prepare_megas_route_barriers(bool8 pl) {
@@ -915,7 +914,7 @@ void _game_session::Prepare_megas_route_barriers(bool8 pl) {
 	// this system is custom for the player object - routing megas use their own system
 	// this routine fecthes the 'special' player only line-of-sight barriers too
 
-	_parent_box *par = 0;
+	_parent_box *par = nullptr;
 	_child_group *pchild;
 	uint32 total_childs;
 	uint32 j, k;
@@ -973,7 +972,7 @@ void _game_session::Prepare_megas_route_barriers(bool8 pl) {
 
 	if (parent_number == slice->num_parent_boxes) {
 		// not on a legal position - can happen
-		M->cur_parent = 0; // null pointer
+		M->cur_parent = nullptr; // null pointer
 		M->number_of_barriers = 0;
 		M->number_of_nudge = 0;
 		M->number_of_animating = 0;

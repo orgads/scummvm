@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -149,7 +148,7 @@ bool Pics::ImageFile::doImageOp(Pics::ImageContext *ctx) const {
 	uint16 a, b;
 
 	opcode = ctx->_file.readByte();
-	debugCN(kDebugGraphics, "  %.4x [%.2x]: ", ctx->_file.pos() - 1, opcode);
+	debugCN(kDebugGraphics, "  %.4x [%.2x]: ", (int)ctx->_file.pos() - 1, opcode);
 
 	byte param = opcode & 0xf;
 	opcode >>= 4;
@@ -279,10 +278,13 @@ bool Pics::ImageFile::doImageOp(Pics::ImageContext *ctx) const {
 			ctx->_drawSurface->floodFill(a, b, ctx->_fillColor);
 		break;
 
+	#if 0
+	// FIXME: The reset case was causing room outside cell to be drawn all white
 	case OPCODE_RESET:
 		a = imageGetOperand(ctx);
 		doResetOp(ctx, a);
 		break;
+	#endif
 	}
 
 	//ctx->_drawSurface->dumpToScreen();
@@ -360,7 +362,8 @@ int Pics::getPictureNumber(const Common::String &filename) const {
 	return atoi(num.c_str());
 }
 
-bool Pics::hasFile(const Common::String &name) const {
+bool Pics::hasFile(const Common::Path &path) const {
+	Common::String name = path.toString();
 	int num = getPictureNumber(name);
 	if (num == -1)
 		return false;
@@ -379,14 +382,16 @@ int Pics::listMembers(Common::ArchiveMemberList &list) const {
 	return list.size();
 }
 
-const Common::ArchiveMemberPtr Pics::getMember(const Common::String &name) const {
+const Common::ArchiveMemberPtr Pics::getMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	if (!hasFile(name))
 		return Common::ArchiveMemberPtr();
 
 	return Common::ArchiveMemberPtr(new Common::GenericArchiveMember(name, this));
 }
 
-Common::SeekableReadStream *Pics::createReadStreamForMember(const Common::String &name) const {
+Common::SeekableReadStream *Pics::createReadStreamForMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	// Get the picture number
 	int num = getPictureNumber(name);
 	if (num == -1 || !hasFile(name))

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -32,8 +31,8 @@ class TextCastMember;
 
 enum SpritePosition {
 	kSpritePositionUnk1 = 0,
-	kSpritePositionEnabled,
-	kSpritePositionUnk2,
+	kSpritePositionEnabled = 1,
+	kSpritePositionUnk2 = 2,
 	kSpritePositionFlags = 4,
 	kSpritePositionCastId = 6,
 	kSpritePositionY = 8,
@@ -59,42 +58,51 @@ enum MainChannelsPosition {
 
 class Sprite {
 public:
-	Sprite(Frame *frame);
+	Sprite(Frame *frame = nullptr);
+	Sprite(const Sprite &sprite);
+	Sprite& operator=(const Sprite &sprite);
 	~Sprite();
 
 	Frame *getFrame() const { return _frame; }
 	Score *getScore() const { return _score; }
 
-	void updateCast();
+	void updateEditable();
 
 	bool respondsToMouse();
 	bool isActive();
 	bool shouldHilite();
+	bool checkSpriteType();
 
 	uint16 getPattern();
 	void setPattern(uint16 pattern);
 
-	void setCast(uint16 castid);
+	void setCast(CastMemberID memberID);
 	bool isQDShape();
+	Graphics::Surface *getQDMatte();
+	void createQDMatte();
+	MacShape *getShape();
+	uint32 getForeColor();
+	uint32 getBackColor();
+	Common::Point getRegistrationOffset();
 
 	Frame *_frame;
 	Score *_score;
 	Movie *_movie;
 
-	uint16 _scriptId;
-	uint16 _scriptCastIndex;
-	byte _colorcode;  // x40 editable, 0x80 moveable
+	Graphics::FloodFill *_matte; // matte for quickdraw shape
+
+	CastMemberID _scriptId;
+	byte _colorcode; // x40 editable, 0x80 moveable
 	byte _blendAmount;
 	uint32 _unk3;
 
 	bool _enabled;
-	uint16 _castIndex;
 	SpriteType _spriteType;
 	byte _inkData;
 	InkType _ink;
 	uint16 _trails;
 
-	uint16 _castId;
+	CastMemberID _castId;
 	uint16 _pattern;
 	CastMember *_cast;
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -49,6 +48,23 @@ static const CINEGameDescription gameDescriptions[] = {
 			AD_ENTRY2s("AUTO00.PRC",	"4fe1e7930b38e3c63f0f2474d471bf8f", -1,
 					   "PART01", 		"61d003202d301c29dd399acfb1354310", -1),
 			Common::EN_USA,
+			Common::kPlatformDOS,
+			ADGF_CD,
+			GUIO0()
+		},
+		GType_FW,
+		GF_CD | GF_CRYPTED_BOOT_PRC,
+	},
+
+	{
+		// This is the Future Wars CD version
+		// with a French translation patch (#12490).
+		{
+			"fw",
+			"Sony CD version with French translation patch",
+			AD_ENTRY2s("AUTO00.PRC",	"4fe1e7930b38e3c63f0f2474d471bf8f", -1,
+					   "PART01",		"5d1acb97abe9591f9008e00d07add95a", -1),
+			Common::FR_FRA,
 			Common::kPlatformDOS,
 			ADGF_CD,
 			GUIO0()
@@ -407,6 +423,20 @@ static const CINEGameDescription gameDescriptions[] = {
 		0,
 	},
 
+	{ // Submitted by Nyarlathotep7777 in #12812 (Italian Amiga version)
+		{
+			"os",
+			"",
+			AD_ENTRY1s("procs1", "d7458be2b14d77410e6330148ca6c371", 61682),
+			Common::IT_ITA,
+			Common::kPlatformAmiga,
+			ADGF_NO_FLAGS,
+			GUIO0()
+		},
+		GType_OS,
+		0,
+	},
+
 	{
 		{
 			"os",
@@ -509,7 +539,7 @@ static const CINEGameDescription gameDescriptions[] = {
 		{
 			"os",
 			"Demo",
-			AD_ENTRY1("demo", "8d3a750d1c840b1b1071e42f9e6f6aa2"),
+			AD_ENTRY1("demo_os", "dfc30c6a57998a56e8980f7ea3413867"),
 			Common::EN_GRB,
 			Common::kPlatformAmiga,
 			ADGF_DEMO,

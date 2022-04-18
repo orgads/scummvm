@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -44,7 +43,13 @@ public:
 	void removeSaveState(const char *target, int slot) const override;
 	SaveStateDescriptor querySaveMetaInfos(const char *target, int slot) const override;
 
-	Common::Error createInstance(OSystem *syst, Engine **engine) const override;
+	Common::Error createInstance(OSystem *syst, Engine **engine) override;
+	Common::String getSavegameFile(int saveGameIdx, const char *target) const override {
+		if (saveGameIdx == kSavegameFilePattern)
+			return Common::String::format("sword1.###");
+		else
+			return Common::String::format("sword1.%03d", saveGameIdx);
+	}
 };
 
 bool SwordMetaEngine::hasFeature(MetaEngineFeature f) const {
@@ -65,7 +70,7 @@ bool Sword1::SwordEngine::hasFeature(EngineFeature f) const {
 	    (f == kSupportsLoadingDuringRuntime);
 }
 
-Common::Error SwordMetaEngine::createInstance(OSystem *syst, Engine **engine) const {
+Common::Error SwordMetaEngine::createInstance(OSystem *syst, Engine **engine) {
 	assert(engine);
 	*engine = new Sword1::SwordEngine(syst);
 	return Common::kNoError;
@@ -88,7 +93,7 @@ SaveStateList SwordMetaEngine::listSaves(const char *target) const {
 			if (in) {
 				in->readUint32LE(); // header
 				in->read(saveName, 40);
-				saveList.push_back(SaveStateDescriptor(slotNum, saveName));
+				saveList.push_back(SaveStateDescriptor(this, slotNum, saveName));
 				delete in;
 			}
 		}
@@ -118,7 +123,7 @@ SaveStateDescriptor SwordMetaEngine::querySaveMetaInfos(const char *target, int 
 		in->read(name, sizeof(name));
 		in->read(&versionSave, 1);      // version
 
-		SaveStateDescriptor desc(slot, name);
+		SaveStateDescriptor desc(this, slot, name);
 
 		if (versionSave < 2) // These older version of the savegames used a flag to signal presence of thumbnail
 			in->skip(1);

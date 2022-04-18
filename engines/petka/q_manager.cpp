@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -82,7 +81,7 @@ void QManager::removeResource(uint32 id) {
 
 void QManager::clearUnneeded() {
 	for (auto it = _resourceMap.begin(); it != _resourceMap.end(); ++it) {
-		if (!_isAlwaysNeededMap.getVal(it->_key)) {
+		if (!_isAlwaysNeededMap.getValOrDefault(it->_key, false)) {
 			_resourceMap.erase(it);
 		}
 	}
@@ -94,7 +93,7 @@ Graphics::Surface *QManager::getSurface(uint32 id, uint16 w, uint16 h) {
 		return res.type == QResource::kSurface ? res.surface : nullptr;
 	}
 
-	QResource &res = _resourceMap.getVal(id);
+	QResource &res = _resourceMap.getOrCreateVal(id);
 	res.type = QResource::kSurface;
 	res.surface = new Graphics::Surface;
 	res.surface->create(w, h, _vm._system->getScreenFormat());
@@ -118,9 +117,10 @@ Graphics::Surface *QManager::getSurface(uint32 id) {
 		return nullptr;
 	}
 
-	Graphics::Surface *s = loadBitmapSurface(*stream);
+	Common::ScopedPtr<Common::SeekableReadStream> preloaded_stream (stream->readStream(stream->size()));
+	Graphics::Surface *s = loadBitmapSurface(*preloaded_stream);
 	if (s) {
-		QResource &res = _resourceMap.getVal(id);
+		QResource &res = _resourceMap.getOrCreateVal(id);
 		res.type = QResource::kSurface;
 		res.surface = s;
 		return res.surface;
@@ -148,7 +148,7 @@ FlicDecoder *QManager::getFlic(uint32 id) {
 	FlicDecoder *flc = new FlicDecoder;
 	flc->load(stream, _vm.openFile(name, false));
 
-	QResource &res = _resourceMap.getVal(id);
+	QResource &res = _resourceMap.getOrCreateVal(id);
 	res.type = QResource::kFlic;
 	res.flcDecoder = flc;
 

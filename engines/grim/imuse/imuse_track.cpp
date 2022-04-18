@@ -1,22 +1,21 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
+ * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
-
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -345,7 +344,8 @@ void Imuse::fadeOutMusic(int duration) {
 	for (int l = 0; l < MAX_IMUSE_TRACKS; l++) {
 		Track *track = _track[l];
 		if (track->used && !track->toBeRemoved && (track->volGroupId == IMUSE_VOLGRP_MUSIC)) {
-			moveToFadeOutTrack(track, duration);
+			cloneToFadeOutTrack(track, duration);
+			flushTrack(track);
 			return;
 		}
 	}
@@ -358,7 +358,8 @@ void Imuse::fadeOutMusicAndStartNew(int fadeDelay, const char *filename, int hoo
 		Track *track = _track[l];
 		if (track->used && !track->toBeRemoved && (track->volGroupId == IMUSE_VOLGRP_MUSIC)) {
 			startMusicWithOtherPos(filename, 0, vol, pan, track);
-			moveToFadeOutTrack(track, fadeDelay);
+			cloneToFadeOutTrack(track, fadeDelay);
+			flushTrack(track);
 			break;
 		}
 	}
@@ -402,58 +403,6 @@ Track *Imuse::cloneToFadeOutTrack(Track *track, int fadeDelay) {
 	g_system->getMixer()->playStream(track->getType(), &fadeTrack->handle, fadeTrack->stream, -1, fadeTrack->getVol(),
 											fadeTrack->getPan(), DisposeAfterUse::YES, false,
 											(track->mixerFlags & kFlagReverseStereo) != 0);
-	fadeTrack->used = true;
-
-	return fadeTrack;
-}
-
-Track *Imuse::moveToFadeOutTrack(Track *track, int fadeDelay) {
-	assert(track);
-	Track *fadeTrack;
-
-	if (track->toBeRemoved) {
-		error("moveToFadeOutTrack: Tried to move a track to be removed, please bug report");
-		return nullptr;
-	}
-
-	// Clamp fade time to remaining time in the current region
-	if (track->curRegion != -1) {
-		int remainingLen = _sound->getRegionLength(track->soundDesc, track->curRegion) - track->regionOffset;
-		int remainingTime = (remainingLen * 60) / track->feedSize;
-		if (fadeDelay > remainingTime) {
-			fadeDelay = remainingTime;
-		}
-	}
-
-	if (fadeDelay <= 0) {
-		flushTrack(track);
-		return nullptr;
-	}
-
-	assert(track->trackId < MAX_IMUSE_TRACKS);
-	fadeTrack = _track[track->trackId + MAX_IMUSE_TRACKS];
-
-	if (fadeTrack->used) {
-		flushTrack(fadeTrack);
-		g_system->getMixer()->stopHandle(fadeTrack->handle);
-	}
-
-	// Clone the settings of the given track
-	memcpy(fadeTrack, track, sizeof(Track));
-	fadeTrack->trackId = track->trackId + MAX_IMUSE_TRACKS;
-
-	// Reset the track
-	track->clear();
-
-	// Mark as used for now so the track won't be reused again this frame
-	track->used = true;
-
-	// Set the volume fading parameters to indicate a fade out
-	fadeTrack->volFadeDelay = fadeDelay;
-	fadeTrack->volFadeDest = 0;
-	fadeTrack->volFadeStep = (fadeTrack->volFadeDest - fadeTrack->vol) * 60 * (1000 / _callbackFps) / (1000 * fadeDelay);
-	fadeTrack->volFadeUsed = true;
-
 	fadeTrack->used = true;
 
 	return fadeTrack;

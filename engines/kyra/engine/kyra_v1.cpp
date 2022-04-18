@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -34,12 +33,12 @@ namespace Kyra {
 
 KyraEngine_v1::KyraEngine_v1(OSystem *system, const GameFlags &flags)
 	: Engine(system), _flags(flags), _rnd("kyra") {
-	_res = 0;
-	_sound = 0;
-	_text = 0;
-	_staticres = 0;
-	_timer = 0;
-	_emc = 0;
+	_res = nullptr;
+	_sound = nullptr;
+	_text = nullptr;
+	_staticres = nullptr;
+	_timer = nullptr;
+	_emc = nullptr;
 
 	_configRenderMode = Common::kRenderDefault;
 	_configNullSound = false;
@@ -50,7 +49,7 @@ KyraEngine_v1::KyraEngine_v1(OSystem *system, const GameFlags &flags)
 		_gameSpeed = 60;
 	_tickLength = (uint8)(1000.0 / _gameSpeed);
 
-	_trackMap = 0;
+	_trackMap = nullptr;
 	_trackMapSize = 0;
 	_lastMusicCommand = -1;
 	_curSfxFile = _curMusicTheme = -1;
@@ -95,6 +94,8 @@ Common::Error KyraEngine_v1::init() {
 				_sound = new SoundTownsPC98_v2(this, _mixer);
 		} else if (_flags.platform == Common::kPlatformAmiga) {
 			_sound = new SoundAmiga_LoK(this, _mixer);
+		} else if (_flags.platform == Common::kPlatformMacintosh && _flags.gameID == GI_KYRA1) {
+			_sound = new SoundMac(this, _mixer);
 		} else {
 			// In Kyra 1 users who have specified a default MT-32 device in the launcher settings
 			// will get MT-32 music, otherwise AdLib. In Kyra 2 and LoL users who have specified a
@@ -117,7 +118,7 @@ Common::Error KyraEngine_v1::init() {
 				else
 					type = Sound::kMidiGM;
 
-				MidiDriver *driver = 0;
+				MidiDriver *driver = nullptr;
 
 				if (musicType == MT_PCSPK) {
 					driver = new MidiDriver_PCSpeaker(_mixer);
@@ -258,7 +259,7 @@ int KyraEngine_v1::checkInput(Button *buttonList, bool mainLoop, int eventFlag) 
 				} else {
 					char savegameName[14];
 					sprintf(savegameName, "Quicksave %d", event.kbd.keycode - Common::KEYCODE_0);
-					saveGameStateIntern(saveLoadSlot, savegameName, 0);
+					saveGameStateIntern(saveLoadSlot, savegameName, nullptr);
 				}
 			} else if (event.kbd.hasFlags(Common::KBD_CTRL)) {
 				if (event.kbd.keycode == Common::KEYCODE_q) {
@@ -473,8 +474,7 @@ void KyraEngine_v1::updateInput() {
 		}
 	}
 
-	if (updateScreen)
-		_system->updateScreen();
+	screen()->updateBackendScreen(updateScreen);
 }
 
 void KyraEngine_v1::removeInputTop() {
@@ -548,6 +548,8 @@ void KyraEngine_v1::delayWithTicks(int ticks) {
 void KyraEngine_v1::registerDefaultSettings() {
 	if (_flags.platform == Common::kPlatformFMTowns)
 		ConfMan.registerDefault("cdaudio", true);
+	else if (_flags.platform == Common::kPlatformMacintosh)
+		ConfMan.registerDefault("hqmusic", true);
 	if (_flags.fanLang != Common::UNK_LANG) {
 		// HACK/WORKAROUND: Since we can't use registerDefault here to overwrite
 		// the global subtitles settings, we're using this hack to enable subtitles
@@ -565,6 +567,8 @@ void KyraEngine_v1::readSettings() {
 	if (!ConfMan.getBool("music_mute")) {
 		if (_flags.platform == Common::kPlatformFMTowns)
 			_configMusic = ConfMan.getBool("cdaudio") ? 2 : 1;
+		else if (_flags.platform == Common::kPlatformMacintosh)
+			_configMusic = ConfMan.getBool("hqmusic") ? 1 : 2;
 		else
 			_configMusic = 1;
 	}
@@ -595,6 +599,8 @@ void KyraEngine_v1::writeSettings() {
 	ConfMan.setBool("music_mute", _configMusic == 0);
 	if (_flags.platform == Common::kPlatformFMTowns)
 		ConfMan.setBool("cdaudio", _configMusic == 2);
+	else if (_flags.platform == Common::kPlatformMacintosh)
+		ConfMan.setBool("hqmusic", _configMusic == 1);
 	ConfMan.setBool("sfx_mute", _configSounds == 0);
 
 	switch (_configVoice) {

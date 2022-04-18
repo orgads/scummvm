@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -110,6 +109,8 @@ protected:
 	*/
 	virtual void listSaves();
 
+	void activate(int slot, const Common::U32String &description);
+
 	const bool					_saveMode;
 	const MetaEngine		    *_metaEngine;
 	bool						_delSupport;
@@ -120,6 +121,7 @@ protected:
 	Common::String				_target;
 	bool _dialogWasShown;
 	SaveStateList				_saveList;
+	Common::U32String			_resultString;
 
 #ifndef DISABLE_SAVELOADCHOOSER_GRID
 	ButtonWidget *_listButton;
@@ -131,13 +133,8 @@ protected:
 };
 
 class SaveLoadChooserSimple : public SaveLoadChooserDialog {
-	typedef Common::String String;
-	typedef Common::Array<Common::String> StringArray;
-
-	typedef Common::U32String U32String;
-	typedef Common::Array<Common::U32String> U32StringArray;
 public:
-	SaveLoadChooserSimple(const U32String &title, const U32String &buttonLabel, bool saveMode);
+	SaveLoadChooserSimple(const Common::U32String &title, const Common::U32String &buttonLabel, bool saveMode);
 
 	void handleCommand(CommandSender *sender, uint32 cmd, uint32 data) override;
 
@@ -165,8 +162,6 @@ private:
 	StaticTextWidget	*_time;
 	StaticTextWidget	*_playtime;
 	StaticTextWidget	*_pageTitle;
-
-	U32String			_resultString;
 
 	void addThumbnailContainer();
 	void updateSelection(bool redraw);
@@ -227,7 +222,6 @@ private:
 
 	ContainerWidget *_newSaveContainer;
 	int _nextFreeSaveSlot;
-	Common::U32String _resultString;
 
 	SavenameDialog _savenameDialog;
 	bool selectDescription();

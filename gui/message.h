@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,14 +24,15 @@
 
 #include "gui/dialog.h"
 #include "common/str.h"
+#include "common/str-array.h"
 
 namespace GUI {
 
 class CommandSender;
 
 enum {
-	kMessageOK = 1,
-	kMessageCancel = 0
+	kMessageOK = 0,
+	kMessageAlt = 1
 };
 
 
@@ -41,13 +41,29 @@ enum {
  */
 class MessageDialog : public Dialog {
 public:
-	MessageDialog(const Common::U32String &message, const Common::U32String &defaultButton = Common::U32String("OK"), const Common::U32String &altButton = Common::U32String(), Graphics::TextAlign alignment = Graphics::kTextAlignCenter, const char *url = nullptr);
-	MessageDialog(const Common::String &message, const Common::String &defaultButton = "OK", const Common::String &altButton = "", Graphics::TextAlign alignment = Graphics::kTextAlignCenter, const char *url = nullptr);
+	MessageDialog(const Common::U32String &message,
+				  const Common::U32String &defaultButton = Common::U32String("OK"),
+				  const Common::U32String &altButton = Common::U32String(),
+				  Graphics::TextAlign alignment = Graphics::kTextAlignCenter,
+				  const char *url = nullptr);
+	MessageDialog(const Common::String &message,
+				  const Common::String &defaultButton = "OK",
+				  const Common::String &altButton = Common::String(),
+				  Graphics::TextAlign alignment = Graphics::kTextAlignCenter,
+				  const char *url = nullptr);
+	MessageDialog(const Common::U32String &message,
+				  const Common::U32String &defaultButton,
+				  const Common::U32StringArray &altButtons,
+				  Graphics::TextAlign alignment = Graphics::kTextAlignCenter);
 
 	void handleCommand(CommandSender *sender, uint32 cmd, uint32 data) override;
 private:
 	const char *_url;
-	void init(const Common::U32String &message, const Common::U32String &defaultButton, const Common::U32String &altButton, Graphics::TextAlign alignment, const char *url);
+	void init(const Common::U32String &message,
+			  const Common::U32String &defaultButton,
+			  const Common::U32StringArray &altButtons,
+			  Graphics::TextAlign alignment,
+			  const char *url);
 };
 
 /**

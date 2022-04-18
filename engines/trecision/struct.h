@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -48,12 +47,12 @@ struct SRoom {
 	void loadRoom(Common::SeekableReadStreamEndian *stream);
 
 private:
-	uint8 _flag = 0; // Room visited or not, extra or not
+	uint8 _flag; // Room visited or not, extra or not
 };
 
 struct SObject {
 	Common::Rect _rect;
-	Common::Rect _lim;
+	Common::Rect _area;
 	int8  _position;						// -1 if no position
 	uint16 _name;
 	uint16 _examine;
@@ -97,8 +96,8 @@ struct SObject {
 	void loadObj(Common::SeekableReadStreamEndian *stream);
 
 private:
-	uint8 _flag = 0;
-	uint8 _mode = 0;
+	uint8 _flag;
+	uint8 _mode;
 };
 
 struct SInvObject {
@@ -116,22 +115,48 @@ struct SInvObject {
 	void loadObj(Common::SeekableReadStreamEndian *stream);
 
 private:
-	uint8 _flag = 0;
+	uint8 _flag;
 };
 
 struct SAtFrame {
 	uint8 _type;	   //ATFTEXT, ATFSND, ATFEVENT
-	uint8 _child;	   // 0 1 2 3 4
+	uint8 _area;	   // 0 1 2 3 4
 	uint16 _numFrame;
 	uint16 _index;
 };
 
+// Shifted left by 1 - 4, depending on the subarea
+#define SMKANIM_OFF_BASE 16
+
 struct SAnim {
 	char _name[14];
 	uint16 _flag;		// 1- background 2- icon 3- action 4- active  -  4bits per child
-	Common::Rect _lim[MAXCHILD];
+	Common::Rect _area[MAXAREA];
 	uint8 _nbox;
 	SAtFrame _atFrame[MAXATFRAME];
+
+	/**
+	 * Toggle the animation of a subarea
+	 * @param area: 1 - 4
+	 * @param show: show or hide the animation area
+	*/
+	void toggleAnimArea(uint8 area, bool show) {
+		assert(area >= 1 && area <= 4);
+		if (show)
+			_flag &= ~(SMKANIM_OFF_BASE << area);
+		else
+			_flag |= (SMKANIM_OFF_BASE << area);
+	}
+
+	/**
+	 * Checks if an animation subarea is shown
+	 * @param area: 1 - 4
+	 * @return true if the subarea is shown 
+	*/
+	bool isAnimAreaShown(uint8 area) {
+		assert(area >= 1 && area <= 4);
+		return !(_flag & (SMKANIM_OFF_BASE << area));
+	}
 };
 
 struct SSortTable {
@@ -184,7 +209,7 @@ struct STexture {
 	bool isActive() { return _active; };
 
 private:
-	bool _active = false;
+	bool _active;
 };
 
 struct SVertex {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -1750,7 +1749,7 @@ void cmdSetMenu(AgiGame *state, AgiEngine *vm, uint8 *parameter) {
 
 	debugC(4, kDebugLevelScripts, "text %02x of %02x", textNr, state->_curLogic->numTexts);
 
-	if (state->_curLogic->texts != NULL && (textNr - 1) <= state->_curLogic->numTexts) {
+	if (state->_curLogic->texts != nullptr && (textNr - 1) <= state->_curLogic->numTexts) {
 		const char *menuText = state->_curLogic->texts[textNr - 1];
 
 		state->_vm->_menu->addMenu(menuText);
@@ -1763,7 +1762,7 @@ void cmdSetMenuItem(AgiGame *state, AgiEngine *vm, uint8 *parameter) {
 
 	debugC(4, kDebugLevelScripts, "text %02x of %02x", textNr, state->_curLogic->numTexts);
 
-	if (state->_curLogic->texts != NULL && textNr <= state->_curLogic->numTexts) {
+	if (state->_curLogic->texts != nullptr && textNr <= state->_curLogic->numTexts) {
 		const char *menuItemText = state->_curLogic->texts[textNr];
 
 		state->_vm->_menu->addMenuItem(menuItemText, controllerSlot);
@@ -2065,7 +2064,7 @@ void cmdSetCursorChar(AgiGame *state, AgiEngine *vm, uint8 *parameter) {
 	TextMgr *textMgr = state->_vm->_text;
 	uint16 textNr = parameter[0] - 1;
 
-	if (state->_curLogic->texts != NULL && textNr <= state->_curLogic->numTexts) {
+	if (state->_curLogic->texts != nullptr && textNr <= state->_curLogic->numTexts) {
 		textMgr->inputSetCursorChar(*state->_curLogic->texts[textNr]);
 	} else {
 		// default
@@ -2095,7 +2094,7 @@ void cmdSetKey(AgiGame *state, AgiEngine *vm, uint8 *parameter) {
 	state->controllerKeyMapping[keyMappingSlot].keycode = key;
 	state->controllerKeyMapping[keyMappingSlot].controllerSlot = controllerSlot;
 
-	state->controllerOccured[controllerSlot] = false;
+	state->controllerOccurred[controllerSlot] = false;
 }
 
 void cmdSetString(AgiGame *state, AgiEngine *vm, uint8 *parameter) {

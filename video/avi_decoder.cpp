@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -335,8 +334,7 @@ void AVIDecoder::handleStreamHeader(uint32 size) {
 		byte *initialPalette = 0;
 
 		if (bmInfo.bitCount == 8) {
-			initialPalette = new byte[256 * 3];
-			memset(initialPalette, 0, 256 * 3);
+			initialPalette = new byte[256 * 3]();
 
 			byte *palette = initialPalette;
 			for (uint32 i = 0; i < bmInfo.clrUsed; i++) {
@@ -347,7 +345,11 @@ void AVIDecoder::handleStreamHeader(uint32 size) {
 			}
 		}
 
-		addTrack(new AVIVideoTrack(_header.totalFrames, sHeader, bmInfo, initialPalette));
+		AVIVideoTrack *track = new AVIVideoTrack(_header.totalFrames, sHeader, bmInfo, initialPalette);
+		if (track->isValid())
+			addTrack(track);
+		else
+			delete track;
 	} else if (sHeader.streamType == ID_AUDS) {
 		PCMWaveFormat wvInfo;
 		wvInfo.tag = _fileStream->readUint16LE();
@@ -442,6 +444,11 @@ bool AVIDecoder::loadStream(Common::SeekableReadStream *stream) {
 	// Go through all chunks in the file
 	while (_fileStream->pos() < fileSize && parseNextChunk())
 		;
+
+	if (_decodedHeader) {
+		// Ensure there's at least a supported video track
+		_decodedHeader = findNextVideoTrack() != nullptr;
+	}
 
 	if (!_decodedHeader) {
 		warning("Failed to parse AVI header");

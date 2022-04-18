@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,12 +30,12 @@ namespace Plugins {
 namespace AGSParallax {
 
 struct Sprite {
-int32 x = 0;
-int32 y = 0;
-int slot = -1;
-int speed = 0;
+	int32 x = 0;
+	int32 y = 0;
+	int slot = -1;
+	int speed = 0;
 
-void syncGame(Serializer &s);
+	void syncGame(Serializer &s);
 };
 
 #define MAX_SPEED 1000
@@ -47,29 +46,30 @@ void syncGame(Serializer &s);
  * but a workalike plugin created for the AGS engine ports.
  */
 class AGSParallax : public PluginBase {
+	SCRIPT_HASH(AGSParallax)
 private:
-static IAGSEngine *_engine;
-static int32 _screenWidth;
-static int32 _screenHeight;
-static int32 _screenColorDepth;
+	int32 _screenWidth = 320;
+	int32 _screenHeight = 200;
+	int32 _screenColorDepth = 32;
 
-static bool _enabled;
-static Sprite _sprites[MAX_SPRITES];
-private:
-static const char *AGS_GetPluginName();
-static void AGS_EngineStartup(IAGSEngine *lpEngine);
-static int64 AGS_EngineOnEvent(int event, NumberPtr data);
-
-static void pxDrawSprite(ScriptMethodParams &params);
-static void pxDeleteSprite(ScriptMethodParams &params);
+	bool _enabled = false;
+	Sprite _sprites[MAX_SPRITES];
 
 private:
-static void syncGame(Serializer &s);
-static void Draw(bool foreground);
-static void clear();
+	void pxDrawSprite(ScriptMethodParams &params);
+	void pxDeleteSprite(ScriptMethodParams &params);
+
+	void syncGame(Serializer &s);
+	void Draw(bool foreground);
+	void clear();
 
 public:
-AGSParallax();
+	AGSParallax() : PluginBase() {}
+	virtual ~AGSParallax() {}
+
+	const char *AGS_GetPluginName() override;
+	void AGS_EngineStartup(IAGSEngine *lpEngine) override;
+	int64 AGS_EngineOnEvent(int event, NumberPtr data) override;
 };
 
 } // namespace AGSParallax

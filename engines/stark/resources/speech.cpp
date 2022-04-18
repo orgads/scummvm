@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,6 +24,7 @@
 #include "engines/stark/formats/xrc.h"
 
 #include "engines/stark/services/services.h"
+#include "engines/stark/services/settings.h"
 #include "engines/stark/services/dialogplayer.h"
 #include "engines/stark/services/global.h"
 #include "engines/stark/services/stateprovider.h"
@@ -151,6 +151,18 @@ void Speech::readData(Formats::XRCReadStream *stream) {
 
 	_phrase = stream->readString();
 	_character = stream->readSint32LE();
+
+	// bug fix for #12967 (STARK: Cortez says "no", but subtitles say "si")
+	if (StarkSettings->getLanguage() == Common::EN_ANY
+	    && _character == 1 // Cortez
+	    && getIndex() == 1
+	    && getSubType() == 0
+	    && getName().equals("Cortez_Laying low #1")) {
+		_phrase = "Nyo! So it was a good thing I didn't stick my head out the door to look for you, then, no?";
+	}
+
+	// For debug purposes
+	//printData();
 }
 
 void Speech::onGameLoop() {

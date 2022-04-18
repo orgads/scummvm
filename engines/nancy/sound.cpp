@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -201,15 +200,15 @@ Audio::SeekableAudioStream *SoundManager::makeHISStream(Common::SeekableReadStre
 
 	if (headerID == "DiamondWare Digitized") {
 		if (!readDiamondwareHeader(stream, type, numChannels, samplesPerSec, bitsPerSample, size))
-			return 0;
+			return nullptr;
 	} else if (headerID == "Her Interactive Sound") {
 		// Early HIS file
 		if (!readWaveHeader(stream, type, numChannels, samplesPerSec, bitsPerSample, size))
-			return 0;
+			return nullptr;
 	} else if (headerID == "HIS") {
 		stream->seek(4);
 		if (!readHISHeader(stream, type, numChannels, samplesPerSec, bitsPerSample, size))
-			return 0;
+			return nullptr;
 	}
 
 	byte flags = 0;
@@ -220,14 +219,14 @@ Audio::SeekableAudioStream *SoundManager::makeHISStream(Common::SeekableReadStre
 			flags |= (Audio::FLAG_16BITS | Audio::FLAG_LITTLE_ENDIAN);
 		} else {
 			warning("Unsupported bitsPerSample %d found in HIS file", bitsPerSample);
-			return 0;
+			return nullptr;
 		}
 
 		if (numChannels == 2) {
 			flags |= Audio::FLAG_STEREO;
 		} else if (numChannels != 1) {
 			warning("Unsupported number of channels %d found in HIS file", numChannels);
-			return 0;
+			return nullptr;
 		}
 
 		// Raw PCM, make sure the last packet is complete

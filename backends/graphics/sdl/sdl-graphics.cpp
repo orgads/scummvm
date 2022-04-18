@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -59,7 +58,7 @@ void SdlGraphicsManager::deactivateManager() {
 		g_system->getEventManager()->getEventDispatcher()->unregisterObserver(this);
 	}
 
-	_eventSource->setGraphicsManager(0);
+	_eventSource->setGraphicsManager(nullptr);
 }
 
 SdlGraphicsManager::State SdlGraphicsManager::getState() const {
@@ -85,7 +84,7 @@ bool SdlGraphicsManager::setState(const State &state) {
 		// pixel format instead.
 		Graphics::PixelFormat format = state.pixelFormat;
 		Common::List<Graphics::PixelFormat> supportedFormats = getSupportedFormats();
-		if (Common::find(supportedFormats.begin(), supportedFormats.end(), format) == supportedFormats.end())
+		if (!supportedFormats.empty() && Common::find(supportedFormats.begin(), supportedFormats.end(), format) == supportedFormats.end())
 			format = supportedFormats.front();
 		initSize(state.screenWidth, state.screenHeight, &format);
 #else
@@ -121,17 +120,17 @@ Common::Rect SdlGraphicsManager::getPreferredFullscreenResolution() {
 
 bool SdlGraphicsManager::defaultGraphicsModeConfig() const {
 	const Common::ConfigManager::Domain *transientDomain = ConfMan.getDomain(Common::ConfigManager::kTransientDomain);
-	if (transientDomain && transientDomain->contains("gfx_mode")) {
-		const Common::String &mode = transientDomain->getVal("gfx_mode");
-		if (!mode.equalsIgnoreCase("normal") && !mode.equalsIgnoreCase("default")) {
+	if (transientDomain && transientDomain->contains("scaler")) {
+		const Common::String &mode = transientDomain->getVal("scaler");
+		if (!mode.equalsIgnoreCase("default")) {
 			return false;
 		}
 	}
 
 	const Common::ConfigManager::Domain *gameDomain = ConfMan.getActiveDomain();
-	if (gameDomain && gameDomain->contains("gfx_mode")) {
-		const Common::String &mode = gameDomain->getVal("gfx_mode");
-		if (!mode.equalsIgnoreCase("normal") && !mode.equalsIgnoreCase("default")) {
+	if (gameDomain && gameDomain->contains("scaler")) {
+		const Common::String &mode = gameDomain->getVal("scaler");
+		if (!mode.equalsIgnoreCase("default")) {
 			return false;
 		}
 	}
@@ -139,26 +138,11 @@ bool SdlGraphicsManager::defaultGraphicsModeConfig() const {
 	return true;
 }
 
-int SdlGraphicsManager::getGraphicsModeIdByName(const Common::String &name) const {
-	if (name == "normal" || name == "default") {
-		return getDefaultGraphicsMode();
-	}
-
-	const OSystem::GraphicsMode *mode = getSupportedGraphicsModes();
-	while (mode && mode->name != nullptr) {
-		if (name.equalsIgnoreCase(mode->name)) {
-			return mode->id;
-		}
-		++mode;
-	}
-	return -1;
-}
-
 void SdlGraphicsManager::initSizeHint(const Graphics::ModeList &modes) {
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 	const bool useDefault = defaultGraphicsModeConfig();
 
-	int scale = getGraphicsModeScale(getGraphicsModeIdByName(ConfMan.get("gfx_mode")));
+	int scale = ConfMan.getInt("scale_factor");
 	if (scale == -1) {
 		warning("Unknown scaler; defaulting to 1");
 		scale = 1;
@@ -227,16 +211,24 @@ bool SdlGraphicsManager::notifyMousePosition(Common::Point &mouse) {
 	mouse.y = CLIP<int16>(mouse.y, 0, _windowHeight - 1);
 
 	int showCursor = SDL_DISABLE;
-	// DPI aware scaling to mouse position
-	uint scale = getFeatureState(BaseBackend::kFeatureHiDPI) ? 2 : 1;
-	mouse.x *= scale;
-	mouse.y *= scale;
+	// Currently on macOS we need to scale the events for HiDPI screen, but on
+	// Windows we do not. We can find out if we need to do it by querying the
+	// SDL window size vs the SDL drawable size.
+	float dpiScale = _window->getSdlDpiScalingFactor();
+	mouse.x = (int)(mouse.x * dpiScale + 0.5f);
+	mouse.y = (int)(mouse.y * dpiScale + 0.5f);
 	bool valid = true;
 	if (_activeArea.drawRect.contains(mouse)) {
 		_cursorLastInActiveArea = true;
 	} else {
-		mouse.x = CLIP<int>(mouse.x, _activeArea.drawRect.left, _activeArea.drawRect.right - 1);
-		mouse.y = CLIP<int>(mouse.y, _activeArea.drawRect.top, _activeArea.drawRect.bottom - 1);
+		// The right/bottom edges are not part of the drawRect. As the clipping
+		// is done in drawable area coordinates, but the mouse position is set
+		// in window coordinates, we need to subtract as many pixels from the
+		// edges as corresponds to one pixel in the window coordinates.
+		mouse.x = CLIP<int>(mouse.x, _activeArea.drawRect.left,
+							_activeArea.drawRect.right - (int)(1 * dpiScale + 0.5f));
+		mouse.y = CLIP<int>(mouse.y, _activeArea.drawRect.top,
+							_activeArea.drawRect.bottom - (int)(1 * dpiScale + 0.5f));
 
 		if (_window->mouseIsGrabbed() ||
 			// Keep the mouse inside the game area during dragging to prevent an
@@ -278,6 +270,10 @@ void SdlGraphicsManager::setSystemMousePosition(const int x, const int y) {
 		const Common::Point mouse = convertWindowToVirtual(x, y);
 		_eventSource->fakeWarpMouse(mouse.x, mouse.y);
 	}
+}
+
+void SdlGraphicsManager::notifyActiveAreaChanged() {
+	_window->setMouseRect(_activeArea.drawRect);
 }
 
 void SdlGraphicsManager::handleResizeImpl(const int width, const int height) {
@@ -354,11 +350,19 @@ void SdlGraphicsManager::saveScreenshot() {
 			debug("Saved screenshot '%s' in current directory", filename.c_str());
 		else
 			debug("Saved screenshot '%s' in directory '%s'", filename.c_str(), screenshotsPath.c_str());
+
+#ifdef USE_OSD
+		displayMessageOnOSD(Common::U32String::format(_("Saved screenshot '%s'"), filename.c_str()));
+#endif
 	} else {
 		if (screenshotsPath.empty())
 			warning("Could not save screenshot in current directory");
 		else
 			warning("Could not save screenshot in directory '%s'", screenshotsPath.c_str());
+
+#ifdef USE_OSD
+		displayMessageOnOSD(_("Could not save screenshot"));
+#endif
 	}
 }
 
@@ -386,14 +390,20 @@ bool SdlGraphicsManager::notifyEvent(const Common::Event &event) {
 }
 
 void SdlGraphicsManager::toggleFullScreen() {
+	/* Don't use g_system for kFeatureOpenGLForGame as it's always supported
+	 * We want to check if we are a 3D graphics manager */
+	bool is3D = hasFeature(OSystem::kFeatureOpenGLForGame);
+
 	if (!g_system->hasFeature(OSystem::kFeatureFullscreenMode) ||
-	   (!g_system->hasFeature(OSystem::kFeatureFullscreenToggleKeepsContext) && g_system->hasFeature(OSystem::kFeatureOpenGLForGame))) {
+	   (!g_system->hasFeature(OSystem::kFeatureFullscreenToggleKeepsContext) && is3D)) {
 		return;
 	}
 
-	beginGFXTransaction();
+	if (!is3D)
+		beginGFXTransaction();
 	setFeatureState(OSystem::kFeatureFullscreenMode, !getFeatureState(OSystem::kFeatureFullscreenMode));
-	endGFXTransaction();
+	if (!is3D)
+		endGFXTransaction();
 #ifdef USE_OSD
 	if (getFeatureState(OSystem::kFeatureFullscreenMode))
 		displayMessageOnOSD(_("Fullscreen mode"));

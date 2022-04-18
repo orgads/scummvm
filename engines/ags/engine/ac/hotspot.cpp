@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,6 +30,7 @@
 #include "ags/engine/ac/string.h"
 #include "ags/shared/game/room_struct.h"
 #include "ags/shared/gfx/bitmap.h"
+#include "ags/shared/gui/gui_main.h"
 #include "ags/engine/script/runtime_script_value.h"
 #include "ags/shared/debugging/out.h"
 #include "ags/engine/script/script_api.h"
@@ -42,11 +42,6 @@ namespace AGS3 {
 
 using namespace AGS::Shared;
 
-
-
-
-
-
 void Hotspot_SetEnabled(ScriptHotspot *hss, int newval) {
 	if (newval)
 		EnableHotspot(hss->id);
@@ -55,7 +50,7 @@ void Hotspot_SetEnabled(ScriptHotspot *hss, int newval) {
 }
 
 int Hotspot_GetEnabled(ScriptHotspot *hss) {
-	return _G(croom)->hotspot_enabled[hss->id];
+	return _G(croom)->hotspot[hss->id].Enabled ? 1 : 0;
 }
 
 int Hotspot_GetID(ScriptHotspot *hss) {
@@ -71,23 +66,11 @@ int Hotspot_GetWalkToY(ScriptHotspot *hss) {
 }
 
 ScriptHotspot *GetHotspotAtScreen(int xx, int yy) {
-	int hsnum = GetHotspotIDAtScreen(xx, yy);
-	ScriptHotspot *ret_hotspot;
-	if (hsnum <= 0)
-		ret_hotspot = &_G(scrHotspot)[0];
-	else
-		ret_hotspot = &_G(scrHotspot)[hsnum];
-	return ret_hotspot;
+	return &_G(scrHotspot)[GetHotspotIDAtScreen(xx, yy)];
 }
 
 ScriptHotspot *GetHotspotAtRoom(int x, int y) {
-	int hsnum = get_hotspot_at(x, y);
-	ScriptHotspot *ret_hotspot;
-	if (hsnum <= 0)
-		ret_hotspot = &_G(scrHotspot)[0];
-	else
-		ret_hotspot = &_G(scrHotspot)[hsnum];
-	return ret_hotspot;
+	return &_G(scrHotspot)[get_hotspot_at(x, y)];
 }
 
 void Hotspot_GetName(ScriptHotspot *hss, char *buffer) {
@@ -95,7 +78,16 @@ void Hotspot_GetName(ScriptHotspot *hss, char *buffer) {
 }
 
 const char *Hotspot_GetName_New(ScriptHotspot *hss) {
-	return CreateNewScriptString(get_translation(_GP(thisroom).Hotspots[hss->id].Name.GetCStr()));
+	if ((hss->id < 0) || (hss->id >= MAX_ROOM_HOTSPOTS))
+		quit("!Hotspot.Name: invalid hotspot number");
+	return CreateNewScriptString(get_translation(_G(croom)->hotspot[hss->id].Name.GetCStr()));
+}
+
+void Hotspot_SetName(ScriptHotspot *hss, const char *newName) {
+	if ((hss->id < 0) || (hss->id >= MAX_ROOM_HOTSPOTS))
+		quit("!Hotspot.Name: invalid hotspot number");
+	_G(croom)->hotspot[hss->id].Name = newName;
+	GUI::MarkSpecialLabelsForUpdate(kLabelMacro_Overhotspot);
 }
 
 bool Hotspot_IsInteractionAvailable(ScriptHotspot *hhot, int mood) {
@@ -134,8 +126,8 @@ bool Hotspot_SetTextProperty(ScriptHotspot *hss, const char *property, const cha
 
 int get_hotspot_at(int xpp, int ypp) {
 	int onhs = _GP(thisroom).HotspotMask->GetPixel(room_to_mask_coord(xpp), room_to_mask_coord(ypp));
-	if (onhs < 0) return 0;
-	if (_G(croom)->hotspot_enabled[onhs] == 0) return 0;
+	if (onhs <= 0 || onhs >= MAX_ROOM_HOTSPOTS) return 0;
+	if (!_G(croom)->hotspot[onhs].Enabled) return 0;
 	return onhs;
 }
 
@@ -152,6 +144,11 @@ RuntimeScriptValue Sc_GetHotspotAtRoom(const RuntimeScriptValue *params, int32_t
 // ScriptHotspot *(int xx, int yy)
 RuntimeScriptValue Sc_GetHotspotAtScreen(const RuntimeScriptValue *params, int32_t param_count) {
 	API_SCALL_OBJ_PINT2(ScriptHotspot, _GP(ccDynamicHotspot), GetHotspotAtScreen);
+}
+
+RuntimeScriptValue Sc_Hotspot_GetDrawingSurface(const RuntimeScriptValue *params, int32_t param_count) {
+	ScriptDrawingSurface *ret_obj = Room_GetDrawingSurfaceForMask(kRoomAreaHotspot);
+	return RuntimeScriptValue().SetDynamicObject(ret_obj, ret_obj);
 }
 
 // void (ScriptHotspot *hss, char *buffer)
@@ -211,6 +208,10 @@ RuntimeScriptValue Sc_Hotspot_GetName_New(void *self, const RuntimeScriptValue *
 	API_CONST_OBJCALL_OBJ(ScriptHotspot, const char, _GP(myScriptStringImpl), Hotspot_GetName_New);
 }
 
+RuntimeScriptValue Sc_Hotspot_SetName(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+	API_OBJCALL_VOID_POBJ(ScriptHotspot, Hotspot_SetName, const char);
+}
+
 // int (ScriptHotspot *hss)
 RuntimeScriptValue Sc_Hotspot_GetWalkToX(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_INT(ScriptHotspot, Hotspot_GetWalkToX);
@@ -226,6 +227,7 @@ RuntimeScriptValue Sc_Hotspot_GetWalkToY(void *self, const RuntimeScriptValue *p
 void RegisterHotspotAPI() {
 	ccAddExternalStaticFunction("Hotspot::GetAtRoomXY^2", Sc_GetHotspotAtRoom);
 	ccAddExternalStaticFunction("Hotspot::GetAtScreenXY^2", Sc_GetHotspotAtScreen);
+	ccAddExternalStaticFunction("Hotspot::GetDrawingSurface", Sc_Hotspot_GetDrawingSurface);
 	ccAddExternalObjectFunction("Hotspot::GetName^1", Sc_Hotspot_GetName);
 	ccAddExternalObjectFunction("Hotspot::GetProperty^1", Sc_Hotspot_GetProperty);
 	ccAddExternalObjectFunction("Hotspot::GetPropertyText^2", Sc_Hotspot_GetPropertyText);
@@ -238,24 +240,9 @@ void RegisterHotspotAPI() {
 	ccAddExternalObjectFunction("Hotspot::set_Enabled", Sc_Hotspot_SetEnabled);
 	ccAddExternalObjectFunction("Hotspot::get_ID", Sc_Hotspot_GetID);
 	ccAddExternalObjectFunction("Hotspot::get_Name", Sc_Hotspot_GetName_New);
+	ccAddExternalObjectFunction("Hotspot::set_Name", Sc_Hotspot_SetName);
 	ccAddExternalObjectFunction("Hotspot::get_WalkToX", Sc_Hotspot_GetWalkToX);
 	ccAddExternalObjectFunction("Hotspot::get_WalkToY", Sc_Hotspot_GetWalkToY);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("Hotspot::GetAtRoomXY^2", (void *)GetHotspotAtRoom);
-	ccAddExternalFunctionForPlugin("Hotspot::GetAtScreenXY^2", (void *)GetHotspotAtScreen);
-	ccAddExternalFunctionForPlugin("Hotspot::GetName^1", (void *)Hotspot_GetName);
-	ccAddExternalFunctionForPlugin("Hotspot::GetProperty^1", (void *)Hotspot_GetProperty);
-	ccAddExternalFunctionForPlugin("Hotspot::GetPropertyText^2", (void *)Hotspot_GetPropertyText);
-	ccAddExternalFunctionForPlugin("Hotspot::GetTextProperty^1", (void *)Hotspot_GetTextProperty);
-	ccAddExternalFunctionForPlugin("Hotspot::RunInteraction^1", (void *)Hotspot_RunInteraction);
-	ccAddExternalFunctionForPlugin("Hotspot::get_Enabled", (void *)Hotspot_GetEnabled);
-	ccAddExternalFunctionForPlugin("Hotspot::set_Enabled", (void *)Hotspot_SetEnabled);
-	ccAddExternalFunctionForPlugin("Hotspot::get_ID", (void *)Hotspot_GetID);
-	ccAddExternalFunctionForPlugin("Hotspot::get_Name", (void *)Hotspot_GetName_New);
-	ccAddExternalFunctionForPlugin("Hotspot::get_WalkToX", (void *)Hotspot_GetWalkToX);
-	ccAddExternalFunctionForPlugin("Hotspot::get_WalkToY", (void *)Hotspot_GetWalkToY);
 }
 
 } // namespace AGS3

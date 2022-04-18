@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -76,23 +75,19 @@ extern SCNHANDLE GetSceneHandle();
 
 extern void ResetVarsDrives();
 extern void ResetVarsEvents();
-extern void RebootScalingReels();
 extern void ResetVarsMove();
 extern void ResetVarsPalette();
 extern void ResetVarsPCode();
 extern void ResetVarsPDisplay();
 extern void ResetVarsPlay();
 extern void ResetVarsPolygons();
-extern void RebootMovers();
 extern void ResetVarsSaveLoad();
 extern void ResetVarsSaveScn();
 extern void ResetVarsScene();
 extern void ResetVarsSched();
 extern void ResetVarsStrRes();
-extern void FreeTextBuffer();
 extern void ResetVarsSysVar();
 extern void FreeAllTokens();
-extern void RebootTimers();
 extern void ResetVarsTinlib();
 
 //----------------- FORWARD DECLARATIONS  ---------------------
@@ -968,7 +963,7 @@ TinselEngine::~TinselEngine() {
 	ResetVarsPDisplay();	// pdisplay.cpp
 	ResetVarsPlay();	// play.cpp
 	ResetVarsPolygons();	// polygons.cpp
-	RebootMovers();       // rince.cpp
+	RebootMovers();       // movers.cpp
 	ResetVarsSaveLoad();	// saveload.cpp
 	ResetVarsSaveScn();	// savescn.cpp
 	ResetVarsScene();	// scene.cpp
@@ -1355,8 +1350,8 @@ const char *TinselEngine::getSampleIndex(LANGUAGE lang) {
 
 	} else {
 		cd = 0;
-		if (lang != TXT_JAPANESE)
-			lang = TXT_ENGLISH;
+		if (!Common::File::exists(_sampleFiles[lang][cd]))
+			lang = TXT_ENGLISH; // fallback to ENGLISH.IDX/.SMP if <LANG>.IDX is not found
 	}
 
 	return _sampleIndices[lang][cd];
@@ -1376,8 +1371,8 @@ const char *TinselEngine::getSampleFile(LANGUAGE lang) {
 
 	} else {
 		cd = 0;
-		if (lang != TXT_JAPANESE)
-			lang = TXT_ENGLISH;
+		if (!Common::File::exists(_sampleFiles[lang][cd]))
+			lang = TXT_ENGLISH; // fallback to ENGLISH.IDX/.SMP if <LANG>.IDX is not found
 	}
 
 	return _sampleFiles[lang][cd];

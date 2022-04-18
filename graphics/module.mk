@@ -8,11 +8,13 @@ MODULE_OBJS := \
 	fonts/amigafont.o \
 	fonts/bdf.o \
 	fonts/consolefont.o \
+	fonts/freetype.o \
 	fonts/macfont.o \
 	fonts/newfont_big.o \
 	fonts/newfont.o \
 	fonts/ttf.o \
 	fonts/winfont.o \
+	framelimiter.o \
 	korfont.o \
 	larryScale.o \
 	maccursor.o \
@@ -28,6 +30,8 @@ MODULE_OBJS := \
 	macgui/macwindowmanager.o \
 	managed_surface.o \
 	nine_patch.o \
+	opengl/context.o \
+	opengl/shader.o \
 	pixelformat.o \
 	primitives.o \
 	renderer.o \
@@ -45,17 +49,7 @@ MODULE_OBJS := \
 	VectorRenderer.o \
 	VectorRendererSpec.o \
 	wincursor.o \
-	yuv_to_rgb.o \
-	pixelbuffer.o \
-	opengl/context.o \
-	opengl/framebuffer.o \
-	opengl/texture.o \
-	opengl/tiledsurface.o \
-	opengl/shader.o \
-	opengl/surfacerenderer.o \
-	opengl/box_shaders.o \
-	opengl/control_shaders.o \
-	opengl/compat_shaders.o
+	yuv_to_rgb.o
 
 ifdef USE_TINYGL
 MODULE_OBJS += \
@@ -71,6 +65,7 @@ MODULE_OBJS += \
 	tinygl/matrix.o \
 	tinygl/memory.o \
 	tinygl/misc.o \
+	tinygl/pixelbuffer.o \
 	tinygl/select.o \
 	tinygl/specbuf.o \
 	tinygl/texture.o \

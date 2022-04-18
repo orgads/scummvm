@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -39,6 +38,8 @@ class Cursor;
 class Channel {
 public:
 	Channel(Sprite *sp, int priority = 0);
+	Channel(const Channel &channel);
+	Channel& operator=(const Channel &channel);
 	~Channel();
 
 	DirectorPlotData getPlotData();
@@ -58,16 +59,34 @@ public:
 	void setWidth(int w);
 	void setHeight(int h);
 	void setBbox(int l, int t, int r, int b);
-	void setCast(uint16 castId);
+	void setCast(CastMemberID memberID);
 	void setClean(Sprite *nextSprite, int spriteId, bool partial = false);
 	void setEditable(bool editable);
 	void replaceSprite(Sprite *nextSprite);
-	void replaceWidget();
+	void replaceWidget(CastMemberID previousCastId = CastMemberID(0, 0), bool force = false);
 	bool updateWidget();
+	void updateTextCast();
+
+	bool isTrail();
 
 	void updateGlobalAttr();
 
 	void addDelta(Common::Point pos);
+	bool canKeepWidget(CastMemberID castId);
+	bool canKeepWidget(Sprite *currentSprite, Sprite *nextSprite);
+
+	int getMouseChar(int x, int y);
+	int getMouseWord(int x, int y);
+	int getMouseItem(int x, int y);
+	int getMouseLine(int x, int y);
+
+	void updateVideoTime();
+
+	// used for film loops
+	bool hasSubChannels();
+	Common::Array<Channel> *getSubChannels();
+
+	void addRegistrationOffset(Common::Point &pos, bool subtract = false);
 
 public:
 	Sprite *_sprite;
@@ -85,20 +104,19 @@ public:
 	int _width;
 	int _height;
 
-	// Using in digital movie sprites
+	// Used in digital movie sprites
 	double _movieRate;
-	uint16 _movieTime;
-	uint16 _startTime;
-	uint16 _stopTime;
+	int _movieTime;
+	int _startTime;
+	int _stopTime;
+
+	// Used in film loops
+	uint _filmLoopFrame;
 
 private:
 	Graphics::ManagedSurface *getSurface();
-	MacShape *getShape();
 	Common::Point getPosition();
-	uint32 getForeColor();
-	uint32 getBackColor();
 
-	void addRegistrationOffset(Common::Point &pos, bool subtract = false);
 };
 
 } // End of namespace Director

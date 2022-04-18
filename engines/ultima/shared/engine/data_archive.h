@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -72,7 +71,7 @@ public:
 	 * Patterns are not allowed, as this is meant to be a quick File::exists()
 	 * replacement.
 	 */
-	bool hasFile(const Common::String &name) const override;
+	bool hasFile(const Common::Path &path) const override;
 
 	/**
 	 * Add all members of the Archive matching the specified pattern to list.
@@ -81,7 +80,7 @@ public:
 	 * @return the number of members added to list
 	 */
 	int listMatchingMembers(Common::ArchiveMemberList &list,
-		const Common::String &pattern) const override;
+		const Common::Path &pattern) const override;
 
 	/**
 	 * Add all members of the Archive to list.
@@ -94,7 +93,7 @@ public:
 	/**
 	 * Returns a ArchiveMember representation of the given file.
 	 */
-	const Common::ArchiveMemberPtr getMember(const Common::String &name)
+	const Common::ArchiveMemberPtr getMember(const Common::Path &path)
 		const override;
 
 	/**
@@ -103,7 +102,7 @@ public:
 	 * @return the newly created input stream
 	 */
 	Common::SeekableReadStream *createReadStreamForMember(
-		const Common::String &name) const override;
+		const Common::Path &path) const override;
 };
 
 #ifndef RELEASE_BUILD
@@ -136,7 +135,8 @@ public:
 	 * Patterns are not allowed, as this is meant to be a quick File::exists()
 	 * replacement.
 	 */
-	bool hasFile(const Common::String &name) const override {
+	bool hasFile(const Common::Path &path) const override {
+		Common::String name = path.toString();
 		return name.hasPrefixIgnoreCase(_publicFolder) && getNode(name).exists();
 	}
 
@@ -147,7 +147,7 @@ public:
 	 * @return the number of members added to list
 	 */
 	int listMatchingMembers(Common::ArchiveMemberList &list,
-			const Common::String &pattern) const override {
+			const Common::Path &pattern) const override {
 		return 0;
 	}
 
@@ -164,7 +164,7 @@ public:
 	/**
 	 * Returns a ArchiveMember representation of the given file.
 	 */
-	const Common::ArchiveMemberPtr getMember(const Common::String &name)
+	const Common::ArchiveMemberPtr getMember(const Common::Path &path)
 		const override;
 
 	/**
@@ -173,7 +173,7 @@ public:
 	 * @return the newly created input stream
 	 */
 	Common::SeekableReadStream *createReadStreamForMember(
-		const Common::String &name) const override;
+		const Common::Path &path) const override;
 };
 
 #endif

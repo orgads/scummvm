@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -57,10 +56,8 @@
 
 namespace Common {
 
-// The sgi IRIX MIPSpro Compiler has difficulties with nested templates.
-// This and the other __sgi conditionals below work around these problems.
-// The Intel C++ Compiler suffers from the same problems.
-#if (defined(__sgi) && !defined(__GNUC__)) || defined(__INTEL_COMPILER)
+// The Intel C++ Compiler has difficulties with nested templates.
+#if defined(__INTEL_COMPILER)
 template<class T> class IteratorImpl;
 #endif
 
@@ -153,9 +150,7 @@ private:
 	size_type lookupAndCreateIfMissing(const Key &key);
 	void expandStorage(size_type newCapacity);
 
-#if !defined(__sgi) || defined(__GNUC__)
 	template<class T> friend class IteratorImpl;
-#endif
 
 	/**
 	 * Simple HashMap iterator implementation.
@@ -163,7 +158,7 @@ private:
 	template<class NodeType>
 	class IteratorImpl {
 		friend class HashMap;
-#if (defined(__sgi) && !defined(__GNUC__)) || defined(__INTEL_COMPILER)
+#if defined(__INTEL_COMPILER)
 		template<class T> friend class Common::IteratorImpl;
 #else
 		template<class T> friend class IteratorImpl;

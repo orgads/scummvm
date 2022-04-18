@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -39,8 +38,8 @@ class XARCMember : public Common::ArchiveMember {
 public:
 	XARCMember(const XARCArchive *xarc, Common::ReadStream &stream, uint32 offset);
 
-	Common::SeekableReadStream *createReadStream() const;
-	Common::String getName() const { return _name; }
+	Common::SeekableReadStream *createReadStream() const override;
+	Common::String getName() const override { return _name; }
 	uint32 getLength() const { return _length; }
 	uint32 getOffset() const { return _offset; }
 
@@ -134,7 +133,8 @@ Common::String XARCArchive::getFilename() const {
 	return _filename;
 }
 
-bool XARCArchive::hasFile(const Common::String &name) const {
+bool XARCArchive::hasFile(const Common::Path &path) const {
+	Common::String name = path.toString();
 	for (Common::ArchiveMemberList::const_iterator it = _members.begin(); it != _members.end(); ++it) {
 		if ((*it)->getName() == name) {
 			// Found it
@@ -146,10 +146,11 @@ bool XARCArchive::hasFile(const Common::String &name) const {
 	return false;
 }
 
-int XARCArchive::listMatchingMembers(Common::ArchiveMemberList &list, const Common::String &pattern) const {
+int XARCArchive::listMatchingMembers(Common::ArchiveMemberList &list, const Common::Path &pattern) const {
+	Common::String patternString = pattern.toString();
 	int matches = 0;
 	for (Common::ArchiveMemberList::const_iterator it = _members.begin(); it != _members.end(); ++it) {
-		if ((*it)->getName().matchString(pattern)) {
+		if ((*it)->getName().matchString(patternString)) {
 			// This file matches, add it
 			list.push_back(*it);
 			matches++;
@@ -170,7 +171,8 @@ int XARCArchive::listMembers(Common::ArchiveMemberList &list) const {
 	return files;
 }
 
-const Common::ArchiveMemberPtr XARCArchive::getMember(const Common::String &name) const {
+const Common::ArchiveMemberPtr XARCArchive::getMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	for (Common::ArchiveMemberList::const_iterator it = _members.begin(); it != _members.end(); ++it) {
 		if ((*it)->getName() == name) {
 			// Found it
@@ -182,7 +184,8 @@ const Common::ArchiveMemberPtr XARCArchive::getMember(const Common::String &name
 	return Common::ArchiveMemberPtr();
 }
 
-Common::SeekableReadStream *XARCArchive::createReadStreamForMember(const Common::String &name) const {
+Common::SeekableReadStream *XARCArchive::createReadStreamForMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	for (Common::ArchiveMemberList::const_iterator it = _members.begin(); it != _members.end(); ++it) {
 		if ((*it)->getName() == name) {
 			// Found it

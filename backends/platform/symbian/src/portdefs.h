@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -27,9 +26,17 @@
 #include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+
+#if (__GNUC__ && __cplusplus)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wparentheses"
+#endif
+#include <stdlib.h>
+#if (__GNUC__ && __cplusplus)
+#pragma GCC diagnostic pop
+#endif
 
 #if (__GNUC__ && __cplusplus)
 #pragma GCC diagnostic push
@@ -87,6 +94,12 @@ namespace std
 #ifndef SYMBIAN_USE_SYSTEM_REMOVE
 #undef remove
 #endif
+
+#if __cplusplus >= 201103L
+#define USE_CXX11
+#define NO_CXX11_INITIALIZER_LIST
+#define NO_CXX11_NULLPTR_T
+#endif //USE_CXX11
 
 #define DISABLE_COMMAND_LINE
 #define USE_RGB_COLOR
@@ -182,16 +195,18 @@ namespace std
 
 // Functions from openlibm not declared in Symbian math.h
 extern "C"{
-	float roundf (float x);
+	float  roundf (float x);
 	double nearbyint(double x);
 	double round(double x);
-	int __signbit(double);
-	int __signbitf(float);
-	int __signbitl(long double);
-	float truncf(float);
-	float fminf(float x, float y);
-	float fmaxf(float x, float y);
+	long   lround(double);
+	int  __signbit(double);
+	int  __signbitf(float);
+	int  __signbitl(long double);
+	float  truncf(float);
+	float  fminf(float x, float y);
+	float  fmaxf(float x, float y);
 	double fmax (double x, double y);
+	long long int strtoll(const char* start, char** end, int radix);
 }
 
 
@@ -223,6 +238,10 @@ void *scumm_bsearch(const void *key, const void *base, size_t nmemb, size_t size
 #define FORBIDDEN_SYMBOL_EXCEPTION_getcwd
 #define FORBIDDEN_SYMBOL_EXCEPTION_stdout
 #define FORBIDDEN_SYMBOL_EXCEPTION_stderr
+
+#if defined(__GNUC__)
+# define va_copy(dst, src) __builtin_va_copy(dst, src)
+#endif
 
 // we cannot include SymbianOS.h everywhere, but this works too (functions code is in SymbianOS.cpp)
 namespace Symbian {

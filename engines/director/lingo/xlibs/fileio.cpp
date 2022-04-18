@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -32,35 +31,48 @@
 
 namespace Director {
 
-static const char *xlibName = "FileIO";
+const char *FileIO::xlibName = "FileIO";
+const char *FileIO::fileNames[] = {
+	"FileIO",
+	nullptr
+};
 
 static MethodProto xlibMethods[] = {
 	{ "delete",					FileIO::m_delete,			 0, 0,	200 },	// D2
+	{ "error",					FileIO::m_error,			 1, 1,	200 },	// D2
 	{ "fileName",				FileIO::m_fileName,			 0, 0,	200 },	// D2
+	{ "getFinderInfo",			FileIO::m_getFinderInfo,	 0, 0,	200 },	// D2
 	{ "getLength",				FileIO::m_getLength,		 0, 0,	200 },	// D2
 	{ "getPosition",			FileIO::m_getPosition,		 0, 0,	200 },	// D2
 	{ "new",					FileIO::m_new,				 2, 2,	200 },	// D2
 	{ "readChar",				FileIO::m_readChar,			 0, 0,	200 },	// D2
+	{ "readFile",				FileIO::m_readFile,			 0, 0,	200 },	// D2
 	{ "readLine",				FileIO::m_readLine,			 0, 0,	200 },	// D2
 	{ "readToken",				FileIO::m_readToken,		 2, 2,	200 },	// D2
 	{ "readWord",				FileIO::m_readWord,			 0, 0,	200 },	// D2
+	{ "setFinderInfo",			FileIO::m_setFinderInfo,	 2, 2,	200 },	// D2
 	{ "setPosition",			FileIO::m_setPosition,		 1, 1,	200 },	// D2
+	{ "status",					FileIO::m_status,			 0, 0,	200 },	// D2
 	{ "writeChar",				FileIO::m_writeChar,		 1, 1,	200 },	// D2
 	{ "writeString",			FileIO::m_writeString,		 1, 1,	200 },	// D2
-	{ 0, 0, 0, 0, 0 }
+	{ nullptr, nullptr, 0, 0, 0 }
 };
 
-void FileIO::initialize(int type) {
-	FileObject::initMethods(xlibMethods);
-	if (type & kXObj) {
-		if (!g_lingo->_globalvars.contains(xlibName)) {
-			FileObject *xobj = new FileObject(kXObj);
-			g_lingo->_globalvars[xlibName] = xobj;
-		} else {
-			warning("FileIO XObject already initialized");
-		}
+void FileIO::open(int type) {
+	if (type == kXObj) {
+		FileObject::initMethods(xlibMethods);
+		FileObject *xobj = new FileObject(kXObj);
+		g_lingo->_globalvars[xlibName] = xobj;
+	} else if (type == kXtraObj) {
+		// TODO - Implement Xtra
 	}
-	if (type & kXtraObj) {
+}
+
+void FileIO::close(int type) {
+	if (type == kXObj) {
+		FileObject::cleanupMethods();
+		g_lingo->_globalvars[xlibName] = Datum();
+	} else if (type == kXtraObj) {
 		// TODO - Implement Xtra
 	}
 }
@@ -70,7 +82,6 @@ void FileIO::initialize(int type) {
 FileObject::FileObject(ObjectType objType) : Object<FileObject>("FileIO") {
 	_objType = objType;
 	_filename = nullptr;
-	_inFile = nullptr;
 	_inStream = nullptr;
 	_outFile = nullptr;
 	_outStream = nullptr;
@@ -78,7 +89,6 @@ FileObject::FileObject(ObjectType objType) : Object<FileObject>("FileIO") {
 
 FileObject::FileObject(const FileObject &obj) : Object<FileObject>(obj) {
 	_filename = nullptr;
-	_inFile = nullptr;
 	_inStream = nullptr;
 	_outFile = nullptr;
 	_outStream = nullptr;
@@ -93,11 +103,8 @@ void FileObject::clear() {
 		delete _filename;
 		_filename = nullptr;
 	}
-	if (_inFile) {
-		delete _inFile;
-		if (_inStream != _inFile)
-			delete _inStream;
-		_inFile = nullptr;
+	if (_inStream) {
+		delete _inStream;
 		_inStream = nullptr;
 	}
 	if (_outFile) {
@@ -133,27 +140,45 @@ void FileIO::m_new(int nargs) {
 
 	Common::SaveFileManager *saves = g_system->getSavefileManager();
 	Common::String option = d1.asString();
-	Common::String filename = d2.asString();
+	Common::String path = d2.asString();
+	Common::String origpath = path;
+
+	Common::String prefix = g_director->getTargetName() + '-';
 
 	if (option.hasPrefix("?")) {
 		option = option.substr(1);
-		GUI::FileBrowserDialog browser(0, "txt", option.equalsIgnoreCase("write") ? GUI::kFBModeSave : GUI::kFBModeLoad);
+		Common::String mask = prefix + "*.txt";
+
+		GUI::FileBrowserDialog browser(nullptr, "txt", option.equalsIgnoreCase("write") ? GUI::kFBModeSave : GUI::kFBModeLoad, mask.c_str());
 		if (browser.runModal() <= 0) {
 			g_lingo->push(Datum(kErrorFileNotFound));
 			return;
 		}
-		filename = browser.getResult();
-	} else if (!filename.hasSuffixIgnoreCase(".txt")) {
-		filename += ".txt";
+		path = browser.getResult();
+	} else if (!path.hasSuffixIgnoreCase(".txt")) {
+		path += ".txt";
 	}
 
+	// Enforce target to the created files so they do not mix up
+	Common::String filename = lastPathComponent(path, '/');
+	Common::String dir = firstPathComponents(path, '/');
+
+	if (!filename.hasPrefixIgnoreCase(prefix))
+		filename = dir + prefix + filename;
+
 	if (option.equalsIgnoreCase("read")) {
-		me->_inFile = saves->openForLoading(filename);
-		me->_inStream = me->_inFile;
-		if (!me->_inFile) {
-			saveFileError();
-			me->dispose();
-			return;
+		me->_inStream = saves->openForLoading(filename);
+		if (!me->_inStream) {
+			// Maybe we're trying to read one of the game files
+			Common::File *f = new Common::File;
+
+			if (!f->open(Common::Path(pathMakeRelative(origpath), g_director->_dirSeparator))) {
+				delete f;
+				saveFileError();
+				me->dispose();
+				return;
+			}
+			me->_inStream = f;
 		}
 	} else if (option.equalsIgnoreCase("write")) {
 		// OutSaveFile is not seekable so create a separate seekable stream
@@ -166,19 +191,25 @@ void FileIO::m_new(int nargs) {
 			return;
 		}
 	} else if (option.equalsIgnoreCase("append")) {
-		Common::InSaveFile *_inFile = saves->openForLoading(filename);
-		if (!_inFile) {
-			saveFileError();
-			me->dispose();
-			return;
+		Common::SeekableReadStream *inFile = saves->openForLoading(filename);
+		if (!inFile) {
+			Common::File *f = new Common::File;
+
+			if (!f->open(origpath)) {
+				delete f;
+				saveFileError();
+				me->dispose();
+				return;
+			}
+			inFile = f;
 		}
 		me->_outStream = new Common::MemoryWriteStreamDynamic(DisposeAfterUse::YES);
-		byte b = _inFile->readByte();
-		while (!_inFile->eos() && !_inFile->err()) {
+		byte b = inFile->readByte();
+		while (!inFile->eos() && !inFile->err()) {
 			me->_outStream->writeByte(b);
-			b = _inFile->readByte();
+			b = inFile->readByte();
 		}
-		delete _inFile;
+		delete inFile;
 		me->_outFile = saves->openForSaving(filename, false);
 		if (!me->_outFile) {
 			saveFileError();
@@ -279,6 +310,24 @@ void FileIO::m_readToken(int nargs) {
 	g_lingo->push(Datum(tok));
 }
 
+void FileIO::m_readFile(int nargs) {
+	FileObject *me = static_cast<FileObject *>(g_lingo->_currentMe.u.obj);
+
+	if (!me->_inStream || me->_inStream->eos() || me->_inStream->err()) {
+		g_lingo->push(Datum(""));
+		return;
+	}
+
+	Common::String res;
+	char ch = me->_inStream->readByte();
+	while (!me->_inStream->eos() && !me->_inStream->err()) {
+		res += ch;
+		ch = me->_inStream->readByte();
+	}
+
+	g_lingo->push(res);
+}
+
 // Write
 
 void FileIO::m_writeChar(int nargs) {
@@ -307,7 +356,19 @@ void FileIO::m_writeString(int nargs) {
 	g_lingo->push(Datum(kErrorNone));
 }
 
-// Other
+// Getters/Setters
+
+void FileIO::m_getFinderInfo(int nargs) {
+	g_lingo->printSTUBWithArglist("FileIO::m_getFinderInfo", nargs);
+	g_lingo->dropStack(nargs);
+	g_lingo->push(Datum());
+}
+
+void FileIO::m_setFinderInfo(int nargs) {
+	g_lingo->printSTUBWithArglist("FileIO::m_setFinderInfo", nargs);
+	g_lingo->dropStack(nargs);
+	g_lingo->push(Datum());
+}
 
 void FileIO::m_getPosition(int nargs) {
 	FileObject *me = static_cast<FileObject *>(g_lingo->_currentMe.u.obj);
@@ -366,12 +427,32 @@ void FileIO::m_fileName(int nargs) {
 	FileObject *me = static_cast<FileObject *>(g_lingo->_currentMe.u.obj);
 
 	if (me->_filename) {
-		g_lingo->push(Datum(*me->_filename));
+		Common::String prefix = g_director->getTargetName() + '-';
+		Common::String res = *me->_filename;
+		if (res.hasPrefix(prefix)) {
+			res = Common::String(&me->_filename->c_str()[prefix.size() + 1]);
+		}
+
+		g_lingo->push(Datum(res));
 	} else {
 		warning("FileIO: No file open");
 		g_lingo->push(Datum(kErrorFileNotOpen));
 	}
 }
+
+void FileIO::m_error(int nargs) {
+	g_lingo->printSTUBWithArglist("FileIO::m_error", nargs);
+	g_lingo->dropStack(nargs);
+	g_lingo->push(Datum());
+}
+
+void FileIO::m_status(int nargs) {
+	g_lingo->printSTUBWithArglist("FileIO::m_status", nargs);
+	g_lingo->dropStack(nargs);
+	g_lingo->push(Datum());
+}
+
+// Other
 
 void FileIO::m_delete(int nargs) {
 	FileObject *me = static_cast<FileObject *>(g_lingo->_currentMe.u.obj);

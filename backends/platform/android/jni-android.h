@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -34,6 +33,10 @@
 #include "common/ustr.h"
 #include "engines/engine.h"
 
+namespace Graphics {
+	struct Surface;
+}
+
 class OSystem_Android;
 
 class JNI {
@@ -42,12 +45,17 @@ private:
 	virtual ~JNI();
 
 public:
+	enum struct BitmapResources {
+		TOUCH_ARROWS_BITMAP = 0
+	};
+
 	static bool pause;
 	static sem_t pause_sem;
 
 	static int surface_changeid;
 	static int egl_surface_width;
 	static int egl_surface_height;
+	static int egl_bits_per_pixel;
 
 	static jint onLoad(JavaVM *vm);
 
@@ -68,6 +76,10 @@ public:
 	static bool isConnectionLimited();
 	static void showVirtualKeyboard(bool enable);
 	static void showKeyboardControl(bool enable);
+	static Graphics::Surface *getBitmapResource(BitmapResources resource);
+	static void setTouch3DMode(bool touch3DMode);
+	static bool getTouch3DMode();
+	static void showSAFRevokePermsControl(bool enable);
 	static void addSysArchivesToSearchSet(Common::SearchSet &s, int priority);
 
 	static inline bool haveSurface();
@@ -87,6 +99,7 @@ public:
 	static bool createDirectoryWithSAF(const Common::String &dirPath);
 	static Common::U32String createFileWithSAF(const Common::String &filePath);
 	static void closeFileWithSAF(const Common::String &hackyFilename);
+	static bool isDirectoryWritableWithSAF(const Common::String &dirPath);
 
 private:
 	static JavaVM *_vm;
@@ -112,6 +125,10 @@ private:
 	static jmethodID _MID_setWindowCaption;
 	static jmethodID _MID_showVirtualKeyboard;
 	static jmethodID _MID_showKeyboardControl;
+	static jmethodID _MID_getBitmapResource;
+	static jmethodID _MID_setTouch3DMode;
+	static jmethodID _MID_getTouch3DMode;
+	static jmethodID _MID_showSAFRevokePermsControl;
 	static jmethodID _MID_getSysArchives;
 	static jmethodID _MID_getAllStorageLocations;
 	static jmethodID _MID_initSurface;
@@ -119,6 +136,7 @@ private:
 	static jmethodID _MID_createDirectoryWithSAF;
 	static jmethodID _MID_createFileWithSAF;
 	static jmethodID _MID_closeFileWithSAF;
+	static jmethodID _MID_isDirectoryWritableWithSAF;
 
 	static jmethodID _MID_EGL10_eglSwapBuffers;
 
@@ -140,11 +158,12 @@ private:
 						jint audio_buffer_size);
 	static void destroy(JNIEnv *env, jobject self);
 
-	static void setSurface(JNIEnv *env, jobject self, jint width, jint height);
+	static void setSurface(JNIEnv *env, jobject self, jint width, jint height, jint bpp);
 	static jint main(JNIEnv *env, jobject self, jobjectArray args);
 
 	static void pushEvent(JNIEnv *env, jobject self, int type, int arg1,
 							int arg2, int arg3, int arg4, int arg5, int arg6);
+	static void updateTouch(JNIEnv *env, jobject self, int action, int ptr, int x, int y);
 	static void setPause(JNIEnv *env, jobject self, jboolean value);
 
 	static jstring getNativeVersionInfo(JNIEnv *env, jobject self);

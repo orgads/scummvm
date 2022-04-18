@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -29,8 +28,8 @@
 #include "common/list.h" // For OSystem::getSupportedFormats()
 #include "common/ustr.h"
 #include "graphics/pixelformat.h"
-#include "graphics/pixelbuffer.h"
 #include "graphics/mode.h"
+#include "graphics/opengl/context.h"
 
 namespace Audio {
 class Mixer;
@@ -47,6 +46,7 @@ class OptionsContainerWidget;
 
 namespace Common {
 class EventManager;
+class MutexInternal;
 struct Rect;
 class SaveFileManager;
 class SearchSet;
@@ -67,7 +67,6 @@ class WriteStream;
 class HardwareInputSet;
 class Keymap;
 class KeymapperDefaultBindings;
-class Encoding;
 
 typedef Array<Keymap *> KeymapArray;
 }
@@ -138,7 +137,6 @@ enum Type {
  * - Sound output
  */
 class OSystem : Common::NonCopyable {
-	friend class Common::Encoding;
 protected:
 	OSystem();
 	virtual ~OSystem();
@@ -365,11 +363,6 @@ public:
 		kFeatureFilteringMode,
 
 		/**
-		 * Indicates that GUI runs in HiDPI mode
-		 */
-		kFeatureHiDPI,
-
-		/**
 		 * Indicate if stretch modes are supported by the backend.
 		 */
 		kFeatureStretchMode,
@@ -413,6 +406,12 @@ public:
 		 * OpenGL is supported and can be used for 3D game rendering.
 		 */
 		kFeatureOpenGLForGame,
+
+		/**
+		 * This feature flag can be used to check if shaders are supported
+		 * and can be used for 3D game rendering.
+		 */
+		kFeatureShadersForGame,
 
 		/**
 		 * If supported, this feature flag can be used to check if
@@ -462,19 +461,9 @@ public:
 		kFeatureOpenUrl,
 
 		/**
-		* Show on-screen control.
-		*/
-		kFeatureOnScreenControl,
-
-		/**
 		* Mouse emulation mode.
 		*/
 		kFeatureTouchpadMode,
-
-		/**
-		* Swap menu and back buttons.
-		*/
-		kFeatureSwapMenuAndBackButtons,
 
 		/**
 		* Keyboard mouse and joystick mouse speed.
@@ -485,6 +474,11 @@ public:
 		* Change analog joystick deadzone.
 		*/
 		kFeatureJoystickDeadzone,
+
+		/**
+		* Scalers.
+		*/
+		kFeatureScalers,
 
 		/**
 		* Shaders.
@@ -742,6 +736,20 @@ public:
 	}
 
 	/**
+	 * Return the chosen OpenGL type.
+	 *
+	 * This function works even when a 2D graphical manager is active and
+	 * let to select a proper renderer before changing mode.
+	 * Implementation having feature kFeatureOpenGLForGame are expected to
+	 * override this function.
+	 *
+	 * @return the OpenGL type of context which is supported.
+	 */
+	virtual OpenGL::ContextOGLType getOpenGLType() const {
+		return OpenGL::kOGLContextNone;
+	}
+
+	/**
 	 * Retrieve a list of all hardware shaders supported by this backend.
 	 *
 	 * This can be only hardware shaders.
@@ -860,6 +868,67 @@ public:
 	 * @return ID of the active stretch mode.
 	 */
 	virtual int getStretchMode() const { return 0; }
+
+	/**
+	 * Return the ID of the 'default' scaler.
+	 *
+	 * This mode is set by the client code when no user overrides
+	 * are present (i.e. if no custom scaler is selected using the
+	 * command line or a config file).
+	 *
+	 * @return ID of the 'default' scaler.
+	 */
+	virtual uint getDefaultScaler() const { return 0; }
+
+	/**
+	 * Return the 'default' scale factor.
+	 *
+	 * This mode is set by the client code when no user overrides
+	 * are present (i.e. if no custom shader mode is selected using
+	 * the command line or a config file).
+	 *
+	 * @return The 'default' scale factor.
+	 */
+	virtual uint getDefaultScaleFactor() const { return 1; }
+
+	/**
+	 * Switch to the specified scaler.
+	 *
+	 * If switching to the new mode fails, this method returns false.
+	 *
+	 * @param mode ID of the new scaler.
+	 * @param factor The scale factor to use
+	 *
+	 * @return True if the switch was successful, false otherwise.
+	 */
+	virtual bool setScaler(uint mode, int factor) { return false; }
+
+	/**
+	 * Switch to the scaler with the given name.
+	 *
+	 * If @p name is unknown, or if switching to the new mode fails,
+	 * this method returns false.
+	 *
+	 * @param name Name of the new scaler.
+	 * @param factor The scale factor to use
+	 *
+	 * @return True if the switch was successful, false otherwise.
+	 */
+	virtual bool setScaler(const char *name, int factor) { return false; }
+
+	/**
+	 * Determine which scaler is currently active.
+	 *
+	 * @return ID of the active stretch mode.
+	 */
+	virtual uint getScaler() const { return 0; }
+
+	/**
+	 * Determine which scale factor is currently active.
+	 *
+	 * @return The active scale factor.
+	 */
+	virtual uint getScaleFactor() const { return 1; }
 
 
 	/**
@@ -994,6 +1063,12 @@ public:
 	 * For more information, see @ref PaletteManager.
 	 */
 	virtual PaletteManager *getPaletteManager() = 0;
+
+	/**
+	 * Return the scale factor for HiDPI screens.
+	 * Returns 1 for non-HiDPI screens, or if HiDPI display is not supported by the backend.
+	 */
+	virtual float getHiDPIScreenFactor() const { return 1.0f; }
 
 	/**
 	 * Blit a bitmap to the virtual screen.
@@ -1171,7 +1246,8 @@ public:
 	virtual void clearOverlay() = 0;
 
 	/**
-	 * Copy the content of the overlay into a buffer provided by the caller.
+	 * Copy the content of the overlay into a surface provided by the
+	 * caller.
 	 *
 	 * This is only used to implement fake alpha blending.
 	 */
@@ -1308,7 +1384,7 @@ public:
 	 * On many systems, this corresponds to the combination of time()
 	 * and localtime().
 	 */
-	virtual void getTimeAndDate(TimeDate &t) const = 0;
+	virtual void getTimeAndDate(TimeDate &td, bool skipRecord = false) const = 0;
 
 	/**
 	 * Return the timer manager singleton.
@@ -1377,44 +1453,12 @@ public:
 	 * use dummy implementations for these methods.
 	 */
 
-	typedef struct OpaqueMutex *MutexRef;
-
 	/**
 	 * Create a new mutex.
 	 *
 	 * @return The newly created mutex, or 0 if an error occurred.
 	 */
-	virtual MutexRef createMutex() = 0;
-
-	/**
-	 * Lock the given mutex.
-	 *
-	 * @note ScummVM code assumes that the mutex implementation supports
-	 * recursive locking. That is, a thread can lock a mutex twice without
-	 * deadlocking. In case of a multilock, the mutex must be unlocked
-	 * as many times as it was locked befored it really becomes unlocked.
-	 *
-	 * @param mutex	The mutex to lock.
-	 */
-	virtual void lockMutex(MutexRef mutex) = 0;
-
-	/**
-	 * Unlock the given mutex.
-	 *
-	 * @param mutex	The mutex to unlock.
-	 */
-	virtual void unlockMutex(MutexRef mutex) = 0;
-
-	/**
-	 * Delete the given mutex.
-	 *
-	 * Make sure the mutex is unlocked before you delete it.
-	 * If you delete a locked mutex, the behavior is undefined.
-	 * In particular, your program may crash.
-	 *
-	 * @param mutex	The mutex to delete.
-	 */
-	virtual void deleteMutex(MutexRef mutex) = 0;
+	virtual Common::MutexInternal *createMutex() = 0;
 
 	/** @} */
 
@@ -1587,7 +1631,7 @@ public:
 
 	/** Add system-specific Common::Archive objects to the given SearchSet.
 	 * For example, on Unix, the directory corresponding to DATA_PATH (if set), or, on
-	 * Mac OS X, the 'Resource' dir in the app bundle.
+	 * macOS, the 'Resource' dir in the app bundle.
 	 *
 	 * @todo Come up with a better name.
 	 *
@@ -1667,6 +1711,14 @@ public:
 	virtual void logMessage(LogMessageType::Type type, const char *message) = 0;
 
 	/**
+	 * Display a dialog box containing the given message.
+	 *
+	 * @param type    Type of the message.
+	 * @param message The message itself.
+	 */
+	virtual void messageBox(LogMessageType::Type type, const char *message) {}
+
+	/**
 	 * Open the log file in a way that allows the user to review it,
 	 * and possibly email it (or parts of it) to the ScummVM team,
 	 * for example as part of a bug report.
@@ -1741,16 +1793,17 @@ public:
 	virtual bool openUrl(const Common::String &url) {return false; }
 
 	/**
-	 * Return the locale of the system.
+	 * Return the language of the system.
 	 *
-	 * This returns the currently set locale of the system on which
+	 * This returns the currently set language of the system on which
 	 * ScummVM is run.
 	 *
-	 * The format of the locale is language_country. These should match
-	 * the POSIX locale values.
+	 * The format is an ISO 639 language code, optionally followed by an ISO 3166-1 country code
+	 * in the form language_country.
 	 *
 	 * For information about POSIX locales, see the following link:
-	 * https://en.wikipedia.org/wiki/Locale_(computer_software)#POSIX_platforms
+	 * https://en.wikipedia.org/wiki/ISO_639
+	 * https://en.wikipedia.org/wiki/ISO_3166-1
 	 *
 	 * The default implementation returns "en_US".
 	 *

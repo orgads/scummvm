@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -1234,12 +1233,12 @@ void UCMachine::execProcess(UCProcess *p) {
 		case 0x4F:
 			// 4F xx xx yy
 			// pop value into global xxxx size yy bits
-			ui16a = cs->readUint16LE();
-			ui16b = cs->readByte();
-			ui32a = p->_stack.pop2();
+			ui16a = cs->readUint16LE();	// pos
+			ui16b = cs->readByte();		// len
+			ui32a = p->_stack.pop2();	// val
 			_globals->setEntries(ui16a, ui16b, ui32a);
 
-			if ((GAME_IS_U8 && (ui32a & ~(((1 << ui16b) - 1)))) || ui16b > 2) {
+			if ((GAME_IS_U8 && (ui32a & ~(((1 << ui16b) - 1)))) || (GAME_IS_CRUSADER && (ui16b > 2))) {
 				perr << "Warning: value popped into a flag it doesn't fit in (" << ConsoleStream::hex
 					 << ui16a << " " << ui16b << " " << ui32a << ")" << Std::endl;
 			}
@@ -2408,6 +2407,10 @@ bool UCMachine::loadLists(Common::ReadStream *rs, uint32 version) {
 
 
 uint32 UCMachine::I_true(const uint8 * /*args*/, unsigned int /*argsize*/) {
+	return 1;
+}
+
+uint32 UCMachine::I_false(const uint8 * /*args*/, unsigned int /*argsize*/) {
 	return 1;
 }
 

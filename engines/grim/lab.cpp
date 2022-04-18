@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
+ * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -146,8 +145,8 @@ void Lab::parseMonkey4FileTable(Common::File *file) {
 	delete[] stringTable;
 }
 
-bool Lab::hasFile(const Common::String &filename) const {
-	Common::String fname(filename);
+bool Lab::hasFile(const Common::Path &filename) const {
+	Common::String fname(filename.toString());
 	fname.toLowercase();
 	return _entries.contains(fname);
 }
@@ -163,7 +162,8 @@ int Lab::listMembers(Common::ArchiveMemberList &list) const {
 	return count;
 }
 
-const Common::ArchiveMemberPtr Lab::getMember(const Common::String &name) const {
+const Common::ArchiveMemberPtr Lab::getMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	if (!hasFile(name))
 		return Common::ArchiveMemberPtr();
 
@@ -172,7 +172,8 @@ const Common::ArchiveMemberPtr Lab::getMember(const Common::String &name) const 
 	return _entries[fname];
 }
 
-Common::SeekableReadStream *Lab::createReadStreamForMember(const Common::String &filename) const {
+Common::SeekableReadStream *Lab::createReadStreamForMember(const Common::Path &path) const {
+	Common::String filename = path.toString();
 	if (!hasFile(filename))
 		return nullptr;
 

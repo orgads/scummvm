@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -63,11 +62,11 @@ void PNGDecoder::destroy() {
 	_palette = NULL;
 }
 
-Graphics::PixelFormat PNGDecoder::getByteOrderRgbaPixelFormat() const {
+Graphics::PixelFormat PNGDecoder::getByteOrderRgbaPixelFormat(bool isAlpha) const {
 #ifdef SCUMM_BIG_ENDIAN
-	return Graphics::PixelFormat(4, 8, 8, 8, 8, 24, 16, 8, 0);
+	return Graphics::PixelFormat(4, 8, 8, 8, isAlpha ? 8 : 0, 24, 16, 8, 0);
 #else
-	return Graphics::PixelFormat(4, 8, 8, 8, 8, 0, 8, 16, 24);
+	return Graphics::PixelFormat(4, 8, 8, 8, isAlpha ? 8 : 0, 0, 8, 16, 24);
 #endif
 }
 
@@ -201,7 +200,7 @@ bool PNGDecoder::loadStream(Common::SeekableReadStream &stream) {
 		}
 
 		_outputSurface->create(width, height,
-			hasRgbaPalette ? getByteOrderRgbaPixelFormat() : Graphics::PixelFormat::createFormatCLUT8());
+			hasRgbaPalette ? getByteOrderRgbaPixelFormat(true) : Graphics::PixelFormat::createFormatCLUT8());
 		png_set_packing(pngPtr);
 
 		if (hasRgbaPalette) {
@@ -219,11 +218,13 @@ bool PNGDecoder::loadStream(Common::SeekableReadStream &stream) {
 			_palette = nullptr;
 		}
 	} else {
+ 		bool isAlpha = (colorType & PNG_COLOR_MASK_ALPHA);
 		if (png_get_valid(pngPtr, infoPtr, PNG_INFO_tRNS)) {
+ 			isAlpha = true;
 			png_set_expand(pngPtr);
 		}
 
-		_outputSurface->create(width, height, getByteOrderRgbaPixelFormat());
+		_outputSurface->create(width, height, getByteOrderRgbaPixelFormat(isAlpha));
 		if (!_outputSurface->getPixels()) {
 			error("Could not allocate memory for output image.");
 		}
@@ -352,7 +353,7 @@ bool writePNG(Common::WriteStream &out, const Graphics::Surface &input, const by
 
 	Common::Array<const uint8 *> rows;
 	rows.reserve(surface->h);
-	for (uint y = 0; y < surface->h; ++y) {
+	for (int y = 0; y < surface->h; ++y) {
 		rows.push_back((const uint8 *)surface->getBasePtr(0, y));
 	}
 

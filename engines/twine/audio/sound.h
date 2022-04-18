@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -44,7 +43,8 @@ enum _Samples {
 	TaskCompleted = 41,
 	Hit = 86,
 	ItemFound = 97,
-	WalkFloorBegin = 126
+	WalkFloorBegin = 126,
+	WalkFloorRightBegin = 141
 };
 }
 
@@ -80,13 +80,15 @@ public:
 	 * Play FLA movie samples
 	 * @param index sample index under flasamp.hqr file
 	 * @param repeat number of times to repeat the sample
-	 * @param x unknown x variable
-	 * @param y unknown y variable
 	 */
-	void playFlaSample(int32 index, int32 repeat, int32 x, int32 y);
+	void playFlaSample(int32 index, int32 repeat, uint8 balance, int32 volumeLeft, int32 volumeRight);
 
 	/** Update sample position in channel */
 	void setSamplePosition(int32 channelIdx, int32 x, int32 y, int32 z);
+
+	inline void setSamplePosition(int32 channelIdx, const IVec3 &pos) {
+		setSamplePosition(channelIdx, pos.x, pos.y, pos.z);
+	}
 
 	/**
 	 * Play samples

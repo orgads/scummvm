@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -91,6 +90,16 @@ bool Bitmap::CreateSubBitmap(Bitmap *src, const Rect &rc) {
 	return _alBitmap != nullptr;
 }
 
+bool Bitmap::ResizeSubBitmap(int width, int height) {
+	if (!isSubBitmap())
+		return false;
+	// TODO: can't clamp to parent size, because subs do not keep parent ref;
+	// might require amending allegro bitmap struct
+	_alBitmap->w = _alBitmap->cr = width;
+	_alBitmap->h = _alBitmap->cb = height;
+	return true;
+}
+
 bool Bitmap::CreateCopy(Bitmap *src, int color_depth) {
 	if (Create(src->_alBitmap->w, src->_alBitmap->h, color_depth ? color_depth : bitmap_color_depth(src->_alBitmap))) {
 		blit(src->_alBitmap, _alBitmap, 0, 0, 0, 0, _alBitmap->w, _alBitmap->h);
@@ -125,6 +134,17 @@ bool Bitmap::LoadFromFile(const char *filename) {
 	return _alBitmap != nullptr;
 }
 
+bool Bitmap::LoadFromFile(PACKFILE *pf) {
+	Destroy();
+
+	BITMAP *al_bmp = load_bitmap(pf, nullptr);
+	if (al_bmp) {
+		_alBitmap = al_bmp;
+		_isDataOwner = true;
+	}
+	return _alBitmap != nullptr;
+}
+
 bool Bitmap::SaveToFile(Common::WriteStream &out, const void *palette) {
 	return save_bitmap(out, _alBitmap, (const RGB *)palette) == 0;
 }
@@ -135,7 +155,9 @@ bool Bitmap::SaveToFile(const char *filename, const void *palette) {
 	size_t lastSlash = name.findLastOf('/');
 	if (lastSlash != Common::String::npos)
 		name = name.substr(lastSlash + 1);
-	name = ConfMan.getActiveDomainName() + "-" + name;
+	Common::String gameTarget = ConfMan.getActiveDomainName();
+	if (!name.hasPrefixIgnoreCase(gameTarget))
+		name = gameTarget + "-" + name;
 
 	Common::OutSaveFile *out = g_system->getSavefileManager()->openForSaving(name, false);
 	assert(out);
@@ -162,6 +184,10 @@ color_t Bitmap::GetCompatibleColor(color_t color) {
 
 void Bitmap::SetClip(const Rect &rc) {
 	set_clip_rect(_alBitmap, rc.Left, rc.Top, rc.Right, rc.Bottom);
+}
+
+void Bitmap::ResetClip() {
+	set_clip_rect(_alBitmap, 0, 0, _alBitmap->w - 1, _alBitmap->h - 1);
 }
 
 Rect Bitmap::GetClip() const {
@@ -191,6 +217,10 @@ void Bitmap::Blit(Bitmap *src, int src_x, int src_y, int dst_x, int dst_y, int w
 	} else {
 		blit(al_src_bmp, _alBitmap, src_x, src_y, dst_x, dst_y, width, height);
 	}
+}
+
+void Bitmap::MaskedBlit(Bitmap *src, int dst_x, int dst_y) {
+	draw_sprite(_alBitmap, src->_alBitmap, dst_x, dst_y);
 }
 
 void Bitmap::StretchBlt(Bitmap *src, const Rect &dst_rc, BitmapMaskOption mask) {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,6 +32,7 @@
 #include "dc.h"
 #include "icon.h"
 #include "label.h"
+#include "dcutils.h"
 
 #include <ronin/gddrive.h>
 
@@ -40,98 +40,6 @@
 #define MAX_GAMES 100
 #define MAX_DIR 100
 #define MAX_PLUGIN_DIRS 100
-
-
-void draw_solid_quad(float x1, float y1, float x2, float y2,
-		     int c0, int c1, int c2, int c3)
-{
-  struct polygon_list mypoly;
-  struct packed_colour_vertex_list myvertex;
-
-  mypoly.cmd =
-	TA_CMD_POLYGON|TA_CMD_POLYGON_TYPE_OPAQUE|TA_CMD_POLYGON_SUBLIST|
-	TA_CMD_POLYGON_STRIPLENGTH_2|TA_CMD_POLYGON_PACKED_COLOUR|
-	TA_CMD_POLYGON_GOURAUD_SHADING;
-  mypoly.mode1 = TA_POLYMODE1_Z_ALWAYS|TA_POLYMODE1_NO_Z_UPDATE;
-  mypoly.mode2 =
-	TA_POLYMODE2_BLEND_SRC|TA_POLYMODE2_FOG_DISABLED;
-  mypoly.texture = 0;
-
-  mypoly.red = mypoly.green = mypoly.blue = mypoly.alpha = 0;
-
-  ta_commit_list(&mypoly);
-
-  myvertex.cmd = TA_CMD_VERTEX;
-  myvertex.ocolour = 0;
-  myvertex.z = 0.5;
-  myvertex.u = 0.0;
-  myvertex.v = 0.0;
-
-  myvertex.colour = c0;
-  myvertex.x = x1;
-  myvertex.y = y1;
-  ta_commit_list(&myvertex);
-
-  myvertex.colour = c1;
-  myvertex.x = x2;
-  ta_commit_list(&myvertex);
-
-  myvertex.colour = c2;
-  myvertex.x = x1;
-  myvertex.y = y2;
-  ta_commit_list(&myvertex);
-
-  myvertex.colour = c3;
-  myvertex.x = x2;
-  myvertex.cmd |= TA_CMD_VERTEX_EOS;
-  ta_commit_list(&myvertex);
-}
-
-void draw_trans_quad(float x1, float y1, float x2, float y2,
-		     int c0, int c1, int c2, int c3)
-{
-  struct polygon_list mypoly;
-  struct packed_colour_vertex_list myvertex;
-
-  mypoly.cmd =
-	TA_CMD_POLYGON|TA_CMD_POLYGON_TYPE_TRANSPARENT|TA_CMD_POLYGON_SUBLIST|
-	TA_CMD_POLYGON_STRIPLENGTH_2|TA_CMD_POLYGON_PACKED_COLOUR|
-	TA_CMD_POLYGON_GOURAUD_SHADING;
-  mypoly.mode1 = TA_POLYMODE1_Z_ALWAYS|TA_POLYMODE1_NO_Z_UPDATE;
-  mypoly.mode2 =
-	TA_POLYMODE2_BLEND_SRC_ALPHA|TA_POLYMODE2_BLEND_DST_INVALPHA|
-	TA_POLYMODE2_FOG_DISABLED|TA_POLYMODE2_ENABLE_ALPHA;
-  mypoly.texture = 0;
-
-  mypoly.red = mypoly.green = mypoly.blue = mypoly.alpha = 0;
-
-  ta_commit_list(&mypoly);
-
-  myvertex.cmd = TA_CMD_VERTEX;
-  myvertex.ocolour = 0;
-  myvertex.z = 0.5;
-  myvertex.u = 0.0;
-  myvertex.v = 0.0;
-
-  myvertex.colour = c0;
-  myvertex.x = x1;
-  myvertex.y = y1;
-  ta_commit_list(&myvertex);
-
-  myvertex.colour = c1;
-  myvertex.x = x2;
-  ta_commit_list(&myvertex);
-
-  myvertex.colour = c2;
-  myvertex.x = x1;
-  myvertex.y = y2;
-  ta_commit_list(&myvertex);
-
-  myvertex.colour = c3;
-  myvertex.x = x2;
-  myvertex.cmd |= TA_CMD_VERTEX_EOS;
-  ta_commit_list(&myvertex);
-}
 
 
 struct Game
@@ -157,7 +65,7 @@ static Game the_game;
 
 static bool isIcon(const Common::FSNode &entry)
 {
-	return entry.getDisplayName().hasSuffixIgnoreCase(".ICO");
+	return entry.getName().hasSuffixIgnoreCase(".ICO");
 }
 
 static bool loadIcon(Game &game, Dir *dirs, int num_dirs)
@@ -216,7 +124,11 @@ static int findGames(Game *games, int max, bool use_ini)
   int curr_game = 0, curr_dir = 0, num_dirs = 0;
 
   if (use_ini) {
+	Common::ConfigManager::Domain *appDomain =
+	  ConfMan.getDomain(Common::ConfigManager::kApplicationDomain);
+	Common::ConfigManager::Domain savedAppDomain = *appDomain;
 	ConfMan.loadDefaultConfigFile();
+	*appDomain = savedAppDomain;
 	const Common::ConfigManager::DomainMap &game_domains = ConfMan.getGameDomains();
 	for(Common::ConfigManager::DomainMap::const_iterator i =
 	  game_domains.begin(); curr_game < max && i != game_domains.end(); i++) {
@@ -269,7 +181,7 @@ static int findGames(Game *games, int max, bool use_ini)
 	  files.push_back(*entry);
 	  } else
 	if (isIcon(*entry))
-	  strcpy(dirs[curr_dir-1].deficon, entry->getDisplayName().c_str());
+	  strcpy(dirs[curr_dir-1].deficon, entry->getName().c_str());
 	else if(!use_ini)
 	  files.push_back(*entry);
 	}
@@ -313,50 +225,20 @@ static int findGames(Game *games, int max, bool use_ini)
   return curr_game;
 }
 
-int getCdState()
-{
-  unsigned int param[4];
-  gdGdcGetDrvStat(param);
-  return param[0];
-}
-
 static void drawBackground()
 {
   draw_solid_quad(20.0, 20.0, 620.0, 460.0,
 		  0xff0000, 0x00ff00, 0x0000ff, 0xffffff);
 }
 
-void waitForDisk()
-{
-  Label lab;
-  int wasopen = 0;
-  ta_sync();
-  void *mark = ta_txmark();
-  lab.create_texture("Please insert game CD.");
-  //printf("waitForDisk, cdstate = %d\n", getCdState());
-  for (;;) {
-	int s = getCdState();
-	if (s >= 6)
-	  wasopen = 1;
-	if (s > 0 && s < 6 && wasopen) {
-	  cdfs_reinit();
-	  chdir("/");
-	  chdir("/");
-	  ta_sync();
-	  ta_txrelease(mark);
-	  return;
-	}
-
-	ta_begin_frame();
-
+namespace {
+  class SelectorDiscSwap : public DiscSwap {
+    using DiscSwap::DiscSwap;
+  protected:
+    void background() override {
 	drawBackground();
-
-	ta_commit_end();
-
-	lab.draw(166.0, 200.0, 0xffff2020);
-
-	ta_commit_frame();
-
+    }
+    void interact() override {
 	int mousex = 0, mousey = 0;
 	byte shiftFlags;
 
@@ -364,7 +246,14 @@ void waitForDisk()
 	setimask(15);
 	handleInput(locked_get_pads(), mousex, mousey, shiftFlags);
 	setimask(mask);
-  }
+    }
+  };
+}
+
+void waitForDisk()
+{
+  //printf("waitForDisk, cdstate = %d\n", getCdState());
+  SelectorDiscSwap("Please insert game CD.", 0xffff2020).run();
 }
 
 static void drawGameLabel(Game &game, int pal, float x, float y,
@@ -474,29 +363,26 @@ bool selectGame(char *&engineId, char *&ret, char *&dir_ret, Common::Language &l
   Game *games = new Game[MAX_GAMES];
   int selected, num_games;
 
-  ta_sync();
-  void *mark = ta_txmark();
-
   for (;;) {
 	num_games = findGames(games, MAX_GAMES, true);
 	if (!num_games)
 	  num_games = findGames(games, MAX_GAMES, false);
 
-	for (int i=0; i<num_games; i++) {
-	  games[i].icon.create_texture();
-	  games[i].label.create_texture(games[i].text);
+	{
+	  TextureStack txstack;
+
+	  for (int i=0; i<num_games; i++) {
+	    games[i].icon.create_texture();
+	    games[i].label.create_texture(games[i].text);
+	  }
+
+	  selected = gameMenu(games, num_games);
 	}
-
-	selected = gameMenu(games, num_games);
-
-	ta_sync();
-	ta_txrelease(mark);
 
 	if (selected == -1)
 	  waitForDisk();
 	else
 	  break;
-
   }
 
   if (selected >= num_games)
@@ -536,7 +422,7 @@ static int findPluginDirs(Game *plugin_dirs, int max, const Common::FSNode &base
 	  if (curr_dir >= max)
 	break;
 	  strncpy(plugin_dirs[curr_dir].dir, (*entry).getPath().c_str(), 256);
-	  strncpy(plugin_dirs[curr_dir].text, (*entry).getDisplayName().c_str(), 256);
+	  strncpy(plugin_dirs[curr_dir].text, (*entry).getName().c_str(), 256);
 	  plugin_dirs[curr_dir].icon.load(NULL, 0, 0);
 	  curr_dir++;
 	}
@@ -549,20 +435,18 @@ bool selectPluginDir(Common::String &selection, const Common::FSNode &base)
   Game *plugin_dirs = new Game[MAX_PLUGIN_DIRS];
   int selected, num_plugin_dirs;
 
-  ta_sync();
-  void *mark = ta_txmark();
-
   num_plugin_dirs = findPluginDirs(plugin_dirs, MAX_PLUGIN_DIRS, base);
 
-  for (int i=0; i<num_plugin_dirs; i++) {
+  {
+    TextureStack txstack;
+
+    for (int i=0; i<num_plugin_dirs; i++) {
 	plugin_dirs[i].icon.create_texture();
 	plugin_dirs[i].label.create_texture(plugin_dirs[i].text);
+    }
+
+    selected = gameMenu(plugin_dirs, num_plugin_dirs);
   }
-
-  selected = gameMenu(plugin_dirs, num_plugin_dirs);
-
-  ta_sync();
-  ta_txrelease(mark);
 
   if (selected >= num_plugin_dirs)
 	selected = -1;

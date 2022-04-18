@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,11 +23,27 @@
 
 namespace Asylum {
 
+const struct {
+	int  cdNumber;
+	uint resourceId;
+	uint size;
+} patchedSizes[] = {
+	{1, 0x800402B0, 40146626}, {3, 0x800403EB, 18177962}, {2, 0x8004071D, 40501676},
+	{1, 0x8004072D,  7349518}, {2, 0x80040733, 40367314}, {1, 0x8004073B,  5534658},
+	{2, 0x8004073C, 40347616}, {1, 0x80040745,  4333670}, {2, 0x80040746, 40214368},
+	{3, 0x8004074A, 17247084}, {2, 0x8004074C, 40072902}, {3, 0x80040756, 15741212},
+	{2, 0x8004075E, 39099030}, {1, 0x8004076E,  1122128}, {2, 0x80040781, 36131104},
+	{3, 0x80040782, 15468752}, {2, 0x80040783, 36119940}, {1, 0x80040786,   755152},
+	{2, 0x800408B9, 18430980}, {3, 0x8004093A,  6679208}, {1, 0x8004093D,   383318},
+	{3, 0x80040942,  4502532}, {2, 0x80040968,  3920338}, {3, 0x80040970,   654212},
+	{2, 0x8004097D,   524576}, {1, 0x8004097F,    52574}, {2, 0x80040983,   289832},
+};
+
 //////////////////////////////////////////////////////////////////////////
 // ResourceManager
 //////////////////////////////////////////////////////////////////////////
 
-ResourceManager::ResourceManager() : _cdNumber(-1), _musicPackId(kResourcePackInvalid) {
+ResourceManager::ResourceManager(AsylumEngine *vm) : _cdNumber(-1), _musicPackId(kResourcePackInvalid), _vm(vm) {
 }
 
 ResourceManager::~ResourceManager() {
@@ -56,13 +71,28 @@ ResourceEntry *ResourceManager::get(ResourceId id) {
 		ResourcePack *pack;
 
 		if (isMusicPack) {
-			pack = new ResourcePack(Common::String::format("mus.%03d", _musicPackId));
+			if (_vm->checkGameVersion("Demo"))
+				pack = new ResourcePack("res.002");
+			else
+				pack = new ResourcePack(Common::String::format("mus.%03d", _musicPackId));
 		} else {
 			if (packId == kResourcePackSharedSound) {
+				if (_vm->checkGameVersion("Demo")) {
+					pack = new ResourcePack("res.004");
+					cache->setVal(packId, pack);
+					return cache->getVal(packId)->get(index);
+				}
+
 				if (_cdNumber == -1)
 					error("[ResourceManager::get] Cd number has not been set!");
 
 				pack = new ResourcePack(Common::String::format("res.%01d%02d", _cdNumber, packId));
+
+				// WORKAROUND to support combined resource packs (used by GOG and Steam versions)
+				if (pack->_packFile.size() == 299872422)
+					for (int i = 0; i < ARRAYSIZE(patchedSizes); i++)
+						if (_cdNumber == patchedSizes[i].cdNumber)
+							pack->_resources[RESOURCE_INDEX(patchedSizes[i].resourceId)].size = patchedSizes[i].size;
 			} else {
 				pack = new ResourcePack(Common::String::format("res.%03d", packId));
 			}
@@ -89,7 +119,7 @@ void ResourceManager::unload(ResourcePackId id) {
 //////////////////////////////////////////////////////////////////////////
 // ResourcePack
 //////////////////////////////////////////////////////////////////////////
-ResourcePack::ResourcePack(Common::String filename) {
+ResourcePack::ResourcePack(const Common::String &filename) {
 	init(filename);
 }
 
@@ -101,7 +131,7 @@ ResourcePack::~ResourcePack() {
 	_packFile.close();
 }
 
-void ResourcePack::init(Common::String filename) {
+void ResourcePack::init(const Common::String &filename) {
 	if (!_packFile.open(filename))
 		error("[ResourcePack::init] Could not open resource file: %s", filename.c_str());
 
@@ -118,7 +148,7 @@ void ResourcePack::init(Common::String filename) {
 		// Read the offset of the next entry to determine the size of this one
 		nextOffset = (i < entryCount - 1) ? _packFile.readUint32LE() : (uint32)_packFile.size();
 		entry.size = (nextOffset > 0) ? nextOffset - prevOffset : (uint32)_packFile.size() - prevOffset;
-		entry.data = NULL;
+		entry.data = nullptr;
 
 		_resources[i] = entry;
 
@@ -128,7 +158,7 @@ void ResourcePack::init(Common::String filename) {
 
 ResourceEntry *ResourcePack::get(uint16 index) {
 	if (index > _resources.size() - 1)
-		return NULL;
+		return nullptr;
 
 	if (!_resources[index].data) {
 		// Load the requested resource if it's not loaded already

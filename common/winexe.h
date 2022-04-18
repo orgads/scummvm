@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,6 +24,7 @@
 
 #include "common/hash-str.h"
 #include "common/str.h"
+#include "common/types.h"
 
 namespace Common {
 
@@ -119,7 +119,7 @@ public:
 	virtual bool loadFromCompressedEXE(const String &fileName);
 
 	/** Load from a stream. */
-	virtual bool loadFromEXE(SeekableReadStream *stream) = 0;
+	virtual bool loadFromEXE(SeekableReadStream *stream, DisposeAfterUse::Flag disposeFileHandle = DisposeAfterUse::YES) = 0;
 
 	/** Return a list of IDs for a given type. */
 	virtual const Array<WinResourceID> getIDList(const WinResourceID &type) const = 0;
@@ -139,6 +139,7 @@ public:
 	}
 
 	static WinResources *createFromEXE(const String &fileName);
+	static WinResources *createFromEXE(SeekableReadStream *stream);
 
 	typedef Common::HashMap<Common::String, Common::U32String, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> VersionHash;
 
@@ -156,12 +157,17 @@ public:
 		uint32 fileDate[2];
 
 		VersionHash hash;
+
+		bool readVSVersionInfo(SeekableReadStream *res);
 	};
 
-	static VersionInfo *parseVersionInfo(SeekableReadStream *stream);
+	VersionInfo *getVersionResource(const WinResourceID &id);
 
 	/** Get a string from a string resource. */
 	virtual String loadString(uint32 stringID) = 0;
+
+protected:
+	virtual VersionInfo *parseVersionInfo(SeekableReadStream *stream) = 0;
 };
 
 /** @} */

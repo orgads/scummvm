@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -27,13 +26,14 @@
 #include "ags/lib/std/vector.h"
 #include "ags/shared/ac/character_info.h"
 #include "ags/engine/ac/runtime_defines.h"
+#include "ags/engine/ac/speech.h"
+#include "ags/engine/ac/timer.h"
 #include "ags/shared/game/room_struct.h"
 #include "ags/engine/game/viewport.h"
 #include "ags/engine/media/audio/queued_audio_item.h"
 #include "ags/shared/util/geometry.h"
 #include "ags/shared/util/string_types.h"
 #include "ags/shared/util/string.h"
-#include "ags/engine/ac/timer.h"
 
 namespace AGS3 {
 
@@ -53,6 +53,7 @@ struct RestoredData;
 using namespace AGS; // FIXME later
 struct ScriptViewport;
 struct ScriptCamera;
+struct ScriptOverlay;
 
 #define GAME_STATE_RESERVED_INTS 5
 
@@ -157,6 +158,8 @@ struct GameState {
 	int   bg_frame = 0, bg_anim_delay = 0;  // for animating backgrounds
 	int   music_vol_was = 0;  // before the volume drop
 	short wait_counter = 0;
+	int8  wait_skipped_by = 0; // tells how last blocking wait was skipped [not serialized]
+	int   wait_skipped_by_data = 0; // extended data telling how last blocking wait was skipped [not serialized]
 	short mboundx1 = 0, mboundx2 = 0, mboundy1 = 0, mboundy2 = 0;
 	int   fade_effect = 0;
 	int   bg_frame_locked = 0;
@@ -167,15 +170,16 @@ struct GameState {
 	char  walkable_areas_on[MAX_WALK_AREAS + 1];
 	short screen_flipped = 0;
 	int   entered_at_x = 0, entered_at_y = 0, entered_edge = 0;
-	int   want_speech = 0;
+	bool  voice_avail; // whether voice-over is available
+	SpeechMode speech_mode; // speech mode (text, voice, or both)
 	int   cant_skip_speech = 0;
 	int32_t   script_timers[MAX_TIMERS];
 	int   sound_volume = 0, speech_volume = 0;
 	int   normal_font = 0, speech_font = 0;
-	char  key_skip_wait = 0;
+	int8  key_skip_wait = 0;
 	int   swap_portrait_lastchar = 0;
 	int   swap_portrait_lastlastchar = 0;
-	int   separate_music_lib = 0;
+	bool  separate_music_lib = false;
 	int   in_conversation = 0;
 	int   screen_tint = 0;
 	int   num_parsed_words = 0;
@@ -243,6 +247,17 @@ struct GameState {
 	bool  speech_voice_blocking = false;
 	// Tells whether character speech stays on screen not animated for additional time
 	bool  speech_in_post_state = false;
+
+	// Special overlays
+	//
+	// Is there a QFG4-style dialog overlay on screen (contains overlay ID)
+	int  complete_overlay_on = 0;
+	// Is there a blocking text overlay on screen (contains overlay ID)
+	int  text_overlay_on = 0;
+	// Blocking speech overlay managed object, for accessing in scripts
+	ScriptOverlay *speech_text_scover = nullptr;
+	// Speech portrait overlay managed object
+	ScriptOverlay *speech_face_scover = nullptr;
 
 	int shake_screen_yoff = 0; // y offset of the shaking screen
 
@@ -339,6 +354,14 @@ struct GameState {
 	void SetIgnoreInput(int timeout_ms);
 	// Clears ignore input state
 	void ClearIgnoreInput();
+
+	// Set how the last blocking wait was skipped
+	void SetWaitSkipResult(int how, int data = 0);
+	// Returns the code of the latest blocking wait skip method.
+	// * positive value means a key code;
+	// * negative value means a -(mouse code + 1);
+	// * 0 means timeout.
+	int GetWaitSkipResult() const;
 
 	//
 	// Voice speech management

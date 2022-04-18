@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -101,7 +100,8 @@ static bool launcherDialog() {
 #if defined(__DC__)
 	DCLauncherDialog dlg;
 #else
-	GUI::LauncherDialog dlg;
+	GUI::LauncherChooser dlg;
+	dlg.selectLauncher();
 #endif
 	return (dlg.runModal() != -1);
 }
@@ -117,18 +117,18 @@ static const Plugin *detectPlugin() {
 	// At this point the engine ID and game ID must be known
 	if (engineId.empty()) {
 		warning("The engine ID is not set for target '%s'", ConfMan.getActiveDomainName().c_str());
-		return 0;
+		return nullptr;
 	}
 
 	if (gameId.empty()) {
 		warning("The game ID is not set for target '%s'", ConfMan.getActiveDomainName().c_str());
-		return 0;
+		return nullptr;
 	}
 
 	const Plugin *plugin = EngineMan.findPlugin(engineId);
 	if (!plugin) {
 		warning("'%s' is an invalid engine ID. Use the --list-engines command to list supported engine IDs", engineId.c_str());
-		return 0;
+		return nullptr;
 	}
 
 	// Query the plugin for the game descriptor
@@ -138,7 +138,7 @@ static const Plugin *detectPlugin() {
 	PlainGameDescriptor game = metaEngine.findGame(gameId.c_str());
 	if (!game.gameId) {
 		warning("'%s' is an invalid game ID for the engine '%s'. Use the --list-games option to list supported game IDs", gameId.c_str(), engineId.c_str());
-		return 0;
+		return nullptr;
 	}
 
 	return plugin;
@@ -162,7 +162,7 @@ static Common::Error runGame(const Plugin *plugin, const Plugin *enginePlugin, O
 	Common::FSNode dir(ConfMan.get("path"));
 	Common::String target = ConfMan.getActiveDomainName();
 	Common::Error err = Common::kNoError;
-	Engine *engine = 0;
+	Engine *engine = nullptr;
 
 #if defined(SDL_BACKEND) && defined(USE_OPENGL) && defined(USE_RGB_COLOR)
 	// HACK: We set up the requested graphics mode setting here to allow the
@@ -196,8 +196,26 @@ static Common::Error runGame(const Plugin *plugin, const Plugin *enginePlugin, O
 	// before we instantiate the engine, we register debug channels for it
 	DebugMan.addAllDebugChannels(metaEngineDetection.getDebugChannels());
 
+	// On creation the engine should have set up all debug levels so we can use
+	// the command line arguments here
+	Common::StringTokenizer tokenizer(debugLevels, " ,");
+	while (!tokenizer.empty()) {
+		Common::String token = tokenizer.nextToken();
+		if (token.equalsIgnoreCase("all"))
+			DebugMan.enableAllDebugChannels();
+		else if (!DebugMan.enableDebugChannel(token))
+			warning("Engine does not support debug level '%s'", token.c_str());
+	}
+
 	// Create the game's MetaEngine.
 	MetaEngine &metaEngine = enginePlugin->get<MetaEngine>();
+	if (err.getCode() == Common::kNoError) {
+		// Set default values for all of the custom engine options
+		// Apparently some engines query them in their constructor, thus we
+		// need to set this up before instance creation.
+		metaEngine.registerDefaultSettings(target);
+	}
+
 	err = metaEngine.createInstance(&system, &engine);
 
 	// Check for errors
@@ -267,17 +285,6 @@ static Common::Error runGame(const Plugin *plugin, const Plugin *enginePlugin, O
 		}
 	}
 
-	// On creation the engine should have set up all debug levels so we can use
-	// the command line arguments here
-	Common::StringTokenizer tokenizer(debugLevels, " ,");
-	while (!tokenizer.empty()) {
-		Common::String token = tokenizer.nextToken();
-		if (token.equalsIgnoreCase("all"))
-			DebugMan.enableAllDebugChannels();
-		else if (!DebugMan.enableDebugChannel(token))
-			warning("Engine does not support debug level '%s'", token.c_str());
-	}
-
 #ifdef USE_TRANSLATION
 	Common::String previousLanguage = TransMan.getCurrentLanguage();
 	if (ConfMan.hasKey("gui_use_game_language")
@@ -302,6 +309,10 @@ static Common::Error runGame(const Plugin *plugin, const Plugin *enginePlugin, O
 
 	// Inform backend that the engine is about to be run
 	system.engineInit();
+
+	// Purge queued input events that may remain from the GUI (such as key-up)
+	system.getEventManager()->purgeKeyboardEvents();
+	system.getEventManager()->purgeMouseEvents();
 
 	// Run the engine
 	Common::Error result = engine->run();
@@ -343,15 +354,14 @@ static void setupGraphics(OSystem &system) {
 		system.setGraphicsMode(ConfMan.get("gfx_mode").c_str());
 		system.setStretchMode(ConfMan.get("stretch_mode").c_str());
 		system.setShader(ConfMan.get("shader").c_str());
+		system.setScaler(ConfMan.get("scaler").c_str(), ConfMan.getInt("scale_factor"));
 
 		system.initSize(320, 200);
 
-		if (ConfMan.hasKey("aspect_ratio"))
-			system.setFeatureState(OSystem::kFeatureAspectRatioCorrection, ConfMan.getBool("aspect_ratio"));
-		if (ConfMan.hasKey("fullscreen"))
-			system.setFeatureState(OSystem::kFeatureFullscreenMode, ConfMan.getBool("fullscreen"));
-		if (ConfMan.hasKey("filtering"))
-			system.setFeatureState(OSystem::kFeatureFilteringMode, ConfMan.getBool("filtering"));
+		// Parse graphics configuration, implicit fallback to defaults set with RegisterDefaults()
+		system.setFeatureState(OSystem::kFeatureAspectRatioCorrection, ConfMan.getBool("aspect_ratio"));
+		system.setFeatureState(OSystem::kFeatureFullscreenMode, ConfMan.getBool("fullscreen"));
+		system.setFeatureState(OSystem::kFeatureFilteringMode, ConfMan.getBool("filtering"));
 	system.endGFXTransaction();
 
 	system.applyBackendSettings();
@@ -424,7 +434,7 @@ extern "C" int scummvm_main(int argc, const char * const argv[]) {
 	// soonest possible moment to ensure debug output starts early on, if
 	// requested.
 	if (settings.contains("debuglevel")) {
-		gDebugLevel = (int)strtol(settings["debuglevel"].c_str(), 0, 10);
+		gDebugLevel = (int)strtol(settings["debuglevel"].c_str(), nullptr, 10);
 		printf("Debuglevel (from command line): %d\n", gDebugLevel);
 		settings.erase("debuglevel"); // This option should not be passed to ConfMan.
 	} else if (ConfMan.hasKey("debuglevel"))
@@ -439,6 +449,16 @@ extern "C" int scummvm_main(int argc, const char * const argv[]) {
 	if (settings.contains("debug-channels-only"))
 		gDebugChannelsOnly = true;
 
+
+	// Now we want to enable global flags if any
+	Common::StringTokenizer tokenizer(specialDebug, " ,");
+	while (!tokenizer.empty()) {
+		Common::String token = tokenizer.nextToken();
+		if (token.equalsIgnoreCase("all"))
+			DebugMan.enableAllDebugChannels();
+		else
+			DebugMan.enableDebugChannel(token);
+	}
 
 	ConfMan.registerDefault("always_run_fallback_detection_extern", true);
 	PluginManager::instance().init();
@@ -548,13 +568,13 @@ extern "C" int scummvm_main(int argc, const char * const argv[]) {
 #endif
 
 	// Unless a game was specified, show the launcher dialog
-	if (0 == ConfMan.getActiveDomain())
+	if (nullptr == ConfMan.getActiveDomain())
 		launcherDialog();
 
 	// FIXME: We're now looping the launcher. This, of course, doesn't
 	// work as well as it should. In theory everything should be destroyed
 	// cleanly, so this is now enabled to encourage people to fix bits :)
-	while (0 != ConfMan.getActiveDomain()) {
+	while (nullptr != ConfMan.getActiveDomain()) {
 		saveLastLaunchedTarget(ConfMan.getActiveDomainName());
 
 		EngineMan.upgradeTargetIfNecessary(ConfMan.getActiveDomainName());
@@ -585,7 +605,10 @@ extern "C" int scummvm_main(int argc, const char * const argv[]) {
 			Common::String recordFileName = ConfMan.get("record_file_name");
 
 			if (recordMode == "record") {
-				g_eventRec.init(g_eventRec.generateRecordFileName(ConfMan.getActiveDomainName()), GUI::EventRecorder::kRecorderRecord);
+				Common::String targetFileName = ConfMan.hasKey("record_file_name") ? recordFileName : g_eventRec.generateRecordFileName(ConfMan.getActiveDomainName());
+				g_eventRec.init(targetFileName, GUI::EventRecorder::kRecorderRecord);
+			} else if (recordMode == "update") {
+				g_eventRec.init(recordFileName, GUI::EventRecorder::kRecorderUpdate);
 			} else if (recordMode == "playback") {
 				g_eventRec.init(recordFileName, GUI::EventRecorder::kRecorderPlayback);
 			} else if ((recordMode == "info") && (!recordFileName.empty())) {
@@ -596,12 +619,13 @@ extern "C" int scummvm_main(int argc, const char * const argv[]) {
 			}
 #endif
 			Common::TextToSpeechManager *ttsMan = g_system->getTextToSpeechManager();
-			if (ttsMan != nullptr) {
+			if (ttsMan != nullptr && ConfMan.hasKey("tts_enabled", "scummvm") && ConfMan.getBool("tts_enabled", "scummvm")) {
 				ttsMan->pushState();
 			}
+
 			// Try to run the game
 			Common::Error result = runGame(plugin, enginePlugin, system, specialDebug);
-			if (ttsMan != nullptr) {
+			if (ttsMan != nullptr && ConfMan.hasKey("tts_enabled", "scummvm") && ConfMan.getBool("tts_enabled", "scummvm")) {
 				ttsMan->popState();
 			}
 
@@ -679,7 +703,7 @@ extern "C" int scummvm_main(int argc, const char * const argv[]) {
 
 		// reset the graphics to default
 		setupGraphics(system);
-		if (0 == ConfMan.getActiveDomain()) {
+		if (nullptr == ConfMan.getActiveDomain()) {
 			launcherDialog();
 		}
 	}

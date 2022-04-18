@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -26,6 +25,7 @@
 #include "ultima/ultima8/world/actors/actor.h"
 #include "ultima/ultima8/world/world.h"
 #include "ultima/ultima8/world/world_point.h"
+#include "ultima/ultima8/world/coord_utils.h"
 #include "ultima/ultima8/usecode/uc_list.h"
 #include "ultima/ultima8/usecode/uc_machine.h"
 #include "ultima/ultima8/world/teleport_egg.h"
@@ -335,7 +335,7 @@ void CurrentMap::removeTargetItem(const Item *item) {
 }
 
 
-Item *CurrentMap::findBestTargetItem(int32 x, int32 y, Direction dir, DirectionMode dirmode) {
+Item *CurrentMap::findBestTargetItem(int32 x, int32 y, int32 z, Direction dir, DirectionMode dirmode) {
 	// "best" means:
 	// Shape info SI_OCCL
 	// isNPC
@@ -377,7 +377,8 @@ Item *CurrentMap::findBestTargetItem(int32 x, int32 y, Direction dir, DirectionM
 
 		int xdiff = abs(x - ix);
 		int ydiff = abs(y - iy);
-		int dist = MAX(xdiff, ydiff);
+		int zdiff = abs(z - iz);
+		int dist = MAX(MAX(xdiff, ydiff), zdiff);
 
 		if (dist < bestdist) {
 			bestitem = item;
@@ -532,7 +533,7 @@ void CurrentMap::unsetChunkFast(int32 cx, int32 cy) {
 	while (iter != _items[cx][cy].end()) {
 		Item *item = *iter;
 		++iter;
-#if VALIDATE_CHUNKS
+#ifdef VALIDATE_CHUNKS
 		int32 x, y, z;
 		item->getLocation(x, y, z);
 		if (x / _mapChunkSize != cx || y / _mapChunkSize != cy) {
@@ -1351,18 +1352,15 @@ uint32 CurrentMap::I_canExistAt(const uint8 *args, unsigned int argsize) {
 	ARG_UINT16(shape);
 	ARG_UINT16(x);
 	ARG_UINT16(y);
-	ARG_UINT16(z);
+	ARG_UINT8(z);
 	if (argsize > 8) {
 		//!! TODO: figure these out
-		ARG_UINT16(unk1); // is either 1 or 4
-		ARG_UINT16(unk2); // looks like it could be an objid
-		ARG_UINT16(unk3); // always zero
+		ARG_NULL16(); // is either 1 or 4. moves?
+		ARG_NULL16(); // some objid?
+		ARG_NULL16(); // always zero
 	}
 
-	if (GAME_IS_CRUSADER) {
-		x *= 2;
-		y *= 2;
-	}
+	World_FromUsecodeXY(x, y);
 
 	//
 	// TODO: The crusader version of this function actually checks by
@@ -1380,8 +1378,8 @@ uint32 CurrentMap::I_canExistAt(const uint8 *args, unsigned int argsize) {
 }
 
 uint32 CurrentMap::I_canExistAtPoint(const uint8 *args, unsigned int /*argsize*/) {
-	ARG_UINT16(unk1);
-	ARG_UINT16(unk2);
+	ARG_NULL16(); // unknown
+	ARG_NULL16(); // unknown
 	ARG_UINT16(shape);
 	ARG_WORLDPOINT(pt);
 
@@ -1392,10 +1390,7 @@ uint32 CurrentMap::I_canExistAtPoint(const uint8 *args, unsigned int /*argsize*/
 	int32 y = pt.getY();
 	int32 z = pt.getZ();
 
-	if (GAME_IS_CRUSADER) {
-		x *= 2;
-		y *= 2;
-	}
+	World_FromUsecodeXY(x, y);
 
 	const CurrentMap *cm = World::get_instance()->getCurrentMap();
 	bool valid = cm->isValidPosition(x, y, z, shape, 0, 0, 0);

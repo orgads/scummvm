@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -88,7 +87,7 @@ void _game_session::Reset_route_manager() {
 
 	// remove used routes - just keeps the memory limit down
 
-	Zdebug("--new sesssion: reseting route manager service--");
+	Zdebug("--new sesssion: resetting route manager service--");
 }
 
 bool8 _game_session::Is_route_required(PXreal startx, PXreal startz, PXreal destx, PXreal destz) {
@@ -269,7 +268,7 @@ _route_description *_game_session::Fetch_route_desc(uint32 id) {
 
 	// no route at all
 	if (!logic_structs[id]->mega->m_phase)
-		return (0);
+		return (nullptr);
 
 	return (&logic_structs[id]->mega->m_main_route);
 }
@@ -278,7 +277,7 @@ void _route_description::___init() {
 	// nethack diagnostics
 	if (diag_bars)
 		delete[] diag_bars;
-	diag_bars = 0;
+	diag_bars = nullptr;
 
 	number_of_diag_bars = 0;
 
@@ -494,7 +493,7 @@ mcodeFunctionReturnCodes _game_session::fn_route_to_nico(int32 &result, int32 *p
 
 	_feature_info *monica;
 
-	const char *nico_name = NULL;
+	const char *nico_name = nullptr;
 	if (params && params[0]) {
 		nico_name = (const char *)MemoryUtil::resolvePtr(params[0]);
 	}

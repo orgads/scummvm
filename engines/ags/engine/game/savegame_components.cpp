@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,16 +15,16 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "ags/lib/std/map.h"
 #include "ags/shared/ac/audio_clip_type.h"
-#include "ags/engine/ac/character.h"
 #include "ags/shared/ac/common.h"
 #include "ags/shared/ac/dialog_topic.h"
+#include "ags/engine/ac/button.h"
+#include "ags/engine/ac/character.h"
 #include "ags/engine/ac/draw.h"
 #include "ags/engine/ac/dynamic_sprite.h"
 #include "ags/engine/ac/game.h"
@@ -333,11 +333,12 @@ HSaveError ReadGameState(Stream *in, int32_t cmp_ver, const PreservedParams &pp,
 }
 
 HSaveError WriteAudio(Stream *out) {
-	AudioChannelsLock lock;
-
 	// Game content assertion
 	out->WriteInt32(_GP(game).audioClipTypes.size());
-	out->WriteInt32(_GP(game).audioClips.size()); // [ivan-mogilko] not necessary, kept only to avoid changing save format
+	out->WriteInt8(TOTAL_AUDIO_CHANNELS);
+	out->WriteInt8(_GP(game).numGameChannels);
+	out->WriteInt16(0); // reserved 2 bytes (remains of int32)
+
 	// Audio types
 	for (size_t i = 0; i < _GP(game).audioClipTypes.size(); ++i) {
 		_GP(game).audioClipTypes[i].WriteToSavegame(out);
@@ -345,17 +346,17 @@ HSaveError WriteAudio(Stream *out) {
 	}
 
 	// Audio clips and crossfade
-	for (int i = 0; i <= MAX_SOUND_CHANNELS; i++) {
-		auto *ch = lock.GetChannelIfPlaying(i);
-		if ((ch != nullptr) && (ch->_sourceClip != nullptr)) {
-			out->WriteInt32(((ScriptAudioClip *)ch->_sourceClip)->id);
+	for (int i = 0; i < TOTAL_AUDIO_CHANNELS; i++) {
+		auto *ch = AudioChans::GetChannelIfPlaying(i);
+		if ((ch != nullptr) && (ch->_sourceClipID >= 0)) {
+			out->WriteInt32(ch->_sourceClipID);
 			out->WriteInt32(ch->get_pos());
 			out->WriteInt32(ch->_priority);
 			out->WriteInt32(ch->_repeat ? 1 : 0);
-			out->WriteInt32(ch->_vol);
-			out->WriteInt32(ch->_panning);
-			out->WriteInt32(ch->_volAsPercentage);
-			out->WriteInt32(ch->_panningAsPercentage);
+			out->WriteInt32(ch->get_volume255());
+			out->WriteInt32(0); // unused
+			out->WriteInt32(ch->get_volume100());
+			out->WriteInt32(ch->get_panning());
 			out->WriteInt32(ch->get_speed());
 			// since version 1
 			out->WriteInt32(ch->_xSource);
@@ -373,7 +374,7 @@ HSaveError WriteAudio(Stream *out) {
 	out->WriteInt32(_G(current_music_type));
 
 	// Ambient sound
-	for (int i = 0; i < MAX_SOUND_CHANNELS; ++i)
+	for (int i = 0; i < _GP(game).numGameChannels; ++i)
 		_GP(ambient)[i].WriteToFile(out);
 	return HSaveError::None();
 }
@@ -383,10 +384,19 @@ HSaveError ReadAudio(Stream *in, int32_t cmp_ver, const PreservedParams &pp, Res
 	// Game content assertion
 	if (!AssertGameContent(err, in->ReadInt32(), _GP(game).audioClipTypes.size(), "Audio Clip Types"))
 		return err;
-	in->ReadInt32(); // audio clip count
-	/* [ivan-mogilko] looks like it's not necessary to assert, as there's no data serialized for clips
-	if (!AssertGameContent(err, in->ReadInt32(), _GP(game).audioClips.size(), "Audio Clips"))
-	    return err;*/
+	int total_channels, max_game_channels;
+	if (cmp_ver >= 2) {
+		total_channels = in->ReadInt8();
+		max_game_channels = in->ReadInt8();
+		in->ReadInt16(); // reserved 2 bytes
+		if (!AssertCompatLimit(err, total_channels, TOTAL_AUDIO_CHANNELS, "System Audio Channels") ||
+			!AssertCompatLimit(err, max_game_channels, MAX_GAME_CHANNELS, "Game Audio Channels"))
+			return err;
+	} else {
+		total_channels = TOTAL_AUDIO_CHANNELS_v320;
+		max_game_channels = MAX_GAME_CHANNELS_v320;
+		in->ReadInt32(); // unused in prev format ver
+	}
 
 	// Audio types
 	for (size_t i = 0; i < _GP(game).audioClipTypes.size(); ++i) {
@@ -395,7 +405,7 @@ HSaveError ReadAudio(Stream *in, int32_t cmp_ver, const PreservedParams &pp, Res
 	}
 
 	// Audio clips and crossfade
-	for (int i = 0; i <= MAX_SOUND_CHANNELS; ++i) {
+	for (int i = 0; i < total_channels; ++i) {
 		RestoredData::ChannelInfo &chan_info = r_data.AudioChans[i];
 		chan_info.Pos = 0;
 		chan_info.ClipID = in->ReadInt32();
@@ -406,9 +416,9 @@ HSaveError ReadAudio(Stream *in, int32_t cmp_ver, const PreservedParams &pp, Res
 			chan_info.Priority = in->ReadInt32();
 			chan_info.Repeat = in->ReadInt32();
 			chan_info.Vol = in->ReadInt32();
-			chan_info.Pan = in->ReadInt32();
+			in->ReadInt32(); // unused
 			chan_info.VolAsPercent = in->ReadInt32();
-			chan_info.PanAsPercent = in->ReadInt32();
+			chan_info.Pan = in->ReadInt32();
 			chan_info.Speed = 1000;
 			chan_info.Speed = in->ReadInt32();
 			if (cmp_ver >= 1) {
@@ -426,9 +436,9 @@ HSaveError ReadAudio(Stream *in, int32_t cmp_ver, const PreservedParams &pp, Res
 	_G(current_music_type) = in->ReadInt32();
 
 	// Ambient sound
-	for (int i = 0; i < MAX_SOUND_CHANNELS; ++i)
+	for (int i = 0; i < max_game_channels; ++i)
 		_GP(ambient)[i].ReadFromFile(in);
-	for (int i = 1; i < MAX_SOUND_CHANNELS; ++i) {
+	for (int i = NUM_SPEECH_CHANS; i < max_game_channels; ++i) {
 		if (_GP(ambient)[i].channel == 0) {
 			r_data.DoAmbient[i] = 0;
 		} else {
@@ -558,9 +568,10 @@ HSaveError WriteGUI(Stream *out) {
 
 	// Animated buttons
 	WriteFormatTag(out, "AnimatedButtons");
-	out->WriteInt32(_G(numAnimButs));
-	for (int i = 0; i < _G(numAnimButs); ++i)
-		_G(animbuts)[i].WriteToFile(out);
+	size_t num_abuts = GetAnimatingButtonCount();
+	out->WriteInt32(num_abuts);
+	for (size_t i = 0; i < num_abuts; ++i)
+		GetAnimatingButtonByIndex(i)->WriteToFile(out);
 	return HSaveError::None();
 }
 
@@ -620,13 +631,13 @@ HSaveError ReadGUI(Stream *in, int32_t cmp_ver, const PreservedParams &pp, Resto
 	// Animated buttons
 	if (!AssertFormatTagStrict(err, in, "AnimatedButtons"))
 		return err;
+	RemoveAllButtonAnimations();
 	int anim_count = in->ReadInt32();
-	if (!AssertCompatLimit(err, anim_count, MAX_ANIMATING_BUTTONS, "animated buttons"))
-		return err;
-	_G(numAnimButs) = anim_count;
-	for (int i = 0; i < _G(numAnimButs); ++i)
-		_G(animbuts)[i].ReadFromFile(in);
-	return err;
+	for (int i = 0; i < anim_count; ++i) {
+		AnimatingGUIButton abut;
+		abut.ReadFromFile(in);
+		AddButtonAnimation(abut);
+	}	return err;
 }
 
 HSaveError WriteInventory(Stream *out) {
@@ -666,7 +677,7 @@ HSaveError ReadMouseCursors(Stream *in, int32_t cmp_ver, const PreservedParams &
 	if (!AssertGameContent(err, in->ReadInt32(), _GP(game).numcursors, "Mouse Cursors"))
 		return err;
 	for (int i = 0; i < _GP(game).numcursors; ++i) {
-		_GP(game).mcurs[i].ReadFromSavegame(in);
+		_GP(game).mcurs[i].ReadFromSavegame(in, cmp_ver);
 	}
 	return err;
 }
@@ -674,12 +685,12 @@ HSaveError ReadMouseCursors(Stream *in, int32_t cmp_ver, const PreservedParams &
 HSaveError WriteViews(Stream *out) {
 	out->WriteInt32(_GP(game).numviews);
 	for (int view = 0; view < _GP(game).numviews; ++view) {
-		out->WriteInt32(_G(views)[view].numLoops);
-		for (int loop = 0; loop < _G(views)[view].numLoops; ++loop) {
-			out->WriteInt32(_G(views)[view].loops[loop].numFrames);
-			for (int frame = 0; frame < _G(views)[view].loops[loop].numFrames; ++frame) {
-				out->WriteInt32(_G(views)[view].loops[loop].frames[frame].sound);
-				out->WriteInt32(_G(views)[view].loops[loop].frames[frame].pic);
+		out->WriteInt32(_GP(views)[view].numLoops);
+		for (int loop = 0; loop < _GP(views)[view].numLoops; ++loop) {
+			out->WriteInt32(_GP(views)[view].loops[loop].numFrames);
+			for (int frame = 0; frame < _GP(views)[view].loops[loop].numFrames; ++frame) {
+				out->WriteInt32(_GP(views)[view].loops[loop].frames[frame].sound);
+				out->WriteInt32(_GP(views)[view].loops[loop].frames[frame].pic);
 			}
 		}
 	}
@@ -691,16 +702,16 @@ HSaveError ReadViews(Stream *in, int32_t cmp_ver, const PreservedParams &pp, Res
 	if (!AssertGameContent(err, in->ReadInt32(), _GP(game).numviews, "Views"))
 		return err;
 	for (int view = 0; view < _GP(game).numviews; ++view) {
-		if (!AssertGameObjectContent(err, in->ReadInt32(), _G(views)[view].numLoops,
+		if (!AssertGameObjectContent(err, in->ReadInt32(), _GP(views)[view].numLoops,
 		                             "Loops", "View", view))
 			return err;
-		for (int loop = 0; loop < _G(views)[view].numLoops; ++loop) {
-			if (!AssertGameObjectContent2(err, in->ReadInt32(), _G(views)[view].loops[loop].numFrames,
+		for (int loop = 0; loop < _GP(views)[view].numLoops; ++loop) {
+			if (!AssertGameObjectContent2(err, in->ReadInt32(), _GP(views)[view].loops[loop].numFrames,
 			                              "Frame", "View", view, "Loop", loop))
 				return err;
-			for (int frame = 0; frame < _G(views)[view].loops[loop].numFrames; ++frame) {
-				_G(views)[view].loops[loop].frames[frame].sound = in->ReadInt32();
-				_G(views)[view].loops[loop].frames[frame].pic = in->ReadInt32();
+			for (int frame = 0; frame < _GP(views)[view].loops[loop].numFrames; ++frame) {
+				_GP(views)[view].loops[loop].frames[frame].sound = in->ReadInt32();
+				_GP(views)[view].loops[loop].frames[frame].pic = in->ReadInt32();
 			}
 		}
 	}
@@ -747,26 +758,24 @@ HSaveError ReadDynamicSprites(Stream *in, int32_t cmp_ver, const PreservedParams
 }
 
 HSaveError WriteOverlays(Stream *out) {
-	out->WriteInt32(_G(numscreenover));
-	for (int i = 0; i < _G(numscreenover); ++i) {
-		_G(screenover)[i].WriteToFile(out);
-		serialize_bitmap(_G(screenover)[i].pic, out);
+	out->WriteInt32(_GP(screenover).size());
+	for (const auto &over : _GP(screenover)) {
+		over.WriteToFile(out);
+		serialize_bitmap(over.pic, out);
 	}
 	return HSaveError::None();
 }
 
 HSaveError ReadOverlays(Stream *in, int32_t cmp_ver, const PreservedParams &pp, RestoredData &r_data) {
-	HSaveError err;
-	int over_count = in->ReadInt32();
-	if (!AssertCompatLimit(err, over_count, MAX_SCREEN_OVERLAYS, "overlays"))
-		return err;
-	_G(numscreenover) = over_count;
-	for (int i = 0; i < _G(numscreenover); ++i) {
-		_G(screenover)[i].ReadFromFile(in, cmp_ver);
-		if (_G(screenover)[i].hasSerializedBitmap)
-			_G(screenover)[i].pic = read_serialized_bitmap(in);
+	size_t over_count = in->ReadInt32();
+	for (size_t i = 0; i < over_count; ++i) {
+		ScreenOverlay over;
+		over.ReadFromFile(in, cmp_ver);
+		if (over.hasSerializedBitmap)
+			over.pic = read_serialized_bitmap(in);
+		_GP(screenover).push_back(over);
 	}
-	return err;
+	return HSaveError::None();
 }
 
 HSaveError WriteDynamicSurfaces(Stream *out) {
@@ -869,7 +878,7 @@ HSaveError ReadRoomStates(Stream *in, int32_t cmp_ver, const PreservedParams &pp
 			if (!AssertFormatTagStrict(err, in, "RoomState", true))
 				return err;
 			RoomStatus *roomstat = getRoomStatus(id);
-			roomstat->ReadFromSavegame(in);
+			roomstat->ReadFromSavegame(in, cmp_ver);
 			if (!AssertFormatTagStrict(err, in, "RoomState", false))
 				return err;
 		}
@@ -914,7 +923,7 @@ HSaveError WriteThisRoom(Stream *out) {
 	// persistent room's indicator
 	const bool persist = _G(displayed_room) < MAX_ROOMS;
 	out->WriteBool(persist);
-	// write the current _GP(troom) state, in case they save in temporary room
+	// write the current troom state, in case they save in temporary room
 	if (!persist)
 		_GP(troom).WriteToSavegame(out);
 	return HSaveError::None();
@@ -952,7 +961,7 @@ HSaveError ReadThisRoom(Stream *in, int32_t cmp_ver, const PreservedParams &pp, 
 	if (!AssertCompatLimit(err, objmls_count, CHMLSOFFS, "room object move lists"))
 		return err;
 	for (int i = 0; i < objmls_count; ++i) {
-		err = _G(mls)[i].ReadFromFile(in, cmp_ver > 0 ? 1 : 0);
+		err = _G(mls)[i].ReadFromFile(in, cmp_ver > 0 ? 1 : 0); // FIXME!!
 		if (!err)
 			return err;
 	}
@@ -960,9 +969,9 @@ HSaveError ReadThisRoom(Stream *in, int32_t cmp_ver, const PreservedParams &pp, 
 	// save the new room music vol for later use
 	r_data.RoomVolume = (RoomVolumeMod)in->ReadInt32();
 
-	// read the current _GP(troom) state, in case they saved in temporary room
+	// read the current troom state, in case they saved in temporary room
 	if (!in->ReadBool())
-		_GP(troom).ReadFromSavegame(in);
+		_GP(troom).ReadFromSavegame(in, cmp_ver);
 
 	return HSaveError::None();
 }
@@ -1017,7 +1026,7 @@ ComponentHandler ComponentHandlers[] = {
 	},
 	{
 		"Audio",
-		1,
+		2,
 		0,
 		WriteAudio,
 		ReadAudio
@@ -1052,7 +1061,7 @@ ComponentHandler ComponentHandlers[] = {
 	},
 	{
 		"Mouse Cursors",
-		0,
+		1,
 		0,
 		WriteMouseCursors,
 		ReadMouseCursors
@@ -1073,7 +1082,7 @@ ComponentHandler ComponentHandlers[] = {
 	},
 	{
 		"Overlays",
-		1,
+		2,
 		0,
 		WriteOverlays,
 		ReadOverlays
@@ -1094,14 +1103,14 @@ ComponentHandler ComponentHandlers[] = {
 	},
 	{
 		"Room States",
-		0,
+		2,
 		0,
 		WriteRoomStates,
 		ReadRoomStates
 	},
 	{
 		"Loaded Room State",
-		1,
+		2, // should correspond to "Room States"
 		0,
 		WriteThisRoom,
 		ReadThisRoom
@@ -1192,7 +1201,8 @@ HSaveError ReadComponent(Stream *in, SvgCmpReadHelper &hlp, ComponentInfo &info)
 	if (!err)
 		return err;
 	if (in->GetPosition() - info.DataOffset != info.DataSize)
-		return new SavegameError(kSvgErr_ComponentSizeMismatch, String::FromFormat("Expected: %lld, actual: %lld", info.DataSize, in->GetPosition() - info.DataOffset));
+		return new SavegameError(kSvgErr_ComponentSizeMismatch, String::FromFormat("Expected: %llu, actual: %llu",
+			static_cast<int64>(info.DataSize), static_cast<int64>(in->GetPosition() - info.DataOffset)));
 	if (!AssertFormatTag(in, info.Name, false))
 		return new SavegameError(kSvgErr_ComponentClosingTagFormat);
 	return HSaveError::None();

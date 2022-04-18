@@ -1,22 +1,21 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
+ * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -42,10 +41,10 @@
 #include "common/system.h"
 #include "common/textconsole.h"
 
-#if defined(USE_GLES2) || defined(USE_OPENGL_SHADERS)
+#if defined(USE_OPENGL_SHADERS)
 
 #include "graphics/surface.h"
-#include "graphics/pixelbuffer.h"
+#include "graphics/opengl/context.h"
 #include "graphics/projection.h"
 
 #include "engines/grim/actor.h"
@@ -212,7 +211,7 @@ GfxOpenGLS::GfxOpenGLS() {
 	_fov = -1.0;
 	_nclip = -1;
 	_fclip = -1;
-	_selectedTexture = NULL;
+	_selectedTexture = nullptr;
 	_emergTexture = 0;
 	_maxLights = 8;
 	_lights = new GLSLight[_maxLights];
@@ -273,7 +272,7 @@ void GfxOpenGLS::setupZBuffer() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, format, nextHigher2((int)width), nextHigher2((int)height), 0, format, type, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, format, nextHigher2((int)width), nextHigher2((int)height), 0, format, type, nullptr);
 	glActiveTexture(GL_TEXTURE0);
 
 	_zBufTexCrop = Math::Vector2d(width / nextHigher2((int)width), height / nextHigher2((int)height));
@@ -325,7 +324,7 @@ void GfxOpenGLS::setupPrimitives() {
 	_currentPrimitive = 0;
 	for (uint32 i = 0; i < numVBOs; ++i) {
 		glBindBuffer(GL_ARRAY_BUFFER, _primitiveVBOs[i]);
-		glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
 	}
 
 	if (g_grim->getGameType() == GType_MONKEY4)
@@ -333,7 +332,7 @@ void GfxOpenGLS::setupPrimitives() {
 
 	glGenBuffers(1, &_irisVBO);
 	glBindBuffer(GL_ARRAY_BUFFER, _irisVBO);
-	glBufferData(GL_ARRAY_BUFFER, 20 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 20 * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
 
 	_irisProgram->enableVertexAttribute("position", _irisVBO, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
 
@@ -374,18 +373,18 @@ GLuint GfxOpenGLS::nextPrimitive() {
 void GfxOpenGLS::setupShaders() {
 	bool isEMI = g_grim->getGameType() == GType_MONKEY4;
 
-	static const char* commonAttributes[] = {"position", "texcoord", NULL};
+	static const char* commonAttributes[] = {"position", "texcoord", nullptr};
 	_backgroundProgram = OpenGL::ShaderGL::fromFiles(isEMI ? "emi_background" : "grim_background", commonAttributes);
 	_smushProgram = OpenGL::ShaderGL::fromFiles("grim_smush", commonAttributes);
 	_textProgram = OpenGL::ShaderGL::fromFiles("grim_text", commonAttributes);
 	_emergProgram = OpenGL::ShaderGL::fromFiles("grim_emerg", commonAttributes);
 
-	static const char* actorAttributes[] = {"position", "texcoord", "color", "normal", NULL};
+	static const char* actorAttributes[] = {"position", "texcoord", "color", "normal", nullptr};
 	_actorProgram = OpenGL::ShaderGL::fromFiles(isEMI ? "emi_actor" : "grim_actor", actorAttributes);
 	_actorLightsProgram = OpenGL::ShaderGL::fromFiles(isEMI ? "emi_actorlights" : "grim_actorlights", actorAttributes);
 	_spriteProgram = OpenGL::ShaderGL::fromFiles(isEMI ? "emi_sprite" : "grim_actor", actorAttributes);
 
-	static const char* primAttributes[] = { "position", NULL };
+	static const char* primAttributes[] = { "position", nullptr };
 	_shadowPlaneProgram = OpenGL::ShaderGL::fromFiles("grim_shadowplane", primAttributes);
 	_primitiveProgram = OpenGL::ShaderGL::fromFiles("grim_primitive", primAttributes);
 
@@ -406,7 +405,7 @@ void GfxOpenGLS::setupShaders() {
 	setupPrimitives();
 
 	if (!isEMI) {
-		_blastVBO = OpenGL::ShaderGL::createBuffer(GL_ARRAY_BUFFER, 128 * 16 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
+		_blastVBO = OpenGL::ShaderGL::createBuffer(GL_ARRAY_BUFFER, 128 * 16 * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
 	}
 }
 
@@ -523,8 +522,75 @@ void GfxOpenGLS::flipBuffer() {
 	g_system->updateScreen();
 }
 
-void GfxOpenGLS::getScreenBoundingBox(const Mesh *mesh, int *x1, int *y1, int *x2, int *y2) {
+void GfxOpenGLS::getScreenBoundingBox(const Mesh *model, int *x1, int *y1, int *x2, int *y2) {
+	if (_currentShadowArray) {
+		*x1 = -1;
+		*y1 = -1;
+		*x2 = -1;
+		*y2 = -1;
+		return;
+	}
 
+	Math::Matrix4 modelMatrix = _currentActor->getFinalMatrix();
+	Math::Matrix4 mvpMatrix = _mvpMatrix * modelMatrix;
+
+	double top = 1000;
+	double right = -1000;
+	double left = 1000;
+	double bottom = -1000;
+
+	Math::Vector3d obj;
+	float *pVertices = nullptr;
+
+	for (int i = 0; i < model->_numFaces; i++) {
+		for (int j = 0; j < model->_faces[i].getNumVertices(); j++) {
+			pVertices = model->_vertices + 3 * model->_faces[i].getVertex(j);
+
+			obj.set(*(pVertices), *(pVertices + 1), *(pVertices + 2));
+
+			Math::Vector4d v = Math::Vector4d(obj.x(), obj.y(), obj.z(), 1.0f);
+			v = mvpMatrix * v;
+			v /= v.w();
+
+			double winX = (1 + v.x()) / 2.0f * _gameWidth;
+			double winY = (1 + v.y()) / 2.0f * _gameHeight;
+
+			if (winX > right)
+				right = winX;
+			if (winX < left)
+				left = winX;
+			if (winY < top)
+				top = winY;
+			if (winY > bottom)
+				bottom = winY;
+		}
+	}
+
+	double t = bottom;
+	bottom = _gameHeight - top;
+	top = _gameHeight - t;
+
+	if (left < 0)
+		left = 0;
+	if (right >= _gameWidth)
+		right = _gameWidth - 1;
+	if (top < 0)
+		top = 0;
+	if (bottom >= _gameHeight)
+		bottom = _gameHeight - 1;
+
+	if (top >= _gameHeight || left >= _gameWidth || bottom < 0 || right < 0) {
+		*x1 = -1;
+		*y1 = -1;
+		*x2 = -1;
+		*y2 = -1;
+		return;
+	}
+
+	*x1 = (int)left;
+	*y1 = (int)(_gameHeight - bottom);
+	*x2 = (int)right;
+	*y2 = (int)(_gameHeight - top);
 }
 
 void GfxOpenGLS::getScreenBoundingBox(const EMIModel *model, int *x1, int *y1, int *x2, int *y2) {
@@ -765,33 +831,83 @@ void GfxOpenGLS::startActorDraw(const Actor *actor) {
 
 	_actorLightsProgram->setUniform("hasAmbient", _hasAmbientLight);
 	if (_lightsEnabled) {
+		// Allocate all variables in one chunk
+		static const unsigned int numUniforms = 4;
+		static const unsigned int uniformSize = _maxLights * 4;
+		float *lightsData = new float[numUniforms * uniformSize];
 		for (int i = 0; i < _maxLights; ++i) {
 			const GLSLight &l = _lights[i];
-			Common::String uniform;
-			uniform = Common::String::format("lightsPosition[%u]", i);
 
-			_actorLightsProgram->setUniform(uniform.c_str(), viewMatrix * l._position);
+			// lightsPosition
+			Math::Vector4d tmp = viewMatrix * l._position;
 
+			lightsData[0 * uniformSize + 4 * i + 0] = tmp.x();
+			lightsData[0 * uniformSize + 4 * i + 1] = tmp.y();
+			lightsData[0 * uniformSize + 4 * i + 2] = tmp.z();
+			lightsData[0 * uniformSize + 4 * i + 3] = tmp.w();
+
+			// lightsDirection
 			Math::Vector4d direction = l._direction;
 			direction.w() = 0.0;
 			viewMatrix.transformVector(&direction);
 			direction.w() = l._direction.w();
 
-			uniform = Common::String::format("lightsDirection[%u]", i);
-			_actorLightsProgram->setUniform(uniform.c_str(), direction);
+			lightsData[1 * uniformSize + 4 * i + 0] = direction.x();
+			lightsData[1 * uniformSize + 4 * i + 1] = direction.y();
+			lightsData[1 * uniformSize + 4 * i + 2] = direction.z();
+			lightsData[1 * uniformSize + 4 * i + 3] = direction.w();
 
-			uniform = Common::String::format("lightsColor[%u]", i);
-			_actorLightsProgram->setUniform(uniform.c_str(), l._color);
+			// lightsColor
+			lightsData[2 * uniformSize + 4 * i + 0] = l._color.x();
+			lightsData[2 * uniformSize + 4 * i + 1] = l._color.y();
+			lightsData[2 * uniformSize + 4 * i + 2] = l._color.z();
+			lightsData[2 * uniformSize + 4 * i + 3] = l._color.w();
 
-			uniform = Common::String::format("lightsParams[%u]", i);
-			_actorLightsProgram->setUniform(uniform.c_str(), l._params);
+			// lightsParams
+			lightsData[3 * uniformSize + 4 * i + 0] = l._params.x();
+			lightsData[3 * uniformSize + 4 * i + 1] = l._params.y();
+			lightsData[3 * uniformSize + 4 * i + 2] = l._params.z();
+			lightsData[3 * uniformSize + 4 * i + 3] = l._params.w();
 		}
+
+		Common::String uniform;
+		GLint uniformPos;
+
+		uniform = Common::String::format("lightsPosition");
+		uniformPos = _actorLightsProgram->getUniformLocation(uniform.c_str());
+		if (uniformPos == -1) {
+			error("No uniform named '%s'", uniform.c_str());
+		}
+		glUniform4fv(uniformPos, _maxLights, &lightsData[0 * uniformSize]);
+
+		uniform = Common::String::format("lightsDirection");
+		uniformPos = _actorLightsProgram->getUniformLocation(uniform.c_str());
+		if (uniformPos == -1) {
+			error("No uniform named '%s'", uniform.c_str());
+		}
+		glUniform4fv(uniformPos, _maxLights, &lightsData[1 * uniformSize]);
+
+		uniform = Common::String::format("lightsColor");
+		uniformPos = _actorLightsProgram->getUniformLocation(uniform.c_str());
+		if (uniformPos == -1) {
+			error("No uniform named '%s'", uniform.c_str());
+		}
+		glUniform4fv(uniformPos, _maxLights, &lightsData[2 * uniformSize]);
+
+		uniform = Common::String::format("lightsParams");
+		uniformPos = _actorLightsProgram->getUniformLocation(uniform.c_str());
+		if (uniformPos == -1) {
+			error("No uniform named '%s'", uniform.c_str());
+		}
+		glUniform4fv(uniformPos, _maxLights, &lightsData[3 * uniformSize]);
+
+		delete[] lightsData;
 	}
 }
 
 
 void GfxOpenGLS::finishActorDraw() {
-	_currentActor = NULL;
+	_currentActor = nullptr;
 	glDisable(GL_POLYGON_OFFSET_FILL);
 	if (g_grim->getGameType() == GType_MONKEY4) {
 		glDisable(GL_CULL_FACE);
@@ -857,8 +973,8 @@ void GfxOpenGLS::drawShadowPlanes() {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sud->_indicesVBO);
 	const uint32 attribPos = _shadowPlaneProgram->getAttribute("position")._idx;
 	glEnableVertexAttribArray(attribPos);
-	glVertexAttribPointer(attribPos, 3, GL_FLOAT, GL_TRUE, 3 * sizeof(float), 0);
-	glDrawElements(GL_TRIANGLES, 3 * sud->_numTriangles, GL_UNSIGNED_SHORT, 0);
+	glVertexAttribPointer(attribPos, 3, GL_FLOAT, GL_TRUE, 3 * sizeof(float), nullptr);
+	glDrawElements(GL_TRIANGLES, 3 * sud->_numTriangles, GL_UNSIGNED_SHORT, nullptr);
 
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
@@ -954,13 +1070,12 @@ void GfxOpenGLS::drawEMIModelFace(const EMIModel* model, const EMIMeshFace* face
 	actorShader->use();
 	bool textured = face->_hasTexture && !_currentShadowArray;
 	actorShader->setUniform("textured", textured ? GL_TRUE : GL_FALSE);
-	actorShader->setUniform("swapRandB", _selectedTexture->_colorFormat == BM_BGRA || _selectedTexture->_colorFormat == BM_BGR888);
-	actorShader->setUniform("useVertexAlpha", _selectedTexture->_colorFormat == BM_BGRA);
+	actorShader->setUniform("useVertexAlpha", _selectedTexture->_hasAlpha);
 	actorShader->setUniform1f("meshAlpha", (model->_meshAlphaMode == Actor::AlphaReplace) ? model->_meshAlpha : 1.0f);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, face->_indicesEBO);
 
-	glDrawElements(GL_TRIANGLES, 3 * face->_faceLength, GL_UNSIGNED_SHORT, 0);
+	glDrawElements(GL_TRIANGLES, 3 * face->_faceLength, GL_UNSIGNED_SHORT, nullptr);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
@@ -977,7 +1092,7 @@ void GfxOpenGLS::drawMesh(const Mesh *mesh) {
 	actorShader->use();
 	actorShader->setUniform("extraMatrix", _matrixStack.top());
 
-	const Material *curMaterial = NULL;
+	const Material *curMaterial = nullptr;
 	for (int i = 0; i < mesh->_numFaces;) {
 		const MeshFace *face = &mesh->_faces[i];
 
@@ -1012,7 +1127,7 @@ void GfxOpenGLS::drawDimPlane() {
 	_dimPlaneProgram->setUniform1f("dim", _dimLevel);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _quadEBO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	glEnable(GL_DEPTH_TEST);
@@ -1058,7 +1173,6 @@ void GfxOpenGLS::drawSprite(const Sprite *sprite) {
 	extraMatrix.transpose();
 	_spriteProgram->setUniform("extraMatrix", extraMatrix);
 	_spriteProgram->setUniform("textured", GL_TRUE);
-	_spriteProgram->setUniform("swapRandB", _selectedTexture->_colorFormat == BM_BGRA || _selectedTexture->_colorFormat == BM_BGR888);
 	if (g_grim->getGameType() == GType_GRIM) {
 		_spriteProgram->setUniform1f("alphaRef", 0.5f);
 	} else if (sprite->_flags2 & Sprite::AlphaTest) {
@@ -1073,7 +1187,7 @@ void GfxOpenGLS::drawSprite(const Sprite *sprite) {
 	_spriteProgram->setUniform("uniformColor", color);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _quadEBO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
@@ -1147,7 +1261,7 @@ void GfxOpenGLS::createTexture(Texture *texture, const uint8 *data, const CMap *
 	char *texdata = new char[texture->_width * texture->_height * 4];
 	char *texdatapos = texdata;
 
-	if (cmap != NULL) { // EMI doesn't have colour-maps
+	if (cmap != nullptr) { // EMI doesn't have colour-maps
 		int bytes = 4;
 		for (int y = 0; y < texture->_height; y++) {
 			for (int x = 0; x < texture->_width; x++) {
@@ -1169,29 +1283,6 @@ void GfxOpenGLS::createTexture(Texture *texture, const uint8 *data, const CMap *
 		memcpy(texdata, data, texture->_width * texture->_height * texture->_bpp);
 	}
 
-	GLuint format = 0;
-	GLuint internalFormat = 0;
-	if (texture->_colorFormat == BM_RGBA) {
-		format = GL_RGBA;
-		internalFormat = GL_RGBA;
-	} else if (texture->_colorFormat == BM_BGRA) {
-#ifdef USE_GLES2
-		format = GL_RGBA;
-		internalFormat = GL_RGBA;
-#else
-		format = GL_BGRA;
-		internalFormat = GL_RGBA;
-#endif
-	} else { // The only other colorFormat we load right now is BGR
-#ifdef USE_GLES2
-		format = GL_RGB;
-		internalFormat = GL_RGB;
-#else
-		format = GL_BGR;
-		internalFormat = GL_RGBA;
-#endif
-	}
-
 	GLuint *textures = (GLuint *)texture->_texture;
 	glBindTexture(GL_TEXTURE_2D, textures[0]);
 
@@ -1206,7 +1297,7 @@ void GfxOpenGLS::createTexture(Texture *texture, const uint8 *data, const CMap *
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, texture->_width, texture->_height, 0, format, GL_UNSIGNED_BYTE, texdata);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->_width, texture->_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texdata);
 	delete[] texdata;
 }
 
@@ -1232,14 +1323,16 @@ void GfxOpenGLS::destroyTexture(Texture *texture) {
 void GfxOpenGLS::createBitmap(BitmapData *bitmap) {
 	if (bitmap->_format != 1) {
 		for (int pic = 0; pic < bitmap->_numImages; pic++) {
-			uint16 *zbufPtr = reinterpret_cast<uint16 *>(bitmap->getImageData(pic).getRawBuffer());
+			uint16 *zbufPtr = reinterpret_cast<uint16 *>(const_cast<void *>(bitmap->getImageData(pic).getPixels()));
 			for (int i = 0; i < (bitmap->_width * bitmap->_height); i++) {
 				uint16 val = READ_LE_UINT16(zbufPtr + i);
 				// fix the value if it is incorrectly set to the bitmap transparency color
 				if (val == 0xf81f) {
 					val = 0;
 				}
-				zbufPtr[i] = 0xffff - ((uint32)val) * 0x10000 / 100 / (0x10000 - val);
+				// This is later read as a LA pair when filling texture
+				// with L being used as the LSB in fragment shader
+				zbufPtr[i] = TO_LE_16(0xffff - ((uint32)val) * 0x10000 / 100 / (0x10000 - val));
 			}
 		}
 	}
@@ -1251,8 +1344,8 @@ void GfxOpenGLS::createBitmap(BitmapData *bitmap) {
 		bitmap->_texIds = textures;
 		glGenTextures(bitmap->_numTex * bitmap->_numImages, textures);
 
-		byte *texData = 0;
-		byte *texOut = 0;
+		byte *texData = nullptr;
+		const byte *texOut = nullptr;
 
 		GLint format = GL_RGBA;
 		GLint type = GL_UNSIGNED_BYTE;
@@ -1262,11 +1355,11 @@ void GfxOpenGLS::createBitmap(BitmapData *bitmap) {
 
 		for (int pic = 0; pic < bitmap->_numImages; pic++) {
 			if (bitmap->_format == 1 && bitmap->_bpp == 16 && bitmap->_colorFormat != BM_RGB1555) {
-				if (texData == 0)
+				if (texData == nullptr)
 					texData = new byte[bytes * bitmap->_width * bitmap->_height];
 				// Convert data to 32-bit RGBA format
 				byte *texDataPtr = texData;
-				uint16 *bitmapData = reinterpret_cast<uint16 *>(bitmap->getImageData(pic).getRawBuffer());
+				const uint16 *bitmapData = reinterpret_cast<const uint16 *>(bitmap->getImageData(pic).getPixels());
 				for (int i = 0; i < bitmap->_width * bitmap->_height; i++, texDataPtr += bytes, bitmapData++) {
 					uint16 pixel = *bitmapData;
 					int r = pixel >> 11;
@@ -1285,9 +1378,9 @@ void GfxOpenGLS::createBitmap(BitmapData *bitmap) {
 				texOut = texData;
 			} else if (bitmap->_format == 1 && bitmap->_colorFormat == BM_RGB1555) {
 				bitmap->convertToColorFormat(pic, Graphics::PixelFormat(4, 8, 8, 8, 8, 0, 8, 16, 24));
-				texOut = (byte *)bitmap->getImageData(pic).getRawBuffer();
+				texOut = (const byte *)bitmap->getImageData(pic).getPixels();
 			} else {
-				texOut = (byte *)bitmap->getImageData(pic).getRawBuffer();
+				texOut = (const byte *)bitmap->getImageData(pic).getPixels();
 			}
 
 			int actualWidth = nextHigher2(bitmap->_width);
@@ -1298,7 +1391,7 @@ void GfxOpenGLS::createBitmap(BitmapData *bitmap) {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexImage2D(GL_TEXTURE_2D, 0, format, actualWidth, actualHeight, 0, format, type, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, format, actualWidth, actualHeight, 0, format, type, nullptr);
 
 			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, bitmap->_width, bitmap->_height, format, type, texOut);
 		}
@@ -1317,8 +1410,8 @@ void GfxOpenGLS::createBitmap(BitmapData *bitmap) {
 		}
 	} else {
 		bitmap->_numTex = 0;
-		bitmap->_texIds = NULL;
-		bitmap->_userData = NULL;
+		bitmap->_texIds = nullptr;
+		bitmap->_userData = nullptr;
 	}
 }
 
@@ -1382,7 +1475,7 @@ void GfxOpenGLS::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, 
 			M.getRow(2) << 0 << 0 << 0;
 			shader->setUniform("rot", M);
 		}
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
 
 		glDisable(GL_BLEND);
 		glDepthMask(GL_TRUE);
@@ -1390,7 +1483,8 @@ void GfxOpenGLS::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, 
 	} else {
 		// Only draw the manual zbuffer when enabled
 		if (bitmap->getActiveImage() - 1 < bitmap->getNumImages()) {
-			drawDepthBitmap(dx, dy, bitmap->getWidth(), bitmap->getHeight(), (char *)bitmap->getData(bitmap->getActiveImage() - 1).getRawBuffer());
+			drawDepthBitmap(bitmap->getId(), dx, dy, bitmap->getWidth(), bitmap->getHeight(),
+			                (char *)const_cast<void *>(bitmap->getData(bitmap->getActiveImage() - 1).getPixels()));
 		} else {
 			warning("zbuffer image has index out of bounds! %d/%d", bitmap->getActiveImage(), bitmap->getNumImages());
 		}
@@ -1398,15 +1492,26 @@ void GfxOpenGLS::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, 
 	}
 }
 
-void GfxOpenGLS::drawDepthBitmap(int x, int y, int w, int h, char *data) {
+void GfxOpenGLS::drawDepthBitmap(int bitmapId, int x, int y, int w, int h, char *data) {
+	static int prevId = -1;
 	static int prevX = -1, prevY = -1;
-	static char *prevData = NULL;
+	static int prevW = -1, prevH = -1;
+	static char *prevData = nullptr;
 
-	if (prevX == x && prevY == y && data == prevData)
+	// Sometimes the data pointer is reused by the allocator between bitmaps
+	// Use the bitmap ID to ensure we don't prevent an expected update
+	if (bitmapId == prevId &&
+	        prevX == x && prevY == y &&
+	        prevW == w && prevH == h &&
+	        data == prevData) {
 		return;
+	}
 
+	prevId = bitmapId;
 	prevX = x;
 	prevY = y;
+	prevW = w;
+	prevH = h;
 	prevData = data;
 
 	glActiveTexture(GL_TEXTURE1);
@@ -1422,7 +1527,7 @@ void GfxOpenGLS::destroyBitmap(BitmapData *bitmap) {
 	if (textures) {
 		glDeleteTextures(bitmap->_numTex * bitmap->_numImages, textures);
 		delete[] textures;
-		bitmap->_texIds = 0;
+		bitmap->_texIds = nullptr;
 	}
 	OpenGL::ShaderGL *shader = (OpenGL::ShaderGL *)bitmap->_userData;
 	if (g_grim->getGameType() == GType_MONKEY4) {
@@ -1475,9 +1580,7 @@ void GfxOpenGLS::createFont(Font *font) {
 		size = 64;
 
 	uint arraySize = size * size * bpp * charsWide * charsHigh;
-	byte *temp = new byte[arraySize];
-
-	memset(temp, 0, arraySize);
+	byte *temp = new byte[arraySize]();
 
 	FontUserData *userData = new FontUserData;
 	font->setUserData(userData);
@@ -1615,7 +1718,7 @@ void GfxOpenGLS::drawTextObject(const TextObject *text) {
 	_textProgram->setUniform("color", colors);
 	glBindTexture(GL_TEXTURE_2D, td->texture);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _quadEBO);
-	glDrawElements(GL_TRIANGLES, td->characters * 6, GL_UNSIGNED_SHORT, 0);
+	glDrawElements(GL_TRIANGLES, td->characters * 6, GL_UNSIGNED_SHORT, nullptr);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glEnable(GL_DEPTH_TEST);
 }
@@ -1625,7 +1728,7 @@ void GfxOpenGLS::destroyTextObject(TextObject *text) {
 	if (!text->isBlastDraw()) {
 		glDeleteBuffers(1, &td->shader->getAttributeAt(0)._vbo);
 	}
-	text->setUserData(NULL);
+	text->setUserData(nullptr);
 
 	delete td->shader;
 	delete td;
@@ -1774,8 +1877,7 @@ void GfxOpenGLS::drawEmergString(int x, int y, const char *text, const Color &fg
 }
 
 void GfxOpenGLS::loadEmergFont() {
-	uint8 *atlas = new uint8[128 * 128];
-	memset(atlas, 0, 128 * 128);
+	uint8 *atlas = new uint8[128 * 128]();
 
 	for (int c = 32; c < 128; ++c) {
 		int blockrow = c / 16;
@@ -1954,7 +2056,7 @@ void GfxOpenGLS::prepareMovieFrame(Graphics::Surface* frame) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, frameFormat, nextHigher2(width), nextHigher2(height), 0, frameFormat, frameType, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, frameFormat, nextHigher2(width), nextHigher2(height), 0, frameFormat, frameType, nullptr);
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, frame->format.bytesPerPixel);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, frameFormat, frameType, bitmap);
@@ -1976,7 +2078,7 @@ void GfxOpenGLS::drawMovieFrame(int offsetX, int offsetY) {
 	_smushProgram->setUniform("swizzle", _smushSwizzle);
 	glBindTexture(GL_TEXTURE_2D, _smushTexId);
 
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glEnable(GL_DEPTH_TEST);
@@ -2087,7 +2189,7 @@ void GfxOpenGLS::createMesh(Mesh *mesh) {
 	}
 
 	if (meshInfo.empty()) {
-		mesh->_userData = NULL;
+		mesh->_userData = nullptr;
 		return;
 	}
 
@@ -2138,33 +2240,40 @@ static void readPixels(int x, int y, int width, int height, byte *buffer) {
 }
 
 Bitmap *GfxOpenGLS::getScreenshot(int w, int h, bool useStored) {
-	Graphics::PixelBuffer src(Graphics::PixelFormat(4, 8, 8, 8, 8, 0, 8, 16, 24), _screenWidth * _screenHeight, DisposeAfterUse::YES);
+	Graphics::Surface src;
+	src.create(_screenWidth, _screenHeight, Graphics::PixelFormat(4, 8, 8, 8, 8, 0, 8, 16, 24));
+	Bitmap *bmp;
+
 	if (useStored) {
-#ifdef USE_GLES2
-		GLuint frameBuffer;
-		glGenFramebuffers(1, &frameBuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _storedDisplay, 0);
+		if (OpenGLContext.type == OpenGL::kOGLContextGLES2) {
+			GLuint frameBuffer;
+			glGenFramebuffers(1, &frameBuffer);
+			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _storedDisplay, 0);
 
-		readPixels(0, 0, _screenWidth, _screenHeight, src.getRawBuffer());
+			readPixels(0, 0, _screenWidth, _screenHeight, (uint8 *)src.getPixels());
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDeleteFramebuffers(1, &frameBuffer);
-#else
-		glBindTexture(GL_TEXTURE_2D, _storedDisplay);
-		char *buffer = new char[_screenWidth * _screenHeight * 4];
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glDeleteFramebuffers(1, &frameBuffer);
+#if !USE_FORCED_GLES2
+		} else {
+			glBindTexture(GL_TEXTURE_2D, _storedDisplay);
+			char *buffer = new char[_screenWidth * _screenHeight * 4];
 
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
-		byte *rawBuf = src.getRawBuffer();
-		for (int i = 0; i < _screenHeight; i++) {
-			memcpy(&(rawBuf[(_screenHeight - i - 1) * _screenWidth * 4]), &buffer[4 * _screenWidth * i], _screenWidth * 4);
-		}
-		delete[] buffer;
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+			byte *rawBuf = (byte *)src.getPixels();
+			for (int i = 0; i < _screenHeight; i++) {
+				memcpy(&(rawBuf[(_screenHeight - i - 1) * _screenWidth * 4]), &buffer[4 * _screenWidth * i], _screenWidth * 4);
+			}
+			delete[] buffer;
 #endif
+		}
 	} else {
-		readPixels(0, 0, _screenWidth, _screenHeight, src.getRawBuffer());
+		readPixels(0, 0, _screenWidth, _screenHeight, (uint8 *)src.getPixels());
 	}
-	return createScreenshotBitmap(src, w, h, true);
+	bmp = createScreenshotBitmap(&src, w, h, true);
+	src.free();
+	return bmp;
 }
 
 void GfxOpenGLS::createSpecialtyTextureFromScreen(uint id, uint8 *data, int x, int y, int width, int height) {

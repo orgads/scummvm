@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -207,6 +206,7 @@ void EoBCoreEngine::gui_drawCharPortraitWithStats(int index, bool screenUpdt) {
 				gui_drawInventoryItem(27, 1, 2);
 
 			_screen->setFont(cf);
+			_screen->updateScreen();
 
 		} else {
 			_screen->setFont(cf);
@@ -541,7 +541,6 @@ void EoBCoreEngine::gui_drawInventoryItem(int slot, int redraw, int pageNum) {
 		drawItemIconShape(pageNum, item, x, y);
 	}
 	_screen->_curPage = cp;
-	_screen->updateScreen();
 }
 
 void EoBCoreEngine::gui_drawCharacterStatsPage() {
@@ -1490,6 +1489,8 @@ void EoBCoreEngine::gui_processInventorySlotClick(int slot) {
 			setHandItem(itm);
 		}
 
+		_screen->updateScreen();
+
 	} else if (slot == 27) {
 		gui_displayMap();
 
@@ -1498,17 +1499,16 @@ void EoBCoreEngine::gui_processInventorySlotClick(int slot) {
 		_characters[_updateCharNum].inventory[slot] = ih;
 		gui_drawInventoryItem(slot, 1, 0);
 		recalcArmorClass(_updateCharNum);
+		_screen->updateScreen();
 	}
 }
 
 GUI_EoB::GUI_EoB(EoBCoreEngine *vm) : GUI(vm), _vm(vm), _screen(vm->_screen), _numSlotsVisible(vm->gameFlags().platform == Common::kPlatformSegaCD ? 5 : 6) {
-	_menuStringsPrefsTemp = new char*[4];
-	memset(_menuStringsPrefsTemp, 0, 4 * sizeof(char *));
+	_menuStringsPrefsTemp = new char*[4]();
 
 	_saveSlotStringsTemp = new char*[6];
 	for (int i = 0; i < 6; i++) {
-		_saveSlotStringsTemp[i] = new char[26];
-		memset(_saveSlotStringsTemp[i], 0, 26);
+		_saveSlotStringsTemp[i] = new char[26]();
 	}
 	_saveSlotIdTemp = new int16[7];
 	memset(_saveSlotIdTemp, 0xFF, sizeof(int16) * 7);
@@ -1532,8 +1532,7 @@ GUI_EoB::GUI_EoB(EoBCoreEngine *vm) : GUI(vm), _vm(vm), _screen(vm->_screen), _n
 	_numVisPages = (_vm->game() == GI_EOB2) ? 6 : 5;
 	_clericSpellAvltyFlags = (_vm->game() == GI_EOB2) ? 0xF7FFFFFF : 0x7BFFFF;
 	_paladinSpellAvltyFlags = (_vm->game() == GI_EOB2) ? 0xA9BBD1D : 0x800FF2;
-	_numAssignedSpellsOfType = new int8[72];
-	memset(_numAssignedSpellsOfType, 0, 72);
+	_numAssignedSpellsOfType = new int8[72]();
 
 	_charSelectRedraw = false;
 	_clickableCharactersPage = 0;
@@ -2147,10 +2146,12 @@ int GUI_EoB::simpleMenu_process(int sd, const char *const *strings, void *b, int
 		if (_vm->gameFlags().platform == Common::kPlatformSegaCD) {
 			_vm->_txt->printShadedText(strings[simpleMenu_getMenuItem(currentItem, menuItemsMask, itemOffset)], 4, (sd == 8 ? 2 : 20) + currentItem * lineH, _menuTextColor, _menuShadowColor);
 			_vm->_txt->printShadedText(strings[simpleMenu_getMenuItem(newItem, menuItemsMask, itemOffset)], 4, (sd == 8 ? 2 : 20) + newItem * lineH, _menuHighlightColor, _menuShadowColor);
+			_screen->sega_getRenderer()->render(0, 6, 20, 26, 5);
 		} else {
 			_screen->printText(strings[simpleMenu_getMenuItem(currentItem, menuItemsMask, itemOffset)], x, y + currentItem * lineH, _menuTextColor, 0);
 			_screen->printText(strings[simpleMenu_getMenuItem(newItem, menuItemsMask, itemOffset)], x, y + newItem * lineH, _menuHighlightColor, 0);
 		}
+		_screen->updateScreen();
 	}
 
 	if (result != -1) {
@@ -2709,8 +2710,7 @@ int GUI_EoB::getTextInput(char *dest, int x, int y, int destMaxLen, int textColo
 	uint8 cursorState = 1;
 	char sufx[3] = " \0";
 
-	uint8 *segaCharBuf = new uint8[destMaxLen << 5];
-	memset(segaCharBuf, 0, destMaxLen << 5);
+	uint8 *segaCharBuf = new uint8[destMaxLen << 5]();
 
 	int len = strlen(dest);
 	if (len > destMaxLen) {
@@ -3036,8 +3036,7 @@ Common::String GUI_EoB::transferTargetMenu(Common::Array<Common::String> &target
 	}
 
 	_savegameListSize = targets.size();
-	_savegameList = new char*[_savegameListSize];
-	memset(_savegameList, 0, _savegameListSize * sizeof(char *));
+	_savegameList = new char*[_savegameListSize]();
 
 	Common::StringArray::iterator ii = targets.begin();
 	for (int i = 0; i < _savegameListSize; ++i) {
@@ -3187,7 +3186,13 @@ bool GUI_EoB::runSaveMenu(int x, int y) {
 
 			Graphics::Surface thumb;
 			createScreenThumbnail(thumb);
-			Common::Error err = _vm->saveGameStateIntern(_savegameOffset + slot, _saveSlotStringsTemp[slot], &thumb);
+			char temp[26];
+			Common::strlcpy(temp, _saveSlotStringsTemp[slot], 26);
+			// Ingame auto-generated Japanese EOB SegaCD savegame descriptions have a special 1-byte encoding that
+			// does not survive this conversion. And the rest of the characters in these descriptions do not require it.
+			if (!(_vm->gameFlags().platform == Common::kPlatformSegaCD && _vm->gameFlags().lang == Common::JA_JPN && Common::String(temp).contains('\r')))
+				Util::convertDOSToUTF8(temp, 26);
+			Common::Error err = _vm->saveGameStateIntern(_savegameOffset + slot, temp, &thumb);
 			thumb.free();
 
 			if (err.getCode() == Common::kNoError)
@@ -3391,13 +3396,10 @@ void GUI_EoB::runMemorizePrayMenu(int charIndex, int spellType) {
 		}
 	}
 
-	int8 *menuSpellMap = new int8[88];
-	memset(menuSpellMap, 0, 88);
-	int8 *numAssignedSpellsPerBookPage = new int8[8];
-	memset(numAssignedSpellsPerBookPage, 0, 8);
+	int8 *menuSpellMap = new int8[88]();
+	int8 *numAssignedSpellsPerBookPage = new int8[8]();
 	memset(_numAssignedSpellsOfType, 0, 72);
-	int8 *lh = new int8[40];
-	memset(lh, 0, 40);
+	int8 *lh = new int8[40]();
 
 	memcpy(lh, spellType ? _vm->_spellLevelsCleric : _vm->_spellLevelsMage, spellType ? _vm->_spellLevelsClericSize : _vm->_spellLevelsMageSize);
 	int8 *charSpellList = spellType ? c->clericSpells : c->mageSpells;
@@ -4443,6 +4445,7 @@ void GUI_EoB::drawSaveSlotButton(int slot, int redrawBox, bool highlight) {
 	int y = _saveSlotY + slot * 17 + 20;
 	int w = 167;
 	char slotString[26];
+	memset(slotString, 0, 26);
 	Common::strlcpy(slotString, slot < _numSlotsVisible ? _saveSlotStringsTemp[slot] : _vm->_saveLoadStrings[0], _vm->gameFlags().platform == Common::kPlatformFMTowns ? 25 : 20);
 
 	if (slot >= 6) {
@@ -4589,7 +4592,21 @@ void GUI_EoB::setupSaveMenuSlots() {
 	for (int i = 0; i < _numSlotsVisible; ++i) {
 		if (_savegameOffset + i < _savegameListSize) {
 			if (_savegameList[i + _savegameOffset]) {
+				memset(_saveSlotStringsTemp[i], 0, 25);
 				Common::strlcpy(_saveSlotStringsTemp[i], _savegameList[i + _savegameOffset], 25);
+
+				if (!(_vm->gameFlags().lang == Common::JA_JPN && _vm->gameFlags().platform == Common::kPlatformSegaCD &&
+					Common::String(_saveSlotStringsTemp[i]).contains('\r')) && (_vm->gameFlags().lang == Common::JA_JPN || _vm->gameFlags().platform == Common::kPlatformSegaCD)) {
+						// Strip special characters from GMM save dialog which might get misinterpreted as SJIS
+						// Special case for Japanese SegaCD: Only the save descriptions from GMM should be stripped. The auto-generated descriptions from the ingame save dialog
+						// have a special 1-byte encoding that must be kept. It is easy to distinguish between GMM descriptions and ingame descriptions due to the '\r' characters
+						// that the auto-generated strings always and the GMM strings never have.
+						for (uint ii = 0; ii < strlen(_saveSlotStringsTemp[i]); ++ii) {
+							if (_saveSlotStringsTemp[i][ii] < 32 && _saveSlotStringsTemp[i][ii] != '\r') // due to the signed char type this will also clean up everything >= 0x80
+								_saveSlotStringsTemp[i][ii] = ' ';
+						}
+				}
+
 				_saveSlotIdTemp[i] = i + _savegameOffset;
 				continue;
 			}

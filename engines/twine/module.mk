@@ -14,8 +14,8 @@ MODULE_OBJS := \
 	menu/menuoptions.o \
 	\
 	parser/anim.o \
+	parser/blocklibrary.o \
 	parser/body.o \
-	parser/brick.o \
 	parser/entity.o \
 	parser/holomap.o \
 	parser/parser.o \
@@ -42,10 +42,12 @@ MODULE_OBJS := \
 	resources/lzss.o \
 	resources/resources.o \
 	\
-	flamovies.o \
+	movies.o \
 	holomap.o \
 	input.o \
 	metaengine.o \
+	shared.o \
+	slideshow.o \
 	text.o \
 	twine.o
 

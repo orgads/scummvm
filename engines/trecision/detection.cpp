@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,6 +24,7 @@
 #include "engines/advancedDetector.h"
 
 static const PlainGameDescriptor trecisionGames[] = {
+	{"aot", "Ark of Time"},
 	{"nl", "Nightlong: Union City Conspiracy"},
 	{0, 0}
 };
@@ -54,7 +54,7 @@ static const ADGameDescription gameDescriptions[] = {
 		AD_NL_ENTRY("7665db13ad2a1ceb576531be3e1efb30", 436228),
 		Common::EN_ANY,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO0()
 	},
 	{
@@ -63,7 +63,7 @@ static const ADGameDescription gameDescriptions[] = {
 		AD_NL_ENTRY("7665db13ad2a1ceb576531be3e1efb30", 436598),
 		Common::EN_ANY,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO0()
 	},
 	{
@@ -72,7 +72,7 @@ static const ADGameDescription gameDescriptions[] = {
 		AD_NL_ENTRY("7665db13ad2a1ceb576531be3e1efb30", 457299),
 		Common::DE_DEU,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO0()
 	},
 	{
@@ -81,7 +81,7 @@ static const ADGameDescription gameDescriptions[] = {
 		AD_NL_ENTRY("7665db13ad2a1ceb576531be3e1efb30", 436697),
 		Common::ES_ESP,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO0()
 	},
 	{
@@ -90,7 +90,7 @@ static const ADGameDescription gameDescriptions[] = {
 		AD_NL_ENTRY("7665db13ad2a1ceb576531be3e1efb30", 456209),
 		Common::FR_FRA,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO0()
 	},
 	{
@@ -99,7 +99,7 @@ static const ADGameDescription gameDescriptions[] = {
 		AD_NL_ENTRY("7665db13ad2a1ceb576531be3e1efb30", 446634),
 		Common::IT_ITA,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO0()
 	},
 	{
@@ -108,7 +108,7 @@ static const ADGameDescription gameDescriptions[] = {
 		AD_NL_ENTRY("7665db13ad2a1ceb576531be3e1efb30", 432900),
 		Common::RU_RUS,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO0()
 	},
 	// bug #12619
@@ -118,7 +118,7 @@ static const ADGameDescription gameDescriptions[] = {
 		AD_NL_ENTRY("7665db13ad2a1ceb576531be3e1efb30", 429370),
 		Common::HU_HUN,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO0()
 	},
 	// bug #12619
@@ -128,7 +128,7 @@ static const ADGameDescription gameDescriptions[] = {
 		AD_NL_ENTRY("7665db13ad2a1ceb576531be3e1efb30", 429731),
 		Common::HU_HUN,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO0()
 	},
 	{
@@ -137,7 +137,7 @@ static const ADGameDescription gameDescriptions[] = {
 		AD_NL_DEMO_ENTRY("7665db13ad2a1ceb576531be3e1efb30", 392950),
 		Common::EN_ANY,
 		Common::kPlatformWindows,
-		ADGF_DEMO | ADGF_TESTING,
+		ADGF_DEMO,
 		GUIO0()
 	},
 	{
@@ -146,7 +146,7 @@ static const ADGameDescription gameDescriptions[] = {
 		AD_NL_DEMO_ENTRY("7665db13ad2a1ceb576531be3e1efb30", 413651),
 		Common::DE_DEU,
 		Common::kPlatformWindows,
-		ADGF_DEMO | ADGF_TESTING,
+		ADGF_DEMO,
 		GUIO0()
 	},
 	{
@@ -194,7 +194,18 @@ static const ADGameDescription gameDescriptions[] = {
 		ADGF_UNSTABLE,
 		GUIO0()
 	},
-
+	{
+		"aot",
+		_s("Missing game code"),
+		{
+			{"dialogue.dat", 0, "afc71fe29b1be3a9b145b8d61dfa4539", 166155130},
+			{"sentence.dat", 0, "f38afcd22e7de14f9a2343e911eaa126", 75668232},
+		},
+		Common::EN_ANY,
+		Common::kPlatformDOS,
+		ADGF_UNSUPPORTED,
+		GUIO0()
+	},
 	AD_TABLE_END_MARKER
 };
 

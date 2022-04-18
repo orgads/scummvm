@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,6 +24,7 @@
 
 #include "common/str.h"
 #include "common/list.h"
+#include "common/path.h"
 #include "common/ptr.h"
 #include "common/singleton.h"
 
@@ -57,7 +57,7 @@ public:
 	virtual ~ArchiveMember() { }
 	virtual SeekableReadStream *createReadStream() const = 0; /*!< Create a read stream. */
 	virtual String getName() const = 0; /*!< Get the name of the archive member. */
-	virtual String getDisplayName() const { return getName(); } /*!< Get the display name of the archive member. */
+	virtual U32String getDisplayName() const { return getName(); } /*!< Get the display name of the archive member. */
 };
 
 typedef SharedPtr<ArchiveMember> ArchiveMemberPtr; /*!< Shared pointer to an archive member. */
@@ -107,7 +107,7 @@ public:
 	 * Patterns are not allowed, as this is meant to be a quick File::exists()
 	 * replacement.
 	 */
-	virtual bool hasFile(const String &name) const = 0;
+	virtual bool hasFile(const Path &path) const = 0;
 
 	/**
 	 * Add all members of the Archive matching the specified pattern to the list.
@@ -115,7 +115,7 @@ public:
 	 *
 	 * @return The number of members added to list.
 	 */
-	virtual int listMatchingMembers(ArchiveMemberList &list, const String &pattern) const;
+	virtual int listMatchingMembers(ArchiveMemberList &list, const Path &pattern) const;
 
 	/**
 	 * Add all members of the Archive to the list.
@@ -128,7 +128,7 @@ public:
 	/**
 	 * Return an ArchiveMember representation of the given file.
 	 */
-	virtual const ArchiveMemberPtr getMember(const String &name) const = 0;
+	virtual const ArchiveMemberPtr getMember(const Path &path) const = 0;
 
 	/**
 	 * Create a stream bound to a member with the specified name in the
@@ -136,7 +136,7 @@ public:
 	 *
 	 * @return The newly created input stream.
 	 */
-	virtual SeekableReadStream *createReadStreamForMember(const String &name) const = 0;
+	virtual SeekableReadStream *createReadStreamForMember(const Path &path) const = 0;
 };
 
 
@@ -191,7 +191,7 @@ public:
 	 * Create and add a subdirectory by name (caseless).
 	 *
 	 * It is also possible to add subdirectories of subdirectories (of any depth) with this function.
-	 * The path seperator for this case is SLASH for all systems.
+	 * The path separator for this case is SLASH for all systems.
 	 *
 	 * Example:
 	 *
@@ -215,7 +215,7 @@ public:
 	 * Create and add subdirectories by pattern.
 	 *
 	 * It is also possible to add subdirectories of subdirectories (of any depth) with this function.
-	 * The path seperator for this case is SLASH for all systems.
+	 * The path separator for this case is SLASH for all systems.
 	 *
 	 * Example:
 	 *
@@ -251,17 +251,17 @@ public:
 	 */
 	void setPriority(const String& name, int priority);
 
-	virtual bool hasFile(const String &name) const;
-	virtual int listMatchingMembers(ArchiveMemberList &list, const String &pattern) const;
-	virtual int listMembers(ArchiveMemberList &list) const;
+	bool hasFile(const Path &path) const override;
+	int listMatchingMembers(ArchiveMemberList &list, const Path &pattern) const override;
+	int listMembers(ArchiveMemberList &list) const override;
 
-	virtual const ArchiveMemberPtr getMember(const String &name) const;
+	const ArchiveMemberPtr getMember(const Path &path) const override;
 
 	/**
 	 * Implement createReadStreamForMember from the Archive base class. The current policy is
 	 * opening the first file encountered that matches the name.
 	 */
-	virtual SeekableReadStream *createReadStreamForMember(const String &name) const;
+	SeekableReadStream *createReadStreamForMember(const Path &path) const override;
 
 	/**
 	 * Ignore clashes when adding directories. For more details, see the corresponding parameter

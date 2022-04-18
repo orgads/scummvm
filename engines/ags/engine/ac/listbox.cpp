@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -65,6 +64,20 @@ void ListBox_Clear(GUIListBox *listbox) {
 	listbox->Clear();
 }
 
+static void FillSaveList(std::set<String> &files, const String &filePattern) {
+	size_t wildcard = filePattern.FindChar('*');
+	assert(wildcard != String::npos);
+	Common::String prefix(filePattern.GetCStr(), wildcard);
+	Common::StringArray matches = g_system->getSavefileManager()->listSavefiles(filePattern);
+
+	for (uint idx = 0; idx < matches.size(); ++idx) {
+		Common::String name = matches[idx];
+		name = Common::String(name.c_str() + wildcard);
+
+		files.insert(name);
+	}
+}
+
 void FillDirList(std::set<String> &files, const String &path) {
 	String dirName = Path::GetDirectoryPath(path);
 	String filePattern = Path::get_filename(path);
@@ -76,15 +89,13 @@ void FillDirList(std::set<String> &files, const String &path) {
 		dirName = ConfMan.get("path");
 	} else if (dirName.CompareLeftNoCase(get_save_game_directory()) == 0) {
 		// Save files listing
-		Common::StringArray matches = g_system->getSavefileManager()->listSavefiles(filePattern);
-		for (uint idx = 0; idx < matches.size(); ++idx)
-			files.insert(matches[idx]);
+		FillSaveList(files, filePattern);
 		return;
 	}
 
-	Common::FSDirectory dir(dirName);
+	Common::FSDirectory dir(dirName.GetCStr());
 	Common::ArchiveMemberList fileList;
-	dir.listMatchingMembers(fileList, filePattern);
+	dir.listMatchingMembers(fileList, filePattern.GetCStr());
 	for (Common::ArchiveMemberList::iterator iter = fileList.begin(); iter != fileList.end(); ++iter) {
 		files.insert((*iter)->getName());
 	}
@@ -96,6 +107,8 @@ void ListBox_FillDirList(GUIListBox *listbox, const char *filemask) {
 	ResolvedPath rp;
 	if (!ResolveScriptPath(filemask, true, rp))
 		return;
+
+	// TODO: support listing assets from AssetMgr
 
 	std::set<String> files;
 	FillDirList(files, rp.FullPath);
@@ -587,35 +600,6 @@ void RegisterListBoxAPI() {
 	ccAddExternalObjectFunction("ListBox::set_TextColor", Sc_ListBox_SetTextColor);
 	ccAddExternalObjectFunction("ListBox::get_TopItem", Sc_ListBox_GetTopItem);
 	ccAddExternalObjectFunction("ListBox::set_TopItem", Sc_ListBox_SetTopItem);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("ListBox::AddItem^1", (void *)ListBox_AddItem);
-	ccAddExternalFunctionForPlugin("ListBox::Clear^0", (void *)ListBox_Clear);
-	ccAddExternalFunctionForPlugin("ListBox::FillDirList^1", (void *)ListBox_FillDirList);
-	ccAddExternalFunctionForPlugin("ListBox::FillSaveGameList^0", (void *)ListBox_FillSaveGameList);
-	ccAddExternalFunctionForPlugin("ListBox::GetItemAtLocation^2", (void *)ListBox_GetItemAtLocation);
-	ccAddExternalFunctionForPlugin("ListBox::GetItemText^2", (void *)ListBox_GetItemText);
-	ccAddExternalFunctionForPlugin("ListBox::InsertItemAt^2", (void *)ListBox_InsertItemAt);
-	ccAddExternalFunctionForPlugin("ListBox::RemoveItem^1", (void *)ListBox_RemoveItem);
-	ccAddExternalFunctionForPlugin("ListBox::ScrollDown^0", (void *)ListBox_ScrollDown);
-	ccAddExternalFunctionForPlugin("ListBox::ScrollUp^0", (void *)ListBox_ScrollUp);
-	ccAddExternalFunctionForPlugin("ListBox::SetItemText^2", (void *)ListBox_SetItemText);
-	ccAddExternalFunctionForPlugin("ListBox::get_Font", (void *)ListBox_GetFont);
-	ccAddExternalFunctionForPlugin("ListBox::set_Font", (void *)ListBox_SetFont);
-	ccAddExternalFunctionForPlugin("ListBox::get_HideBorder", (void *)ListBox_GetHideBorder);
-	ccAddExternalFunctionForPlugin("ListBox::set_HideBorder", (void *)ListBox_SetHideBorder);
-	ccAddExternalFunctionForPlugin("ListBox::get_HideScrollArrows", (void *)ListBox_GetHideScrollArrows);
-	ccAddExternalFunctionForPlugin("ListBox::set_HideScrollArrows", (void *)ListBox_SetHideScrollArrows);
-	ccAddExternalFunctionForPlugin("ListBox::get_ItemCount", (void *)ListBox_GetItemCount);
-	ccAddExternalFunctionForPlugin("ListBox::geti_Items", (void *)ListBox_GetItems);
-	ccAddExternalFunctionForPlugin("ListBox::seti_Items", (void *)ListBox_SetItemText);
-	ccAddExternalFunctionForPlugin("ListBox::get_RowCount", (void *)ListBox_GetRowCount);
-	ccAddExternalFunctionForPlugin("ListBox::geti_SaveGameSlots", (void *)ListBox_GetSaveGameSlots);
-	ccAddExternalFunctionForPlugin("ListBox::get_SelectedIndex", (void *)ListBox_GetSelectedIndex);
-	ccAddExternalFunctionForPlugin("ListBox::set_SelectedIndex", (void *)ListBox_SetSelectedIndex);
-	ccAddExternalFunctionForPlugin("ListBox::get_TopItem", (void *)ListBox_GetTopItem);
-	ccAddExternalFunctionForPlugin("ListBox::set_TopItem", (void *)ListBox_SetTopItem);
 }
 
 } // namespace AGS3

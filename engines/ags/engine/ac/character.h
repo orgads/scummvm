@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -53,7 +52,9 @@ bool    Character_IsInteractionAvailable(CharacterInfo *cchar, int mood);
 void    Character_LockView(CharacterInfo *chap, int vii);
 void    Character_LockViewEx(CharacterInfo *chap, int vii, int stopMoving);
 void    Character_LockViewAligned(CharacterInfo *chap, int vii, int loop, int align);
+void    Character_LockViewAligned_Old(CharacterInfo *chap, int vii, int loop, int align);
 void    Character_LockViewAlignedEx(CharacterInfo *chap, int vii, int loop, int align, int stopMoving);
+void    Character_LockViewAlignedEx_Old(CharacterInfo *chap, int vii, int loop, int align, int stopMoving);
 void    Character_LockViewFrame(CharacterInfo *chaa, int view, int loop, int frame);
 void    Character_LockViewFrameEx(CharacterInfo *chaa, int view, int loop, int frame, int stopMoving);
 void    Character_LockViewOffset(CharacterInfo *chap, int vii, int xoffs, int yoffs);
@@ -62,6 +63,7 @@ void    Character_LoseInventory(CharacterInfo *chap, ScriptInvItem *invi);
 void    Character_PlaceOnWalkableArea(CharacterInfo *chap);
 void    Character_RemoveTint(CharacterInfo *chaa);
 int     Character_GetHasExplicitTint(CharacterInfo *chaa);
+int     Character_GetHasExplicitTint_Old(CharacterInfo *ch);
 void    Character_Say(CharacterInfo *chaa, const char *text);
 void    Character_SayAt(CharacterInfo *chaa, int x, int y, int width, const char *texx);
 ScriptOverlay *Character_SayBackground(CharacterInfo *chaa, const char *texx);
@@ -107,6 +109,8 @@ int     Character_GetDiagonalWalking(CharacterInfo *chaa);
 void    Character_SetDiagonalWalking(CharacterInfo *chaa, int yesorno);
 int     Character_GetClickable(CharacterInfo *chaa);
 void    Character_SetClickable(CharacterInfo *chaa, int clik);
+int     Character_GetDestinationX(CharacterInfo *chaa);
+int     Character_GetDestinationY(CharacterInfo *chaa);
 int     Character_GetID(CharacterInfo *chaa);
 int     Character_GetFrame(CharacterInfo *chaa);
 void    Character_SetFrame(CharacterInfo *chaa, int newval);
@@ -184,9 +188,10 @@ void fix_player_sprite(MoveList *cmls, CharacterInfo *chinf);
 // Check whether two characters have walked into each other
 int  has_hit_another_character(int sourceChar);
 int  doNextCharMoveStep(CharacterInfo *chi, int &char_index, CharacterExtras *chex);
+// Tells if character is currently moving, in eWalkableAreas mode
+bool is_char_walking_ndirect(CharacterInfo *chi);
 int  find_nearest_walkable_area_within(int *xx, int *yy, int range, int step);
 void find_nearest_walkable_area(int *xx, int *yy);
-void walk_character(int chac, int tox, int toy, int ignwal, bool autoWalkAnims);
 void FindReasonableLoopForCharacter(CharacterInfo *chap);
 void walk_or_move_character(CharacterInfo *chaa, int x, int y, int blocking, int direct, bool isWalk);
 int  is_valid_character(int newchar);
@@ -195,6 +200,7 @@ void setup_player_character(int charid);
 void CheckViewFrameForCharacter(CharacterInfo *chi);
 Shared::Bitmap *GetCharacterImage(int charid, int *isFlipped);
 CharacterInfo *GetCharacterAtScreen(int xx, int yy);
+CharacterInfo *GetCharacterAtRoom(int x, int y);
 // Get character ID at the given room coordinates
 int is_pos_on_character(int xx, int yy);
 void get_char_blocking_rect(int charid, int *x1, int *y1, int *width, int *y2);
@@ -203,7 +209,6 @@ int is_char_on_another(int sourceChar, int ww, int *fromxptr, int *cwidptr);
 int my_getpixel(Shared::Bitmap *blk, int x, int y);
 // X and Y co-ordinates must be in 320x200 format
 int check_click_on_character(int xx, int yy, int mood);
-int is_pos_on_character(int xx, int yy);
 void _DisplaySpeechCore(int chid, const char *displbuf);
 void _DisplayThoughtCore(int chid, const char *displbuf);
 void _displayspeech(const char *texx, int aschar, int xx, int yy, int widd, int isThought);

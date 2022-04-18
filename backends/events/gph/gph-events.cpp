@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -379,12 +378,7 @@ bool GPHEventSource::handleJoyButtonDown(SDL_Event &ev, Common::Event &event) {
 	case BUTTON_R:
 		event.type = Common::EVENT_KEYDOWN;
 		if (_buttonStateL == true) {
-#ifdef ENABLE_VKEYBD
 			event.type = Common::EVENT_VIRTUAL_KEYBOARD;
-#else
-			event.kbd.keycode = Common::KEYCODE_0;
-			event.kbd.ascii = mapKey(SDLK_0, ev.key.keysym.mod, 0);
-#endif
 		} else {
 			event.kbd.keycode = Common::KEYCODE_RETURN;
 			event.kbd.ascii = mapKey(SDLK_RETURN, ev.key.keysym.mod, 0);
@@ -529,13 +523,8 @@ bool GPHEventSource::handleJoyButtonUp(SDL_Event &ev, Common::Event &event) {
 	case BUTTON_R:
 		event.type = Common::EVENT_KEYUP;
 		if (_buttonStateL == true) {
-#ifdef ENABLE_VKEYBD
 			event.kbd.keycode = Common::KEYCODE_F7;
 			event.kbd.ascii = mapKey(SDLK_F7, ev.key.keysym.mod, 0);
-#else
-			event.kbd.keycode = Common::KEYCODE_0;
-			event.kbd.ascii = mapKey(SDLK_0, ev.key.keysym.mod, 0);
-#endif
 		} else {
 			event.kbd.keycode = Common::KEYCODE_RETURN;
 			event.kbd.ascii = mapKey(SDLK_RETURN, ev.key.keysym.mod, 0);

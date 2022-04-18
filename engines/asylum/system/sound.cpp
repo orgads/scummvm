@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -58,6 +57,9 @@ void Sound::playSound(ResourceId resourceId, bool looping, int32 volume, int32 p
 
 	if (volume <= -10000)
 		return;
+
+	if (_vm->checkGameVersion("Demo") && RESOURCE_PACK(resourceId) == kResourcePackSound)
+		resourceId = MAKE_RESOURCE(kResourcePackShared, RESOURCE_INDEX(resourceId));
 
 	SoundQueueItem *item = getItem(resourceId);
 	if (item) {
@@ -108,7 +110,7 @@ void Sound::changeMusic(int32 index, int32 musicStatusExt) {
 }
 
 bool Sound::isPlaying(ResourceId resourceId) {
-	return (getPlayingItem(resourceId) != NULL);
+	return (getPlayingItem(resourceId) != nullptr);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -243,7 +245,7 @@ int32 Sound::calculatePanningAtPoint(const Common::Point &point) {
 void Sound::stop(ResourceId resourceId) {
 	SoundQueueItem *item = getPlayingItem(resourceId);
 
-	if (item != NULL)
+	if (item != nullptr)
 		_mixer->stopHandle(item->handle);
 }
 
@@ -286,7 +288,7 @@ SoundQueueItem *Sound::getItem(ResourceId resourceId) {
 		if (resourceId == _soundQueue[i].resourceId)
 			return &_soundQueue[i];
 
-	return NULL;
+	return nullptr;
 }
 
 SoundQueueItem *Sound::getPlayingItem(ResourceId resourceId) {
@@ -295,7 +297,7 @@ SoundQueueItem *Sound::getPlayingItem(ResourceId resourceId) {
 			&& _mixer->isSoundHandleActive(_soundQueue[i].handle))
 			return &_soundQueue[i];
 
-	return NULL;
+	return nullptr;
 }
 
 SoundQueueItem *Sound::addToQueue(ResourceId resourceId) {

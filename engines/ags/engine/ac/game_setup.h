@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -41,6 +40,14 @@ enum MouseSpeedDef {
 	kMouseSpeed_Absolute,       // apply speed multiplier directly
 	kMouseSpeed_CurrentDisplay, // keep speed/resolution relation based on current system display mode
 	kNumMouseSpeedDefs
+};
+
+// Screen rotation mode on supported platforms and devices
+enum ScreenRotation {
+	kScreenRotation_Unlocked = 0,     // player can freely rotate the screen if possible
+	kScreenRotation_Portrait,         // screen can only be in portrait orientation
+	kScreenRotation_Landscape,        // screen can only be in landscape orientation
+	kNumScreenRotationOptions
 };
 
 using AGS::Shared::String;
@@ -68,8 +75,9 @@ struct GameSetup {
 	String opt_audio_dir; // optional custom install audio dir path
 	String opt_voice_dir; // optional custom install voice-over dir path
 	//
-	String conf_path; // explicitly set path to config
+	String conf_path; // a read-only config path (if set the regular config is ignored)
 	bool   local_user_conf; // search for user config in the game directory
+	String user_conf_dir; // directory to read and write user config in
 	String user_data_dir; // directory to write savedgames and user files to
 	String shared_data_dir; // directory to write shared game files to
 	String translation;
@@ -83,8 +91,10 @@ struct GameSetup {
 	MouseSpeedDef mouse_speed_def;
 	bool  RenderAtScreenRes; // render sprites at screen resolution, as opposed to native one
 	int   Supersampling;
+	bool  clear_cache_on_room_change; // compatibility
+	ScreenRotation rotation;
 
-	ScreenSetup Screen;
+	DisplayModeSetup Screen;
 
 	GameSetup();
 };

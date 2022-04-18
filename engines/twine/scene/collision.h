@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,26 +23,29 @@
 #define TWINE_SCENE_COLLISION_H
 
 #include "common/scummsys.h"
-#include "twine/scene/extra.h"
+#include "twine/shared.h"
 
 namespace TwinE {
 
+class ActorStruct;
+struct ExtraListStruct;
 class TwinEEngine;
 
 class Collision {
 private:
 	TwinEEngine *_engine;
 
+	void handlePushing(const IVec3 &minsTest, const IVec3 &maxsTest, const ActorStruct *actor, ActorStruct *actorTest);
 public:
 	Collision(TwinEEngine *engine);
 	/** Actor collision coordinate */
-	IVec3 collision;
+	IVec3 _collision;
 
 	/** Actor collision coordinate */
-	IVec3 processCollision;
+	IVec3 _processCollision;
 
 	/** Cause damage in current processed actor */
-	int32 causeActorDamage = 0; //fieldCauseDamage
+	int32 _causeActorDamage = 0; //fieldCauseDamage
 
 	/**
 	 * Check if actor 1 is standing in actor 2
@@ -95,7 +97,7 @@ public:
 	int32 checkExtraCollisionWithActors(ExtraListStruct *extra, int32 actorIdx);
 
 	/** Check extra collision with bricks */
-	bool checkExtraCollisionWithBricks(int32 x, int32 y, int32 z, int32 oldX, int32 oldY, int32 oldZ);
+	bool checkExtraCollisionWithBricks(int32 x, int32 y, int32 z, const IVec3 &oldPos);
 
 	/**
 	 * Check extra collision with another extra

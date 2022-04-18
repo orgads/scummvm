@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,15 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef AGS_PLUGINS_AGS_SPRITE_FONT_AGS_SPRITE_FONT_H
 #define AGS_PLUGINS_AGS_SPRITE_FONT_AGS_SPRITE_FONT_H
 
-#include "ags/plugins/plugin_base.h"
+#include "ags/plugins/ags_plugin.h"
 #include "ags/plugins/ags_sprite_font/sprite_font_renderer.h"
 #include "ags/plugins/ags_sprite_font/variable_width_sprite_font.h"
 
@@ -36,25 +35,25 @@ namespace Plugins {
 namespace AGSSpriteFont {
 
 class AGSSpriteFont : public PluginBase {
+	SCRIPT_HASH(AGSSpriteFont)
 protected:
-static IAGSEngine *_engine;
-static SpriteFontRenderer *_fontRenderer;
-static VariableWidthSpriteFontRenderer *_vWidthRenderer;
-
-protected:
-static const char *AGS_GetPluginName();
-static void AGS_EngineStartup(IAGSEngine *lpEngine);
-static void AGS_EngineShutdown();
+	SpriteFontRenderer *_fontRenderer;
+	VariableWidthSpriteFontRenderer *_vWidthRenderer;
 
 private:
-static void SetSpriteFont(ScriptMethodParams &params);
-static void SetVariableSpriteFont(ScriptMethodParams &params);
-static void SetGlyph(ScriptMethodParams &params);
-static void SetSpacing(ScriptMethodParams &params);
-static void SetLineHeightAdjust(ScriptMethodParams &params);
+	void SetSpriteFont(ScriptMethodParams &params);
+	void SetVariableSpriteFont(ScriptMethodParams &params);
+	void SetGlyph(ScriptMethodParams &params);
+	void SetSpacing(ScriptMethodParams &params);
+	void SetLineHeightAdjust(ScriptMethodParams &params);
 
 public:
-AGSSpriteFont();
+	AGSSpriteFont() : PluginBase() {}
+	virtual ~AGSSpriteFont() {}
+
+	const char *AGS_GetPluginName() override;
+	void AGS_EngineStartup(IAGSEngine *lpEngine) override;
+	void AGS_EngineShutdown() override;
 };
 
 } // namespace AGSSpriteFont

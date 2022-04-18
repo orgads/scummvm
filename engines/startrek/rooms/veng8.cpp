@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,12 +15,10 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
-#if 0
 #include "startrek/room.h"
 
 #define OBJECT_DEAD_GUY 8 // Unused
@@ -112,16 +110,93 @@ extern const RoomAction veng8ActionList[] = {
 };
 
 enum veng8TextIds {
-	TX_SPEAKER_KIRK, TX_SPEAKER_MCCOY, TX_SPEAKER_SPOCK, TX_SPEAKER_EVERTS,
+	TX_SPEAKER_KIRK, TX_SPEAKER_MCCOY, TX_SPEAKER_SPOCK, TX_SPEAKER_KIJE,
+	TX_BRIDU146, TX_MUD4_018, TX_VEN2U093, TX_VEN2_028,
+	TX_VEN2_066, TX_VEN2_098, TX_VEN4N010, TX_VEN5N002, TX_VEN5N004,
+	TX_VEN6N007, TX_VEN8N000, TX_VEN8N001, TX_VEN8N003, TX_VEN8N004,
+	TX_VEN8N005, TX_VEN8N006, TX_VEN8N007, TX_VEN8N008, TX_VEN8N009,
+	TX_VEN8N010, TX_VEN8_001, TX_VEN8_002, TX_VEN8_003, TX_VEN8_004,
+	TX_VEN8_005, TX_VEN8_006, TX_VEN8_007, TX_VEN8_008, TX_VEN8_009,
+	TX_VEN8_010, TX_VEN8_011, TX_VEN8_012, TX_VEN8_013,
+	TX_VEN8_014, TX_VEN8_015, TX_VEN8_016, TX_VEN8_018, TX_VEN8_020,
+	TX_VEN8_021, TX_VEN8_023, TX_VEN8_024, TX_VEN8_025, TX_VEN8_026,
+	TX_VEN8_027, TX_VEN8_028, TX_VEN8_029, TX_VEN8_030, TX_VEN8_031,
+	TX_VEN8_032, TX_VEN8_033, TX_VEN8_034, TX_VEN8_035, TX_VEN8_036,
+	TX_VEN8_037, TX_VEN8_038, TX_VEN8_039, TX_VEN8_040, TX_VEN8_041,
+	TX_VEN8_042, TX_VENA_F32, TX_VENA_F34, TX_VENA_F40
 };
 
 // TODO: Finish floppy offsets
 extern const RoomTextOffsets veng8TextOffsets[] = {
-	//{ TX_SPEAKER_KIRK, 2597, 0 },
-	//{ TX_SPEAKER_MCCOY, 2622, 0 },
-	//{ TX_SPEAKER_SPOCK, 2632, 0 },
-	//{ TX_SPEAKER_EVERTS, 2642, 0 },
-	{          -1, 0,    0 }
+	{ TX_SPEAKER_KIRK, 7744, 0, 0, 0 },
+	{ TX_SPEAKER_MCCOY, 7755, 0, 0, 0 },
+	{ TX_SPEAKER_SPOCK, 7765, 0, 0, 0 },
+	{ TX_SPEAKER_KIJE, 7779, 0, 0, 0 },
+	{ TX_BRIDU146, 7146, 0, 0, 0 },
+	{ TX_MUD4_018, 7077, 0, 0, 0 },
+	//{ TX_MUD4_018, 7210, 0, 0, 0 },	// Skip duplicate text
+	{ TX_VEN2U093, 7278, 0, 0, 0 },
+	{ TX_VEN2_028, 7385, 0, 0, 0 },
+	{ TX_VEN2_066, 7463, 0, 0, 0 },
+	{ TX_VEN2_098, 6273, 0, 0, 0 },
+	{ TX_VEN4N010, 6927, 0, 0, 0 },
+	{ TX_VEN5N002, 1314, 0, 0, 0 },
+	{ TX_VEN5N004, 1369, 0, 0, 0 },
+	{ TX_VEN6N007, 6992, 0, 0, 0 },
+	{ TX_VEN8N000, 1449, 0, 0, 0 },
+	{ TX_VEN8N001, 1254, 0, 0, 0 },
+	{ TX_VEN8N003, 1079, 0, 0, 0 },
+	{ TX_VEN8N004, 695, 0, 0, 0 },
+	{ TX_VEN8N005, 1621, 0, 0, 0 },
+	{ TX_VEN8N006, 892, 0, 0, 0 },
+	{ TX_VEN8N007, 990, 0, 0, 0 },
+	{ TX_VEN8N008, 1173, 0, 0, 0 },
+	{ TX_VEN8N009, 805, 0, 0, 0 },
+	{ TX_VEN8N010, 1519, 0, 0, 0 },
+	{ TX_VEN8_001, 2288, 0, 0, 0 },
+	{ TX_VEN8_002, 1721, 0, 0, 0 },
+	{ TX_VEN8_003, 2892, 0, 0, 0 },
+	{ TX_VEN8_004, 4214, 0, 0, 0 },
+	{ TX_VEN8_005, 1809, 0, 0, 0 },
+	{ TX_VEN8_006, 1876, 0, 0, 0 },
+	{ TX_VEN8_007, 5851, 0, 0, 0 },
+	{ TX_VEN8_008, 5667, 0, 0, 0 },
+	{ TX_VEN8_009, 5092, 0, 0, 0 },
+	//{ TX_VEN8_009, 3845, 0, 0, 0 },	// Skip duplicate text
+	{ TX_VEN8_010, 4795, 0, 0, 0 },
+	{ TX_VEN8_011, 3584, 0, 0, 0 },
+	{ TX_VEN8_012, 5371, 0, 0, 0 },
+	{ TX_VEN8_013, 4576, 0, 0, 0 },
+	{ TX_VEN8_014, 3169, 0, 0, 0 },
+	{ TX_VEN8_015, 4458, 0, 0, 0 },
+	{ TX_VEN8_016, 7815, 0, 0, 0 },
+	{ TX_VEN8_018, 2443, 0, 0, 0 },
+	{ TX_VEN8_020, 2215, 0, 0, 0 },
+	{ TX_VEN8_021, 2391, 0, 0, 0 },
+	{ TX_VEN8_023, 2628, 0, 0, 0 },
+	{ TX_VEN8_024, 7890, 0, 0, 0 },
+	{ TX_VEN8_025, 6123, 0, 0, 0 },
+	{ TX_VEN8_026, 3070, 0, 0, 0 },
+	{ TX_VEN8_027, 4359, 0, 0, 0 },
+	{ TX_VEN8_028, 2130, 0, 0, 0 },
+	{ TX_VEN8_029, 2050, 0, 0, 0 },
+	{ TX_VEN8_030, 3263, 0, 0, 0 },
+	{ TX_VEN8_031, 3429, 0, 0, 0 },
+	{ TX_VEN8_032, 1986, 0, 0, 0 },
+	{ TX_VEN8_033, 3717, 0, 0, 0 },
+	{ TX_VEN8_034, 2576, 0, 0, 0 },
+	{ TX_VEN8_035, 4984, 0, 0, 0 },
+	{ TX_VEN8_036, 2682, 0, 0, 0 },
+	{ TX_VEN8_037, 5258, 0, 0, 0 },
+	{ TX_VEN8_038, 5770, 0, 0, 0 },
+	{ TX_VEN8_039, 5455, 0, 0, 0 },
+	{ TX_VEN8_040, 2812, 0, 0, 0 },
+	{ TX_VEN8_041, 2757, 0, 0, 0 },
+	{ TX_VEN8_042, 4668, 0, 0, 0 },
+	{ TX_VENA_F32, 6503, 0, 0, 0 },
+	{ TX_VENA_F34, 6773, 0, 0, 0 },
+	{ TX_VENA_F40, 6368, 0, 0, 0 },
+	{          -1, 0,    0, 0, 0 }
 };
 
 extern const RoomText veng8Texts[] = {
@@ -398,4 +473,3 @@ void Room::veng8UseSTricorderOnConsole() {
 }
 
 }
-#endif

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -103,8 +102,6 @@ public:
 	}
 
 	DetectedGame toDetectedGame(const ADDetectedGame &adGame, ADDetectedGameExtraInfo *extraInfo) const override;
-
-	void registerDefaultSettings(const Common::String &target) const override;
 };
 
 DetectedGame MohawkMetaEngineDetection::toDetectedGame(const ADDetectedGame &adGame, ADDetectedGameExtraInfo *extraInfo) const {
@@ -133,20 +130,6 @@ DetectedGame MohawkMetaEngineDetection::toDetectedGame(const ADDetectedGame &adG
 	}
 
 	return game;
-}
-
-void MohawkMetaEngineDetection::registerDefaultSettings(const Common::String &target) const {
-	Common::String gameId = ConfMan.get("gameid", target);
-
-	if (gameId == "myst" || gameId == "makingofmyst") {
-		return Mohawk::MohawkMetaEngine_Myst::registerDefaultSettings();
-	}
-
-	if (gameId == "riven") {
-		return Mohawk::MohawkMetaEngine_Riven::registerDefaultSettings();
-	}
-
-	return AdvancedMetaEngineDetection::registerDefaultSettings(target);
 }
 
 REGISTER_PLUGIN_STATIC(MOHAWK_DETECTION, PLUGIN_TYPE_ENGINE_DETECTION, MohawkMetaEngineDetection);

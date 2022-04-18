@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,12 +15,10 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
-#if 0
 #include "startrek/room.h"
 
 #define OBJECT_CABLE_1 8
@@ -134,16 +132,94 @@ extern const RoomAction veng6ActionList[] = {
 };
 
 enum veng6TextIds {
-	TX_SPEAKER_KIRK, TX_SPEAKER_MCCOY, TX_SPEAKER_SPOCK, TX_SPEAKER_EVERTS,
+	TX_SPEAKER_KIRK, TX_SPEAKER_MCCOY, TX_SPEAKER_SPOCK, TX_SPEAKER_KIJE, TX_SPEAKER_COMPUTER,
+	TX_BRIDU146, TX_COMPA185, TX_DEM3_019, TX_MUD1N014, TX_MUD4_018,
+	TX_VEN0N016, TX_VEN0_016, TX_VEN2U093, TX_VEN2_028,
+	TX_VEN2_066, TX_VEN2_098, TX_VEN4N010, TX_VEN4_016, TX_VEN5N007,
+	TX_VEN6N000, TX_VEN6N001, TX_VEN6N002, TX_VEN6N003, TX_VEN6N005,
+	TX_VEN6N006, TX_VEN6N007, TX_VEN6N008, TX_VEN6N009, TX_VEN6N010,
+	TX_VEN6N011, TX_VEN6N012, TX_VEN6N013, TX_VEN6N015, TX_VEN6N016,
+	TX_VEN6N017, TX_VEN6N018, TX_VEN6N019, TX_VEN6N020, TX_VEN6N022,
+	TX_VEN6N024, TX_VEN6N025, TX_VEN6_001, TX_VEN6_002, TX_VEN6_003,
+	TX_VEN6_005, TX_VEN6_006, TX_VEN6_007, TX_VEN6_008, TX_VEN6_009,
+	TX_VEN6_010, TX_VEN6_011, TX_VEN6_012, TX_VEN6_013, TX_VEN6_014,
+	TX_VEN6_015, TX_VEN6_016, TX_VEN6_017, TX_VEN6_018, TX_VEN6_019,
+	TX_VEN6_020, TX_VEN6_021, TX_VEN6_022, TX_VEN6_023, TX_VENA_F32,
+	TX_VENA_F34, TX_VENA_F40
 };
 
 // TODO: Finish floppy offsets
 extern const RoomTextOffsets veng6TextOffsets[] = {
-	//{ TX_SPEAKER_KIRK, 2597, 0 },
-	//{ TX_SPEAKER_MCCOY, 2622, 0 },
-	//{ TX_SPEAKER_SPOCK, 2632, 0 },
-	//{ TX_SPEAKER_EVERTS, 2642, 0 },
-	{          -1, 0,    0 }
+	{ TX_SPEAKER_KIRK, 8894, 0, 0, 0 },
+	{ TX_SPEAKER_MCCOY, 8905, 0, 0, 0 },
+	{ TX_SPEAKER_SPOCK, 8915, 0, 0, 0 },
+	{ TX_SPEAKER_KIJE, 8925, 0, 0, 0 },
+	{ TX_SPEAKER_COMPUTER, 8937, 0, 0, 0 },
+	{ TX_BRIDU146, 7831, 0, 0, 0 },
+	{ TX_COMPA185, 4008, 0, 0, 0 },
+	{ TX_DEM3_019, 8315, 0, 0, 0 },
+	{ TX_MUD1N014, 6550, 0, 0, 0 },
+	{ TX_MUD4_018, 7762, 0, 0, 0 },
+	//{ TX_MUD4_018, 7895, 0, 0, 0 },	// Skip duplicate text
+	{ TX_VEN0N016, 2156, 0, 0, 0 },
+	{ TX_VEN0_016, 8552, 0, 0, 0 },
+	//{ TX_VEN0_016, 8611, 0, 0, 0 },	// Skip duplicate text
+	{ TX_VEN2U093, 7963, 0, 0, 0 },
+	{ TX_VEN2_028, 8070, 0, 0, 0 },
+	{ TX_VEN2_066, 8148, 0, 0, 0 },
+	{ TX_VEN2_098, 6958, 0, 0, 0 },
+	{ TX_VEN4N010, 7612, 0, 0, 0 },
+	{ TX_VEN4_016, 8366, 0, 0, 0 },
+	{ TX_VEN5N007, 775, 0, 0, 0 },
+	{ TX_VEN6N000, 2099, 0, 0, 0 },
+	{ TX_VEN6N001, 1781, 0, 0, 0 },
+	{ TX_VEN6N002, 1999, 0, 0, 0 },
+	{ TX_VEN6N003, 1873, 0, 0, 0 },
+	{ TX_VEN6N005, 5276, 0, 0, 0 },
+	{ TX_VEN6N006, 4887, 0, 0, 0 },
+	{ TX_VEN6N007, 4998, 0, 0, 0 },
+	{ TX_VEN6N007, 7677, 0, 0, 0 },
+	{ TX_VEN6N008, 6615, 0, 0, 0 },
+	{ TX_VEN6N009, 1334, 0, 0, 0 },
+	{ TX_VEN6N010, 1253, 0, 0, 0 },
+	{ TX_VEN6N011, 845, 0, 0, 0 },
+	{ TX_VEN6N012, 1425, 0, 0, 0 },
+	{ TX_VEN6N013, 1052, 0, 0, 0 },
+	{ TX_VEN6N015, 976, 0, 0, 0 },
+	{ TX_VEN6N016, 8975, 0, 0, 0 },
+	{ TX_VEN6N018, 9063, 0, 0, 0 },
+	{ TX_VEN6N017, 1139, 0, 0, 0 },
+	{ TX_VEN6N019, 2207, 0, 0, 0 },
+	{ TX_VEN6N020, 3318, 0, 0, 0 },
+	{ TX_VEN6N022, 3710, 0, 0, 0 },
+	{ TX_VEN6N024, 6803, 0, 0, 0 },
+	{ TX_VEN6N025, 1536, 0, 0, 0 },
+	{ TX_VEN6_001, 5699, 0, 0, 0 },
+	{ TX_VEN6_002, 4457, 0, 0, 0 },
+	{ TX_VEN6_003, 4062, 0, 0, 0 },
+	{ TX_VEN6_005, 2298, 0, 0, 0 },
+	{ TX_VEN6_006, 6407, 0, 0, 0 },
+	{ TX_VEN6_007, 5830, 0, 0, 0 },
+	{ TX_VEN6_008, 2674, 0, 0, 0 },
+	{ TX_VEN6_009, 2457, 0, 0, 0 },
+	{ TX_VEN6_010, 5433, 0, 0, 0 },
+	{ TX_VEN6_011, 4737, 0, 0, 0 },
+	{ TX_VEN6_012, 3881, 0, 0, 0 },
+	{ TX_VEN6_013, 5972, 0, 0, 0 },
+	{ TX_VEN6_014, 2534, 0, 0, 0 },
+	{ TX_VEN6_015, 6196, 0, 0, 0 },
+	{ TX_VEN6_016, 4297, 0, 0, 0 },
+	{ TX_VEN6_017, 4105, 0, 0, 0 },
+	{ TX_VEN6_018, 2781, 0, 0, 0 },
+	{ TX_VEN6_019, 4596, 0, 0, 0 },
+	{ TX_VEN6_020, 5500, 0, 0, 0 },
+	{ TX_VEN6_021, 1616, 0, 0, 0 },
+	{ TX_VEN6_022, 9197, 0, 0, 0 },
+	{ TX_VEN6_023, 2954, 0, 0, 0 },
+	{ TX_VENA_F32, 7188, 0, 0, 0 },
+	{ TX_VENA_F34, 7458, 0, 0, 0 },
+	{ TX_VENA_F40, 7053, 0, 0, 0 },
+	{          -1, 0,    0, 0, 0 }
 };
 
 extern const RoomText veng6Texts[] = {
@@ -428,7 +504,7 @@ void Room::veng6OpenedOrClosedCabinet() {
 		playSoundEffectIndex(kSfxDoor);
 		_awayMission->veng.engineeringCabinetOpen = true;
 		if (!_awayMission->veng.tookEngineeringJournal)
-			showText(TX_VEN6N005);
+			showDescription(TX_VEN6N005);
 	}
 }
 
@@ -458,11 +534,11 @@ void Room::veng6UsePowerPackOnLeftConsole() {
 }
 
 void Room::veng6GetJunctionBox() {
-	showText(TX_MUD1N014);
+	showDescription(TX_MUD1N014);
 }
 
 void Room::veng6GetOilCanister() {
-	showText(TX_VEN6N008);
+	showDescription(TX_VEN6N008);
 }
 
 void Room::veng6GetEngineeringJournal() {
@@ -483,4 +559,3 @@ void Room::veng6TookEngineeringJournal() {
 }
 
 }
-#endif

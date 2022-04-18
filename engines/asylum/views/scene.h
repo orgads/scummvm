@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,6 +27,8 @@
 #include "common/rational.h"
 
 #include "graphics/surface.h"
+
+#include "asylum/system/screen.h"
 
 #include "asylum/eventhandler.h"
 #include "asylum/shared.h"
@@ -119,7 +120,7 @@ public:
 	 * WorldStats actor list. Default parameter just
 	 * gets the instance associated with _playerActorIdx
 	 */
-	Actor* getActor(ActorIndex index = kActorInvalid);
+	Actor *getActor(ActorIndex index = kActorInvalid);
 
 	/**
 	 * Change player actor
@@ -196,6 +197,9 @@ public:
 	WorldStats  *worldstats() { return _ws; }
 	uint32 getFrameCounter() { return _frameCounter; }
 
+	const byte *getSavedPalette() { return _savedPalette; }
+	const Graphics::Surface &getSavedScreen() { return _savedScreen; }
+
 private:
 	AsylumEngine  *_vm;
 
@@ -214,6 +218,9 @@ private:
 
 	Common::Array<UpdateItem> _updateList;
 	uint32 _frameCounter;
+
+	Graphics::Surface _savedScreen;
+	byte _savedPalette[PALETTE_SIZE];
 
 	//////////////////////////////////////////////////////////////////////////
 	// Message handling

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -52,8 +51,10 @@ static void fChgMode(ArgArray args) {
 	} else
 		assert(0);
 
-	if (args.size() == 3)
-		setSymbol(args[2].u.sym, true);
+	if (args.size() == 3) {
+		Symbol *location = g_private->maps.lookupLocation(args[2].u.sym->name);
+		setSymbol(location, true);
+	}
 
 	// This is the only place where this should be used
 	if (g_private->_noStopSounds) {
@@ -140,8 +141,8 @@ static void fLoadGame(ArgArray args) {
 	m.surf = g_private->loadMask(args[0].u.str, 0, 0, true);
 	m.cursor = *args[2].u.sym->name;
 	m.nextSetting = "";
-	m.flag1 = NULL;
-	m.flag2 = NULL;
+	m.flag1 = nullptr;
+	m.flag2 = nullptr;
 	if (g_private->_loadGameMask.surf)
 		g_private->_loadGameMask.surf->free();
 	delete g_private->_loadGameMask.surf;
@@ -156,8 +157,8 @@ static void fSaveGame(ArgArray args) {
 	m.surf = g_private->loadMask(args[0].u.str, 0, 0, true);
 	m.cursor = *args[1].u.sym->name;
 	m.nextSetting = "";
-	m.flag1 = NULL;
-	m.flag2 = NULL;
+	m.flag1 = nullptr;
+	m.flag2 = nullptr;
 	if (g_private->_saveGameMask.surf)
 		g_private->_saveGameMask.surf->free();
 	delete g_private->_saveGameMask.surf;
@@ -253,8 +254,8 @@ static void fDossierChgSheet(ArgArray args) {
 	m.surf = g_private->loadMask(s, x, y, true);
 	m.cursor = g_private->getExitCursor();
 	m.nextSetting = "";
-	m.flag1 = NULL;
-	m.flag2 = NULL;
+	m.flag1 = nullptr;
+	m.flag2 = nullptr;
 	if (p == 0)
 		g_private->_dossierPrevSheetMask = m;
 	else if (p == 1)
@@ -276,8 +277,8 @@ static void fDossierPrevSuspect(ArgArray args) {
 	m.surf = g_private->loadMask(s, x, y, true);
 	m.cursor = g_private->getExitCursor();
 	m.nextSetting = "";
-	m.flag1 = NULL;
-	m.flag2 = NULL;
+	m.flag1 = nullptr;
+	m.flag2 = nullptr;
 	g_private->_dossierPrevSuspectMask = m;
 	g_private->_masks.push_front(m);
 }
@@ -293,8 +294,8 @@ static void fDossierNextSuspect(ArgArray args) {
 	m.surf = g_private->loadMask(s, x, y, true);
 	m.cursor = g_private->getExitCursor();
 	m.nextSetting = "";
-	m.flag1 = NULL;
-	m.flag2 = NULL;
+	m.flag1 = nullptr;
+	m.flag2 = nullptr;
 	g_private->_dossierNextSuspectMask = m;
 	g_private->_masks.push_front(m);
 }
@@ -359,12 +360,12 @@ static void fInventory(ArgArray args) {
 		if (v1.type == NAME) {
 			m.flag1 = g_private->maps.lookupVariable(v1.u.sym->name);
 		} else
-			m.flag1 = NULL;
+			m.flag1 = nullptr;
 
 		if (v2.type == NAME) {
 			m.flag2 = g_private->maps.lookupVariable(v2.u.sym->name);
 		} else
-			m.flag2 = NULL;
+			m.flag2 = nullptr;
 
 		g_private->_masks.push_front(m);
 		g_private->_toTake = true;
@@ -511,12 +512,7 @@ static void fTransition(ArgArray args) {
 static void fResume(ArgArray args) {
 	assert(args[0].type == NUM);
 	debugC(1, kPrivateDebugScript, "Resume(%d)", args[0].u.val); // this value is always 1
-	g_private->_nextSetting = g_private->_pausedSetting;
-	g_private->_pausedSetting = "";
-	g_private->_mode = 1;
-	g_private->_origin = Common::Point(kOriginOne[0], kOriginOne[1]);
-	if (g_private->_videoDecoder)
-		g_private->_videoDecoder->pauseVideo(false);
+	g_private->resumeGame();
 }
 
 static void fMovie(ArgArray args) {
@@ -594,8 +590,8 @@ static void _fMask(ArgArray args, bool drawn) {
 	m.surf = g_private->loadMask(s, x, y, drawn);
 	m.nextSetting = e;
 	m.cursor = *c;
-	m.flag1 = NULL;
-	m.flag2 = NULL;
+	m.flag1 = nullptr;
+	m.flag2 = nullptr;
 	m.point = Common::Point(x, y);
 	g_private->_masks.push_front(m);
 }
@@ -607,7 +603,7 @@ static void fMaskDrawn(ArgArray args) {
 	_fMask(args, true);
 }
 
-static void fAddSound(Common::String sound, const char *t, Symbol *flag = NULL, int val = 0) {
+static void fAddSound(Common::String sound, const char *t, Symbol *flag = nullptr, int val = 0) {
 	if (sound == "\"\"")
 		return;
 
@@ -638,8 +634,16 @@ static void fAMRadioClip(ArgArray args) {
 }
 
 static void fPoliceClip(ArgArray args) {
-	assert(args.size() <= 4);
+	assert(args.size() <= 4 || args.size() == 6);
 	fAddSound(args[0].u.str, "PoliceClip");
+	// In the original, the variable is updated when the clip is played, but here we just update
+	// the variable when the clip is added to play. The effect for the player, is mostly the same.
+	if (args.size() == 6) {
+		assert(args[4].type == NAME);
+		assert(args[5].type == NUM);
+		Symbol *flag = g_private->maps.lookupVariable(args[4].u.sym->name);
+		setSymbol(flag, args[5].u.val);
+	}
 }
 
 static void fPhoneClip(ArgArray args) {
@@ -649,13 +653,14 @@ static void fPhoneClip(ArgArray args) {
 	}
 	int i = args[2].u.val;
 	int j = args[3].u.val;
+	Symbol *flag = g_private->maps.lookupVariable(args[4].u.sym->name);
 
 	if (i == j)
-		fAddSound(args[0].u.str, "PhoneClip", args[4].u.sym, args[5].u.val);
+		fAddSound(args[0].u.str, "PhoneClip", flag, args[5].u.val);
 	else {
 		assert(i < j);
 		Common::String sound = g_private->getRandomPhoneClip(args[0].u.str, i, j);
-		fAddSound(sound, "PhoneClip", args[4].u.sym, args[5].u.val);
+		fAddSound(sound, "PhoneClip", flag, args[5].u.val);
 	}
 }
 
@@ -679,8 +684,8 @@ static void fSoundArea(ArgArray args) {
 		m.surf = g_private->loadMask(s, 0, 0, true);
 		m.cursor = *args[2].u.sym->name;
 		m.nextSetting = "";
-		m.flag1 = NULL;
-		m.flag2 = NULL;
+		m.flag1 = nullptr;
+		m.flag2 = nullptr;
 		if (g_private->_AMRadioArea.surf)
 			g_private->_AMRadioArea.surf->free();
 		delete g_private->_AMRadioArea.surf;
@@ -690,8 +695,8 @@ static void fSoundArea(ArgArray args) {
 		m.surf = g_private->loadMask(s, 0, 0, true);
 		m.cursor = *args[2].u.sym->name;
 		m.nextSetting = "";
-		m.flag1 = NULL;
-		m.flag2 = NULL;
+		m.flag1 = nullptr;
+		m.flag2 = nullptr;
 		if (g_private->_policeRadioArea.surf)
 			g_private->_policeRadioArea.surf->free();
 		delete g_private->_policeRadioArea.surf;
@@ -701,8 +706,8 @@ static void fSoundArea(ArgArray args) {
 		m.surf = g_private->loadMask(s, 0, 0, true);
 		m.cursor = *args[2].u.sym->name;
 		m.nextSetting = "";
-		m.flag1 = NULL;
-		m.flag2 = NULL;
+		m.flag1 = nullptr;
+		m.flag2 = nullptr;
 		if (g_private->_phoneArea.surf)
 			g_private->_phoneArea.surf->free();
 		delete g_private->_phoneArea.surf;
@@ -713,13 +718,16 @@ static void fSoundArea(ArgArray args) {
 }
 
 static void fSafeDigit(ArgArray args) {
-	debugC(1, kPrivateDebugScript, "WARNING: SafeDigit is not implemented");
+	assert(args[0].type == NUM);
+	assert(args[1].type == RECT);
+	debugC(1, kPrivateDebugScript, "SafeDigit(%d, ..)", args[0].u.val);
+	g_private->addSafeDigit(args[0].u.val, args[1].u.rect);
 }
 
 static void fAskSave(ArgArray args) {
 	// This is not needed, since scummvm will take care of this
 	debugC(1, kPrivateDebugScript, "WARNING: AskSave is partially implemented");
-	g_private->_nextSetting = args[0].u.str;
+	g_private->_nextSetting = *args[0].u.sym->name;
 }
 
 static void fTimer(ArgArray args) {
@@ -734,7 +742,8 @@ static void fTimer(ArgArray args) {
 	// This pointer is necessary since installTimer needs one
 	Common::String *s = new Common::String(args[1].u.sym->name->c_str());
 	if (delay > 0) {
-		assert(g_private->installTimer(delay, s));
+		if (!g_private->installTimer(delay, s))
+			error("Timer installation failed!");
 	} else if (delay == 0) {
 		g_private->_nextSetting = *s;
 		// No need to keep the pointer alive
@@ -811,7 +820,7 @@ const FuncTable funcTable[] = {
 	{fSafeDigit, "SafeDigit"},
 	{fCRect, "CRect"},
 
-	{0, 0}};
+	{nullptr, nullptr}};
 
 void call(const char *name, const ArgArray &args) {
 	Common::String n(name);

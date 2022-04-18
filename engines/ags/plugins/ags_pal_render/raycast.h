@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -101,106 +100,6 @@ extern double **ZBuffer;
 extern double *distTable;
 extern short *interactionmap;
 extern int skybox;
-
-
-
-void MakeTextures(ScriptMethodParams &params);
-void Raycast_Render(ScriptMethodParams &params);
-void MoveForward(ScriptMethodParams &params);
-void MoveBackward(ScriptMethodParams &params);
-void RotateLeft(ScriptMethodParams &params);
-void RotateRight(ScriptMethodParams &params);
-void Init_Raycaster(ScriptMethodParams &params);
-void QuitCleanup(ScriptMethodParams &params);
-void LoadMap(ScriptMethodParams &params);
-void Ray_InitSprite(ScriptMethodParams &params);
-void Ray_SetPlayerPosition(ScriptMethodParams &params);
-void Ray_GetPlayerX(ScriptMethodParams &params);
-void Ray_GetPlayerY(ScriptMethodParams &params);
-void Ray_GetPlayerAngle(ScriptMethodParams &params);
-void Ray_SetPlayerAngle(ScriptMethodParams &params);
-
-void Ray_GetWallHotspot(ScriptMethodParams &params);
-void Ray_GetWallTexture(ScriptMethodParams &params);
-void Ray_GetWallSolid(ScriptMethodParams &params);
-void Ray_GetWallIgnoreLighting(ScriptMethodParams &params);
-void Ray_GetWallAlpha(ScriptMethodParams &params);
-void Ray_GetWallBlendType(ScriptMethodParams &params);
-
-void Ray_SelectTile(ScriptMethodParams &params);
-
-void Ray_GetHotspotAt(ScriptMethodParams &params);
-void Ray_GetObjectAt(ScriptMethodParams &params);
-
-void Ray_DrawTile(ScriptMethodParams &params);
-void Ray_DrawOntoTile(ScriptMethodParams &params);
-void Ray_SetNoClip(ScriptMethodParams &params);
-void Ray_GetNoClip(ScriptMethodParams &params);
-void Ray_SetSpriteInteractObj(ScriptMethodParams &params);
-void  Ray_GetSpriteInteractObj(ScriptMethodParams &params);
-void Ray_SetSpritePosition(ScriptMethodParams &params);
-void Ray_SetSpriteVertOffset(ScriptMethodParams &params);
-void Ray_GetSpriteVertOffset(ScriptMethodParams &params);
-void Ray_GetSpriteX(ScriptMethodParams &params);
-void Ray_GetSpriteY(ScriptMethodParams &params);
-
-void Ray_SetWallHotspot(ScriptMethodParams &params);
-void Ray_SetWallTextures(ScriptMethodParams &params);
-void Ray_SetWallSolid(ScriptMethodParams &params);
-void Ray_SetWallIgnoreLighting(ScriptMethodParams &params);
-void Ray_SetWallAlpha(ScriptMethodParams &params);
-void Ray_SetWallBlendType(ScriptMethodParams &params);
-
-void Ray_GetMoveSpeed(ScriptMethodParams &params);
-void Ray_SetMoveSpeed(ScriptMethodParams &params);
-void Ray_GetRotSpeed(ScriptMethodParams &params);
-void Ray_SetRotSpeed(ScriptMethodParams &params);
-void Ray_GetWallAt(ScriptMethodParams &params);
-void Ray_GetLightAt(ScriptMethodParams &params);
-void Ray_SetLightAt(ScriptMethodParams &params);
-void Ray_SetWallAt(ScriptMethodParams &params);
-void Ray_SetPlaneY(ScriptMethodParams &params);
-void Ray_GetDistanceAt(ScriptMethodParams &params);
-void Ray_GetSpriteAngle(ScriptMethodParams &params);
-void Ray_SetSpriteAngle(ScriptMethodParams &params);
-void Ray_SetSpriteView(ScriptMethodParams &params);
-void Ray_GetSpriteView(ScriptMethodParams &params);
-void Ray_SetSpriteFrame(ScriptMethodParams &params);
-void Ray_GetSpriteFrame(ScriptMethodParams &params);
-
-void Ray_GetTileX_At(ScriptMethodParams &params);
-void Ray_GetTileY_At(ScriptMethodParams &params);
-
-void Ray_SetSkyBox(ScriptMethodParams &params);
-void Ray_GetSkyBox(ScriptMethodParams &params);
-
-void Ray_SetAmbientLight(ScriptMethodParams &params);
-void Ray_GetAmbientLight(ScriptMethodParams &params);
-void Ray_SetAmbientColor(ScriptMethodParams &params);
-
-
-void Ray_GetSpriteAlpha(ScriptMethodParams &params);
-void Ray_SetSpriteAlpha(ScriptMethodParams &params);
-void Ray_GetSpritePic(ScriptMethodParams &params);
-void Ray_SetSpritePic(ScriptMethodParams &params);
-
-void Ray_GetSpriteScaleX(ScriptMethodParams &params);
-void Ray_SetSpriteScaleX(ScriptMethodParams &params);
-void Ray_GetSpriteScaleY(ScriptMethodParams &params);
-void Ray_SetSpriteScaleY(ScriptMethodParams &params);
-
-void Ray_SetSpriteBlendType(ScriptMethodParams &params);
-void Ray_GetSpriteBlendType(ScriptMethodParams &params);
-
-void Ray_SetFloorAt(ScriptMethodParams &params);
-void Ray_SetCeilingAt(ScriptMethodParams &params);
-void Ray_GetCeilingAt(ScriptMethodParams &params);
-void Ray_GetFloorAt(ScriptMethodParams &params);
-void Ray_GetLightingAt(ScriptMethodParams &params);
-void Ray_SetLightingAt(ScriptMethodParams &params);
-void Ray_GetAmbientWeight(ScriptMethodParams &params);
-
-void Ray_HasSeenTile(ScriptMethodParams &params);
 
 } // namespace AGSPalRender
 } // namespace Plugins

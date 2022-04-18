@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -232,6 +231,9 @@ struct BuildSetup {
 	std::string filePrefix; ///< Prefix for the relative path arguments in the project files.
 	std::string outputDir;  ///< Path where to put the MSVC project files.
 
+	StringList includeDirs; ///< List of additional include paths
+	StringList libraryDirs; ///< List of additional library paths
+
 	EngineDescList engines; ///< Engine list for the build (this may contain engines, which are *not* enabled!).
 	FeatureList features;   ///< Feature list for the build (this may contain features, which are *not* enabled!).
 
@@ -245,6 +247,7 @@ struct BuildSetup {
 	bool useSDL2;              ///< Whether to use SDL2 or not.
 	bool useCanonicalLibNames; ///< Whether to use canonical libraries names or default ones
 	bool useStaticDetection;   ///< Whether to link detection features inside the executable or not.
+	bool useWindowsUnicode;    ///< Whether to use Windows Unicode APIs or ANSI APIs.
 
 	BuildSetup() {
 		devTools = false;
@@ -254,6 +257,7 @@ struct BuildSetup {
 		useSDL2 = true;
 		useCanonicalLibNames = false;
 		useStaticDetection = true;
+		useWindowsUnicode = true;
 	}
 
 	bool featureEnabled(std::string feature) const;
@@ -430,6 +434,14 @@ bool producesObjectFile(const std::string &fileName);
 std::string toString(int num);
 
 /**
+* Convert a string to uppercase
+*
+* @param str the source string
+* @return The string transformed to uppercase
+*/
+std::string toUpper(const std::string &str);
+
+/**
  * Returns a list of all files and directories in the specified
  * path.
  *
@@ -547,7 +559,7 @@ protected:
 	 * @param objPrefix Prefix to use for object files, which would name clash.
 	 * @param filePrefix Generic prefix to all files of the node.
 	 */
-	virtual void writeFileListToProject(const FileNode &dir, std::ofstream &projectFile, const int indentation,
+	virtual void writeFileListToProject(const FileNode &dir, std::ostream &projectFile, const int indentation,
 	                                    const std::string &objPrefix, const std::string &filePrefix) = 0;
 
 	/**
@@ -571,7 +583,7 @@ protected:
 	 * @param excludeList Files to exclude (must have a relative directory as prefix).
 	 * @param filePrefix Prefix to use for relative path arguments.
 	 */
-	void addFilesToProject(const std::string &dir, std::ofstream &projectFile,
+	void addFilesToProject(const std::string &dir, std::ostream &projectFile,
 	                       const StringList &includeList, const StringList &excludeList,
 	                       const std::string &filePrefix);
 

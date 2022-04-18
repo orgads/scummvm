@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -49,6 +48,7 @@
 #include "ultima/ultima8/world/bobo_boomer_process.h"
 #include "ultima/ultima8/world/world.h"
 #include "ultima/ultima8/world/current_map.h"
+#include "ultima/ultima8/world/coord_utils.h"
 #include "ultima/ultima8/world/sprite_process.h"
 #include "ultima/ultima8/world/target_reticle_process.h"
 #include "ultima/ultima8/world/item_selection_process.h"
@@ -72,8 +72,8 @@ Actor::Actor() : _strength(0), _dexterity(0), _intelligence(0),
 		_lastAnim(Animation::stand), _animFrame(0), _direction(dir_north),
 		_fallStart(0), _unkByte(0), _actorFlags(0), _combatTactic(0),
 		_homeX(0), _homeY(0), _homeZ(0), _currentActivityNo(0),
-		_lastActivityNo(0), _activeWeapon(0), _lastTimeWasHit(0),
-		_attackMoveStartTime(0), _attackMoveTimeout(0),
+		_lastActivityNo(0), _activeWeapon(0), _lastTickWasHit(0),
+		_attackMoveStartFrame(0), _attackMoveTimeout(0),
 		_attackMoveDodgeFactor(1), _attackAimFlag(false) {
 	_defaultActivity[0] = 0;
 	_defaultActivity[1] = 0;
@@ -510,7 +510,7 @@ uint16 Actor::doAnim(Animation::Sequence anim, Direction dir, unsigned int steps
 		switch(anim) {
 			case Animation::walk:
 			case Animation::retreat: // SmallWeapon
-				_attackMoveStartTime = frameno;
+				_attackMoveStartFrame = frameno;
 				_attackMoveTimeout = 120;
 				_attackMoveDodgeFactor = 3;
 				break;
@@ -526,19 +526,19 @@ uint16 Actor::doAnim(Animation::Sequence anim, Direction dir, unsigned int steps
 			//case Animation::startRunSmallWeapon:
 			//case Animation::startRunLargeWeapon:
 			case Animation::startRun:
-				_attackMoveStartTime = frameno;
+				_attackMoveStartFrame = frameno;
 				_attackMoveTimeout = 120;
 				_attackMoveDodgeFactor = 2;
 				break;
 			case Animation::slideLeft:
 			case Animation::slideRight:
-				_attackMoveStartTime = frameno;
+				_attackMoveStartFrame = frameno;
 				_attackMoveTimeout = 60;
 				_attackMoveDodgeFactor = 3;
 				break;
 			case Animation::startKneeling:
 			case Animation::stopKneeling:
-				_attackMoveStartTime = frameno;
+				_attackMoveStartFrame = frameno;
 				_attackMoveTimeout = 75;
 				_attackMoveDodgeFactor = 3;
 				break;
@@ -763,31 +763,62 @@ uint16 Actor::setActivityU8(int activity) {
 }
 
 uint16 Actor::setActivityCru(int activity) {
-	if (isDead())
+	if (isDead() || World::get_instance()->getControlledNPCNum() == _objId
+		|| hasActorFlags(ACT_WEAPONREADY) || activity == 0)
+		return 0;
+
+	if ((World::get_instance()->getGameDifficulty() == 4) && (getRandom() % 2 == 0)) {
+		if (activity == 5)
+			activity = 0xa;
+		if (activity == 9)
+			activity = 0xb;
+	}
+
+	if (_currentActivityNo == activity || (isInCombat() && activity != 0xc))
 		return 0;
 
 	_lastActivityNo = _currentActivityNo;
 	_currentActivityNo = activity;
 
+	if (isInCombat())
+		clearInCombat();
+
+	if (!hasFlags(FLG_FASTAREA))
+		return 0;
+
+	Kernel *kernel = Kernel::get_instance();
+
+	static const uint16 PROCSTYPES_TO_KILL[] = {
+		ActorAnimProcess::ACTOR_ANIM_PROC_TYPE,
+		PathfinderProcess::PATHFINDER_PROC_TYPE,
+		0x255, // PaceProcess
+		0x257, // LoiterProcess
+		// 0x258, // Stand Process (we don't have a process for this)
+		AttackProcess::ATTACK_PROC_TYPE,
+		0x25e, // GuardProcess
+		0x25f  // SurrenderProcess
+	};
+	for (int i = 0; i < ARRAYSIZE(PROCSTYPES_TO_KILL); i++) {
+		kernel->killProcesses(_objId, PROCSTYPES_TO_KILL[i], true);
+	}
+
 	switch (activity) {
 	case 1: // stand
 		return doAnim(Animation::stand, dir_current);
-	case 3: // pace
-		return Kernel::get_instance()->addProcess(new PaceProcess(this));
 	case 2: // loiter
-		Kernel::get_instance()->addProcess(new LoiterProcess(this));
-		return Kernel::get_instance()->addProcess(new DelayProcess(1));
+		return kernel->addProcess(new LoiterProcess(this));
+	case 3: // pace
+		return kernel->addProcess(new PaceProcess(this));
 	case 4:
 	case 6:
 	    // Does nothing in game..
 	    break;
 	case 7:
 		if (_lastActivityNo != 7)
-			return Kernel::get_instance()->addProcess(new SurrenderProcess(this));
+			return kernel->addProcess(new SurrenderProcess(this));
 	    break;
 	case 8:
-		return Kernel::get_instance()->addProcess(new GuardProcess(this));
-	    break;
+		return kernel->addProcess(new GuardProcess(this));
 	case 5:
 	case 9:
 	case 0xa:
@@ -799,7 +830,7 @@ uint16 Actor::setActivityCru(int activity) {
 	case 0xd:
 		// Only in No Regret
 		setActorFlag(ACT_INCOMBAT);
-		return Kernel::get_instance()->addProcess(new RollingThunderProcess(this));
+		return kernel->addProcess(new RollingThunderProcess(this));
 	case 0x70:
 		return setActivity(getDefaultActivity(0));
 	case 0x71:
@@ -908,14 +939,19 @@ void Actor::receiveHitCru(uint16 other, Direction dir, int damage, uint16 damage
 
 	// Special case for Vargas, who has a shield.
 	if (GAME_IS_REMORSE && shape == 0x3ac && world->getVargasShield() > 0) {
+		uint16 currentanim = 0;
 		if (isBusy()) {
 			ActorAnimProcess *proc = dynamic_cast<ActorAnimProcess *>(Kernel::get_instance()->findProcess(_objId, ActorAnimProcess::ACTOR_ANIM_PROC_TYPE));
-			if (proc->getAction() == Animation::teleportIn || proc->getAction() == Animation::teleportOut || proc->getAction() == Animation::teleportInReplacement || proc->getAction() == Animation::teleportOutReplacement)
+			Animation::Sequence action = proc->getAction();
+			if (action == Animation::teleportIn || action == Animation::teleportOut ||
+				action == Animation::absAnim(Animation::teleportIn) ||
+				action == Animation::absAnim(Animation::teleportOut))
 				return;
+			currentanim = proc->getPid();
 		}
 
-		ProcId teleout = doAnim(Animation::teleportOutReplacement, dir_current);
-		doAnimAfter(Animation::teleportInReplacement, dir_current, teleout);
+		ProcId teleout = doAnimAfter(Animation::absAnim(Animation::teleportOut), dir_current, currentanim);
+		doAnimAfter(Animation::absAnim(Animation::teleportIn), dir_current, teleout);
 		int newval = MAX(0, static_cast<int>(world->getVargasShield()) - damage);
 		world->setVargasShield(static_cast<uint32>(newval));
 		return;
@@ -933,10 +969,10 @@ void Actor::receiveHitCru(uint16 other, Direction dir, int damage, uint16 damage
 		*/
 	}
 
-	if (isDead())
+	if (isDead() && (getShape() != 0x5d6 || GAME_IS_REMORSE))
 		return;
 
-	_lastTimeWasHit = Kernel::get_instance()->getTickNum();
+	_lastTickWasHit = Kernel::get_instance()->getTickNum();
 
 	if (shape != 1 && this != getControlledActor()) {
 		Actor *controlled = getControlledActor();
@@ -1014,7 +1050,7 @@ void Actor::receiveHitCru(uint16 other, Direction dir, int damage, uint16 damage
 				if (!(getRandom() % 3)) {
 					// Randomly stun the NPC for these damage types.
 					// CHECK ME: is this time accurate?
-					Process *attack = kernel->findProcess(_objId, AttackProcess::ATTACK_PROCESS_TYPE);
+					Process *attack = kernel->findProcess(_objId, AttackProcess::ATTACK_PROC_TYPE);
 					uint stun = ((getRandom() % 10) + 8) * 60;
 					if (attack && stun) {
 						Process *delay = new DelayProcess(stun);
@@ -1036,10 +1072,8 @@ void Actor::tookHitCru() {
 	if (!audio)
 		return;
 
-	if (lastanim == Animation::unknownAnim30 || lastanim == Animation::startRunLargeWeapon) {
-		Actor *controlled = getActor(World::get_instance()->getControlledNPCNum());
-		bool canseecontrolled = controlled && (getRangeIfVisible(*controlled) > 0);
-		if (canseecontrolled) {
+	if (lastanim == Animation::lookLeftCru || lastanim == Animation::lookRightCru) {
+		if (canSeeControlledActor(true)) {
 			if (getRandom() % 4)
 				setActivity(5);
 			else
@@ -1311,7 +1345,8 @@ ProcId Actor::dieU8(uint16 damageType) {
 		}
 	}
 
-	destroyContents();
+	if (getFlags() & Item::FLG_FAST_ONLY)
+		destroyContents();
 	giveTreasure();
 
 	const ShapeInfo *shapeinfo = getShapeInfo();
@@ -1375,8 +1410,11 @@ ProcId Actor::dieU8(uint16 damageType) {
 ProcId Actor::dieCru(uint16 damageType, uint16 damagePts, Direction srcDir) {
 	bool is_robot = isRobotCru();
 	bool created_koresh = false;
+	const uint32 startshape = getShape();
 
 	World *world = World::get_instance();
+
+	world->getCurrentMap()->removeTargetItem(this);
 
     if (world->getControlledNPCNum() == _objId) {
 		TargetReticleProcess::get_instance()->avatarMoved();
@@ -1388,10 +1426,13 @@ ProcId Actor::dieCru(uint16 damageType, uint16 damagePts, Direction srcDir) {
 	ProcId lastanim = 0;
 	Kernel::get_instance()->killProcesses(_objId, Kernel::PROC_TYPE_ALL, true);
 
-	destroyContents();
-	giveTreasure();
-
-	if (damageType == 3 || damageType == 4 || damageType == 10 || damageType == 12) {
+	if (getShape() == 0x5d6 && GAME_IS_REGRET) {
+		// you only die twice.. (frozen person breaking into pieces)
+		if (!isBusy()) {
+			setShape(0x5ef);
+			setToStartOfAnim(Animation::fallBackwardsCru);
+		}
+	} else if (damageType == 3 || damageType == 4 || damageType == 10 || damageType == 12) {
 		if (!is_robot /* && violence enabled */) {
 			const FireType *ft = GameData::get_instance()->getFireType(damageType);
 			assert(ft);
@@ -1456,6 +1497,23 @@ ProcId Actor::dieCru(uint16 damageType, uint16 damagePts, Direction srcDir) {
 			setShape(0x59c);
 			setToStartOfAnim(Animation::fallBackwardsCru);
 		}
+	} else if ((damageType == 0x10) || (damageType == 0x12)) {
+		if (!is_robot) {
+			setShape(0x5d6);
+			setToStartOfAnim(Animation::fallBackwardsCru);
+		}
+	} else if (damageType == 0x11) {
+		if (!is_robot) {
+			setShape(0x62d);
+			setToStartOfAnim(Animation::fallBackwardsCru);
+		}
+	} else if (damageType == 0x14) {
+		if (!is_robot) {
+			if (true /*isViolenceEnabled()*/) {
+				setShape(0x278);
+				setToStartOfAnim(Animation::fallBackwardsCru);
+			}
+		}
 	} else if (damageType == 7 && _objId == 1) {
 		lastanim = doAnimAfter(Animation::electrocuted, dir_current, lastanim);
 	}
@@ -1463,6 +1521,27 @@ ProcId Actor::dieCru(uint16 damageType, uint16 damagePts, Direction srcDir) {
 	if (!created_koresh) {
 		bool fall_backwards = true;
 		bool fall_random_dir = false;
+
+		if (GAME_IS_REGRET) {
+			uint32 shape = getShape();
+			if (startshape == shape) {
+				if (shape == 0x5ff || shape == 0x5d7) {
+					setShape(0x606);
+					setToStartOfAnim(Animation::fallBackwardsCru);
+				} else if (shape == 0x625 || shape == 0x626) {
+					setShape(0x62e);
+					setToStartOfAnim(Animation::fallBackwardsCru);
+				} else if (shape == 0x5f0 || shape == 0x2c3) {
+					setShape(0x5d5);
+					setToStartOfAnim(Animation::fallBackwardsCru);
+				} else if (shape == 0x62f || shape == 0x630) {
+					setShape(0x631);
+					setToStartOfAnim(Animation::fallBackwardsCru);
+				}
+			}
+		}
+
+
 		Direction dirtest[9];
 		/* 0x383 == 899 (robot), 1423 = plasma death, 1430 = fire death skeleton */
 		if (getShape() != 899 && getShape() != 0x58f && getShape() != 0x596) {
@@ -1686,7 +1765,7 @@ bool Actor::isFalling() const {
 	return (proc && proc->is_active());
 }
 
-CombatProcess *Actor::getCombatProcess() {
+CombatProcess *Actor::getCombatProcess() const {
 	Process *p = Kernel::get_instance()->findProcess(_objId, 0xF2); // CONSTANT!
 	if (!p)
 		return nullptr;
@@ -1696,8 +1775,8 @@ CombatProcess *Actor::getCombatProcess() {
 	return cp;
 }
 
-AttackProcess *Actor::getAttackProcess() {
-	Process *p = Kernel::get_instance()->findProcess(_objId, AttackProcess::ATTACK_PROCESS_TYPE);
+AttackProcess *Actor::getAttackProcess() const {
+	Process *p = Kernel::get_instance()->findProcess(_objId, AttackProcess::ATTACK_PROC_TYPE);
 	if (!p)
 		return nullptr;
 	AttackProcess *ap = dynamic_cast<AttackProcess *>(p);
@@ -1747,15 +1826,14 @@ void Actor::setInCombatCru(int activity) {
 	AttackProcess *ap = new AttackProcess(this);
 	Kernel::get_instance()->addProcess(ap);
 
-	if (getCurrentActivityNo() == 8) {
-		// Guard process.. set some flag in ap
+	if (getLastActivityNo() == 8) {
+		// Coming from guard process.. set some flag in ap
 		ap->setField97();
 	}
 	if (activity == 0xc) {
-		ap->setTimer3();
-		// This sets fields 0x77 and 0x79 of the attack process
+		// This sets timer 3 of the attack process
 		// to some random timer value in the future
-		//ap->AttackProcess_1108_1485();
+		ap->setTimer3();
 	}
 
 	uint16 animproc = 0;
@@ -1788,6 +1866,51 @@ void Actor::clearInCombat() {
 		p->terminate();
 
 	clearActorFlag(ACT_INCOMBAT);
+}
+
+bool Actor::canSeeControlledActor(bool forcombat) {
+	const Actor *controlled = getControlledActor();
+	if (!controlled)
+		return false;
+
+	if (!isOnScreen())
+		return false;
+
+	Direction dirtocontrolled = getDirToItemCentre(*controlled);
+	Direction curdir = getDir();
+
+	if (forcombat) {
+		Animation::Sequence lastanim = getLastAnim();
+		if ((lastanim == Animation::lookLeftCru || lastanim == Animation::lookRightCru) && _animFrame > 1) {
+			bool left;
+			if (lastanim == Animation::lookLeftCru) {
+				left = false;
+				if (((curdir != 8) && (curdir != 10)) && (curdir != 0xc))
+					left = true;
+			} else {
+				left = true;
+				if (((curdir != 8) && (curdir != 10)) && (curdir != 0xc))
+					left = false;
+			}
+			if (left) {
+				curdir = Direction_TurnByDelta(curdir, -4, dirmode_16dirs);
+			} else {
+				curdir = Direction_TurnByDelta(curdir, 4, dirmode_16dirs);
+			}
+		}
+	}
+
+	if (dirtocontrolled == curdir ||
+		dirtocontrolled == Direction_OneLeft(curdir, dirmode_16dirs) ||
+		dirtocontrolled == Direction_OneRight(curdir, dirmode_16dirs) ||
+		dirtocontrolled == Direction_TurnByDelta(curdir, 2, dirmode_16dirs) ||
+		dirtocontrolled == Direction_TurnByDelta(curdir, -2, dirmode_16dirs))
+	{
+		return getRangeIfVisible(*controlled) > 0;
+	}
+
+	return false;
+
 }
 
 int32 Actor::collideMove(int32 x, int32 y, int32 z, bool teleports, bool force,
@@ -1860,7 +1983,7 @@ Actor *Actor::createActor(uint32 shape, uint32 frame) {
 		     << ")." << Std::endl;
 	}
 
-	Actor *av = getMainActor();
+	const Actor *av = getMainActor();
 	newactor->setMapNum(av->getMapNum());
 	newactor->setNpcNum(objID);
 	newactor->setFlag(FLG_ETHEREAL);
@@ -1872,11 +1995,11 @@ Actor *Actor::createActor(uint32 shape, uint32 frame) {
 void Actor::dumpInfo() const {
 	Container::dumpInfo();
 
-	pout << "hp: " << _hitPoints << ", mp: " << _mana << ", str: " << _strength
+	pout << "  Actor hp: " << _hitPoints << ", mp: " << _mana << ", str: " << _strength
 	     << ", dex: " << _dexterity << ", int: " << _intelligence
 	     << ", ac: " << getArmourClass() << ", defense: " << ConsoleStream::hex
 	     << getDefenseType() << " align: " << getAlignment() << " enemy: "
-	     << getEnemyAlignment() << ", flags: " << _actorFlags
+	     << getEnemyAlignment() << ", flags: " << _actorFlags << ", activity: " << _currentActivityNo
 	     << ConsoleStream::dec << Std::endl;
 }
 
@@ -1928,9 +2051,9 @@ void Actor::saveData(Common::WriteStream *ws) {
 		ws->writeUint16LE(_currentActivityNo);
 		ws->writeUint16LE(_lastActivityNo);
 		ws->writeUint16LE(_activeWeapon);
-		ws->writeSint32LE(_lastTimeWasHit);
+		ws->writeSint32LE(_lastTickWasHit);
 		ws->writeByte(0); // unused, keep for backward compatibility
-		ws->writeUint32LE(_attackMoveStartTime);
+		ws->writeUint32LE(_attackMoveStartFrame);
 		ws->writeUint32LE(_attackMoveTimeout);
 		ws->writeUint16LE(_attackMoveDodgeFactor);
 		ws->writeByte(_attackAimFlag ? 1 : 0);
@@ -1965,9 +2088,9 @@ bool Actor::loadData(Common::ReadStream *rs, uint32 version) {
 		_currentActivityNo = rs->readUint16LE();
 		_lastActivityNo = rs->readUint16LE();
 		_activeWeapon = rs->readUint16LE();
-		_lastTimeWasHit = rs->readSint32LE();
+		_lastTickWasHit = rs->readSint32LE();
 		rs->readByte();  // unused, keep for backward compatibility
-		_attackMoveStartTime = rs->readUint32LE();
+		_attackMoveStartFrame = rs->readUint32LE();
 		_attackMoveTimeout = rs->readUint32LE();
 		_attackMoveDodgeFactor = rs->readUint16LE();
 		_attackAimFlag = rs->readByte() != 0;
@@ -1998,10 +2121,7 @@ uint32 Actor::I_teleport(const uint8 *args, unsigned int /*argsize*/) {
 	ARG_UINT16(newmap);
 	if (!actor) return 0;
 
-	if (GAME_IS_CRUSADER) {
-		newx *= 2;
-		newy *= 2;
-	}
+	World_FromUsecodeXY(newx, newy);
 
 	actor->teleport(newmap, newx, newy, newz);
 	return 0;
@@ -2011,8 +2131,8 @@ uint32 Actor::I_doAnim(const uint8 *args, unsigned int /*argsize*/) {
 	ARG_ACTOR_FROM_PTR(actor);
 	ARG_UINT16(anim);
 	ARG_UINT16(dir); // seems to be 0-8
-	ARG_UINT16(unk1); // this is almost always 10000 in U8.Maybe speed-related?
-	ARG_UINT16(unk2); // appears to be 0 or 1. Some flag?
+	ARG_NULL16(); // uint16? almost always 10000 in U8. Seems to be "priority" or something?
+	ARG_NULL16(); // uint16? appears to be 0 or 1. Some flag?
 
 	if (!actor) return 0;
 
@@ -2264,7 +2384,7 @@ uint32 Actor::I_isEnemy(const uint8 *args, unsigned int /*argsize*/) {
 
 uint32 Actor::I_isDead(const uint8 *args, unsigned int /*argsize*/) {
 	ARG_ACTOR_FROM_PTR(actor);
-	if (!actor) return 0;
+	if (!actor) return 1;
 
 	if (actor->isDead())
 		return 1;
@@ -2421,14 +2541,11 @@ uint32 Actor::I_pathfindToPoint(const uint8 *args, unsigned int /*argsize*/) {
 	ARG_ACTOR_FROM_PTR(actor);
 	ARG_UINT16(x);
 	ARG_UINT16(y);
-	ARG_UINT16(z);
-	ARG_NULL16(); // unknown. Only one instance of this in U8, value is 5.
+	ARG_UINT8(z);
+	ARG_NULL16(); // unknown. Only one instance of this in U8, values are 5,1.
 	if (!actor) return 0;
 
-	if (GAME_IS_CRUSADER) {
-		x *= 2;
-		y *= 2;
-	}
+	World_FromUsecodeXY(x, y);
 
 	return Kernel::get_instance()->addProcess(
 	           new PathfinderProcess(actor, x, y, z));
@@ -2474,7 +2591,8 @@ uint32 Actor::I_createActor(const uint8 *args, unsigned int /*argsize*/) {
 	UCMachine::get_instance()->assignPointer(ptr, buf, 2);
 
 #if 0
-	perr << "I_createActor: created actor #" << objID << " with shape " << shape << Std::endl;
+	perr << "I_createActor: created actor #" << objID << " shape "
+		 << shape << " frame " << frame << Std::endl;
 #endif
 
 	return objID;
@@ -2524,7 +2642,7 @@ uint32 Actor::I_createActorCru(const uint8 *args, unsigned int /*argsize*/) {
 		return 0;
 	}
 
-	newactor->setDir(Direction_FromUsecodeDir(dir));
+	newactor->setDir(static_cast<Direction>(dir * 2));
 
 	int32 x, y, z;
 	item->getLocation(x, y, z);
@@ -2541,7 +2659,8 @@ uint32 Actor::I_createActorCru(const uint8 *args, unsigned int /*argsize*/) {
 	uint16 wpntype2 = npcData->getWpnType2();
 
 	if (World::get_instance()->getGameDifficulty() == 4) {
-	   wpntype = NPCDat::randomlyGetStrongerWeaponTypes(shape);
+		wpntype = NPCDat::randomlyGetStrongerWeaponTypes(shape);
+		wpntype2 = wpntype;
 	}
 
 	if ((!wpntype || !wpnflag) && wpntype2) {

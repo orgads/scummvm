@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -55,19 +54,19 @@ struct Surface {
 	/**
 	 * Width of the surface.
 	 */
-	uint16 w;
+	int16 w;
 
 	/**
 	 * Height of the surface.
 	 */
-	uint16 h;
+	int16 h;
 
 	/**
 	 * Number of bytes in a pixel line.
 	 *
 	 * @note This might not equal w * bytesPerPixel.
 	 */
-	uint16 pitch;
+	int16 pitch;
 
 protected:
 	/**
@@ -188,7 +187,7 @@ public:
 	 * @param height  Height of the surface object.
 	 * @param format  The pixel format to be used by the surface.
 	 */
-	void create(uint16 width, uint16 height, const PixelFormat &format);
+	void create(int16 width, int16 height, const PixelFormat &format);
 
 	/**
 	 * Release the memory used by the pixel memory of this surface.
@@ -212,7 +211,7 @@ public:
 	 * @param pixels  Pixel data.
 	 * @param format  Pixel format of the pixel data.
 	 */
-	void init(uint16 width, uint16 height, uint16 pitch, void *pixels, const PixelFormat &format);
+	void init(int16 width, int16 height, int16 pitch, void *pixels, const PixelFormat &format);
 
 	/**
 	 * Copy the data from another surface.
@@ -402,7 +401,7 @@ public:
 	 * @param newHeight  The resulting height.
 	 * @param filtering  Whether or not to use bilinear filtering.
 	 */
-	Graphics::Surface *scale(uint16 newWidth, uint16 newHeight, bool filtering = false) const;
+	Graphics::Surface *scale(int16 newWidth, int16 newHeight, bool filtering = false) const;
 
 	/**
 	 * @brief Rotoscale function; this returns a transformed version of this surface after rotation and
@@ -428,7 +427,7 @@ public:
 	 * @param scale number of pixels per single character. Default is -1, fit whole surface to maxwidth
 	 * @param maxwidth horizontal size of the print out in characters. Default is 160. Note that 2 characters
 	 *                 are taken by the frame
-	 * @param palette ˚palette to use for 1bpp pixels. If omitted, we assume grayscale palette
+	 * @param palette palette to use for 1bpp pixels. If omitted, we assume grayscale palette
 	 *
 	 */
 	void debugPrint(int debuglevel = 0, int width = 0, int height = 0, int x = 0, int y = 0, int scale = -1, int maxwidth = 160, const byte *palette = NULL) const;

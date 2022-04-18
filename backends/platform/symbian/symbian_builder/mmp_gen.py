@@ -5,10 +5,10 @@
 # are too numerous to list here. Please refer to the COPYRIGHT
 # file distributed with this source distribution.
 
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,12 +16,11 @@
 # GNU General Public License for more details.
 
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 from __future__ import with_statement
-import os, shutil, stat
+import os, shutil
 from collections import defaultdict as defdict
 from common_names import *
 
@@ -107,9 +106,11 @@ def processModule_mk(path, buildparams):
 
 
 # Add per engine fixes
-libc_engines = ("bladerunner", "glk", "illusions", "stark", "titanic", "ultima")
+libc_engines = ("ags", "bladerunner", "glk", "illusions", "nancy", "stark", "titanic", "ultima")
 def CheckEngine(lst, game):
    if game == "sword25":
+      return None
+   if game == "testbed":
       return None
    if game in libc_engines:
       lst = lst + "\nOPTION    GCCE -I'/Symbian/S60_5th_Edition_SDK_v1.0/epoc32/include/libc'\n"
@@ -195,17 +196,32 @@ def FilterUltima(src):
    print "Exclude nuvie and ultima4 engines from detection_tables.h and detection.cpp!"
    return src
 
+
 def FilterGrim(src):
+   src += ["#if !defined(WINS)"]
    src += ["SOURCE   movie/codecs/blocky8ARM.s"]
+   src += ["#endif"]
    return src
+
+
+def FilterScumm(src):
+   src += ["#if !defined(WINS)"]
+   src += ["SOURCE   proc3ARM.s"]
+   src += ["SOURCE   gfxARM.s"]
+   src += ["SOURCE   smush/codec47ARM.s"]
+   src += ["#endif"]
+   return src
+
 
 def FilterSrcs(src, engine):
    if "grim" in engine:
       return FilterGrim(src)
    if "ultima" in engine:
       return FilterUltima(src)
+   if "scumm" in engine:
+      return FilterScumm(src)
    # if "" in engine:
-      # Filter(src)
+      # return Filter(src)
    return src
 
 
@@ -215,6 +231,7 @@ ro_warning = """
 /* Warning! Carbide can silently change file.
 Set read-onle attribute after manual update!!! */
 """
+
 def MakeMMP(engine):
    global firstRun, currentEngine
    print "Start processing engine: %s" %engine
@@ -229,6 +246,7 @@ def MakeMMP(engine):
    staticlib = tt[1]
 
    src = processModule_mk(pth, macrolist)
+   src = ProcessDup(src)
    src = FilterSrcs(src, engine)
 
    mmp = """TARGET scummvm_%s.lib
@@ -236,7 +254,7 @@ TARGETTYPE lib\n
 #include "../S60v3/build_config.mmh"
 
 #include "build_parts.mmh"
-#include "macros.mmh"\n
+#include "../S60v3/macros.mmh"\n
 USERINCLUDE    ..\..\..\..\engines\%s\n
 // *** SOURCE files
 SOURCEPATH   ..\..\..\..\engines\%s\n
@@ -246,8 +264,6 @@ SOURCEPATH   ..\..\..\..\engines\%s\n
    mmp = CheckEngine(mmp, engine)
    if mmp is None:
       return
-
-   src = ProcessDup(src)
 
    plugins_table = """
 #if PLUGIN_ENABLED_STATIC(%s)
@@ -267,14 +283,6 @@ LINK_PLUGIN(%s_DETECTION)
    dtable = os.path.join(pt, "detection_table.h")
    macros = os.path.join(local, "macros.mmh")
    engines = os.path.join(local, "engines.mmh")
-   #save old macros.mmh
-   macros_new = os.path.join(local, "macros.mmh.new")
-   engines_new = os.path.join(local, "engines.mmh.new")
-   if os.path.exists(macros_new):
-      macros = macros_new
-      firstRun = False
-   if os.path.exists(engines_new):
-      engines = engines_new
 #create files and add bld.inf header
    if firstRun is True:
       SafeWriteFile(bldinf, 'w', "PRJ_MMPFILES\n")
@@ -308,45 +316,12 @@ local = mmps
 # pt = 'e:\Scu\engines'
 # local = pt
 
-def data_dump(macros):
-   with open(macros) as ff:
-      f = ff.readlines()
-   n = [x.strip() for x in f if x.startswith(('STATICLIBRARY', 'MACRO'))]
-   n.sort()
-   return n
-
-def check_cashed():
-   macros_new = os.path.join(local, "macros.mmh.new")
-   if os.path.exists(macros_new):
-      macros = os.path.join(local, "macros.mmh")
-      engines = os.path.join(local, "engines.mmh")
-      engines_new = os.path.join(local, "engines.mmh.new")
-
-      macros_dump = data_dump(macros)
-      macros_dump_new = data_dump(macros_new)
-      macros_diff = set(macros_dump).symmetric_difference(set(macros_dump_new))
-      if not macros_diff:
-         return
-      SafeWriteFile(build_log, 'a', "new macro found: ")
-      SafeWriteFile(build_log, 'a', list(macros_diff))
-      SafeWriteFile(macros, 'a', list(macros_diff))
-
-      engines_dump = data_dump(engines)
-      engines_dump_new = data_dump(engines_new)
-      engines_diff = set(engines_dump).symmetric_difference(set(engines_dump_new))
-      SafeWriteFile(engines, 'a', list(engines_diff))
-
-      os.chmod(macros, stat.S_IREAD)
-      os.chmod(engines, stat.S_IREAD)
-
 def count_sc_parts():
    t = []
    for i in range(len(uids)):
-      idx = i+1
-      d = "#define SCUMMVM_PT_%d" %idx
+      d = "#define SCUMMVM_PT_%d" %(i+1)
       t.append(d)
    pth = os.path.join(local, "build_parts.mmh")
-   print t
    SafeWriteFile(pth, 'w', ro_warning)
    SafeWriteFile(pth, 'a', t)
 
@@ -362,22 +337,10 @@ def create_engine_mmps(arg = 'full'):
          try:
             shutil.rmtree(local)
             os.mkdir(local)
-         except:
-            macros = os.path.join(local, "macros.mmh")
-            engines = os.path.join(local, "engines.mmh")
-
-            macros_new = os.path.join(local, "macros.mmh.new")
-            engines_new = os.path.join(local, "engines.mmh.new")
-            SafeWriteFile(macros_new, 'w', ro_warning)
-            SafeWriteFile(engines_new, 'w', ro_warning)
-            os.chmod(macros, stat.S_IWRITE)
-            try:
-               os.chmod(engines, stat.S_IWRITE)
-            except: pass
+         except: pass
    t = os.listdir(pt)
    [MakeMMP(m) for m in t if os.path.isdir(os.path.join(pt, m))]
    count_sc_parts()
-   check_cashed()
 
 if __name__ == "__main__":
    create_engine_mmps()

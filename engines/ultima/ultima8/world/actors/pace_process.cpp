@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -48,19 +47,11 @@ PaceProcess::PaceProcess(Actor *actor): _counter(0) {
 
 
 bool PaceProcess::maybeStartDefaultActivity1(Actor *actor) {
-	const Actor *mainactor = getControlledActor();
-	if (!mainactor)
-		return false;
-
 	uint16 activity = actor->getDefaultActivity(1);
 	uint16 cur_activity = actor->getCurrentActivityNo();
-
-	if (actor->isOnScreen() && activity > 0 && cur_activity != activity) {
-		int range = actor->getRangeIfVisible(*mainactor);
-		if (range > 0) {
-			actor->setActivity(activity);
-			return true;
-		}
+	if (activity != 0 && cur_activity != activity && actor->canSeeControlledActor(false)) {
+		actor->setActivity(activity);
+		return true;
 	}
 
 	return false;
@@ -89,6 +80,7 @@ void PaceProcess::run() {
 
 	Animation::Result result = a->tryAnim(Animation::walk, a->getDir());
 	if (result == Animation::SUCCESS) {
+		_counter = 0;
 		uint16 walkprocid = a->doAnim(Animation::walk, a->getDir());
 		waitFor(walkprocid);
 	} else {
@@ -97,21 +89,21 @@ void PaceProcess::run() {
 			uint32 shapeno = a->getShape();
 			if (shapeno == 0x2f5 || shapeno == 0x2f7 || shapeno != 0x2f6 ||
 				shapeno == 0x344 || shapeno == 0x597) {
-				a->setActivity(5); // attack
-			} else {
 				a->setActivity(7); // surrender
+			} else {
+				a->setActivity(5); // attack
 			}
 			return;
 		}
 
 		// Stand, turn around, and wait for 60.
 		uint16 standprocid = a->doAnim(Animation::stand, a->getDir());
-		uint16 turnprocid = a->turnTowardDir(Direction_Invert(a->getDir()));
-		Process *turnproc = kernel->getProcess(turnprocid);
-		turnproc->waitFor(standprocid);
+		//debug("PaceProcess: actor %d turning from %d to %d", a->getObjId(),
+		//	  a->getDir(), Direction_Invert(a->getDir()));
+		uint16 turnprocid = a->turnTowardDir(Direction_Invert(a->getDir()), standprocid);
 		Process *waitproc = new DelayProcess(60);
 		Kernel::get_instance()->addProcess(waitproc);
-		waitproc->waitFor(turnproc);
+		waitproc->waitFor(turnprocid);
 		waitFor(waitproc);
 	}
 }

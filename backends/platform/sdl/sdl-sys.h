@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -58,6 +57,11 @@
 #if !defined(FORBIDDEN_SYMBOL_ALLOW_ALL) && !defined(FORBIDDEN_SYMBOL_EXCEPTION_system)
 #undef system
 #define system FAKE_system
+#endif
+
+#if !defined(FORBIDDEN_SYMBOL_ALLOW_ALL) && !defined(FORBIDDEN_SYMBOL_EXCEPTION_mkdir)
+#undef mkdir
+#define mkdir FAKE_mkdir
 #endif
 
 // Fix compilation with MacPorts SDL 2
@@ -110,6 +114,32 @@
 	#endif
 
 #endif // FORBIDDEN_SYMBOL_EXCEPTION_time_h
+
+// Fix compilation on non-x86 architectures
+// It needs various (usually forbidden) symbols from unistd.h
+#ifndef FORBIDDEN_SYMBOL_EXCEPTION_unistd_h
+
+	#if !defined(FORBIDDEN_SYMBOL_ALLOW_ALL) && !defined(FORBIDDEN_SYMBOL_EXCEPTION_chdir)
+	#undef chdir
+	#define chdir FAKE_chdir
+	#endif
+
+	#if !defined(FORBIDDEN_SYMBOL_ALLOW_ALL) && !defined(FORBIDDEN_SYMBOL_EXCEPTION_getcwd)
+	#undef getcwd
+	#define getcwd FAKE_getcwd
+	#endif
+
+	#if !defined(FORBIDDEN_SYMBOL_ALLOW_ALL) && !defined(FORBIDDEN_SYMBOL_EXCEPTION_getwd)
+	#undef getwd
+	#define getwd FAKE_getwd
+	#endif
+
+	#if !defined(FORBIDDEN_SYMBOL_ALLOW_ALL) && !defined(FORBIDDEN_SYMBOL_EXCEPTION_unlink)
+	#undef unlink
+	#define unlink FAKE_unlink
+	#endif
+
+#endif // FORBIDDEN_SYMBOL_EXCEPTION_unistd_h
 
 // HACK: SDL might include windows.h which defines its own ARRAYSIZE.
 // However, we want to use the version from common/util.h. Thus, we make sure
@@ -224,6 +254,11 @@
 #define system(a) FORBIDDEN_look_at_common_forbidden_h_for_more_info SYMBOL !%*
 #endif
 
+#if !defined(FORBIDDEN_SYMBOL_ALLOW_ALL) && !defined(FORBIDDEN_SYMBOL_EXCEPTION_mkdir)
+#undef mkdir
+#define mkdir(a,b) FORBIDDEN_look_at_common_forbidden_h_for_more_info SYMBOL !%*
+#endif
+
 // re-forbid all those time.h symbols again (if they were forbidden)
 #ifndef FORBIDDEN_SYMBOL_EXCEPTION_time_h
 
@@ -273,5 +308,30 @@
 	#endif
 
 #endif // FORBIDDEN_SYMBOL_EXCEPTION_time_h
+
+// re-forbid all those unistd.h symbols again (if they were forbidden)
+#ifndef FORBIDDEN_SYMBOL_EXCEPTION_unistd_h
+
+	#if !defined(FORBIDDEN_SYMBOL_ALLOW_ALL) && !defined(FORBIDDEN_SYMBOL_EXCEPTION_chdir)
+	#undef chdir
+	#define chdir(a) FORBIDDEN_look_at_common_forbidden_h_for_more_info SYMBOL !%*
+	#endif
+
+	#if !defined(FORBIDDEN_SYMBOL_ALLOW_ALL) && !defined(FORBIDDEN_SYMBOL_EXCEPTION_getcwd)
+	#undef getcwd
+	#define getcwd(a,b) FORBIDDEN_look_at_common_forbidden_h_for_more_info SYMBOL !%*
+	#endif
+
+	#if !defined(FORBIDDEN_SYMBOL_ALLOW_ALL) && !defined(FORBIDDEN_SYMBOL_EXCEPTION_getwd)
+	#undef getwd
+	#define getwd(a) FORBIDDEN_look_at_common_forbidden_h_for_more_info SYMBOL !%*
+	#endif
+
+	#if !defined(FORBIDDEN_SYMBOL_ALLOW_ALL) && !defined(FORBIDDEN_SYMBOL_EXCEPTION_unlink)
+	#undef unlink
+	#define unlink(a) FORBIDDEN_look_at_common_forbidden_h_for_more_info SYMBOL !%*
+	#endif
+
+#endif // FORBIDDEN_SYMBOL_EXCEPTION_unistd_h
 
 #endif

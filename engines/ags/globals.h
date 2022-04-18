@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,15 +15,18 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef AGS_GLOBALS_H
 #define AGS_GLOBALS_H
 
+#include "ags/shared/core/platform.h"
+#define AGS_PLATFORM_DEFINES_PSP_VARS (AGS_PLATFORM_OS_IOS || AGS_PLATFORM_OS_ANDROID)
+
 #include "ags/shared/ac/game_version.h"
+#include "ags/shared/util/stdio_compat.h"
 #include "ags/shared/util/string.h"
 #include "ags/shared/util/string_types.h"
 #include "ags/shared/util/version.h"
@@ -32,6 +35,7 @@
 #include "ags/engine/ac/runtime_defines.h"
 #include "ags/engine/ac/walk_behind.h"
 #include "ags/engine/main/engine.h"
+#include "ags/engine/main/graphics_mode.h"
 #include "ags/engine/media/audio/audio_defines.h"
 #include "ags/engine/script/script.h"
 #include "ags/engine/script/script_runtime.h"
@@ -72,6 +76,7 @@ class GUITextBox;
 struct InteractionVariable;
 struct PlaneScaling;
 class RoomStruct;
+class SpriteCache;
 struct Translation;
 
 } // namespace Shared
@@ -89,13 +94,18 @@ class MessageBuffer;
 } // namespace Engine
 } // namespace AGS
 
+namespace Plugins {
+namespace Core {
+class EngineExports;
+} // namespace Core
+} // namespace Plugins
+
+class IRouteFinder;
 class Navigation;
 class SplitLines;
-class SpriteCache;
 class TTFFontRenderer;
 class WFNFontRenderer;
 
-struct ActiveDisplaySetting;
 struct AGSDeSerializer;
 struct AGSPlatformDriver;
 struct AGSStaticObject;
@@ -122,9 +132,9 @@ struct COLOR_MAP;
 struct CSCIMessage;
 struct DialogTopic;
 struct DirtyRects;
+struct EnginePlugin;
 struct ExecutingScript;
 struct EventHappened;
-struct GameFrameSetup;
 struct GameSetup;
 struct GameSetupStruct;
 struct GameState;
@@ -138,6 +148,7 @@ struct NonBlockingScriptFunction;
 struct ObjectCache;
 struct OnScreenWindow;
 struct PluginObjectReader;
+struct Point;
 struct ResourcePaths;
 struct RGB_MAP;
 struct RoomCameraDrawData;
@@ -206,6 +217,8 @@ public:
 	int _trans_blend_green = 0;
 	int _trans_blend_blue = 0;
 	BlenderMode __blender_mode = kRgbToRgbBlender;
+	/* current format information and worker routines */
+	int _utype = U_UTF8;
 
 	/* default palette structures */
 	PALETTE _black_palette;
@@ -226,6 +239,7 @@ public:
 	int _mouse_accum_button_state = 0;
 	uint32 _mouse_clear_at_time = 0;
 	int _mouse_accum_relx = 0, _mouse_accum_rely = 0;
+	int _wasbutdown = 0, _wasongui = 0;
 
 	/**@}*/
 
@@ -309,8 +323,7 @@ public:
 	 * @{
 	 */
 
-	AnimatingGUIButton *_animbuts;
-	int _numAnimButs = 0;
+	std::vector<AnimatingGUIButton> *_animbuts;
 
 	/**@}*/
 
@@ -514,6 +527,10 @@ public:
 	ScriptDialogOptionsRendering *_ccDialogOptionsRendering;
 	ScriptDrawingSurface *_dialogOptionsRenderingSurface = nullptr;
 
+	// identifier (username) of the voice pak
+	String _VoicePakName;
+	// parent part to use when making voice asset names
+	String _VoiceAssetPath;
 	int _said_speech_line = 0; // used while in dialog to track whether screen needs updating
 	int _said_text = 0;
 	int _longestline = 0;
@@ -548,8 +565,10 @@ public:
 	 */
 
 	std::vector<RoomCameraDrawData> *_CameraDrawData;
-	std::vector<SpriteListEntry> *_sprlist;
+	// Two lists of sprites to push into renderer during next render pass
+	// thingsToDrawList - is the main list, unsorted, drawn in the index order
 	std::vector<SpriteListEntry> *_thingsToDrawList;
+	std::vector<SpriteListEntry> *_sprlist;
 
 	AGS::Engine::IGraphicsDriver *_gfxDriver = nullptr;
 	AGS::Engine::IDriverDependantBitmap *_blankImage = nullptr;
@@ -558,18 +577,25 @@ public:
 
 	// actsps is used for temporary storage of the bitamp image
 	// of the latest version of the sprite
-	int _actSpsCount = 0;
-	AGS::Shared::Bitmap **_actsps = nullptr;
-	AGS::Engine::IDriverDependantBitmap **_actspsbmp = nullptr;
+	std::vector<Shared::Bitmap *> *_actsps;
+	std::vector<Engine::IDriverDependantBitmap *> *_actspsbmp;
 	// temporary cache of walk-behind for this actsps image
-	AGS::Shared::Bitmap **_actspswb = nullptr;
-	AGS::Engine::IDriverDependantBitmap **_actspswbbmp = nullptr;
-	CachedActSpsData *_actspswbcache = nullptr;
+	std::vector<Shared::Bitmap *> *_actspswb;
+	std::vector<Engine::IDriverDependantBitmap *> *_actspswbbmp;
+	std::vector<CachedActSpsData> *_actspswbcache;
+	// GUI surfaces
+	std::vector<Shared::Bitmap *> *_guibg;
+	std::vector<Engine::IDriverDependantBitmap *> *_guibgbmp;
+	// For debugging room masks
+	RoomAreaMask _debugRoomMask = kRoomAreaNone;
+	Engine::IDriverDependantBitmap *_debugRoomMaskDDB = nullptr;
+	int _debugMoveListChar = -1;
+	Shared::Bitmap *_debugMoveListBmp = nullptr;
+	Engine::IDriverDependantBitmap *_debugMoveListDDB = nullptr;
+
 	bool _current_background_is_dirty = false;
 	// Room background sprite
 	AGS::Engine::IDriverDependantBitmap *_roomBackgroundBmp = nullptr;
-	AGS::Shared::Bitmap **_guibg = nullptr;
-	AGS::Engine::IDriverDependantBitmap **_guibgbmp = nullptr;
 	AGS::Shared::Bitmap *_debugConsoleBuffer = nullptr;
 	// whether there are currently remnants of a DisplaySpeech
 	bool _screen_is_dirty = false;
@@ -587,10 +613,11 @@ public:
 	 * @{
 	 */
 
-	// Dirty rects for the main viewport background (black screen);
+	// Dirty rects for the game screen background (black screen);
 	// these are used when the room viewport does not cover whole screen,
 	// so that we know when to paint black after mouse cursor and gui.
 	DirtyRects *_BlackRects;
+	Point *_GlobalOffs;
 	// Dirty rects object for the single room camera
 	std::vector<DirtyRects> *_RoomCamRects;
 	// Saved room camera offsets to know if we must invalidate whole surface.
@@ -679,7 +706,7 @@ public:
 	std::vector<AGS::Shared::Font> *_fonts;
 	TTFFontRenderer *_ttfRenderer;
 	WFNFontRenderer *_wfnRenderer;
-	SplitLines *_fontLines;
+	SplitLines *_Lines;
 
 	/**@}*/
 
@@ -691,7 +718,7 @@ public:
 
 	GameSetupStruct *_game;
 	GameState *_play;
-	SpriteCache *_spriteset;
+	AGS::Shared::SpriteCache *_spriteset;
 	AGS::Shared::RoomStruct *_thisroom;
 	RoomStatus *_troom; // used for non-saveable rooms, eg. intro
 
@@ -719,13 +746,12 @@ public:
 	ScriptRegion *_scrRegion;
 	ScriptInvItem *_scrInv;
 	ScriptDialog *_scrDialog = nullptr;
-	ViewStruct *_views = nullptr;
+	std::vector<ViewStruct> *_views;
 	CharacterCache *_charcache = nullptr;
 	ObjectCache *_objcache;
 	MoveList *_mls = nullptr;
 	GameSetup *_usetup;
 	AGS::Shared::String _saveGameDirectory;
-	AGS::Shared::String _saveGameParent;
 	AGS::Shared::String _saveGameSuffix;
 	bool _want_exit = false;
 	bool _abort_engine = false;
@@ -742,11 +768,14 @@ public:
 	int _new_room_pos = 0;
 	int _new_room_x = SCR_NO_VALUE, _new_room_y = SCR_NO_VALUE;
 	int _new_room_loop = SCR_NO_VALUE;
-	bool _proper_exit = false;
+	bool _proper_exit = true;
 	int _our_eip = 0;
 
 	int _oldmouse = 0;
+	// Data format version of the loaded game
 	GameDataVersion _loaded_game_file_version = kGameVersion_Undefined;
+	// The version of the engine the loaded game was compiled for (if available)
+	Version _game_compiled_version;
 	int _game_paused = 0;
 	char _pexbuf[STD_BUFFER_SIZE] = { 0 };
 	unsigned int _load_new_game = 0;
@@ -757,6 +786,7 @@ public:
 	int _gameHasBeenRestored = 0;
 	int _oldeip = 0;
 	int _game_update_suspend = 0;
+	bool _new_room_placeonwalkable = false;
 
 	/**@}*/
 
@@ -871,7 +901,7 @@ public:
 	ActiveDisplaySetting *_SavedFullscreenSetting;
 	ActiveDisplaySetting *_SavedWindowedSetting;
 	// Current frame scaling setup
-	GameFrameSetup *_CurFrameSetup;
+	FrameScaleDef _CurFrameSetup = kFrame_Undefined;
 	// The game-to-screen transformation
 	AGS::Shared::PlaneScaling *_GameScaling;
 
@@ -964,8 +994,7 @@ public:
 	 */
 
 	int _guis_need_update = 1;
-	int _all_buttons_disabled = 0, _gui_inv_pic = -1;
-	int _gui_disabled_style = 0;
+	int _all_buttons_disabled = -1, _gui_inv_pic = -1;
 
 	/**@}*/
 
@@ -1021,7 +1050,7 @@ public:
 	char *_lzbuffer = nullptr;
 	int *_node = nullptr;
 	int _pos = 0;
-	long _outbytes = 0, _maxsize = 0, _putbytes = 0;
+	size_t _outbytes = 0, _maxsize = 0, _putbytes = 0;
 
 	/**@}*/
 
@@ -1035,11 +1064,7 @@ public:
 	String _appDirectory; // Needed for library loading
 	String _cmdGameDataPath;
 
-	const char **_global_argv = nullptr;
-	int _global_argc = 0;
-
 	// Startup flags, set from parameters to engine
-	int _force_window = 0;
 	int _override_start_room = 0;
 	bool _justDisplayHelp = false;
 	bool _justDisplayVersion = false;
@@ -1055,12 +1080,13 @@ public:
 	int _psp_ignore_acsetup_cfg_file = 0;
 	int _psp_clear_cache_on_room_change = 0; // clear --sprite cache-- when room is unloaded
 
-#if AGS_PLATFORM_SCUMMVM
+#if defined(AGS_PLATFORM_SCUMMVM) && AGS_PLATFORM_SCUMMVM
 	int _psp_audio_cachesize = 10;
 #endif
 	const char *_psp_game_file_name = "";
 	const char *_psp_translation = "default";
 
+	int _psp_rotation = 0;
 	int _psp_gfx_renderer = 0;
 	int _psp_gfx_scaling = 1;
 	int _psp_gfx_smoothing = 0;
@@ -1093,21 +1119,21 @@ public:
 	 * @{
 	 */
 
-	char _currentcursor = 0;
+	int8 _currentcursor = 0;
 	// virtual mouse cursor coordinates
 	int _mousex = 0, _mousey = 0, _numcurso = -1, _hotx = 0, _hoty = 0;
 	// real mouse coordinates and bounds
 	int _real_mouse_x = 0, _real_mouse_y = 0;
 	int _boundx1 = 0, _boundx2 = 99999, _boundy1 = 0, _boundy2 = 99999;
 	int _disable_mgetgraphpos = 0;
-	char _ignore_bounds = 0;
+	int8 _ignore_bounds = 0;
 	AGS::Shared::Bitmap *_mousecurs[MAXCURSORS];
 
 	ScriptMouse *_scmouse;
 	int _cur_mode = 0, _cur_cursor = 0;
 	int _mouse_frame = 0, _mouse_delay = 0;
 	int _lastmx = -1, _lastmy = -1;
-	char _alpha_blend_cursor = 0;
+	int8 _alpha_blend_cursor = 0;
 	AGS::Shared::Bitmap *_dotted_mouse_cursor = nullptr;
 	AGS::Engine::IDriverDependantBitmap *_mouseCursor = nullptr;
 	AGS::Shared::Bitmap *_blank_mouse_cursor = nullptr;
@@ -1132,9 +1158,8 @@ public:
 	 * @{
 	 */
 
-	ScreenOverlay *_screenover;
-	int _is_complete_overlay = 0, _is_text_overlay = 0;
-	int _numscreenover = 0;
+	std::vector<ScreenOverlay> *_screenover;
+	int _is_complete_overlay = 0;
 
 	/**@}*/
 
@@ -1187,6 +1212,7 @@ public:
 	fixed _move_speed_x = 0, _move_speed_y = 0;
 	AGS::Shared::Bitmap *_wallscreen = nullptr;
 	int _lastcx = 0, _lastcy = 0;
+	std::unique_ptr<IRouteFinder> *_route_finder_impl;
 
 	/**@}*/
 
@@ -1287,6 +1313,12 @@ public:
 	 * @{
 	 */
 
+	Plugins::Core::EngineExports *_engineExports;
+	Common::Array<EnginePlugin> *_plugins;
+	int _pluginsWantingDebugHooks = 0;
+	long _pl_file_handle = -1;
+	AGS::Shared::Stream *_pl_file_stream = nullptr;
+
 	int _pluginSimulatedClick = -1;
 	int _mouse_z_was = 0;
 
@@ -1300,6 +1332,7 @@ public:
 
 	std::chrono::microseconds _tick_duration = std::chrono::microseconds(1000000LL / 40);
 	bool _framerate_maxed = false;
+	int _framerate = 0;
 
 	uint32 _last_tick_time = 0; // AGS_Clock::now();
 	uint32 _next_frame_timestamp = 0; // AGS_Clock::now();
@@ -1316,7 +1349,9 @@ public:
 	StringMap *_transtree = nullptr;
 	String _trans_name, _trans_filename;
 	long _lang_offs_start = 0;
-	char _transFileName[MAX_PATH] = { 0 };
+	char _transFileName[MAX_PATH_SZ] = { 0 };
+	std::vector<uint16> _wcsbuf; // widechar buffer
+	std::vector<char> _mbbuf;  // utf8 buffer
 
 	/**@}*/
 
@@ -1338,7 +1373,7 @@ public:
 
 	char *_walkBehindExists = nullptr;  // whether a WB area is in this column
 	int *_walkBehindStartY = nullptr, *_walkBehindEndY = nullptr;
-	char _noWalkBehindsAtAll = 0;
+	int8 _noWalkBehindsAtAll = 0;
 	int _walkBehindLeft[MAX_WALK_BEHINDS], _walkBehindTop[MAX_WALK_BEHINDS];
 	int _walkBehindRight[MAX_WALK_BEHINDS], _walkBehindBottom[MAX_WALK_BEHINDS];
 	AGS::Engine::IDriverDependantBitmap *_walkBehindBitmap[MAX_WALK_BEHINDS];

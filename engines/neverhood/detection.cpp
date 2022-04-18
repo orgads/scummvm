@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -30,7 +29,7 @@
 
 static const PlainGameDescriptor neverhoodGames[] = {
 	{"neverhood", "The Neverhood Chronicles"},
-	{0, 0}
+	{nullptr, nullptr}
 };
 
 namespace Neverhood {
@@ -40,7 +39,7 @@ static const ADGameDescription gameDescriptions[] = {
 	// Neverhood English version
 	{
 		"neverhood",
-		0,
+		nullptr,
 		AD_ENTRY1s("hd.blb", "22958d968458c9ff221aee38577bb2b2", 4279716),
 		Common::EN_ANY,
 		Common::kPlatformWindows,
@@ -81,6 +80,17 @@ static const ADGameDescription gameDescriptions[] = {
 		GUIO1(GUIO_NONE)
 	},
 
+	// Neverhood lite English demo version
+	{
+		"neverhood",
+		"Demo",
+		AD_ENTRY1s("nevdemo.blb", "816741610771f6434a673b6821e88899", 11986100),
+		Common::EN_ANY,
+		Common::kPlatformWindows,
+		ADGF_DEMO | ADGF_DROPPLATFORM,
+		GUIO1(GUIO_NONE)
+	},
+
 	// Neverhood Russian version. Dyadyushka Risech
 	{
 		"neverhood",
@@ -109,7 +119,7 @@ static const ADGameDescription gameDescriptions[] = {
 		"neverhood",
 		_s("Missing game code"), // Reason for being unsupported
 		AD_ENTRY1s("hd.blb", "c791725bbbc23c0f8bf78eece4555565", 4308928),
-		Common::RU_RUS,
+		Common::JA_JPN,
 		Common::kPlatformWindows,
 		ADGF_DROPPLATFORM | ADGF_UNSUPPORTED,
 		GUIO1(GUIO_NONE)

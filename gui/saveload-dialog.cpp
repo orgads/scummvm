@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,6 +37,7 @@
 
 #include "graphics/scaler.h"
 #include "common/savefile.h"
+#include "engines/engine.h"
 
 namespace GUI {
 
@@ -320,7 +320,7 @@ void SaveLoadChooserDialog::listSaves() {
 				slotNum = slotNum * 10 + (c - '0');
 			}
 
-			SaveStateDescriptor slot(slotNum, files[i]);
+			SaveStateDescriptor slot(_metaEngine, slotNum, files[i]);
 			slot.setLocked(true);
 			_saveList.push_back(slot);
 		}
@@ -328,6 +328,28 @@ void SaveLoadChooserDialog::listSaves() {
 		Common::sort(_saveList.begin(), _saveList.end(), SaveStateDescriptorSlotComparator());
 	}
 #endif
+}
+
+void SaveLoadChooserDialog::activate(int slot, const Common::U32String &description) {
+	if (!_saveList.empty() && slot < int(_saveList.size())) {
+		const SaveStateDescriptor &desc = _saveList[slot];
+		if (_saveMode) {
+			if (g_engine) {
+				const int currentPlayTime = g_engine->getTotalPlayTime();
+				const int savedPlayTime = desc.getPlayTimeMSecs();
+				if (currentPlayTime > 0 && savedPlayTime > 0 && currentPlayTime < savedPlayTime) {
+					GUI::MessageDialog warn(
+								_("WARNING: Existing save has longer gameplay duration than the "
+								  "current state. Are you sure you want to overwrite it?"), _("Yes"), _("No"));
+					if (warn.runModal() != GUI::kMessageOK)
+						return;
+				}
+			}
+			_resultString = description.empty() ? desc.getDescription() : description;
+		}
+		setResult(desc.getSaveSlot());
+	}
+	close();
 }
 
 #ifndef DISABLE_SAVELOADCHOOSER_GRID
@@ -373,7 +395,7 @@ enum {
 	kDelCmd = 'DEL '
 };
 
-SaveLoadChooserSimple::SaveLoadChooserSimple(const U32String &title, const U32String &buttonLabel, bool saveMode)
+SaveLoadChooserSimple::SaveLoadChooserSimple(const Common::U32String &title, const Common::U32String &buttonLabel, bool saveMode)
 	: SaveLoadChooserDialog("SaveLoadChooser", saveMode), _list(nullptr), _chooseButton(nullptr), _deleteButton(nullptr), _gfxWidget(nullptr),
 	_container(nullptr) {
 	_backgroundType = ThemeEngine::kDialogBackgroundSpecial;
@@ -441,22 +463,20 @@ void SaveLoadChooserSimple::handleCommand(CommandSender *sender, uint32 cmd, uin
 		if (selItem >= 0 && _chooseButton->isEnabled()) {
 			if (_list->isEditable() || !_list->getSelectedString().empty()) {
 				_list->endEditMode();
-				if (!_saveList.empty()) {
-					setResult(_saveList[selItem].getSaveSlot());
-					_resultString = _list->getSelectedString();
-				}
-				close();
+				Common::U32String description;
+				if (!_saveList.empty())
+					description = _list->getSelectedString();
+				activate(selItem, description);
 			}
 		}
 		break;
 	case kChooseCmd:
 		_list->endEditMode();
 		if (selItem >= 0) {
-			if (!_saveList.empty()) {
-				setResult(_saveList[selItem].getSaveSlot());
-				_resultString = _list->getSelectedString();
-			}
-			close();
+			Common::U32String description;
+			if (!_saveList.empty())
+				description = _list->getSelectedString();
+			activate(selItem, description);
 		}
 		break;
 	case kListSelectionChangedCmd:
@@ -576,6 +596,8 @@ void SaveLoadChooserSimple::updateSelection(bool redraw) {
 
 	if (selItem >= 0 && _metaInfoSupport) {
 		SaveStateDescriptor desc = (_saveList[selItem].getLocked() ? _saveList[selItem] : _metaEngine->querySaveMetaInfos(_target.c_str(), _saveList[selItem].getSaveSlot()));
+		if (!_saveList[selItem].getLocked() && desc.getSaveSlot() >= 0 && !desc.getDescription().empty())
+			_saveList[selItem] = desc;
 
 		isDeletable = desc.getDeletableFlag() && _delSupport;
 		isWriteProtected = desc.getWriteProtectedFlag() ||
@@ -588,7 +610,7 @@ void SaveLoadChooserSimple::updateSelection(bool redraw) {
 
 		if (_thumbnailSupport) {
 			const Graphics::Surface *thumb = desc.getThumbnail();
-			if (thumb)
+			if (thumb && _gfxWidget->isVisible())
 				_gfxWidget->setGfx(thumb, true);
 		}
 
@@ -670,7 +692,7 @@ void SaveLoadChooserSimple::close() {
 	_metaEngine = nullptr;
 	_target.clear();
 	_saveList.clear();
-	_list->setList(U32StringArray());
+	_list->setList(Common::U32StringArray());
 
 	SaveLoadChooserDialog::close();
 }
@@ -680,14 +702,14 @@ void SaveLoadChooserSimple::updateSaveList() {
 
 	int curSlot = 0;
 	int saveSlot = 0;
-	U32StringArray saveNames;
+	Common::U32StringArray saveNames;
 	ListWidget::ColorList colors;
 	for (SaveStateList::const_iterator x = _saveList.begin(); x != _saveList.end(); ++x) {
 		// Handle gaps in the list of save games
 		saveSlot = x->getSaveSlot();
 		if (curSlot < saveSlot) {
 			while (curSlot < saveSlot) {
-				SaveStateDescriptor dummySave(curSlot, "");
+				SaveStateDescriptor dummySave(_metaEngine, curSlot, "");
 				_saveList.insert_at(curSlot, dummySave);
 				saveNames.push_back(dummySave.getDescription());
 				colors.push_back(ThemeEngine::kFontColorNormal);
@@ -731,7 +753,7 @@ void SaveLoadChooserSimple::updateSaveList() {
 	Common::String emptyDesc;
 	for (int i = curSlot; i <= maximumSaveSlots; i++) {
 		saveNames.push_back(emptyDesc);
-		SaveStateDescriptor dummySave(i, "");
+		SaveStateDescriptor dummySave(_metaEngine, i, "");
 		_saveList.push_back(dummySave);
 		colors.push_back(ThemeEngine::kFontColorNormal);
 	}
@@ -793,15 +815,9 @@ const Common::U32String &SaveLoadChooserGrid::getResultString() const {
 }
 
 void SaveLoadChooserGrid::handleCommand(CommandSender *sender, uint32 cmd, uint32 data) {
-	if (cmd <= _entriesPerPage && cmd + _curPage * _entriesPerPage <= _saveList.size()) {
-		const SaveStateDescriptor &desc = _saveList[cmd - 1 + _curPage * _entriesPerPage];
-
-		if (_saveMode) {
-			_resultString = desc.getDescription();
-		}
-
-		setResult(desc.getSaveSlot());
-		close();
+	const int slot = cmd + _curPage * _entriesPerPage - 1;
+	if (cmd <= _entriesPerPage && slot < (int)_saveList.size()) {
+		activate(slot, Common::U32String());
 	}
 
 	switch (cmd) {
@@ -1099,6 +1115,8 @@ void SaveLoadChooserGrid::updateSaves() {
 		const uint saveSlot = _saveList[i].getSaveSlot();
 
 		SaveStateDescriptor desc =  (_saveList[i].getLocked() ? _saveList[i] : _metaEngine->querySaveMetaInfos(_target.c_str(), saveSlot));
+		if (!_saveList[i].getLocked() && desc.getSaveSlot() >= 0 && !desc.getDescription().empty())
+			_saveList[i] = desc;
 		SlotButton &curButton = _buttons[curNum];
 		curButton.setVisible(true);
 		const Graphics::Surface *thumbnail = desc.getThumbnail();

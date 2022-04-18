@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -115,8 +114,8 @@ MemoryObject::MemoryObject() {
 	_mfield_14 = 1;
 	_dataSize = 0;
 	_mflags = 0;
-	_libHandle = 0;
-	_data = 0;
+	_libHandle = nullptr;
+	_data = nullptr;
 }
 
 MemoryObject::~MemoryObject() {
@@ -161,6 +160,7 @@ void MemoryObject::loadFile(const Common::String &filename) {
 			debugC(5, kDebugLoading, "Loading %s (%d bytes)", filename.c_str(), _dataSize);
 			_data = (byte *)calloc(_dataSize, 1);
 			s->read(_data, _dataSize);
+			delete s;
 		} else {
 			// We have no object to read. This is fine
 		}
@@ -190,7 +190,7 @@ void MemoryObject::freeData() {
 	if (_data)
 		free(_data);
 
-	_data = 0;
+	_data = nullptr;
 }
 
 bool MemoryObject::testFlags() {
@@ -204,7 +204,7 @@ bool MemoryObject::testFlags() {
 }
 
 MemoryObject2::MemoryObject2() {
-	_rows = 0;
+	_rows = nullptr;
 }
 
 MemoryObject2::~MemoryObject2() {
@@ -276,7 +276,7 @@ const struct {
 	{ "CMovGraphNode",	kMovGraphNode },
 	{ "CReactParallel",	kReactParallel },
 	{ "CReactPolygonal", kReactPolygonal },
-	{ 0, 0 }
+	{ nullptr, 0 }
 };
 
 static const char *lookupObjectId(int id) {
@@ -291,7 +291,7 @@ static const char *lookupObjectId(int id) {
 static CObject *createObject(int objectId) {
 	switch (objectId) {
 	case kNullObject:
-		return 0;
+		return nullptr;
 	case kInteraction:
 		return new Interaction();
 	case kMessageQueue:
@@ -318,19 +318,19 @@ static CObject *createObject(int objectId) {
 		error("Unknown objectId: %d", objectId);
 	}
 
-	return 0;
+	return nullptr;
 }
 
 MfcArchive::MfcArchive(Common::SeekableReadStream *stream) {
 	_stream = stream;
-	_wstream = 0;
+	_wstream = nullptr;
 
 	init();
 }
 
 MfcArchive::MfcArchive(Common::WriteStream *stream) {
 	_wstream = stream;
-	_stream = 0;
+	_stream = nullptr;
 
 	init();
 }
@@ -360,14 +360,14 @@ CObject *MfcArchive::readBaseClass() {
 CObject *MfcArchive::parseClass(bool *isCopyReturned) {
 	Common::String name;
 	int objectId = 0;
-	CObject *res = 0;
+	CObject *res = nullptr;
 
 	uint obTag = readUint16LE();
 
-	debugC(7, kDebugLoading, "parseClass::obTag = %d (%04x)  at 0x%08x", obTag, obTag, pos() - 2);
+	debugC(7, kDebugLoading, "parseClass::obTag = %d (%04x)  at 0x%08x", obTag, obTag, (int)pos() - 2);
 
 	if (obTag == 0x0000) {
-		return NULL;
+		return nullptr;
 	} else if (obTag == 0xffff) {
 		int schema = readUint16LE();
 
@@ -394,7 +394,7 @@ CObject *MfcArchive::parseClass(bool *isCopyReturned) {
 		*isCopyReturned = false;
 	} else if ((obTag & 0x8000) == 0) {
 		if (_objectMap.size() < obTag) {
-			error("Object index too big: %d  at 0x%08x", obTag, pos() - 2);
+			error("Object index too big: %d  at 0x%08x", obTag, (int)pos() - 2);
 		}
 		debugC(7, kDebugLoading, "parseClass::obTag <%s>", lookupObjectId(_objectIdMap[obTag]));
 
@@ -406,7 +406,7 @@ CObject *MfcArchive::parseClass(bool *isCopyReturned) {
 		obTag &= ~0x8000;
 
 		if (_objectMap.size() < obTag) {
-			error("Object index too big: %d  at 0x%08x", obTag, pos() - 2);
+			error("Object index too big: %d  at 0x%08x", obTag, (int)pos() - 2);
 		}
 
 		debugC(7, kDebugLoading, "parseClass::obTag <%s>", lookupObjectId(_objectIdMap[obTag]));
@@ -424,7 +424,7 @@ CObject *MfcArchive::parseClass(bool *isCopyReturned) {
 }
 
 void MfcArchive::writeObject(CObject *obj) {
-	if (obj == NULL) {
+	if (obj == nullptr) {
 		writeUint16LE(0);
 	} else if (_objectHash.contains(obj)) {
 		int32 idx = _objectHash[obj];
@@ -556,7 +556,7 @@ void NGIEngine::loadGameObjH() {
 		}
 
 		Common::String val(&s.c_str()[8], cnt);
-		int key = strtol(ptr, NULL, 10);
+		int key = strtol(ptr, nullptr, 10);
 
 		_gameObjH[(uint16)key] = val;
 	}

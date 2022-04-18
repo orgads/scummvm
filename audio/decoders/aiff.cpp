@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -79,7 +78,7 @@ RewindableAudioStream *makeAIFFStream(Common::SeekableReadStream *stream, Dispos
 		if (disposeAfterUse == DisposeAfterUse::YES)
 			delete stream;
 
-		return 0;
+		return nullptr;
 	}
 
 	stream->readUint32BE(); // file size
@@ -92,7 +91,7 @@ RewindableAudioStream *makeAIFFStream(Common::SeekableReadStream *stream, Dispos
 		if (disposeAfterUse == DisposeAfterUse::YES)
 			delete stream;
 
-		return 0;
+		return nullptr;
 	}
 
 	// From here on, we only care about the COMM and SSND chunks, which are
@@ -104,7 +103,7 @@ RewindableAudioStream *makeAIFFStream(Common::SeekableReadStream *stream, Dispos
 	uint16 channels = 0, bitsPerSample = 0;
 	uint32 rate = 0;
 	uint32 codec = kCodecPCM; // AIFF default
-	Common::SeekableReadStream *dataStream = 0;
+	Common::SeekableReadStream *dataStream = nullptr;
 
 	while (!(foundCOMM && foundSSND) && !stream->err() && !stream->eos()) {
 		uint32 tag = stream->readUint32BE();
@@ -153,7 +152,7 @@ RewindableAudioStream *makeAIFFStream(Common::SeekableReadStream *stream, Dispos
 				delete stream;
 
 			delete dataStream;
-			return 0;
+			return nullptr;
 		default:
 			debug(1, "Skipping AIFF '%s' chunk", tag2str(tag));
 			break;
@@ -173,7 +172,7 @@ RewindableAudioStream *makeAIFFStream(Common::SeekableReadStream *stream, Dispos
 			delete stream;
 
 		delete dataStream;
-		return 0;
+		return nullptr;
 	}
 
 	if (!foundSSND) {
@@ -182,7 +181,7 @@ RewindableAudioStream *makeAIFFStream(Common::SeekableReadStream *stream, Dispos
 		if (disposeAfterUse == DisposeAfterUse::YES)
 			delete stream;
 
-		return 0;
+		return nullptr;
 	}
 
 	// We only implement a subset of the AIFF standard.
@@ -190,7 +189,7 @@ RewindableAudioStream *makeAIFFStream(Common::SeekableReadStream *stream, Dispos
 	if (channels < 1 || channels > 2) {
 		warning("makeAIFFStream: Only 1 or 2 channels are supported, not %d", channels);
 		delete dataStream;
-		return 0;
+		return nullptr;
 	}
 
 	// Seek to the start of dataStream, required for at least FileStream
@@ -231,7 +230,7 @@ RewindableAudioStream *makeAIFFStream(Common::SeekableReadStream *stream, Dispos
 	}
 
 	delete dataStream;
-	return 0;
+	return nullptr;
 }
 
 } // End of namespace Audio

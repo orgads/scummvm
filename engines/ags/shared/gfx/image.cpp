@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,12 +15,13 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "ags/shared/gfx/image.h"
+#include "ags/shared/util/file.h"
+#include "ags/shared/util/stream.h"
 #include "ags/lib/allegro.h"
 #include "common/file.h"
 #include "common/str.h"
@@ -36,11 +37,10 @@
 namespace AGS3 {
 
 template<class DECODER>
-BITMAP *decodeImage(const char *filename, color *pal) {
+BITMAP *decodeImageStream(Common::SeekableReadStream &stream, color *pal) {
 	DECODER decoder;
-	Common::File f;
 
-	if (f.open(filename) && decoder.loadStream(f)) {
+	if (decoder.loadStream(stream)) {
 		// Create the output surface
 		const Graphics::Surface *src = decoder.getSurface();
 
@@ -63,6 +63,26 @@ BITMAP *decodeImage(const char *filename, color *pal) {
 	} else {
 		return nullptr;
 	}
+}
+
+template<class DECODER>
+BITMAP *decodeImage(const char *filename, color *pal) {
+	AGS::Shared::Stream *file = AGS3::AGS::Shared::File::OpenFileRead(filename);
+	if (!file)
+		return nullptr;
+
+	AGS::Shared::ScummVMReadStream f(file);
+	return decodeImageStream<DECODER>(f, pal);
+}
+
+template<class DECODER>
+BITMAP *decodeImage(PACKFILE *pf, color *pal) {
+	if (!pf)
+		return nullptr;
+
+	AGS::Shared::ScummVMPackReadStream f(pf);
+	f.seek(0);
+	return decodeImageStream<DECODER>(f, pal);
 }
 
 BITMAP *load_bmp(const char *filename, color *pal) {
@@ -96,28 +116,54 @@ BITMAP *load_bitmap(const char *filename, color *pal) {
 		error("Unknown image file - %s", filename);
 }
 
+BITMAP *load_bitmap(PACKFILE *pf, color *pal) {
+	BITMAP *result;
+
+	if ((result = decodeImage<Image::BitmapDecoder>(pf, pal)) != nullptr)
+		return result;
+	if ((result = decodeImage<Image::IFFDecoder>(pf, pal)) != nullptr)
+		return result;
+	if ((result = decodeImage<Image::PCXDecoder>(pf, pal)) != nullptr)
+		return result;
+	if ((result = decodeImage<Image::TGADecoder>(pf, pal)) != nullptr)
+		return result;
+
+	error("Unknown image file");
+}
+
 int save_bitmap(Common::WriteStream &out, BITMAP *bmp, const RGB *pal) {
 #ifdef SCUMM_LITTLE_ENDIAN
 	const Graphics::PixelFormat requiredFormat_3byte(3, 8, 8, 8, 0, 16, 8, 0, 0);
 #else
 	const Graphics::PixelFormat requiredFormat_3byte(3, 8, 8, 8, 0, 0, 8, 16, 0);
 #endif
+	Graphics::ManagedSurface surface(bmp->w, bmp->h, requiredFormat_3byte);
 
 	Graphics::ManagedSurface &src = bmp->getSurface();
-	if (bmp->format.bytesPerPixel == 1 && pal != nullptr) {
-		// We don't use the ManagedSurface palette in-game, so it is not defined yet.
-		byte palette[256 * 3];
-		for (int c = 0, i = 0 ; c < 256 ; ++c, i += 3) {
-			palette[i] = VGA_COLOR_TRANS(pal[c].r);
-			palette[i + 1] = VGA_COLOR_TRANS(pal[c].g);
-			palette[i + 2] = VGA_COLOR_TRANS(pal[c].b);
+	if (bmp->format.bytesPerPixel == 1) {
+		Graphics::ManagedSurface temp = src;
+		if (pal) {
+			byte palette[256 * 3];
+			for (int c = 0, i = 0; c < 256; ++c, i += 3) {
+				palette[i] = VGA_COLOR_TRANS(pal[c].r);
+				palette[i + 1] = VGA_COLOR_TRANS(pal[c].g);
+				palette[i + 2] = VGA_COLOR_TRANS(pal[c].b);
+			}
+			temp.setPalette(palette, 0, 256);
 		}
-		src.setPalette(palette, 0, 256);
-	}
-	Graphics::ManagedSurface surface(bmp->w, bmp->h, requiredFormat_3byte);
-	surface.rawBlitFrom(bmp->getSurface(), Common::Rect(0, 0, src.w, src.h),
-	                    Common::Point(0, 0), src.getPalette());
 
+		surface.rawBlitFrom(temp, Common::Rect(0, 0, src.w, src.h),
+			Common::Point(0, 0), temp.getPalette());
+	} else {
+		// Copy from the source surface without alpha transparency
+		Graphics::ManagedSurface temp = src;
+		temp.format.aLoss = 8;
+
+		surface.rawBlitFrom(temp, Common::Rect(0, 0, src.w, src.h),
+			Common::Point(0, 0), nullptr);
+	}
+
+	// Write out the bitmap
 	int dstPitch = surface.w * 3;
 	int extraDataLength = (dstPitch % 4) ? 4 - (dstPitch % 4) : 0;
 	int padding = 0;

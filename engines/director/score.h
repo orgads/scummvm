@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +23,8 @@
 #define DIRECTOR_SCORE_H
 
 //#include "graphics/macgui/macwindowmanager.h"
+
+#include "director/cursor.h"
 
 namespace Graphics {
 	struct Surface;
@@ -52,13 +53,11 @@ class Cursor;
 class Channel;
 class Sprite;
 class CastMember;
+class AudioDecoder;
 
 enum RenderMode {
 	kRenderModeNormal,
-	kRenderForceUpdate,
-	kRenderUpdateStageOnly,
-	kRenderNoUnrender,
-	kRenderNoWindowRender
+	kRenderForceUpdate
 };
 
 class Score {
@@ -71,6 +70,7 @@ public:
 	void loadFrames(Common::SeekableReadStreamEndian &stream, uint16 version);
 	void loadLabels(Common::SeekableReadStreamEndian &stream);
 	void loadActions(Common::SeekableReadStreamEndian &stream);
+	void loadSampleSounds(uint type);
 
 	static int compareLabels(const void *a, const void *b);
 	uint16 getLabel(Common::String &label);
@@ -93,6 +93,7 @@ public:
 
 	Channel *getChannelById(uint16 id);
 	Sprite *getSpriteById(uint16 id);
+	Sprite *getOriginalSpriteById(uint16 id);
 
 	void setSpriteCasts();
 
@@ -105,17 +106,19 @@ public:
 	uint16 getActiveSpriteIDFromPos(Common::Point pos);
 	bool checkSpriteIntersection(uint16 spriteId, Common::Point pos);
 	Common::List<Channel *> getSpriteIntersections(const Common::Rect &r);
-	uint16 getSpriteIdByMemberId(uint16 id);
+	uint16 getSpriteIdByMemberId(CastMemberID id);
 
 	bool renderTransition(uint16 frameId);
 	void renderFrame(uint16 frameId, RenderMode mode = kRenderModeNormal);
 	void renderSprites(uint16 frameId, RenderMode mode = kRenderModeNormal);
-	void renderCursor(Common::Point pos);
+	void renderCursor(Common::Point pos, bool forceUpdate = false);
+	void updateWidgets(bool hasVideoPlayback);
+
+	void playSoundChannel(uint16 frameId);
 
 private:
 	void update();
-
-	void playSoundChannel(uint16 frameId);
+	void playQueuedSound();
 
 	void screenShot();
 
@@ -141,7 +144,8 @@ public:
 	bool _waitForClickCursor;
 	bool _cursorDirty;
 	int _activeFade;
-	Cursor *_currentCursor;
+	Cursor _defaultCursor;
+	CursorRef _currentCursor;
 
 	int _numChannelsDisplayed;
 

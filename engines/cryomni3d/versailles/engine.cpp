@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -432,9 +431,7 @@ void CryOmni3DEngine_Versailles::loadCursorsPalette() {
 	}
 
 	_cursorPalette = new byte[3 * (bmpDecoder.getPaletteColorCount() +
-	                               bmpDecoder.getPaletteStartIndex())];
-	memset(_cursorPalette, 0, 3 * (bmpDecoder.getPaletteColorCount() +
-	                               bmpDecoder.getPaletteStartIndex()));
+	                               bmpDecoder.getPaletteStartIndex())]();
 	memcpy(_cursorPalette + 3 * bmpDecoder.getPaletteStartIndex(), bmpDecoder.getPalette(),
 	       3 * bmpDecoder.getPaletteColorCount());
 }
@@ -541,8 +538,8 @@ void CryOmni3DEngine_Versailles::makeTranslucent(Graphics::Surface &dst,
 
 	const byte *srcP = (const byte *) src.getPixels();
 	byte *dstP = (byte *) dst.getPixels();
-	for (uint y = 0; y < dst.h; y++) {
-		for (uint x = 0; x < dst.w; x++) {
+	for (int y = 0; y < dst.h; y++) {
+		for (int x = 0; x < dst.w; x++) {
 			dstP[x] = _transparentPaletteMap[srcP[x]];
 		}
 		dstP += dst.pitch;

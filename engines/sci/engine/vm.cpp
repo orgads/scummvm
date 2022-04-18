@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -37,7 +36,6 @@
 #include "sci/engine/gc.h"
 #include "sci/engine/workarounds.h"
 #include "sci/engine/scriptdebug.h"
-#include "sci/engine/vm_hooks.h"
 
 namespace Sci {
 
@@ -186,7 +184,7 @@ static void write_var(EngineState *s, int type, int index, reg_t value) {
 			if (!stopGroopPos.isNull()) {	// does the game have a stopGroop object?
 				// Find the "client" member variable of the stopGroop object, and update it
 				ObjVarRef varp;
-				if (lookupSelector(s->_segMan, stopGroopPos, SELECTOR(client), &varp, NULL) == kSelectorVariable) {
+				if (lookupSelector(s->_segMan, stopGroopPos, SELECTOR(client), &varp, nullptr) == kSelectorVariable) {
 					reg_t *clientVar = varp.getPointer(s->_segMan);
 					*clientVar = value;
 				}
@@ -229,7 +227,7 @@ ExecStack *execute_method(EngineState *s, uint16 script, uint16 pubfunct, StackP
 
 	uint32 exportAddr = scr->validateExportFunc(pubfunct, false);
 	if (!exportAddr)
-		return NULL;
+		return nullptr;
 
 	assert(argp[0].toUint16() == argc); // The first argument is argc
 	ExecStack xstack(calling_obj, calling_obj, sp, argc, argp,
@@ -294,7 +292,7 @@ ExecStack *send_selector(EngineState *s, reg_t send_obj, reg_t work_obj, StackPt
 			error("Send to invalid selector 0x%x (%s) of object at %04x:%04x", 0xffff & selector, g_sci->getKernel()->getSelectorName(0xffff & selector).c_str(), PRINT_REG(send_obj));
 
 		ExecStackType stackType = EXEC_STACK_TYPE_VARSELECTOR;
-		StackPtr curSP = NULL;
+		StackPtr curSP = nullptr;
 		reg_t curFP = make_reg32(0, 0);
 		if (selectorType == kSelectorMethod) {
 			stackType = EXEC_STACK_TYPE_CALL;
@@ -331,7 +329,7 @@ ExecStack *send_selector(EngineState *s, reg_t send_obj, reg_t work_obj, StackPt
 	// those will get executed by op_ret later.
 	_exec_varselectors(s);
 
-	return s->_executionStack.empty() ? NULL : &(s->_executionStack.back());
+	return s->_executionStack.empty() ? nullptr : &(s->_executionStack.back());
 }
 
 static void addKernelCallToExecStack(EngineState *s, int kernelCallNr, int kernelSubCallNr, int argc, reg_t *argv) {
@@ -384,7 +382,7 @@ static void callKernelFunc(EngineState *s, int kernelCallNr, int argc) {
 		s->r_acc = kernelCall.function(s, argc, argv);
 
 		if (g_sci->checkKernelBreakpoint(kernelCall.name))
-			logKernelCall(&kernelCall, NULL, s, argc, argv, s->r_acc);
+			logKernelCall(&kernelCall, nullptr, s, argc, argv, s->r_acc);
 	} else {
 		// Sub-functions available, check signature and call that one directly
 		if (argc < 1)
@@ -578,14 +576,12 @@ void run_vm(EngineState *s) {
 	StackPtr s_temp; // Temporary stack pointer
 	int16 opparams[4]; // opcode parameters
 
-	VmHooks vmHooks;
-
 	s->r_rest = 0;	// &rest adjusts the parameter count by this value
 	// Current execution data:
 	s->xs = &(s->_executionStack.back());
-	ExecStack *xs_new = NULL;
+	ExecStack *xs_new = nullptr;
 	Object *obj = s->_segMan->getObject(s->xs->objp);
-	Script *scr = 0;
+	Script *scr = nullptr;
 	Script *local_script = s->_segMan->getScriptIfLoaded(s->xs->local_segment);
 	int old_executionStackBase = s->executionStackBase;
 	// Used to detect the stack bottom, for "physical" returns
@@ -605,8 +601,6 @@ void run_vm(EngineState *s) {
 #endif
 
 	while (1) {
-		vmHooks.vm_hook_before_exec(s);
-
 		int var_type; // See description below
 		int var_number;
 
@@ -664,12 +658,7 @@ void run_vm(EngineState *s) {
 
 		// Get opcode
 		byte extOpcode;
-		if (!vmHooks.isActive(s))
-			s->xs->addr.pc.incOffset(readPMachineInstruction(scr->getBuf(s->xs->addr.pc.getOffset()), extOpcode, opparams));
-		else {
-			int offset = readPMachineInstruction(vmHooks.data(), extOpcode, opparams);
-			vmHooks.advance(offset);
-		}
+		s->xs->addr.pc.incOffset(readPMachineInstruction(scr->getBuf(s->xs->addr.pc.getOffset()), extOpcode, opparams));
 		const byte opcode = extOpcode >> 1;
 		//debug("%s: %d, %d, %d, %d, acc = %04x:%04x, script %d, local script %d", opcodeNames[opcode], opparams[0], opparams[1], opparams[2], opparams[3], PRINT_REG(s->r_acc), scr->getScriptNumber(), local_script->getScriptNumber());
 
@@ -804,44 +793,30 @@ void run_vm(EngineState *s) {
 
 		case op_bt: // 0x17 (23)
 			// Branch relative if true
-			if (!vmHooks.isActive(s)) {
-				if (s->r_acc.getOffset() || s->r_acc.getSegment())
-					s->xs->addr.pc.incOffset(opparams[0]);
+			if (s->r_acc.getOffset() || s->r_acc.getSegment())
+				s->xs->addr.pc.incOffset(opparams[0]);
 
-				if (s->xs->addr.pc.getOffset() >= local_script->getScriptSize())
-					error("[VM] op_bt: request to jump past the end of script %d (offset %d, script is %d bytes)",
-						local_script->getScriptNumber(), s->xs->addr.pc.getOffset(), local_script->getScriptSize());
-			} else {
-				if (s->r_acc.getOffset() || s->r_acc.getSegment())
-					vmHooks.advance(opparams[0]);
-			}
+			if (s->xs->addr.pc.getOffset() >= local_script->getScriptSize())
+				error("[VM] op_bt: request to jump past the end of script %d (offset %d, script is %d bytes)",
+					local_script->getScriptNumber(), s->xs->addr.pc.getOffset(), local_script->getScriptSize());
 			break;
 
 		case op_bnt: // 0x18 (24)
 			// Branch relative if not true
-			if (!vmHooks.isActive(s)) {
-				if (!(s->r_acc.getOffset() || s->r_acc.getSegment()))
-					s->xs->addr.pc.incOffset(opparams[0]);
+			if (!(s->r_acc.getOffset() || s->r_acc.getSegment()))
+				s->xs->addr.pc.incOffset(opparams[0]);
 
-				if (s->xs->addr.pc.getOffset() >= local_script->getScriptSize())
-					error("[VM] op_bnt: request to jump past the end of script %d (offset %d, script is %d bytes)",
-						local_script->getScriptNumber(), s->xs->addr.pc.getOffset(), local_script->getScriptSize());
-			} else {
-				if (!(s->r_acc.getOffset() || s->r_acc.getSegment()))
-					vmHooks.advance(opparams[0]);
-			}
+			if (s->xs->addr.pc.getOffset() >= local_script->getScriptSize())
+				error("[VM] op_bnt: request to jump past the end of script %d (offset %d, script is %d bytes)",
+					local_script->getScriptNumber(), s->xs->addr.pc.getOffset(), local_script->getScriptSize());
 			break;
 
 		case op_jmp: // 0x19 (25)
-			if (!vmHooks.isActive(s)) {
-				s->xs->addr.pc.incOffset(opparams[0]);
+			s->xs->addr.pc.incOffset(opparams[0]);
 
-				if (s->xs->addr.pc.getOffset() >= local_script->getScriptSize())
-					error("[VM] op_jmp: request to jump past the end of script %d (offset %d, script is %d bytes)",
-						local_script->getScriptNumber(), s->xs->addr.pc.getOffset(), local_script->getScriptSize());
-			} else {
-				vmHooks.advance(opparams[0]);
-			}
+			if (s->xs->addr.pc.getOffset() >= local_script->getScriptSize())
+				error("[VM] op_jmp: request to jump past the end of script %d (offset %d, script is %d bytes)",
+					local_script->getScriptNumber(), s->xs->addr.pc.getOffset(), local_script->getScriptSize());
 			break;
 
 		case op_ldi: // 0x1a (26)
@@ -1457,7 +1432,7 @@ void run_vm(EngineState *s) {
 
 reg_t *ObjVarRef::getPointer(SegManager *segMan) const {
 	Object *o = segMan->getObject(obj);
-	return o ? &o->getVariableRef(varindex) : 0;
+	return o ? &o->getVariableRef(varindex) : nullptr;
 }
 
 reg_t *ExecStack::getVarPointer(SegManager *segMan) const {

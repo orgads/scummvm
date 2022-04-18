@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -82,7 +81,7 @@ GfxPalette::GfxPalette(ResourceManager *resMan, GfxScreen *screen)
 
 	palVaryInit();
 
-	_macClut = 0;
+	_macClut = nullptr;
 	loadMacIconBarPalette();
 
 	switch (_resMan->getViewType()) {
@@ -159,14 +158,20 @@ void GfxPalette::createFromData(const SciSpan<const byte> &data, Palette *palett
 		// SCI0/SCI1 palette
 		palFormat = SCI_PAL_FORMAT_VARIABLE; // CONSTANT;
 		palOffset = 260;
-		palColorStart = 0; palColorCount = 256;
-		//memcpy(&paletteOut->mapping, data, 256);
+		palColorStart = 0;
+		palColorCount = 256;
 	} else {
 		// SCI1.1 palette
 		palFormat = data[32];
 		palOffset = 37;
 		palColorStart = data[25];
-		palColorCount = data.getUint16SEAt(29);
+		if (g_sci->getGameId() != GID_HOYLE4) {
+			palColorCount = data.getUint16SEAt(29);
+		} else {
+			// HOYLE4's SCI1.1 palettes are little endian even in
+			// the Mac version, unlike every other SCI1.1 Mac game.
+			palColorCount = data.getUint16LEAt(29);
+		}
 	}
 
 	switch (palFormat) {
@@ -443,14 +448,14 @@ void GfxPalette::drewPicture(GuiResourceId pictureId) {
 	}
 }
 
-uint16 GfxPalette::matchColor(byte matchRed, byte matchGreen, byte matchBlue) {
+uint16 GfxPalette::matchColor(byte matchRed, byte matchGreen, byte matchBlue, bool force16BitColorMatch) {
 	int16 colorNr;
 	int16 differenceRed, differenceGreen, differenceBlue;
 	int16 differenceTotal = 0;
 	int16 bestDifference = 0x7FFF;
 	uint16 bestColorNr = 255;
 
-	if (_use16bitColorMatch) {
+	if (_use16bitColorMatch || force16BitColorMatch) {
 		// used by SCI0 to SCI1, also by the first few SCI1.1 games
 		for (colorNr = 0; colorNr < 256; colorNr++) {
 			if ((!_sysPalette.colors[colorNr].used))
@@ -560,8 +565,8 @@ void GfxPalette::kernelSetIntensity(uint16 fromColor, uint16 toColor, uint16 int
 	}
 }
 
-int16 GfxPalette::kernelFindColor(uint16 r, uint16 g, uint16 b) {
-	return matchColor(r, g, b) & SCI_PALETTE_MATCH_COLORMASK;
+int16 GfxPalette::kernelFindColor(uint16 r, uint16 g, uint16 b, bool force16BitColorMatch) {
+	return matchColor(r, g, b, force16BitColorMatch) & SCI_PALETTE_MATCH_COLORMASK;
 }
 
 // Returns true, if palette got changed

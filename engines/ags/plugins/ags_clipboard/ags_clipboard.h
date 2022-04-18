@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,33 +15,33 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef AGS_PLUGINS_AGS_CLIPBOARD_H
 #define AGS_PLUGINS_AGS_CLIPBOARD_H
 
-#include "ags/plugins/plugin_base.h"
+#include "ags/plugins/ags_plugin.h"
 
 namespace AGS3 {
 namespace Plugins {
 namespace AGSClipboard {
 
 class AGSClipboard : public PluginBase {
+	SCRIPT_HASH(AGSClipboard)
 private:
-	static IAGSEngine *_engine;
-	static Common::String *_text;
+	Common::String _text;
 private:
-	static const char *AGS_GetPluginName();
-	static void AGS_EngineStartup(IAGSEngine *engine);
-	static void AGS_EngineShutdown();
-	static void Clipboard_PasteText(ScriptMethodParams &params);
-	static void Clipboard_CopyText(ScriptMethodParams &params);
+	void Clipboard_PasteText(ScriptMethodParams &params);
+	void Clipboard_CopyText(ScriptMethodParams &params);
 
 public:
-	AGSClipboard();
+	AGSClipboard() : PluginBase() {}
+	virtual ~AGSClipboard() {}
+
+	const char *AGS_GetPluginName() override;
+	void AGS_EngineStartup(IAGSEngine *engine) override;
 };
 
 } // namespace AGSClipboard

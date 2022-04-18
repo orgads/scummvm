@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -109,46 +108,46 @@ enum tug1TextIds {
 
 // TODO: Finish floppy offsets
 extern const RoomTextOffsets tug1TextOffsets[] = {
-	{ TX_SPEAKER_KIRK, 5549, 0 },
-	{ TX_SPEAKER_MCCOY, 5560, 0 },
-	{ TX_SPEAKER_SPOCK, 5570, 0 },
-	{ TX_SPEAKER_CHRISTENSEN, 5580, 0 },
-	{ TX_TUG1_001, 4050, 0 },
-	{ TX_TUG1_002,  751, 0 },
-	{ TX_TUG1_003, 4598, 0 },
-	{ TX_TUG1_004, 5380, 0 },
-	{ TX_TUG1_005, 4920, 0 },
-	{ TX_TUG1_006, 5788, 0 },
-	{ TX_TUG1_007, 4764, 0 },
-	{ TX_TUG1_008, 4106, 0 },
-	{ TX_TUG1_009, 1461, 0 },
-	{ TX_TUG1_010, 1233, 0 },
-	{ TX_TUG1_011, 4223, 0 },
-	{ TX_TUG1_012, 2253, 0 },
-	{ TX_TUG1_013, 5098, 0 },
-	{ TX_TUG1_014,  482, 0 },
-	{ TX_TUG1_015, 3075, 0 },
-	{ TX_TUG1_016, 2895, 0 },
-	{ TX_TUG1_017, 2426, 0 },
-	{ TX_TUG1_018, 3872, 0 },
-	{ TX_SIN3_012, 5745, 0 },
-	{ TX_TUG1L000, 5267, 0 },
-	{ TX_TUG1L005, 3312, 0 },
-	{ TX_TUG1N000, 1620, 0 },
-	{ TX_TUG1N001, 3693, 0 },
-	{ TX_TUG1N002, 3213, 0 },
-	{ TX_TUG1N003, 5596, 0 },
-	{ TX_TUG1N004, 2040, 0 },
-	{ TX_TUG1N005,  606, 0 },
-	{ TX_TUG1N006, 5638, 0 },
-	{ TX_TUG1N007, 2673, 0 },
-	//{ TX_TUG1N007, 1017, 0 },	 // ignore duplicate text
-	{ TX_TUG1N008, 2552, 0 },
-	{ TX_TUG1N009, 2107, 0 },
-	{ TX_TUG1N010, 3489, 0 },
-	{ TX_TUG1N011, 3594, 0 },
-	{ TX_TUG1N013, 5690, 0 },
-	{          -1, 0,    0 }
+	{ TX_SPEAKER_KIRK, 5549, 0, 0, 0 },
+	{ TX_SPEAKER_MCCOY, 5560, 0, 0, 0 },
+	{ TX_SPEAKER_SPOCK, 5570, 0, 0, 0 },
+	{ TX_SPEAKER_CHRISTENSEN, 5580, 0, 0, 0 },
+	{ TX_TUG1_001, 4050, 0, 0, 0 },
+	{ TX_TUG1_002,  751, 0, 0, 0 },
+	{ TX_TUG1_003, 4598, 0, 0, 0 },
+	{ TX_TUG1_004, 5380, 0, 0, 0 },
+	{ TX_TUG1_005, 4920, 0, 0, 0 },
+	{ TX_TUG1_006, 5788, 0, 0, 0 },
+	{ TX_TUG1_007, 4764, 0, 0, 0 },
+	{ TX_TUG1_008, 4106, 0, 0, 0 },
+	{ TX_TUG1_009, 1461, 0, 0, 0 },
+	{ TX_TUG1_010, 1233, 0, 0, 0 },
+	{ TX_TUG1_011, 4223, 0, 0, 0 },
+	{ TX_TUG1_012, 2253, 0, 0, 0 },
+	{ TX_TUG1_013, 5098, 0, 0, 0 },
+	{ TX_TUG1_014,  482, 0, 0, 0 },
+	{ TX_TUG1_015, 3075, 0, 0, 0 },
+	{ TX_TUG1_016, 2895, 0, 0, 0 },
+	{ TX_TUG1_017, 2426, 0, 0, 0 },
+	{ TX_TUG1_018, 3872, 0, 0, 0 },
+	{ TX_SIN3_012, 5745, 0, 0, 0 },
+	{ TX_TUG1L000, 5267, 0, 0, 0 },
+	{ TX_TUG1L005, 3312, 0, 0, 0 },
+	{ TX_TUG1N000, 1620, 0, 0, 0 },
+	{ TX_TUG1N001, 3693, 0, 0, 0 },
+	{ TX_TUG1N002, 3213, 0, 0, 0 },
+	{ TX_TUG1N003, 5596, 0, 0, 0 },
+	{ TX_TUG1N004, 2040, 0, 0, 0 },
+	{ TX_TUG1N005,  606, 0, 0, 0 },
+	{ TX_TUG1N006, 5638, 0, 0, 0 },
+	{ TX_TUG1N007, 2673, 0, 0, 0 },
+	//{ TX_TUG1N007, 1017, 0, 0, 0 },	 // ignore duplicate text
+	{ TX_TUG1N008, 2552, 0, 0, 0 },
+	{ TX_TUG1N009, 2107, 0, 0, 0 },
+	{ TX_TUG1N010, 3489, 0, 0, 0 },
+	{ TX_TUG1N011, 3594, 0, 0, 0 },
+	{ TX_TUG1N013, 5690, 0, 0, 0 },
+	{          -1, 0,    0, 0, 0 }
 };
 
 extern const RoomText tug1Texts[] = {

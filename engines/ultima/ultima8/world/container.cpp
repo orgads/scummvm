@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -121,8 +120,8 @@ bool Container::CanAddItem(Item *item, bool checkwghtvol) {
 		if (volume + item->getVolume() > capacity)
 			return false;
 
-		Item *p = getTopItem();
-		Item *current = item->getTopItem();
+		const Item *p = getTopItem();
+		const Item *current = item->getTopItem();
 
 		// From outside to inside Avatar's inventory?
 		if (p->getObjId() == 1 && current->getObjId() != 1) {
@@ -199,6 +198,7 @@ void Container::removeContents() {
 void Container::destroyContents() {
 	while (_contents.begin() != _contents.end()) {
 		Item *item = *(_contents.begin());
+		assert(item);
 		Container *cont = dynamic_cast<Container *>(item);
 		if (cont) cont->destroyContents();
 		item->destroy(true); // we destroy the item immediately
@@ -289,7 +289,7 @@ void Container::containerSearch(UCList *itemlist, const uint8 *loopscript,
 }
 
 Item *Container::getFirstItemWithShape(uint16 shapeno, bool recurse) {
-	Std::list<Item *>::iterator iter;
+	Std::list<Item *>::const_iterator iter;
 	for (iter = _contents.begin(); iter != _contents.end(); ++iter) {
 		if ((*iter)->getShape() == shapeno)
 			return *iter;
@@ -309,7 +309,7 @@ Item *Container::getFirstItemWithShape(uint16 shapeno, bool recurse) {
 }
 
 void Container::getItemsWithShapeFamily(Std::vector<Item *> &itemlist, uint16 family, bool recurse) {
-	Std::list<Item *>::iterator iter;
+	Std::list<Item *>::const_iterator iter;
 	for (iter = _contents.begin(); iter != _contents.end(); ++iter) {
 		if ((*iter)->getShapeInfo()->_family == family)
 			itemlist.push_back(*iter);
@@ -328,8 +328,9 @@ void Container::getItemsWithShapeFamily(Std::vector<Item *> &itemlist, uint16 fa
 void Container::dumpInfo() const {
 	Item::dumpInfo();
 
-	pout << "Volume: " << getContentVolume() << "/" << getCapacity()
-	     << ", total weight: " << getTotalWeight() << Std::endl;
+	pout << "  Container vol: " << getContentVolume() << "/" << getCapacity()
+	     << ", total weight: " << getTotalWeight()
+		 << ", items: " << _contents.size() << Std::endl;
 }
 
 void Container::saveData(Common::WriteStream *ws) {

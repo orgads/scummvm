@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,7 +24,9 @@
 
 #include "common/array.h"
 #include "common/mutex.h"
+#include "common/file.h"
 #include "audio/mididrv.h"
+#include "audio/mididrv_ms.h"
 #include "audio/mixer.h"
 #include "audio/miles.h"
 
@@ -34,6 +35,7 @@ class MidiParser;
 namespace Groovie {
 
 class GroovieEngine;
+class TlcGame;
 
 class MusicPlayer {
 public:
@@ -62,7 +64,7 @@ public:
 	void setBackgroundDelay(uint16 delay);
 
 	// Volume
-	void setUserVolume(uint16 volume);
+	virtual void setUserVolume(uint16 volume);
 	void setGameVolume(uint16 volume, uint16 time);
 
 private:
@@ -150,10 +152,12 @@ public:
 	void metaEvent(int8 source, byte type, byte *data, uint16 length) override;
 	void stopAllNotes(bool stopSustainedNotes) override;
 	void processXMIDITimbreChunk(const byte *timbreListPtr, uint32 timbreListSize) override {
-		if (_milesMidiDriver)
-			_milesMidiDriver->processXMIDITimbreChunk(timbreListPtr, timbreListSize);
+		if (_milesXmidiTimbres)
+			_milesXmidiTimbres->processXMIDITimbreChunk(timbreListPtr, timbreListSize);
 	};
 	bool isReady() override;
+
+	void setUserVolume(uint16 volume) override;
 
 protected:
 	void updateVolume() override;
@@ -164,7 +168,8 @@ private:
 	// Output music type
 	uint8 _musicType;
 
-	Audio::MidiDriver_Miles_Midi *_milesMidiDriver;
+	MidiDriver_Multisource *_multisourceDriver;
+	MidiDriver_Miles_Xmidi_Timbres *_milesXmidiTimbres;
 };
 
 class MusicPlayerMac_t7g : public MusicPlayerMidi {
@@ -198,6 +203,30 @@ protected:
 
 private:
 	Audio::SoundHandle _handle;
+};
+
+class MusicPlayerTlc : public MusicPlayer {
+public:
+	MusicPlayerTlc(GroovieEngine *vm);
+	~MusicPlayerTlc();
+
+protected:
+	virtual Common::String getFilename(uint32 fileref);
+	void updateVolume() override;
+	bool load(uint32 fileref, bool loop) override;
+	void unload(bool updateState = true) override;
+
+private:
+	Audio::SoundHandle _handle;
+	Common::File *_file;
+};
+
+class MusicPlayerClan : public MusicPlayerTlc {
+public:
+	MusicPlayerClan(GroovieEngine *vm) : MusicPlayerTlc(vm) {}
+
+protected:
+	Common::String getFilename(uint32 fileref) override;
 };
 
 } // End of Groovie namespace

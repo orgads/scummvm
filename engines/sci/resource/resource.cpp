@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,13 +15,13 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 // Resource library
 
+#include "common/config-manager.h"
 #include "common/file.h"
 #include "common/fs.h"
 #include "common/macresman.h"
@@ -105,7 +105,7 @@ const char *getSciVersionDesc(SciVersion version) {
 
 //////////////////////////////////////////////////////////////////////
 
-//#define SCI_VERBOSE_RESMAN 1
+//#define SCI_VERBOSE_RESMAN
 
 static const char *const s_errorDescriptions[] = {
 	"No error",
@@ -302,7 +302,7 @@ ResourceSource *ResourceManager::addPatchDir(const Common::String &dirname) {
 	ResourceSource *newsrc = new DirectoryResourceSource(dirname);
 
 	_sources.push_back(newsrc);
-	return 0;
+	return nullptr;
 }
 
 ResourceSource *ResourceManager::findVolume(ResourceSource *map, int volume_nr) {
@@ -312,7 +312,7 @@ ResourceSource *ResourceManager::findVolume(ResourceSource *map, int volume_nr) 
 			return src;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 // Resource manager constructors and operations
@@ -401,7 +401,7 @@ Common::SeekableReadStream *ResourceManager::getVolumeFile(ResourceSource *sourc
 	}
 	// failed
 	delete file;
-	return NULL;
+	return nullptr;
 }
 
 void ResourceManager::disposeVolumeFileStream(Common::SeekableReadStream *fileStream, Sci::ResourceSource *source) {
@@ -444,7 +444,7 @@ static Common::Array<uint32> resTypeToMacTags(ResourceType type);
 
 void MacResourceForkResourceSource::loadResource(ResourceManager *resMan, Resource *res) {
 	ResourceType type = res->getType();
-	Common::SeekableReadStream *stream = 0;
+	Common::SeekableReadStream *stream = nullptr;
 
 	if (type == kResourceTypeAudio36 || type == kResourceTypeSync36) {
 		// Handle audio36/sync36, convert back to audio/sync
@@ -630,7 +630,7 @@ void ResourceSource::loadResource(ResourceManager *resMan, Resource *res) {
 	resMan->disposeVolumeFileStream(fileStream, this);
 }
 
-Resource *ResourceManager::testResource(ResourceId id) {
+Resource *ResourceManager::testResource(const ResourceId &id) const {
 	return _resMap.getValOrDefault(id, NULL);
 }
 
@@ -748,7 +748,7 @@ int ResourceManager::addAppropriateSources() {
 }
 
 int ResourceManager::addAppropriateSourcesForDetection(const Common::FSList &fslist) {
-	ResourceSource *map = 0;
+	ResourceSource *map = nullptr;
 	Common::Array<ResourceSource *> sci21Maps;
 
 #ifdef ENABLE_SCI32
@@ -1012,7 +1012,7 @@ void ResourceManager::init() {
 	_memoryLRU = 0;
 	_LRU.clear();
 	_resMap.clear();
-	_audioMapSCI1 = NULL;
+	_audioMapSCI1 = nullptr;
 #ifdef ENABLE_SCI32
 	_currentDiscNo = 1;
 #endif
@@ -1020,7 +1020,7 @@ void ResourceManager::init() {
 		_patcher = new ResourcePatcher(g_sci->getGameId(), g_sci->getLanguage());
 		addSource(_patcher);
 	} else {
-		_patcher = NULL;
+		_patcher = nullptr;
 	};
 
 	// FIXME: put this in an Init() function, so that we can error out if detection fails completely
@@ -1142,7 +1142,7 @@ void ResourceManager::addToLRU(Resource *res) {
 	}
 	_LRU.push_front(res);
 	_memoryLRU += res->size();
-#if SCI_VERBOSE_RESMAN
+#ifdef SCI_VERBOSE_RESMAN
 	debug("Adding %s (%d bytes) to lru control: %d bytes total",
 	      res->_id.toString().c_str(), res->size,
 	      _memoryLRU);
@@ -1213,7 +1213,7 @@ Resource *ResourceManager::findResource(ResourceId id, bool lock) {
 	Resource *retval = testResource(id);
 
 	if (!retval)
-		return NULL;
+		return nullptr;
 
 	if (retval->_status == kResStatusNoMalloc)
 		loadResource(retval);
@@ -1295,9 +1295,9 @@ const char *ResourceManager::versionDescription(ResVersion version) const {
 }
 
 ResVersion ResourceManager::detectMapVersion() {
-	Common::SeekableReadStream *fileStream = 0;
+	Common::SeekableReadStream *fileStream = nullptr;
 	byte buff[6];
-	ResourceSource *rsrc= 0;
+	ResourceSource *rsrc= nullptr;
 
 	for (Common::List<ResourceSource *>::iterator it = _sources.begin(); it != _sources.end(); ++it) {
 		rsrc = *it;
@@ -1338,7 +1338,7 @@ ResVersion ResourceManager::detectMapVersion() {
 		// check if 0 or 01 - try to read resources in SCI0 format and see if exists
 		fileStream->seek(0, SEEK_SET);
 		while (fileStream->read(buff, 6) == 6 && !(buff[0] == 0xFF && buff[1] == 0xFF && buff[2] == 0xFF)) {
-			if (findVolume(rsrc, (buff[5] & 0xFC) >> 2) == NULL) {
+			if (findVolume(rsrc, (buff[5] & 0xFC) >> 2) == nullptr) {
 				delete fileStream;
 				return kResVersionSci1Middle;
 			}
@@ -1399,7 +1399,7 @@ ResVersion ResourceManager::detectMapVersion() {
 }
 
 ResVersion ResourceManager::detectVolVersion() {
-	Common::SeekableReadStream *fileStream = 0;
+	Common::SeekableReadStream *fileStream = nullptr;
 	ResourceSource *rsrc;
 
 	for (Common::List<ResourceSource *>::iterator it = _sources.begin(); it != _sources.end(); ++it) {
@@ -1574,6 +1574,18 @@ bool ResourceManager::isBlacklistedPatch(const ResourceId &resId) const {
 			g_sci->getPlatform() == Common::kPlatformDOS &&
 			resId.getType() == kResourceTypeSound &&
 			resId.getNumber() == 1;
+	case GID_SQ1:
+		// In the SCI remake of SQ1, the bearded musicians at the bar in Kerona
+		//  were removed for legal reasons. Sierra still included them, but the
+		//  real graphics were suppressed with patch files that shrunk the
+		//  guitarists to 13 pixels and replaced the drummer with an alien and
+		//  the Sierra logo. We allow users to enable the original graphics,
+		//  which we do by simply ignoring the patch files. In later versions
+		//  the musicians were completely removed from the game scripts.
+		return resId.getType() == kResourceTypeView &&
+			(resId.getNumber() == 433 || resId.getNumber() == 533) &&
+			ConfMan.getBool("enable_bearded_musicians") &&
+			testResource(resId); // ensure that the original view exists, just to be safe
 	default:
 		return false;
 	}
@@ -1581,8 +1593,8 @@ bool ResourceManager::isBlacklistedPatch(const ResourceId &resId) const {
 
 // version-agnostic patch application
 void ResourceManager::processPatch(ResourceSource *source, ResourceType resourceType, uint16 resourceNr, uint32 tuple) {
-	Common::SeekableReadStream *fileStream = 0;
-	Resource *newrsc = 0;
+	Common::SeekableReadStream *fileStream = nullptr;
+	Resource *newrsc = nullptr;
 	ResourceId resId = ResourceId(resourceType, resourceNr, tuple);
 	ResourceType checkForType = resourceType;
 
@@ -1701,12 +1713,12 @@ ResourceId convertPatchNameBase36(ResourceType type, const Common::String &filen
 	// uint16 resourceId, byte noun, byte verb, byte cond, byte seq
 
 	// Skip patch type character
-	uint16 resourceNr = strtol(Common::String(filename.c_str() + 1, 3).c_str(), 0, 36); // 3 characters
-	uint16 noun = strtol(Common::String(filename.c_str() + 4, 2).c_str(), 0, 36);       // 2 characters
-	uint16 verb = strtol(Common::String(filename.c_str() + 6, 2).c_str(), 0, 36);       // 2 characters
+	uint16 resourceNr = strtol(Common::String(filename.c_str() + 1, 3).c_str(), nullptr, 36); // 3 characters
+	uint16 noun = strtol(Common::String(filename.c_str() + 4, 2).c_str(), nullptr, 36);       // 2 characters
+	uint16 verb = strtol(Common::String(filename.c_str() + 6, 2).c_str(), nullptr, 36);       // 2 characters
 	// Skip '.'
-	uint16 cond = strtol(Common::String(filename.c_str() + 9, 2).c_str(), 0, 36);       // 2 characters
-	uint16 seq = strtol(Common::String(filename.c_str() + 11, 1).c_str(), 0, 36);       // 1 character
+	uint16 cond = strtol(Common::String(filename.c_str() + 9, 2).c_str(), nullptr, 36);       // 2 characters
+	uint16 seq = strtol(Common::String(filename.c_str() + 11, 1).c_str(), nullptr, 36);       // 1 character
 
 	return ResourceId(type, resourceNr, noun, verb, cond, seq);
 }
@@ -1836,7 +1848,7 @@ void ResourceManager::readResourcePatches() {
 
 			// SCI1 scheme
 			if (Common::isDigit(name[0])) {
-				char *end = 0;
+				char *end = nullptr;
 				resourceNr = strtol(name.c_str(), &end, 10);
 				bAdd = (*end == '.'); // Ensure the next character is the period
 			} else {
@@ -1858,7 +1870,7 @@ void ResourceManager::readResourcePatches() {
 }
 
 int ResourceManager::readResourceMapSCI0(ResourceSource *map) {
-	Common::SeekableReadStream *fileStream = 0;
+	Common::SeekableReadStream *fileStream = nullptr;
 	ResourceType type = kResourceTypeInvalid;	// to silence a false positive in MSVC
 	uint16 number, id;
 	uint32 offset;
@@ -1937,7 +1949,7 @@ int ResourceManager::readResourceMapSCI0(ResourceSource *map) {
 }
 
 int ResourceManager::readResourceMapSCI1(ResourceSource *map) {
-	Common::SeekableReadStream *fileStream = 0;
+	Common::SeekableReadStream *fileStream = nullptr;
 
 	if (map->_resourceFile) {
 		fileStream = map->_resourceFile->createReadStream();
@@ -2017,7 +2029,7 @@ int ResourceManager::readResourceMapSCI1(ResourceSource *map) {
 				return SCI_ERROR_NO_RESOURCE_FILES_FOUND;
 			}
 
-			Resource *resource =  NULL;
+			Resource *resource =  nullptr;
 			if (!_resMap.tryGetVal(resId,resource)) {
 				addResource(resId, source, fileOffset, 0, map->getLocationName());
 			} else {
@@ -2373,7 +2385,7 @@ int Resource::decompress(ResVersion volVersion, Common::SeekableReadStream *file
 		return errorNum;
 
 	// getting a decompressor
-	Decompressor *dec = NULL;
+	Decompressor *dec = nullptr;
 	switch (compression) {
 	case kCompNone:
 		dec = new Decompressor;
@@ -2432,7 +2444,7 @@ ResourceCompression ResourceManager::getViewCompression() {
 
 	// Test 10 views to see if any are compressed
 	for (int i = 0; i < 1000; i++) {
-		Common::SeekableReadStream *fileStream = 0;
+		Common::SeekableReadStream *fileStream = nullptr;
 		Resource *res = testResource(ResourceId(kResourceTypeView, i));
 
 		if (!res)
@@ -2675,8 +2687,9 @@ void ResourceManager::detectSciVersion() {
 		// Distinguish between SCI1.1 and SCI32 games here. SCI32 games will
 		// always include script 64920 (the Array class). Note that there are
 		// no Mac SCI2 games. Yes, that means that GK1 Mac is SCI2.1 and not SCI2.
-
-		// TODO: Decide between SCI2.1 and SCI3
+		// There are also no SCI3 Mac games, the final Mac games are Late SCI2.1
+		// versions of SCI3 PC games. That is, the Mac scripts are compiled as
+		// separate script and hunk resources instead of the SCI3 script format.
 		if (res) {
 			s_sciVersion = SCI_VERSION_2_1_EARLY; // we check for SCI2.1 specifics a bit later
 		} else {

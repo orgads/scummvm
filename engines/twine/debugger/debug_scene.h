@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -71,13 +70,13 @@ private:
 	bool drawBox(const ScenePositionsProjected &positions, uint8 color);
 public:
 	DebugScene(TwinEEngine *engine);
-	bool showingZones = false;
-	bool showingActors = false;
-	bool showingTracks = false;
-	bool showingClips = false;
-	bool useScenePatches = false;
-	int32 typeZones = 127; // all zones on as default
-	int16 onlyLoadActor = -1;
+	bool _showingZones = false;
+	bool _showingActors = false;
+	bool _showingTracks = false;
+	bool _showingClips = false;
+	bool _godMode = false;
+	int32 _typeZones = 127; // all zones on as default
+	int16 _onlyLoadActor = -1;
 
 	void renderDebugView();
 

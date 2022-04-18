@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,11 +15,11 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
+#include "common/config-manager.h"
 #include "ags/lib/std/algorithm.h"
 #include "ags/lib/std/math.h"
 #include "ags/engine/ac/display.h"
@@ -43,6 +43,7 @@
 #include "ags/engine/ac/system.h"
 #include "ags/engine/ac/top_bar_settings.h"
 #include "ags/engine/debugging/debug_log.h"
+#include "ags/engine/gfx/blender.h"
 #include "ags/shared/gui/gui_button.h"
 #include "ags/shared/gui/gui_main.h"
 #include "ags/engine/main/game_run.h"
@@ -59,11 +60,11 @@
 namespace AGS3 {
 
 using namespace AGS::Shared;
+using namespace AGS::Shared::BitmapHelper;
 
 struct DisplayVars {
-	int lineheight;    // font's height of single line
-	int linespacing;   // font's line spacing
-	int fulltxtheight; // total height of all the text
+	int linespacing = 0;   // font's line spacing
+	int fulltxtheight = 0; // total height of all the text
 } disp;
 
 // Pass yy = -1 to find Y co-ord automatically
@@ -86,11 +87,20 @@ int _display_main(int xx, int yy, int wii, const char *text, int disp_type, int 
 	int paddingScaled = get_fixed_pixel_size(padding);
 	int paddingDoubledScaled = get_fixed_pixel_size(padding * 2); // Just in case screen size does is not neatly divisible by 320x200
 
+	// FIXME: Fixes the display of the F1 help dialog in La Croix Pan,
+	// since it was previously incorrectly wrapping on the 's' at the end
+	// of the 'Cursors' word. May be due to minor differences in width calcs
+	if (padding == 3 && ConfMan.get("gameid") == "lacroixpan")
+		padding = 0;
+
+	// WORKAROUND: Guard Duty specifies a wii of 100,000, which is larger
+	// than can be supported by ScummVM's surface classes
+	wii = MIN(wii, 8000);
+
 	ensure_text_valid_for_font(todis, usingfont);
-	break_up_text_into_lines(todis, Lines, wii - 2 * padding, usingfont);
-	disp.lineheight = getfontheight_outlined(usingfont);
-	disp.linespacing = getfontspacing_outlined(usingfont);
-	disp.fulltxtheight = getheightoflines(usingfont, Lines.Count());
+	break_up_text_into_lines(todis, _GP(Lines), wii - 2 * padding, usingfont);
+	disp.linespacing = get_font_linespacing(usingfont);
+	disp.fulltxtheight = get_text_lines_surf_height(usingfont, _GP(Lines).Count());
 
 	// AGS 2.x: If the screen is faded out, fade in again when displaying a message box.
 	if (!asspch && (_G(loaded_game_file_version) <= kGameVersion_272))
@@ -108,7 +118,7 @@ int _display_main(int xx, int yy, int wii, const char *text, int disp_type, int 
 	if (_GP(topBar).wantIt) {
 		// ensure that the window is wide enough to display
 		// any top bar text
-		int topBarWid = wgettextwidth_compensate(_GP(topBar).text, _GP(topBar).font);
+		int topBarWid = get_text_width_outlined(_GP(topBar).text, _GP(topBar).font);
 		topBarWid += data_to_game_coord(_GP(play).top_bar_borderwidth + 2) * 2;
 		if (_G(longestline) < topBarWid)
 			_G(longestline) = topBarWid;
@@ -162,7 +172,7 @@ int _display_main(int xx, int yy, int wii, const char *text, int disp_type, int 
 	int extraHeight = paddingDoubledScaled;
 	color_t text_color = MakeColor(15);
 	if (disp_type < DISPLAYTEXT_NORMALOVERLAY)
-		remove_screen_overlay(OVER_TEXTMSG); // remove any previous blocking texts
+		remove_screen_overlay(_GP(play).text_overlay_on); // remove any previous blocking texts
 
 	const int bmp_width = std::max(2, wii);
 	const int bmp_height = std::max(2, disp.fulltxtheight + extraHeight);
@@ -202,8 +212,8 @@ int _display_main(int xx, int yy, int wii, const char *text, int disp_type, int 
 		} else if ((ShouldAntiAliasText()) && (_GP(game).GetColorDepth() >= 24))
 			alphaChannel = true;
 
-		for (size_t ee = 0; ee < Lines.Count(); ee++) {
-			//int ttxp=wii/2 - wgettextwidth_compensate(lines[ee], usingfont)/2;
+		for (size_t ee = 0; ee < _GP(Lines).Count(); ee++) {
+			//int ttxp=wii/2 - get_text_width_outlined(lines[ee], usingfont)/2;
 			int ttyp = ttxtop + ee * disp.linespacing;
 			// asspch < 0 means that it's inside a text box so don't
 			// centre the text
@@ -214,11 +224,10 @@ int _display_main(int xx, int yy, int wii, const char *text, int disp_type, int 
 				else
 					text_color = text_window_ds->GetCompatibleColor(-asspch);
 
-				wouttext_aligned(text_window_ds, ttxleft, ttyp, oriwid, usingfont, text_color, Lines[ee].GetCStr(), _GP(play).text_align);
+				wouttext_aligned(text_window_ds, ttxleft, ttyp, oriwid, usingfont, text_color, _GP(Lines)[ee].GetCStr(), _GP(play).text_align);
 			} else {
 				text_color = text_window_ds->GetCompatibleColor(asspch);
-				//wouttext_outline(ttxp,ttyp,usingfont,lines[ee]);
-				wouttext_aligned(text_window_ds, ttxleft, ttyp, wii, usingfont, text_color, Lines[ee].GetCStr(), _GP(play).speech_text_align);
+				wouttext_aligned(text_window_ds, ttxleft, ttyp, wii, usingfont, text_color, _GP(Lines)[ee].GetCStr(), _GP(play).speech_text_align);
 			}
 		}
 	} else {
@@ -231,19 +240,23 @@ int _display_main(int xx, int yy, int wii, const char *text, int disp_type, int 
 
 		adjust_y_coordinate_for_text(&yoffs, usingfont);
 
-		for (size_t ee = 0; ee < Lines.Count(); ee++)
-			wouttext_aligned(text_window_ds, xoffs, yoffs + ee * disp.linespacing, oriwid, usingfont, text_color, Lines[ee].GetCStr(), _GP(play).text_align);
+		for (size_t ee = 0; ee < _GP(Lines).Count(); ee++)
+			wouttext_aligned(text_window_ds, xoffs, yoffs + ee * disp.linespacing, oriwid, usingfont, text_color, _GP(Lines)[ee].GetCStr(), _GP(play).text_align);
 	}
 
-	int ovrtype = OVER_TEXTMSG;
-	if (disp_type == DISPLAYTEXT_NORMALOVERLAY) ovrtype = OVER_CUSTOM;
-	else if (disp_type >= OVER_CUSTOM) ovrtype = disp_type;
+	int ovrtype;
+	switch (disp_type) {
+	case DISPLAYTEXT_SPEECH: ovrtype = OVER_TEXTSPEECH; break;
+	case DISPLAYTEXT_MESSAGEBOX: ovrtype = OVER_TEXTMSG; break;
+	case DISPLAYTEXT_NORMALOVERLAY: ovrtype = OVER_CUSTOM; break;
+	default: ovrtype = disp_type; break; // must be precreated overlay id
+	}
 
 	int nse = add_screen_overlay(xx, yy, ovrtype, text_window_ds, adjustedXX - xx, adjustedYY - yy, alphaChannel);
 	// we should not delete text_window_ds here, because it is now owned by Overlay
 
 	if (disp_type >= DISPLAYTEXT_NORMALOVERLAY) {
-		return _G(screenover)[nse].type;
+		return _GP(screenover)[nse].type;
 	}
 
 	//
@@ -253,6 +266,7 @@ int _display_main(int xx, int yy, int wii, const char *text, int disp_type, int 
 		// If fast-forwarding, then skip immediately
 		if (_GP(play).fast_forward) {
 			remove_screen_overlay(OVER_TEXTMSG);
+			_GP(play).SetWaitSkipResult(SKIP_AUTOTIMER);
 			_GP(play).messagetime = -1;
 			return 0;
 		}
@@ -275,16 +289,20 @@ int _display_main(int xx, int yy, int wii, const char *text, int disp_type, int 
 				check_skip_cutscene_mclick(mbut);
 				if (_GP(play).fast_forward)
 					break;
-				if (skip_setting & SKIP_MOUSECLICK && !_GP(play).IsIgnoringInput())
+				if (skip_setting & SKIP_MOUSECLICK && !_GP(play).IsIgnoringInput()) {
+					_GP(play).SetWaitSkipResult(SKIP_MOUSECLICK, mbut);
 					break;
+				}
 			}
-			int kp;
+			KeyInput kp;
 			if (run_service_key_controls(kp)) {
-				check_skip_cutscene_keypress(kp);
+				check_skip_cutscene_keypress(kp.Key);
 				if (_GP(play).fast_forward)
 					break;
-				if ((skip_setting & SKIP_KEYPRESS) && !_GP(play).IsIgnoringInput())
+				if ((skip_setting & SKIP_KEYPRESS) && !_GP(play).IsIgnoringInput()) {
+					_GP(play).SetWaitSkipResult(SKIP_KEYPRESS, kp.Key);
 					break;
+				}
 			}
 
 			update_polled_stuff_if_runtime();
@@ -298,7 +316,7 @@ int _display_main(int xx, int yy, int wii, const char *text, int disp_type, int 
 			// Special behavior when coupled with a voice-over
 			if (_GP(play).speech_has_voice) {
 				// extend life of text if the voice hasn't finished yet
-				if (channel_is_playing(SCHAN_SPEECH) && (_GP(play).fast_forward == 0)) {
+				if (AudioChans::ChannelIsPlaying(SCHAN_SPEECH) && (_GP(play).fast_forward == 0)) {
 					if (countdown <= 1)
 						countdown = 1;
 				} else  // if the voice has finished, remove the speech
@@ -306,6 +324,7 @@ int _display_main(int xx, int yy, int wii, const char *text, int disp_type, int 
 			}
 			// Test for the timed auto-skip
 			if ((countdown < 1) && (skip_setting & SKIP_AUTOTIMER)) {
+				_GP(play).SetWaitSkipResult(SKIP_AUTOTIMER);
 				_GP(play).SetIgnoreInput(_GP(play).ignore_user_input_after_text_timeout_ms);
 				break;
 			}
@@ -318,16 +337,17 @@ int _display_main(int xx, int yy, int wii, const char *text, int disp_type, int 
 		remove_screen_overlay(OVER_TEXTMSG);
 		invalidate_screen();
 	} else {
+		/* DISPLAYTEXT_SPEECH */
 		// if the speech does not time out, but we are skipping a cutscene,
 		// allow it to time out
 		if ((_GP(play).messagetime < 0) && (_GP(play).fast_forward))
 			_GP(play).messagetime = 2;
 
 		if (!overlayPositionFixed) {
-			_G(screenover)[nse].positionRelativeToScreen = false;
-			VpPoint vpt = _GP(play).GetRoomViewport(0)->ScreenToRoom(_G(screenover)[nse].x, _G(screenover)[nse].y, false);
-			_G(screenover)[nse].x = vpt.first.X;
-			_G(screenover)[nse].y = vpt.first.Y;
+			_GP(screenover)[nse].positionRelativeToScreen = false;
+			VpPoint vpt = _GP(play).GetRoomViewport(0)->ScreenToRoom(_GP(screenover)[nse].x, _GP(screenover)[nse].y, false);
+			_GP(screenover)[nse].x = vpt.first.X;
+			_GP(screenover)[nse].y = vpt.first.Y;
 		}
 
 		GameLoopUntilNoOverlay();
@@ -370,7 +390,7 @@ bool try_auto_play_speech(const char *text, const char *&replace_text, int chari
 	replace_text = src; // skip voice tag
 	if (play_voice_speech(charid, sndid)) {
 		// if Voice Only, then blank out the text
-		if (_GP(play).want_speech == 2)
+		if (_GP(play).speech_mode == kSpeech_VoiceOnly)
 			replace_text = "  ";
 		return true;
 	}
@@ -430,53 +450,110 @@ bool ShouldAntiAliasText() {
 	return (_GP(game).options[OPT_ANTIALIASFONTS] != 0 || ::AGS::g_vm->_forceTextAA);
 }
 
-void wouttext_outline(Shared::Bitmap *ds, int xxp, int yyp, int usingfont, color_t text_color, const char *texx) {
+void wouttextxy_AutoOutline(Bitmap *ds, size_t font, int32_t color, const char *texx, int &xxp, int &yyp) {
+	const FontInfo &finfo = get_fontinfo(font);
+	int const thickness = finfo.AutoOutlineThickness;
+	auto const style = finfo.AutoOutlineStyle;
+	if (thickness <= 0)
+		return;
 
-	color_t outline_color = ds->GetCompatibleColor(_GP(play).speech_text_shadow);
-	if (get_font_outline(usingfont) >= 0) {
-		// MACPORT FIX 9/6/5: cast
-		wouttextxy(ds, xxp, yyp, (int)get_font_outline(usingfont), outline_color, texx);
-	} else if (get_font_outline(usingfont) == FONT_OUTLINE_AUTO) {
-		int outlineDist = 1;
+	// 16-bit games should use 32-bit stencils to keep anti-aliasing working
+	// because 16-bit blending works correctly if there's an actual color
+	// on the destination bitmap (and our intermediate bitmaps are transparent).
+	int const  ds_cd = ds->GetColorDepth();
+	bool const antialias = ds_cd >= 16 && _GP(game).options[OPT_ANTIALIASFONTS] != 0 && !is_bitmap_font(font);
+	int const  stencil_cd = antialias ? 32 : ds_cd;
+	if (antialias) // This is to make sure TTFs render proper alpha channel in 16-bit games too
+		color |= makeacol32(0, 0, 0, 0xff);
 
-		if (is_bitmap_font(usingfont) && get_font_scaling_mul(usingfont) > 1) {
-			// if it's a scaled up bitmap font, move the outline out more
-			outlineDist = get_fixed_pixel_size(1);
-		}
+	size_t const t_width = get_text_width(texx, font);
+	size_t const t_height = get_font_surface_height(font);
+	if (t_width == 0 || t_height == 0)
+		return;
 
-		// move the text over so that it's still within the bounding rect
-		xxp += outlineDist;
-		yyp += outlineDist;
+	// Prepare stencils
+	Bitmap *texx_stencil, *outline_stencil;
+	alloc_font_outline_buffers(font, &texx_stencil, &outline_stencil,
+		t_width, t_height, stencil_cd);
+	texx_stencil->ClearTransparent();
+	outline_stencil->ClearTransparent();
+	// Ready text stencil
+	wouttextxy(texx_stencil, 0, 0, font, color, texx);
 
-		wouttextxy(ds, xxp - outlineDist, yyp, usingfont, outline_color, texx);
-		wouttextxy(ds, xxp + outlineDist, yyp, usingfont, outline_color, texx);
-		wouttextxy(ds, xxp, yyp + outlineDist, usingfont, outline_color, texx);
-		wouttextxy(ds, xxp, yyp - outlineDist, usingfont, outline_color, texx);
-		wouttextxy(ds, xxp - outlineDist, yyp - outlineDist, usingfont, outline_color, texx);
-		wouttextxy(ds, xxp - outlineDist, yyp + outlineDist, usingfont, outline_color, texx);
-		wouttextxy(ds, xxp + outlineDist, yyp + outlineDist, usingfont, outline_color, texx);
-		wouttextxy(ds, xxp + outlineDist, yyp - outlineDist, usingfont, outline_color, texx);
+	// Anti-aliased TTFs require to be alpha-blended, not blit,
+	// or the alpha values will be plain copied and final image will be broken.
+	void(Bitmap:: * pfn_drawstencil)(Bitmap * src, int dst_x, int dst_y);
+	if (antialias) { // NOTE: we must set out blender AFTER wouttextxy, or it will be overidden
+		set_argb2any_blender();
+		pfn_drawstencil = &Bitmap::TransBlendBlt;
+	} else {
+		pfn_drawstencil = &Bitmap::MaskedBlit;
 	}
 
-	wouttextxy(ds, xxp, yyp, usingfont, text_color, texx);
+	// move start of text so that the outline doesn't drop off the bitmap
+	xxp += thickness;
+	int const outline_y = yyp;
+	yyp += thickness;
+
+	// What we do here: first we paint text onto outline_stencil offsetting vertically;
+	// then we paint resulting outline_stencil onto final dest offsetting horizontally.
+	int largest_y_diff_reached_so_far = -1;
+	for (int x_diff = thickness; x_diff >= 0; x_diff--) {
+		// Integer arithmetics: In the following, we use terms k*(k + 1) to account for rounding.
+		//     (k + 0.5)^2 == k*k + 2*k*0.5 + 0.5^2 == k*k + k + 0.25 ==approx. k*(k + 1)
+		int y_term_limit = thickness * (thickness + 1);
+		if (FontInfo::kRounded == style)
+			y_term_limit -= x_diff * x_diff;
+
+		// Extend the outline stencil to the top and bottom
+		for (int y_diff = largest_y_diff_reached_so_far + 1;
+			y_diff <= thickness && y_diff * y_diff <= y_term_limit;
+			y_diff++) {
+			(outline_stencil->*pfn_drawstencil)(texx_stencil, 0, thickness - y_diff);
+			if (y_diff > 0)
+				(outline_stencil->*pfn_drawstencil)(texx_stencil, 0, thickness + y_diff);
+			largest_y_diff_reached_so_far = y_diff;
+		}
+
+		// Stamp the outline stencil to the left and right of the text
+		(ds->*pfn_drawstencil)(outline_stencil, xxp - x_diff, outline_y);
+		if (x_diff > 0)
+			(ds->*pfn_drawstencil)(outline_stencil, xxp + x_diff, outline_y);
+	}
+}
+
+// Draw an outline if requested, then draw the text on top 
+void wouttext_outline(Shared::Bitmap *ds, int xxp, int yyp, int font, color_t text_color, const char *texx) {
+	size_t const text_font = static_cast<size_t>(font);
+	// Draw outline (a backdrop) if requested
+	color_t const outline_color = ds->GetCompatibleColor(_GP(play).speech_text_shadow);
+	int const outline_font = get_font_outline(font);
+	if (outline_font >= 0)
+		wouttextxy(ds, xxp, yyp, static_cast<size_t>(outline_font), outline_color, texx);
+	else if (outline_font == FONT_OUTLINE_AUTO)
+		wouttextxy_AutoOutline(ds, text_font, outline_color, texx, xxp, yyp);
+	else
+		; // no outline
+
+	// Draw text on top
+	wouttextxy(ds, xxp, yyp, text_font, text_color, texx);
 }
 
 void wouttext_aligned(Bitmap *ds, int usexp, int yy, int oriwid, int usingfont, color_t text_color, const char *text, HorAlignment align) {
 
 	if (align & kMAlignHCenter)
-		usexp = usexp + (oriwid / 2) - (wgettextwidth_compensate(text, usingfont) / 2);
+		usexp = usexp + (oriwid / 2) - (get_text_width_outlined(text, usingfont) / 2);
 	else if (align & kMAlignRight)
-		usexp = usexp + (oriwid - wgettextwidth_compensate(text, usingfont));
+		usexp = usexp + (oriwid - get_text_width_outlined(text, usingfont));
 
 	wouttext_outline(ds, usexp, yy, usingfont, text_color, text);
 }
 
-int get_outline_adjustment(int font) {
-	// automatic outline fonts are 2 pixels taller
+int get_font_outline_padding(int font) {
 	if (get_font_outline(font) == FONT_OUTLINE_AUTO) {
 		// scaled up bitmap font, push outline further out
 		if (is_bitmap_font(font) && get_font_scaling_mul(font) > 1)
-			return get_fixed_pixel_size(2);
+			return get_fixed_pixel_size(2); // FIXME: should be 2 + get_fixed_pixel_size(2)?
 		// otherwise, just push outline by 1 pixel
 		else
 			return 2;
@@ -484,37 +561,8 @@ int get_outline_adjustment(int font) {
 	return 0;
 }
 
-int getfontheight_outlined(int font) {
-	return getfontheight(font) + get_outline_adjustment(font);
-}
-
-int getfontspacing_outlined(int font) {
-	return use_default_linespacing(font) ?
-	       getfontheight_outlined(font) :
-	       getfontlinespacing(font);
-}
-
-int getfontlinegap(int font) {
-	return getfontspacing_outlined(font) - getfontheight_outlined(font);
-}
-
-int getheightoflines(int font, int numlines) {
-	return getfontspacing_outlined(font) * (numlines - 1) + getfontheight_outlined(font);
-}
-
-int wgettextwidth_compensate(const char *tex, int font) {
-	int wdof = wgettextwidth(tex, font);
-
-	if (get_font_outline(font) == FONT_OUTLINE_AUTO) {
-		// scaled up SCI font, push outline further out
-		if (is_bitmap_font(font) && get_font_scaling_mul(font) > 1)
-			wdof += get_fixed_pixel_size(2);
-		// otherwise, just push outline by 1 pixel
-		else
-			wdof += get_fixed_pixel_size(1);
-	}
-
-	return wdof;
+int get_text_width_outlined(const char *tex, int font) {
+	return get_text_width(tex, font) + 2 * get_font_outline_padding(font);
 }
 
 void do_corner(Bitmap *ds, int sprn, int x, int y, int offx, int offy) {
@@ -585,7 +633,7 @@ void draw_button_background(Bitmap *ds, int xx1, int yy1, int xx2, int yy2, GUIM
 					bgoffsx += _GP(game).SpriteInfos[iep->BgImage].Width;
 				}
 				// return to normal clipping rectangle
-				ds->SetClip(Rect(0, 0, ds->GetWidth() - 1, ds->GetHeight() - 1));
+				ds->ResetClip();
 			}
 		}
 		int uu;
@@ -714,7 +762,7 @@ void draw_text_window_and_bar(Bitmap **text_window_ds, bool should_free_ds,
 		}
 
 		// draw the text
-		int textx = (ds->GetWidth() / 2) - wgettextwidth_compensate(_GP(topBar).text, _GP(topBar).font) / 2;
+		int textx = (ds->GetWidth() / 2) - get_text_width_outlined(_GP(topBar).text, _GP(topBar).font) / 2;
 		color_t text_color = ds->GetCompatibleColor(_GP(play).top_bar_textcolor);
 		wouttext_outline(ds, textx, _GP(play).top_bar_borderwidth + get_fixed_pixel_size(1), _GP(topBar).font, text_color, _GP(topBar).text);
 

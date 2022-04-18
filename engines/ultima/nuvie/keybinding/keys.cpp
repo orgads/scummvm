@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -41,15 +40,7 @@
 namespace Ultima {
 namespace Nuvie {
 
-static  class Chardata { // ctype-like character lists
-public:
-	string  whitespace;
-	Chardata() {
-		for (size_t i = 0; i < 256; i++)
-			if (Common::isSpace(i))
-				whitespace += static_cast<char>(i);
-	}
-} chardata;
+static const char * whitespace = "\t\n\v\f\r ";
 
 typedef void(*ActionFunc)(int const *);
 
@@ -453,7 +444,7 @@ void KeyBinder::ParseText(char *text, int len) {
 }
 
 static void skipspace(string &s) {
-	size_t i = s.findFirstNotOf(chardata.whitespace);
+	size_t i = s.findFirstNotOf(whitespace);
 	if (i && i != string::npos)
 		s.erase(0, i);
 }
@@ -494,7 +485,7 @@ void KeyBinder::ParseLine(char *line) {
 			s.erase(0, 6);
 			u.erase(0, 6);
 		} else {
-			i = s.findFirstOf(chardata.whitespace);
+			i = s.findFirstOf(whitespace);
 
 			keycode = s.substr(0, i);
 			s.erase(0, i);
@@ -532,7 +523,7 @@ void KeyBinder::ParseLine(char *line) {
 	// get function
 	skipspace(s);
 
-	i = s.findFirstOf(chardata.whitespace);
+	i = s.findFirstOf(whitespace);
 	string t = s.substr(0, i);
 	s.erase(0, i);
 	t = Std::to_uppercase(t);
@@ -550,7 +541,7 @@ void KeyBinder::ParseLine(char *line) {
 
 	int np = 0;
 	while (!s.empty() && s[0] != '#' && np < c_maxparams) {
-		i = s.findFirstOf(chardata.whitespace);
+		i = s.findFirstOf(whitespace);
 		string tmp = s.substr(0, i);
 		s.erase(0, i);
 		skipspace(s);

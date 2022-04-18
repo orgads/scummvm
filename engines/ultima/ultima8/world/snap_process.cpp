@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,15 +15,17 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
+#include "common/config-manager.h"
 
 #include "ultima/ultima8/world/snap_process.h"
 #include "ultima/ultima8/world/get_object.h"
 #include "ultima/ultima8/world/actors/actor.h"
 #include "ultima/ultima8/world/camera_process.h"
+#include "ultima/ultima8/ultima8.h"
 
 namespace Ultima {
 namespace Ultima8 {
@@ -33,7 +35,7 @@ SnapProcess *SnapProcess::_instance = nullptr;
 
 DEFINE_RUNTIME_CLASSTYPE_CODE(SnapProcess)
 
-SnapProcess::SnapProcess() : Process(), _currentSnapEgg() {
+SnapProcess::SnapProcess() : Process(), _currentSnapEgg(0) {
 	_instance = this;
 	_type = 1; // persistent
 }
@@ -44,8 +46,28 @@ SnapProcess::~SnapProcess() {
 }
 
 void SnapProcess::run() {
-	if (!_currentSnapEgg || !isNpcInRangeOfCurrentEgg()) {
-		updateCurrentEgg();
+	bool snap_to_player = ConfMan.getBool("camera_on_player");
+	bool in_stasis = Ultima8Engine::get_instance()->isAvatarInStasis();
+
+	// For cut scenes and remote cameras (when in stasis),
+	// we should snap to the right egg - not to the player.
+	// Snapping to player resumes once stasis is done.
+	if (snap_to_player && !in_stasis) {
+		const Actor *controlled = getControlledActor();
+		if (controlled) {
+			int32 x, y, z;
+			controlled->getCentre(x, y, z);
+			if (x > 0 || y > 0) {
+				_currentSnapEgg = 0;
+				CameraProcess *camera = CameraProcess::GetCameraProcess();
+				if (camera->getItemNum() != controlled->getObjId())
+					CameraProcess::SetCameraProcess(new CameraProcess(x, y, z));
+			}
+		}
+	} else {
+		if (!_currentSnapEgg || !isNpcInRangeOfCurrentEgg()) {
+			updateCurrentEgg();
+		}
 	}
 }
 
@@ -77,7 +99,7 @@ void SnapProcess::updateCurrentEgg() {
 
 	for (Std::list<ObjId>::const_iterator iter = _snapEggs.begin();
 		 iter != _snapEggs.end(); iter++) {
-		Item *egg = getItem(*iter);
+		const Item *egg = getItem(*iter);
 		if (!egg)
 			continue;
 		Rect r;
@@ -111,7 +133,7 @@ bool SnapProcess::isNpcInRangeOfCurrentEgg() const {
 		return false;
 
 	const Actor *a = getControlledActor();
-	Item *currentegg = getItem(_currentSnapEgg);
+	const Item *currentegg = getItem(_currentSnapEgg);
 
 	if (!a || !currentegg)
 		return false;

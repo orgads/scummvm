@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -39,18 +38,15 @@ namespace AGS3 {
 using namespace AGS::Shared;
 
 void redo_walkable_areas() {
-	_GP(thisroom).WalkAreaMask->Blit(_G(walkareabackup), 0, 0, 0, 0, _GP(thisroom).WalkAreaMask->GetWidth(), _GP(thisroom).WalkAreaMask->GetHeight());
-
-	int hh, ww;
-	for (hh = 0; hh < _G(walkareabackup)->GetHeight(); hh++) {
-		uint8_t *walls_scanline = _GP(thisroom).WalkAreaMask->GetScanLineForWriting(hh);
-		for (ww = 0; ww < _G(walkareabackup)->GetWidth(); ww++) {
-			//      if (_GP(play).walkable_areas_on[_getpixel(_GP(thisroom).WalkAreaMask,ww,hh)]==0)
-			if (_GP(play).walkable_areas_on[walls_scanline[ww]] == 0)
-				walls_scanline[ww] = 0;
+	_GP(thisroom).WalkAreaMask->Blit(_G(walkareabackup), 0, 0);
+	for (int h = 0; h < _G(walkareabackup)->GetHeight(); ++h) {
+		uint8_t *walls_scanline = _GP(thisroom).WalkAreaMask->GetScanLineForWriting(h);
+		for (int w = 0; w < _G(walkareabackup)->GetWidth(); ++w) {
+			if ((walls_scanline[w] >= sizeof(_GP(play).walkable_areas_on)) ||
+				(_GP(play).walkable_areas_on[walls_scanline[w]] == 0))
+				walls_scanline[w] = 0;
 		}
 	}
-
 }
 
 int get_walkable_area_pixel(int x, int y) {

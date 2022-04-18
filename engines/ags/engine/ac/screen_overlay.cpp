@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -46,6 +45,12 @@ void ScreenOverlay::ReadFromFile(Stream *in, int32_t cmp_ver) {
 		_offsetX = in->ReadInt32();
 		_offsetY = in->ReadInt32();
 	}
+	if (cmp_ver >= 2) {
+		zorder = in->ReadInt32();
+		transparency = in->ReadInt32();
+		in->ReadInt32(); // reserve 2 ints
+		in->ReadInt32();
+	}
 }
 
 void ScreenOverlay::WriteToFile(Stream *out) const {
@@ -63,6 +68,11 @@ void ScreenOverlay::WriteToFile(Stream *out) const {
 	// since cmp_ver = 1
 	out->WriteInt32(_offsetX);
 	out->WriteInt32(_offsetY);
+	// since cmp_ver = 2
+	out->WriteInt32(zorder);
+	out->WriteInt32(transparency);
+	out->WriteInt32(0); // reserve 2 ints
+	out->WriteInt32(0);
 }
 
 } // namespace AGS3

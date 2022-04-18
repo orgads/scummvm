@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,11 +23,13 @@
 #define TWINE_SCENE_MOVEMENTS_H
 
 #include "common/scummsys.h"
-#include "twine/scene/actor.h"
+#include "twine/shared.h"
 
 namespace TwinE {
 
 class TwinEEngine;
+class ActorStruct;
+struct ActorMoveStruct;
 
 class Movements {
 private:
@@ -112,7 +113,7 @@ private:
 	void processManualMovementExecution(int actorIdx);
 	void processManualRotationExecution(int actorIdx);
 
-	bool heroAction = false;
+	bool _heroAction = false;
 
 public:
 	Movements(TwinEEngine *engine);
@@ -124,23 +125,21 @@ public:
 	 */
 	bool shouldTriggerZoneAction() const;
 
-	bool heroMoved = false;
+	bool _lastJoyFlag = false;
 
 	/** Process actor coordinate */
-	IVec3 processActor;
+	IVec3 _processActor;
 
 	/** Previous process actor coordinate */
-	IVec3 previousActor;
+	IVec3 _previousActor;
 
-	int32 targetActorDistance = 0;
+	int32 _targetActorDistance = 0;
 
 	/**
 	 * Get shadow position
-	 * @param x Shadow X coordinate
-	 * @param y Shadow Y coordinate
-	 * @param z Shadow Z coordinate
+	 * @param pos Shadow coordinates
 	 */
-	void getShadowPosition(int32 x, int32 y, int32 z);
+	void getShadowPosition(const IVec3 &pos);
 
 	/**
 	 * Set actor safe angle
@@ -185,29 +184,7 @@ public:
 	 * @param z Actor current Z coordinate
 	 * @param angle Actor angle to rotate
 	 */
-	void rotateActor(int32 x, int32 z, int32 angle);
-
-	/**
-	 * Get distance value in 2D
-	 * @param x1 Actor 1 X coordinate
-	 * @param z1 Actor 1 Z coordinate
-	 * @param x2 Actor 2 X coordinate
-	 * @param z2 Actor 2 Z coordinate
-	 */
-	int32 getDistance2D(int32 x1, int32 z1, int32 x2, int32 z2) const;
-	int32 getDistance2D(const IVec3 &v1, const IVec3 &v2) const;
-
-	/**
-	 * Get distance value in 3D
-	 * @param x1 Actor 1 X coordinate
-	 * @param y1 Actor 1 Y coordinate
-	 * @param z1 Actor 1 Z coordinate
-	 * @param x2 Actor 2 X coordinate
-	 * @param y2 Actor 2 Y coordinate
-	 * @param z2 Actor 2 Z coordinate
-	 */
-	int32 getDistance3D(int32 x1, int32 y1, int32 z1, int32 x2, int32 y2, int32 z2) const;
-	int32 getDistance3D(const IVec3 &v1, const IVec3 &v2) const;
+	IVec3 rotateActor(int32 x, int32 z, int32 angle);
 
 	/**
 	 * Move actor around the scene
@@ -222,7 +199,7 @@ public:
 };
 
 inline bool Movements::shouldTriggerZoneAction() const {
-	return heroAction;
+	return _heroAction;
 }
 
 } // namespace TwinE

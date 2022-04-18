@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -55,32 +54,32 @@ MSVCProvider::MSVCProvider(StringList &global_warnings, std::map<std::string, St
 std::string MSVCProvider::getLibraryFromFeature(const char *feature, const BuildSetup &setup, bool isRelease) const {
 	static const MSVCLibrary s_libraries[] = {
 		// Libraries
-		{       "sdl", "SDL.lib",                   "SDLd.lib",      "winmm.lib imm32.lib version.lib setupapi.lib",    0 },
-		{      "sdl2", "SDL2.lib",                  "SDL2d.lib",     "winmm.lib imm32.lib version.lib setupapi.lib",    0 },
-		{      "libz", "zlib.lib",                  "zlibd.lib",     0,                                                 0 },
-		{       "mad", "mad.lib",                   0,               0,                                                 "libmad.lib" },
-		{   "fribidi", "libfribidi.lib",            0,               0,                                                 0 },
-		{       "ogg", "ogg.lib",                   0,               0,                                                 "libogg_static.lib" },
-		{    "vorbis", "vorbis.lib vorbisfile.lib", 0,               0,                                                 "libvorbisfile_static.lib libvorbis_static.lib" },
-		{      "flac", "FLAC.lib",                  0,               0,                                                 "libFLAC_static.lib win_utf8_io_static.lib" },
-		{       "png", "libpng16.lib",              "libpng16d.lib", 0,                                                 0 },
-		{       "gif", "gif.lib",                   0,               0,                                                 0 },
-		{      "faad", "faad.lib",                  0,               0,                                                 "libfaad.lib" },
-		{     "mpeg2", "mpeg2.lib",                 0,               0,                                                 "libmpeg2.lib" },
-		{    "theora", "theora.lib",                0,               0,                                                 "libtheora_static.lib" },
-		{  "freetype", "freetype.lib",              "freetyped.lib", 0,                                                 0 },
-		{      "jpeg", "jpeg.lib",                  "jpegd.lib",     0,                                                 "jpeg-static.lib" },
-		{"fluidsynth", "fluidsynth.lib",            0,               0,                                                 "libfluidsynth.lib" },
-		{ "fluidlite", "fluidlite.lib",             0,               0,                                                 0 },
-		{   "libcurl", "libcurl.lib",               "libcurl-d.lib", "ws2_32.lib wldap32.lib crypt32.lib normaliz.lib", 0 },
-		{    "sdlnet", "SDL_net.lib",               0,               "iphlpapi.lib",                                    0 },
-		{   "sdl2net", "SDL2_net.lib",              0,               "iphlpapi.lib",                                    "SDL_net.lib" },
-		{   "discord", "discord-rpc.lib",           0,               0,                                                 0 },
-		{      "glew", "glew32.lib",                "glew32d.lib",   0,                                                 0 },
+		{       "sdl", "SDL.lib",                   "SDLd.lib",      "winmm.lib imm32.lib version.lib setupapi.lib",    nullptr },
+		{      "sdl2", "SDL2.lib",                  "SDL2d.lib",     "winmm.lib imm32.lib version.lib setupapi.lib",    nullptr },
+		{      "zlib", "zlib.lib",                  "zlibd.lib",     nullptr,                                           nullptr },
+		{       "mad", "mad.lib",                   nullptr,         nullptr,                                           "libmad.lib" },
+		{   "fribidi", "fribidi.lib",               nullptr,         nullptr,                                           nullptr },
+		{       "ogg", "ogg.lib",                   nullptr,         nullptr,                                           "libogg_static.lib" },
+		{    "vorbis", "vorbis.lib vorbisfile.lib", nullptr,         nullptr,                                           "libvorbisfile_static.lib libvorbis_static.lib" },
+		{      "flac", "FLAC.lib",                  nullptr,         nullptr,                                           "libFLAC_static.lib win_utf8_io_static.lib" },
+		{       "png", "libpng16.lib",              "libpng16d.lib", nullptr,                                           nullptr },
+		{       "gif", "gif.lib",                   nullptr,         nullptr,                                           nullptr },
+		{      "faad", "faad.lib",                  nullptr,         nullptr,                                           "libfaad.lib" },
+		{     "mpeg2", "mpeg2.lib",                 nullptr,         nullptr,                                           "libmpeg2.lib" },
+		{ "theoradec", "theora.lib",                nullptr,         nullptr,                                           "libtheora_static.lib" },
+		{ "freetype2", "freetype.lib",              "freetyped.lib", nullptr,                                           nullptr },
+		{      "jpeg", "jpeg.lib",                  nullptr,         nullptr,                                           "jpeg-static.lib" },
+		{"fluidsynth", "fluidsynth.lib",            nullptr,         nullptr,                                           "libfluidsynth.lib" },
+		{ "fluidlite", "fluidlite.lib",             nullptr,         nullptr,                                           nullptr },
+		{   "libcurl", "libcurl.lib",               "libcurl-d.lib", "ws2_32.lib wldap32.lib crypt32.lib normaliz.lib", nullptr },
+		{    "sdlnet", "SDL_net.lib",               nullptr,         "iphlpapi.lib",                                    nullptr },
+		{   "sdl2net", "SDL2_net.lib",              nullptr,         "iphlpapi.lib",                                    "SDL_net.lib" },
+		{   "discord", "discord-rpc.lib",           nullptr,         nullptr,                                           nullptr },
+		{ "retrowave", "retrowave.lib",             nullptr,         nullptr,                                           nullptr },
 		// Feature flags with library dependencies
-		{   "updates", "winsparkle.lib",            0,               0,                                                 0 },
-		{       "tts", 0,                           0,               "sapi.lib",                                        0 },
-		{    "opengl", 0,                           0,               "opengl32.lib",                                    0 }
+		{   "updates", "winsparkle.lib",            nullptr,         nullptr,                                           nullptr },
+		{       "tts", nullptr,                     nullptr,         "sapi.lib",                                        nullptr },
+		{    "opengl", nullptr,                     nullptr,         "opengl32.lib",                                    nullptr }
 	};
 
 	// HACK for switching SDL_net to SDL2_net
@@ -89,7 +88,7 @@ std::string MSVCProvider::getLibraryFromFeature(const char *feature, const Build
 		feature = sdl2net;
 	}
 
-	const MSVCLibrary *library = 0;
+	const MSVCLibrary *library = nullptr;
 	for (unsigned int i = 0; i < sizeof(s_libraries) / sizeof(s_libraries[0]); i++) {
 		if (std::strcmp(feature, s_libraries[i].feature) == 0) {
 			library = &s_libraries[i];
@@ -163,6 +162,10 @@ void MSVCProvider::createWorkspace(const BuildSetup &setup) {
 
 	solution << "Microsoft Visual Studio Solution File, Format Version " << _msvcVersion.solutionFormat << "\n";
 	solution << "# Visual Studio " << _msvcVersion.solutionVersion << "\n";
+	if (_version >= 12) {
+		solution << "VisualStudioVersion = " << _msvcVersion.project << ".0.0\n";
+		solution << "MinimumVisualStudioVersion = 10.0.40219.1\n";
+	}
 
 	// Write main project
 	if (!setup.devTools) {

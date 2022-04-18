@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -116,9 +115,7 @@ public:
 	bool contains(const char *x) const;
 	bool contains(char x) const;
 	bool contains(uint32 x) const;
-#ifdef USE_CXX11
 	bool contains(char32_t x) const;
-#endif
 
 	/**
 	 * Simple DOS-style pattern matching function (understands * and ? like used in DOS).
@@ -141,12 +138,12 @@ public:
 	 *
 	 * @param pat Glob pattern.
 	 * @param ignoreCase Whether to ignore the case when doing pattern match
-	 * @param pathMode Whether to use path mode, i.e., whether slashes must be matched explicitly.
+	 * @param wildcardExclusions Characters which are excluded from wildcards and must be matched explicitly.
 	 *
 	 * @return true if str matches the pattern, false otherwise.
 	 */
-	bool matchString(const char *pat, bool ignoreCase = false, bool pathMode = false) const;
-	bool matchString(const String &pat, bool ignoreCase = false, bool pathMode = false) const;
+	bool matchString(const char *pat, bool ignoreCase = false, const char *wildcardExclusions = NULL) const;
+	bool matchString(const String &pat, bool ignoreCase = false, const char *wildcardExclusions = NULL) const;
 
 	/**@{
 	 * Functions to replace some amount of chars with chars from some other string.
@@ -294,6 +291,20 @@ extern char *trim(char *t);
 String lastPathComponent(const String &path, const char sep);
 
 /**
+ * Returns the first components of a given path (complementary to lastPathComponent)
+ *
+ * Examples:
+ *          /foo/bar.txt    would return '/foo/'
+ *          /foo/bar/       would return '/foo/'
+ *          /foo/./bar//    would return '/foo/./'
+ *
+ * @param path the path of which we want to know the last component
+ * @param sep character used to separate path components
+ * @return The all the components of the path except the last one.
+ */
+String firstPathComponents(const String &path, const char sep);
+
+/**
  * Normalize a given path to a canonical form. In particular:
  * - trailing separators are removed:  /foo/bar/ -> /foo/bar
  * - double separators (= empty components) are removed:   /foo//bar -> /foo/bar
@@ -329,11 +340,11 @@ String normalizePath(const String &path, const char sep);
  * @param str Text to be matched against the given pattern.
  * @param pat Glob pattern.
  * @param ignoreCase Whether to ignore the case when doing pattern match
- * @param pathMode Whether to use path mode, i.e., whether slashes must be matched explicitly.
+ * @param wildcardExclusions Characters which are excluded from wildcards and must be matched explicitly.
  *
  * @return true if str matches the pattern, false otherwise.
  */
-bool matchString(const char *str, const char *pat, bool ignoreCase = false, bool pathMode = false);
+bool matchString(const char *str, const char *pat, bool ignoreCase = false, const char *wildcardExclusions = NULL);
 
 /**
  * Function which replaces substring with the other. It happens in place.
@@ -349,8 +360,11 @@ void replace(Common::String &source, const Common::String &what, const Common::S
  * Take a 32 bit value and turn it into a four character string, where each of
  * the four bytes is turned into one character. Most significant byte is printed
  * first.
+ *
+ * @param tag tag value to convert
+ * @param nonPrintable indicate if non-printable characters need to be printed as octals
  */
-String tag2string(uint32 tag);
+String tag2string(uint32 tag, bool nonPrintable = false);
 
 /**
  * Copy up to size - 1 characters from src to dst and also zero terminate the
@@ -406,6 +420,13 @@ size_t strnlen(const char *src, size_t maxSize);
  * copying or printing it.
  */
 #define tag2str(x)	Common::tag2string(x).c_str()
+
+/**
+ * Convenience wrapper for tag2string with non-printable characters which "returns" a C string.
+ * Note: It is *NOT* safe to do anything with the return value other than directly
+ * copying or printing it.
+ */
+#define tag2strP(x)	Common::tag2string(x, true).c_str()
 
 /**
  * Converts string with all non-printable characters properly escaped

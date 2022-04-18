@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,6 +37,7 @@ namespace AGS3 {
 #define AGS_PLATFORM_OS_ANDROID (0)
 #define AGS_PLATFORM_OS_IOS     (0)
 #define AGS_PLATFORM_OS_PSP     (0)
+#define AGS_PLATFORM_OS_EMSCRIPTEN (0)
 // check Android first because sometimes it can get confused with host OS
 #elif defined(__ANDROID__) || defined(ANDROID)
 #define AGS_PLATFORM_SCUMMVM    (0)
@@ -106,7 +106,7 @@ namespace AGS3 {
 
 
 #if defined(__LP64__)
-// LP64 machine, OS X or Linux
+// LP64 machine, macOS or Linux
 // int 32bit | long 64bit | long long 64bit | void* 64bit
 #define AGS_PLATFORM_64BIT (1)
 #elif defined(_WIN64)
@@ -114,7 +114,7 @@ namespace AGS3 {
 // int 32bit | long 32bit | long long 64bit | void* 64bit
 #define AGS_PLATFORM_64BIT (1)
 #else
-// 32-bit machine, Windows or Linux or OS X
+// 32-bit machine, Windows or Linux or macOS
 // int 32bit | long 32bit | long long 64bit | void* 32bit
 #define AGS_PLATFORM_64BIT (0)
 #endif

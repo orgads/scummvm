@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -170,7 +169,7 @@ const char* const ConvertUsecodeCrusader::_intrinsics[] = {
 	"int16 PaletteFaderProcess::I_fadeToBlack(void)", // fade to black, no args (40 frames)
 	"void MainActor::I_clrKeycards(void)",
 	"int16 MainActor::I_teleportToEgg(int, int, int)",
-	"int16 PaletteFaderProcess::I_fadeFromBlack(void)", // from black, no arg (40 frames)
+	"int16 PaletteFaderProcess::I_fadeToGamePal(void)", // from black, no arg (40 frames)
 	"void Actor::I_clrImmortal(Actor *)", // same coff as 130
 	"int16 Actor::I_getHp(Actor *)",
 	"void Actor::I_setActivity(Actor *, int)", // part of same coff set 055, 07D, 0CD, 0DB, 0F2, 131
@@ -205,8 +204,8 @@ const char* const ConvertUsecodeCrusader::_intrinsics[] = {
 	"void I_resetVargasShieldTo500(void)",
 	"void Item::I_andStatus(Item *, uint16 status)", // part of same coff set 01A, 031, 069, 06E, 099, 0B2, 0BF, 0C1, 0C3, 0E9, 0FC, 101, 104, 106, 108, 10A, 10C, 10E, 110, 114, 117, 11A, 128, 132
 	"void PaletteFaderProcess::I_jumpToNormalPalette(void)",
-	"int16 PaletteFaderProcess::I_fadeFromBlack(nsteps)",
-	"int16 PaletteFaderProcess::I_fadeFromBlackWithParam(nsteps, unk)",
+	"int16 PaletteFaderProcess::I_fadeToGamePal(nsteps)",
+	"int16 PaletteFaderProcess::I_fadeToGamePalWithParam(nsteps, unk)",
 	"int16 PaletteFaderProcess::I_fadeToBlack(nsteps)",
 	"int16 PaletteFaderProcess::I_fadeToBlackWithParam(nsteps, unk)",
 	"int16 PaletteFaderProcess::I_fadeToColor(r, g, b, nsteps, unk)",
@@ -256,7 +255,7 @@ const char* const ConvertUsecodeCrusader::_intrinsics[] = {
 	"int16 Item::I_hurl(Item *,8 bytes)", // part of same coff set 028, 08D, 0BD, 0C0, 0C2, 0C8, 0F7, 0F9, 118, 11D
 	"int16 Item::I_getQHi(Item *)", // same as 026 based on same coff set 026, 045, 047, 049, 04B, 04D, 04F, 0AF, 0BE, 0C9, 0F0, 0F3, 0FB, 133
 	"byte Actor::I_addHp(Actor *, int)",
-	"void MainActort::I_switchMap(int16 mapnum)",
+	"void MainActor::I_switchMap(int16 mapnum)",
 	"byte Actor::I_getInCombat(Actor *)",
 	"void Actor::I_setActivity(Actor *, int)", // part of same coff set 055, 07D, 0CD, 0DB, 0F2, 131
 	"int16 Game::I_isReleaseBuild(void)", // whether the string "GAME COMPILE=1" has the 1.  Might be interesting to see what this does..

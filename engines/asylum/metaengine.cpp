@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,18 +15,26 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
-#include "engines/advancedDetector.h"
 #include "base/plugins.h"
 
 #include "backends/keymapper/action.h"
 #include "backends/keymapper/keymap.h"
 
+#include "common/achievements.h"
+#include "common/savefile.h"
 #include "common/translation.h"
+
+#include "engines/advancedDetector.h"
+
+#include "graphics/scaler.h"
+
+#include "asylum/system/savegame.h"
+
+#include "asylum/views/scene.h"
 
 #include "asylum/asylum.h"
 #include "asylum/shared.h"
@@ -41,13 +49,51 @@ public:
 		return "Sanitarium (c) ASC Games";
 	}
 
-	bool hasFeature(MetaEngineFeature f) const override;
+	int getMaximumSaveSlot() const override { return 24; }
+	int getAutosaveSlot()    const override { return getMaximumSaveSlot(); }
+	SaveStateDescriptor querySaveMetaInfos(const char *target, int slot) const override;
+	void getSavegameThumbnail(Graphics::Surface &thumb) override;
 	Common::Error createInstance(OSystem *syst, Engine **engine, const ADGameDescription *gd) const override;
 	Common::KeymapArray initKeymaps(const char *target) const override;
+	const Common::AchievementDescriptionList *getAchievementDescriptionList() const override;
 };
 
-bool AsylumMetaEngine::hasFeature(MetaEngineFeature f) const {
-	return false;
+bool Asylum::AsylumEngine::hasFeature(EngineFeature f) const {
+	return
+		(f == kSupportsReturnToLauncher) ||
+		(f == kSupportsLoadingDuringRuntime) ||
+		(f == kSupportsSavingDuringRuntime);
+}
+
+void AsylumMetaEngine::getSavegameThumbnail(Graphics::Surface &thumb) {
+	Asylum::AsylumEngine *engine = (Asylum::AsylumEngine *)g_engine;
+
+	if (engine->isMenuVisible()) {
+		const Graphics::Surface &savedScreen = engine->scene()->getSavedScreen();
+		::createThumbnail(&thumb, (const byte *)savedScreen.getPixels(), savedScreen.w, savedScreen.h, engine->scene()->getSavedPalette());
+	} else {
+		::createThumbnailFromScreen(&thumb);
+	}
+}
+
+SaveStateDescriptor AsylumMetaEngine::querySaveMetaInfos(const char *target, int slot) const {
+	SaveStateDescriptor desc = MetaEngine::querySaveMetaInfos(target, slot);
+
+	if (desc.getSaveSlot() == -1) {
+		Common::InSaveFile *in(g_system->getSavefileManager()->openForLoading(getSavegameFile(slot, target)));
+
+		if (in) {
+			if (in->size() > 60) {
+				(void)(uint32)Asylum::Savegame::read(in, "Chapter");
+				desc.setSaveSlot(slot);
+				desc.setDescription(Asylum::Savegame::read(in, 45, "Game Name"));
+			}
+
+			delete in;
+		}
+	}
+
+	return desc;
 }
 
 Common::Error AsylumMetaEngine::createInstance(OSystem *syst, Engine **engine, const ADGameDescription *desc) const {
@@ -96,6 +142,16 @@ Common::KeymapArray AsylumMetaEngine::initKeymaps(const char *target) const {
 	engineKeyMap->addAction(act);
 
 	return Keymap::arrayOf(engineKeyMap);
+}
+
+const Common::AchievementDescriptionList *AsylumMetaEngine::getAchievementDescriptionList() const {
+	static const Common::AchievementDescriptionList achievementDescriptionList[] = {
+		{"asylum", Common::STEAM_ACHIEVEMENTS, "284050"},
+
+		ACHIEVEMENT_DESC_TABLE_END_MARKER
+	};
+
+	return achievementDescriptionList;
 }
 
 #if PLUGIN_ENABLED_DYNAMIC(ASYLUM)

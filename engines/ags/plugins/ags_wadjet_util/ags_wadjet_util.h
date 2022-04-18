@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,41 +15,39 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef AGS_PLUGINS_AGS_WADJET_UTIL_AGS_WADJET_UTIL_H
 #define AGS_PLUGINS_AGS_WADJET_UTIL_AGS_WADJET_UTIL_H
 
-#include "ags/plugins/plugin_base.h"
+#include "ags/plugins/ags_plugin.h"
 
 namespace AGS3 {
 namespace Plugins {
 namespace AGSWadjetUtil {
 
 class AGSWadjetUtil : public PluginBase {
+	SCRIPT_HASH(AGSWadjetUtil)
 private:
-static IAGSEngine *_engine;
-private:
-static const char *AGS_GetPluginName();
-static void AGS_EngineStartup(IAGSEngine *lpEngine);
-
-private:
-static void IsOnPhone(ScriptMethodParams &params);
-static void FakeKeypress(ScriptMethodParams &params);
-static void IosSetAchievementValue(ScriptMethodParams &params);
-static void IosGetAchievementValue(ScriptMethodParams &params);
-static void IosShowAchievements(ScriptMethodParams &params);
-static void IosResetAchievements(ScriptMethodParams &params);
-static void MobileGetAchievement(ScriptMethodParams &params);
-static void MobileSetAchievement(ScriptMethodParams &params);
-static void MobileShowAchievements(ScriptMethodParams &params);
-static void MobileResetAchievements(ScriptMethodParams &params);
+	void IsOnPhone(ScriptMethodParams &params);
+	void FakeKeypress(ScriptMethodParams &params);
+	void IosSetAchievementValue(ScriptMethodParams &params);
+	void IosGetAchievementValue(ScriptMethodParams &params);
+	void IosShowAchievements(ScriptMethodParams &params);
+	void IosResetAchievements(ScriptMethodParams &params);
+	void MobileGetAchievement(ScriptMethodParams &params);
+	void MobileSetAchievement(ScriptMethodParams &params);
+	void MobileShowAchievements(ScriptMethodParams &params);
+	void MobileResetAchievements(ScriptMethodParams &params);
 
 public:
-AGSWadjetUtil();
+	AGSWadjetUtil() : PluginBase() {}
+	virtual ~AGSWadjetUtil() {}
+
+	const char *AGS_GetPluginName() override;
+	void AGS_EngineStartup(IAGSEngine *lpEngine) override;
 };
 
 } // namespace AGSWadjetUtil

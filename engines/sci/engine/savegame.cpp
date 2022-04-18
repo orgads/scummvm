@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -703,9 +702,9 @@ void MusicEntry::saveLoadWithSerializer(Common::Serializer &s) {
 	// pMidiParser and pStreamAud will be initialized when the
 	// sound list is reconstructed in gamestate_restore()
 	if (s.isLoading()) {
-		soundRes = 0;
-		pMidiParser = 0;
-		pStreamAud = 0;
+		soundRes = nullptr;
+		pMidiParser = nullptr;
+		pStreamAud = nullptr;
 		reverb = -1;	// invalid reverb, will be initialized in processInitSound()
 	}
 }
@@ -1237,7 +1236,26 @@ bool gamestate_save(EngineState *s, int saveId, const Common::String &savename, 
 
 bool gamestate_save(EngineState *s, Common::WriteStream *fh, const Common::String &savename, const Common::String &version) {
 	Common::Serializer ser(nullptr, fh);
-	set_savegame_metadata(ser, fh, savename, version);
+	Common::String ver = version;
+
+	// If the game version is empty, we are probably saving from the GMM, so read it
+	// from global 27 and then the VERSION file
+	if (ver == "") {
+		reg_t versionRef = s->variables[VAR_GLOBAL][kGlobalVarVersion];
+#ifdef ENABLE_SCI32
+		// LSL7 stores the version string as an object instead of a reference
+		if (s->_segMan->isObject(versionRef)) {
+			versionRef = readSelector(s->_segMan, versionRef, SELECTOR(data));
+		}
+#endif
+		ver = s->_segMan->getString(versionRef);
+		if (ver == "") {
+			Common::ScopedPtr<Common::SeekableReadStream> versionFile(SearchMan.createReadStreamForMember("VERSION"));
+			ver = versionFile ? versionFile->readLine() : "";
+		}
+	}
+
+	set_savegame_metadata(ser, fh, savename, ver);
 	s->saveLoadWithSerializer(ser);		// FIXME: Error handling?
 	if (g_sci->_gfxPorts)
 		g_sci->_gfxPorts->saveLoadWithSerializer(ser);
@@ -1309,6 +1327,9 @@ void gamestate_afterRestoreFixUp(EngineState *s, int savegameId) {
 		//  saving a previously restored game.
 		// We set the current savedgame-id directly and remove the script
 		//  code concerning this via script patch.
+		// We also set this in kSaveGame so that the global is correct even if no restoring occurs,
+		//  otherwise the auto-delete script at the end of the SCI1.1 floppy version breaks if
+		//  the game is played from start to finish. (bug #5294)
 		s->variables[VAR_GLOBAL][0xB3].setOffset(SAVEGAMEID_OFFICIALRANGE_START + savegameId);
 		break;
 	case GID_JONES:
@@ -1417,7 +1438,7 @@ bool gamestate_restore(EngineState *s, int saveId) {
 void gamestate_restore(EngineState *s, Common::SeekableReadStream *fh) {
 	SavegameMetadata meta;
 
-	Common::Serializer ser(fh, 0);
+	Common::Serializer ser(fh, nullptr);
 	sync_SavegameMetadata(ser, meta);
 
 	if (fh->eos()) {

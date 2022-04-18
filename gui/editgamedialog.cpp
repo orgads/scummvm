@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -89,7 +88,7 @@ enum {
 */
 class DomainEditTextWidget : public EditTextWidget {
 public:
-	DomainEditTextWidget(GuiObject *boss, const String &name, const U32String &text, const U32String &tooltip = U32String())
+	DomainEditTextWidget(GuiObject *boss, const Common::String &name, const Common::U32String &text, const Common::U32String &tooltip = Common::U32String())
 		: EditTextWidget(boss, name, text, tooltip) {}
 
 protected:
@@ -102,7 +101,7 @@ protected:
 	}
 };
 
-EditGameDialog::EditGameDialog(const String &domain)
+EditGameDialog::EditGameDialog(const Common::String &domain)
 	: OptionsDialog(domain, "GameOptions") {
 	EngineMan.upgradeTargetIfNecessary(domain);
 
@@ -123,12 +122,12 @@ EditGameDialog::EditGameDialog(const String &domain)
 	}
 
 	// GAME: Path to game data (r/o), extra data (r/o), and save data (r/w)
-	String gamePath(ConfMan.get("path", _domain));
-	String extraPath(ConfMan.get("extrapath", _domain));
-	String savePath(ConfMan.get("savepath", _domain));
+	Common::String gamePath(ConfMan.get("path", _domain));
+	Common::String extraPath(ConfMan.get("extrapath", _domain));
+	Common::String savePath(ConfMan.get("savepath", _domain));
 
 	// GAME: Determine the description string
-	String description(ConfMan.get("description", domain));
+	Common::String description(ConfMan.get("description", domain));
 	if (description.empty() && !qgd.description.empty()) {
 		description = qgd.description;
 	}
@@ -184,27 +183,28 @@ EditGameDialog::EditGameDialog(const String &domain)
 	}
 
 	//
-	// 2) The engine tab (shown only if the engine implements one or there are custom engine options)
+	// 2) The engine's game settings (shown only if the engine implements one or there are custom engine options)
 	//
 
 	if (metaEnginePlugin) {
-		int tabId = tab->addTab(_("Engine"), "GameOptions_Engine");
-
 		const MetaEngineDetection &metaEngineDetection = metaEnginePlugin->get<MetaEngineDetection>();
 		metaEngineDetection.registerDefaultSettings(_domain);
-		_engineOptions = metaEngineDetection.buildEngineOptionsWidgetStatic(tab, "GameOptions_Engine.Container", _domain);
+		if (enginePlugin) {
+			enginePlugin->get<MetaEngine>().registerDefaultSettings(_domain);
+			_engineOptions = enginePlugin->get<MetaEngine>().buildEngineOptionsWidgetDynamic(tab, "GameOptions_Game.Container", _domain);
+		}
+		if (!_engineOptions)
+			_engineOptions = metaEngineDetection.buildEngineOptionsWidgetStatic(tab, "GameOptions_Game.Container", _domain);
 
 		if (_engineOptions) {
 			_engineOptions->setParentDialog(this);
-		} else {
-			tab->removeTab(tabId);
 		}
 	}
 
 	//
 	// 3) The graphics tab
 	//
-	_graphicsTabId = tab->addTab(g_system->getOverlayWidth() > 320 ? _("Graphics") : _("GFX"), "GameOptions_Graphics");
+	_graphicsTabId = tab->addTab(g_system->getOverlayWidth() > 320 ? _("Graphics") : _("GFX"), "GameOptions_Graphics", false);
 	ScrollContainerWidget *graphicsContainer = new ScrollContainerWidget(tab, "GameOptions_Graphics.Container", "GameOptions_Graphics_Container", kGraphicsTabContainerReflowCmd);
 	graphicsContainer->setBackgroundType(ThemeEngine::kWidgetBackgroundNo);
 	graphicsContainer->setTarget(this);
@@ -241,14 +241,14 @@ EditGameDialog::EditGameDialog(const String &domain)
 	}
 
 	if (!keymaps.empty()) {
-		tab->addTab(_("Keymaps"), "GameOptions_KeyMapper");
+		tab->addTab(_("Keymaps"), "GameOptions_KeyMapper", false);
 		addKeyMapperControls(tab, "GameOptions_KeyMapper.", keymaps, domain);
 	}
 
 	//
 	// The backend tab (shown only if the backend implements one)
 	//
-	int backendTabId = tab->addTab(_("Backend"), "GameOptions_Backend");
+	int backendTabId = tab->addTab(_("Backend"), "GameOptions_Backend", false);
 
 	if (g_system->getOverlayWidth() > 320)
 		_globalBackendOverride = new CheckboxWidget(tab, "GameOptions_Backend.EnableTabCheckbox", _("Override global backend settings"), Common::U32String(), kCmdGlobalBackendOverride);
@@ -367,11 +367,11 @@ EditGameDialog::EditGameDialog(const String &domain)
 		const MetaEngine &metaEngine = enginePlugin->get<MetaEngine>();
 		AchMan.setActiveDomain(metaEngine.getAchievementsInfo(domain));
 		if (AchMan.getAchievementCount()) {
-			tab->addTab(_("Achievements"), "GameOptions_Achievements");
+			tab->addTab(_("Achievements"), "GameOptions_Achievements", false);
 			addAchievementsControls(tab, "GameOptions_Achievements.");
 		}
 		if (AchMan.getStatCount()) {
-			tab->addTab(_("Statistics"), "GameOptions_Achievements");
+			tab->addTab(_("Statistics"), "GameOptions_Achievements", false);
 			addStatisticsControls(tab, "GameOptions_Achievements.");
 		}
 	}
@@ -393,12 +393,12 @@ void EditGameDialog::setupGraphicsTab() {
 void EditGameDialog::open() {
 	OptionsDialog::open();
 
-	String extraPath(ConfMan.get("extrapath", _domain));
+	Common::String extraPath(ConfMan.get("extrapath", _domain));
 	if (extraPath.empty() || !ConfMan.hasKey("extrapath", _domain)) {
 		_extraPathWidget->setLabel(_c("None", "path"));
 	}
 
-	String savePath(ConfMan.get("savepath", _domain));
+	Common::String savePath(ConfMan.get("savepath", _domain));
 	if (savePath.empty() || !ConfMan.hasKey("savepath", _domain)) {
 		_savePathWidget->setLabel(_("Default"));
 	}
@@ -411,6 +411,8 @@ void EditGameDialog::open() {
 	e = ConfMan.hasKey("gfx_mode", _domain) ||
 		ConfMan.hasKey("render_mode", _domain) ||
 		ConfMan.hasKey("stretch_mode", _domain) ||
+		ConfMan.hasKey("scaler", _domain) ||
+		ConfMan.hasKey("scale_factor", _domain) ||
 		ConfMan.hasKey("aspect_ratio", _domain) ||
 		ConfMan.hasKey("fullscreen", _domain) ||
 		ConfMan.hasKey("vsync", _domain) ||
@@ -494,17 +496,17 @@ void EditGameDialog::apply() {
 			ConfMan.set("language", Common::getLanguageCode(lang), _domain);
 	}
 
-	U32String gamePath(_gamePathWidget->getLabel());
+	Common::U32String gamePath(_gamePathWidget->getLabel());
 	if (!gamePath.empty())
 		ConfMan.set("path", gamePath, _domain);
 
-	U32String extraPath(_extraPathWidget->getLabel());
+	Common::U32String extraPath(_extraPathWidget->getLabel());
 	if (!extraPath.empty() && (extraPath != _c("None", "path")))
 		ConfMan.set("extrapath", extraPath, _domain);
 	else
 		ConfMan.removeKey("extrapath", _domain);
 
-	U32String savePath(_savePathWidget->getLabel());
+	Common::U32String savePath(_savePathWidget->getLabel());
 	if (!savePath.empty() && (savePath != _("Default")))
 		ConfMan.set("savepath", savePath, _domain);
 	else
@@ -614,7 +616,13 @@ void EditGameDialog::handleCommand(CommandSender *sender, uint32 cmd, uint32 dat
 		if (browser.runModal() > 0) {
 			// User made his choice...
 			Common::FSNode dir(browser.getResult());
-			_savePathWidget->setLabel(dir.getPath());
+			if (dir.isWritable()) {
+				_savePathWidget->setLabel(dir.getPath());
+			} else {
+				MessageDialog error(_("The chosen directory cannot be written to. Please select another one."));
+				error.runModal();
+				return;
+			}
 #if defined(USE_CLOUD) && defined(USE_LIBCURL)
 			MessageDialog warningMessage(_("Saved games sync feature doesn't work with non-default directories. If you want your saved games to sync, use default directory."));
 			warningMessage.runModal();
@@ -636,7 +644,7 @@ void EditGameDialog::handleCommand(CommandSender *sender, uint32 cmd, uint32 dat
 	case kOKCmd:
 	{
 		// Write back changes made to config object
-		String newDomain(Common::convertFromU32String(_domainWidget->getEditString()));
+		Common::String newDomain(Common::convertFromU32String(_domainWidget->getEditString()));
 		if (newDomain != _domain) {
 			if (newDomain.empty()
 				|| newDomain.hasPrefix("_")

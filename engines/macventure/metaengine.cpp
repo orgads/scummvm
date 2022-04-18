@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -64,6 +63,7 @@ bool MacVentureMetaEngine::hasFeature(MetaEngineFeature f) const {
 		(f == kSavesSupportMetaInfo) ||
 		(f == kSavesSupportThumbnail) ||
 		(f == kSavesSupportCreationDate) ||
+		(f == kSimpleSavesNames) ||
 		(f == kSavesSupportPlayTime);
 }
 
@@ -85,12 +85,7 @@ SaveStateList MacVentureMetaEngine::listSaves(const char *target) const {
 	SaveStateList saveList;
 	for (Common::StringArray::const_iterator file = filenames.begin(); file != filenames.end(); ++file) {
 		int slotNum = atoi(file->c_str() + file->size() - 3);
-		SaveStateDescriptor desc;
-		// Do not allow save slot 0 (used for auto-saving) to be deleted or
-		// overwritten.
-		desc.setDeletableFlag(slotNum != 0);
-		desc.setWriteProtectedFlag(slotNum == 0);
-
+		SaveStateDescriptor desc(this, slotNum, Common::U32String());
 		if (slotNum >= 0 && slotNum <= getMaximumSaveSlot()) {
 			Common::InSaveFile *in = saveFileMan->openForLoading(*file);
 			if (in) {
@@ -143,7 +138,7 @@ SaveStateDescriptor MacVentureMetaEngine::querySaveMetaInfos(const char *target,
 		delete in;
 		return desc;
 	}
-	return SaveStateDescriptor(-1, "");
+	return SaveStateDescriptor();
 }
 
 } // End of namespace MacVenture

@@ -1,13 +1,13 @@
 /* ScummVM - Graphic Adventure Engine
  *
  * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -81,7 +80,8 @@ ResourceLoader::ResourceLoader() {
 
 	//Load the update from the executable, if needed
 	const char *updateFilename = nullptr;
-	if (g_grim->getGameType() == GType_GRIM && !(g_grim->getGameFlags() & ADGF_REMASTERED)) {
+	if ((g_grim->getGameType() == GType_GRIM && !g_grim->isRemastered())
+	    || g_grim->getGameType() == GType_MONKEY4) {
 		updateFilename = g_grim->getUpdateFilename();
 	}
 	if (updateFilename) {
@@ -99,11 +99,11 @@ ResourceLoader::ResourceLoader() {
 			if (g_grim->getGameType() == GType_GRIM) {
 				errorMessage = _("The original patch of Grim Fandango\n"
 								"is missing. Please download it from\n"
-								"https://scummvm.org/frs/extras/patches/gfupd101.exe\n"
+								"https://downloads.scummvm.org/frs/extras/patches/gfupd101.exe\n"
 								"and put it in the game data files directory");
 			} else if (g_grim->getGameType() == GType_MONKEY4) {
 				errorMessage = _("The original patch of Escape from Monkey Island is missing. \n"
-								"Please download it from https://scummvm.org/frs/extras/patches/\n"
+								"Please download it from https://downloads.scummvm.org/frs/extras/patches/\n"
 								"and put it in the game data files directory.\n"
 								"Pay attention to download the correct version according to the game's language");
 			}
@@ -143,7 +143,7 @@ ResourceLoader::ResourceLoader() {
 			SearchMan.listMatchingMembers(files, "local.lab");
 			SearchMan.listMatchingMembers(files, "credits.lab");
 
-			if (g_grim->getGameFlags() & ADGF_REMASTERED) {
+			if (g_grim->isRemastered()) {
 				SearchMan.listMatchingMembers(files, "commentary.lab");
 				SearchMan.listMatchingMembers(files, "images.lab");
 			}
@@ -166,7 +166,6 @@ ResourceLoader::ResourceLoader() {
 		SearchMan.listMatchingMembers(files, emi_patches_filename);
 
 		if (g_grim->getGameFlags() & ADGF_DEMO) {
-			SearchMan.listMatchingMembers(files, "i9n.lab");
 			SearchMan.listMatchingMembers(files, "lip.lab");
 			SearchMan.listMatchingMembers(files, "MagDemo.lab");
 			SearchMan.listMatchingMembers(files, "tile.lab");
@@ -374,7 +373,7 @@ Costume *ResourceLoader::loadCostume(const Common::String &filename, Actor *owne
 Font *ResourceLoader::loadFont(const Common::String &filename) {
 	Common::SeekableReadStream *stream;
 
-	if (g_grim->getGameType() == GType_GRIM && (g_grim->getGameFlags() & ADGF_REMASTERED)) {
+	if (g_grim->getGameType() == GType_GRIM && g_grim->isRemastered()) {
 		Common::String name = "FontsHD/" + filename + ".txt";
 		stream = openNewStreamFile(name, true);
 		if (stream) {

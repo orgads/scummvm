@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -684,7 +683,7 @@ void ScummEngine_v2::o2_actorOps() {
 		a->setPalette(i, arg);
 		break;
 	case 3:		// SO_ACTOR_NAME
-		loadPtrToResource(rtActorName, a->_number, NULL);
+		loadPtrToResource(rtActorName, a->_number, nullptr);
 		break;
 	case 4:		// SO_COSTUME
 		a->setActorCostume(arg);
@@ -856,7 +855,7 @@ void ScummEngine_v2::o2_verbOps() {
 		}
 
 		// It follows the verb name
-		loadPtrToResource(rtVerb, slot, NULL);
+		loadPtrToResource(rtVerb, slot, nullptr);
 		}
 		break;
 	}
@@ -939,7 +938,7 @@ void ScummEngine_v2::o2_doSentence() {
 				}
 			}
 
-			runObjectScript(st->objectA, st->verb, isBackgroundScript, isSpecialVerb, NULL, slot);
+			runObjectScript(st->objectA, st->verb, isBackgroundScript, isSpecialVerb, nullptr, slot);
 		}
 		break;
 	case 2:
@@ -1098,7 +1097,7 @@ void ScummEngine_v2::o2_ifClassOfIs() {
 
 	byte *obcd = getOBCDFromObject(obj);
 
-	if (obcd == 0) {
+	if (obcd == nullptr) {
 		o5_jumpRelative();
 		return;
 	}
@@ -1207,7 +1206,7 @@ void ScummEngine_v2::o2_startScript() {
 		}
 	}
 
-	runScript(script, 0, 0, 0);
+	runScript(script, 0, 0, nullptr);
 }
 
 void ScummEngine_v2::stopScriptCommon(int script) {
@@ -1484,7 +1483,7 @@ void ScummEngine_v2::o2_loadRoomWithEgo() {
 	if (x >= 0 && y >= 0) {
 		a->startWalkActor(x, y, -1);
 	}
-	runScript(5, 0, 0, 0);
+	runScript(5, 0, 0, nullptr);
 }
 
 void ScummEngine_v2::o2_setOwnerOf() {
@@ -1584,7 +1583,7 @@ void ScummEngine_v2::o2_endCutscene() {
 		if (camera._mode == kFollowActorCameraMode) {
 			actorFollowCamera(VAR(VAR_EGO));
 		} else if (vm.cutSceneData[2] != _currentRoom) {
-			startScene(vm.cutSceneData[2], 0, 0);
+			startScene(vm.cutSceneData[2], nullptr, 0);
 		}
 	} else {
 		actorFollowCamera(VAR(VAR_EGO));
@@ -1604,7 +1603,7 @@ void ScummEngine_v2::o2_chainScript() {
 	int script = getVarOrDirectByte(PARAM_1);
 	stopScript(vm.slot[_currentScript].number);
 	_currentScript = 0xFF;
-	runScript(script, 0, 0, 0);
+	runScript(script, 0, 0, nullptr);
 }
 
 void ScummEngine_v2::o2_pickupObject() {

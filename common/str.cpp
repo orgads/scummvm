@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -172,20 +171,18 @@ bool String::contains(uint32 x) const {
 	return false;
 }
 
-#ifdef USE_CXX11
 bool String::contains(char32_t x) const {
 	return contains((uint32)x);
 }
-#endif
 
 #ifndef SCUMMVM_UTIL
 
-bool String::matchString(const char *pat, bool ignoreCase, bool pathMode) const {
-	return Common::matchString(c_str(), pat, ignoreCase, pathMode);
+bool String::matchString(const char *pat, bool ignoreCase, const char *wildcardExclusions) const {
+	return Common::matchString(c_str(), pat, ignoreCase, wildcardExclusions);
 }
 
-bool String::matchString(const String &pat, bool ignoreCase, bool pathMode) const {
-	return Common::matchString(c_str(), pat.c_str(), ignoreCase, pathMode);
+bool String::matchString(const String &pat, bool ignoreCase, const char *wildcardExclusions) const {
+	return Common::matchString(c_str(), pat.c_str(), ignoreCase, wildcardExclusions);
 }
 
 #endif
@@ -332,7 +329,7 @@ size_t String::rfind(char c, size_t pos) const {
 }
 
 size_t String::findFirstOf(char c, size_t pos) const {
-	const char *strP = (pos >= _size) ? 0 : strchr(_str + pos, c);
+	const char *strP = (pos >= _size) ? nullptr : strchr(_str + pos, c);
 	return strP ? strP - _str : npos;
 }
 
@@ -546,6 +543,29 @@ String lastPathComponent(const String &path, const char sep) {
 	return String(first, last);
 }
 
+String firstPathComponents(const String &path, const char sep) {
+	const char *str = path.c_str();
+	const char *last = str + path.size();
+
+	// Skip over trailing slashes
+	while (last > str && *(last - 1) == sep)
+		--last;
+
+	// Path consisted of only slashes -> return empty string
+	if (last == str)
+		return String();
+
+	// Now scan the whole component
+	const char *first = last - 1;
+	while (first > str && *first != sep)
+		--first;
+
+	if (*first == sep)
+		first++;
+
+	return String(str, first);
+}
+
 String normalizePath(const String &path, const char sep) {
 	if (path.empty())
 		return path;
@@ -600,7 +620,7 @@ String normalizePath(const String &path, const char sep) {
 
 #ifndef SCUMMVM_UTIL
 
-bool matchString(const char *str, const char *pat, bool ignoreCase, bool pathMode) {
+bool matchString(const char *str, const char *pat, bool ignoreCase, const char *wildcardExclusions) {
 	assert(str);
 	assert(pat);
 
@@ -609,7 +629,7 @@ bool matchString(const char *str, const char *pat, bool ignoreCase, bool pathMod
 	bool escaped = false;
 
 	for (;;) {
-		if (pathMode && *str == '/') {
+		if (wildcardExclusions && strchr(wildcardExclusions, *str)) {
 			p = nullptr;
 			q = nullptr;
 			if (*pat == '?')
@@ -689,19 +709,24 @@ void replace(Common::String &source, const Common::String &what, const Common::S
 	}
 }
 
-String tag2string(uint32 tag) {
-	char str[5];
-	str[0] = (char)(tag >> 24);
-	str[1] = (char)(tag >> 16);
-	str[2] = (char)(tag >> 8);
-	str[3] = (char)tag;
-	str[4] = '\0';
-	// Replace non-printable chars by dot
-	for (int i = 0; i < 4; ++i) {
-		if (!Common::isPrint(str[i]))
-			str[i] = '.';
+String tag2string(uint32 tag, bool nonPrintable) {
+	Common::String res;
+
+	for (int i = 3; i >= 0; i--) {
+		byte b = (tag >> (8 * i)) & 0xff;
+
+		if (!Common::isPrint(b)) {
+			if (nonPrintable) {
+				res += Common::String::format("\\%03o", b);
+			} else {
+				res += '.';
+			}
+		} else {
+			res += b;
+		}
 	}
-	return String(str);
+
+	return res;
 }
 
 #endif
@@ -904,7 +929,7 @@ const char *scumm_strcasestr(const char *s, const char *find) {
 		do {
 			do {
 				if ((sc = *s++) == 0)
-					return (NULL);
+					return (nullptr);
 			} while ((char)tolower((unsigned char)sc) != c);
 		} while (scumm_strnicmp(s, find, len) != 0);
 		s--;

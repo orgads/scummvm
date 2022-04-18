@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,6 +32,7 @@
 #include "ags/engine/ac/character_extras.h"
 #include "ags/shared/ac/common.h"
 #include "ags/shared/ac/dialog_topic.h"
+#include "ags/engine/ac/button.h"
 #include "ags/engine/ac/dynamic_sprite.h"
 #include "ags/engine/ac/game.h"
 #include "ags/shared/ac/game_setup_struct.h"
@@ -212,16 +212,18 @@ static void restore_game_more_dynamic_values(Stream *in) {
 	_G(game_paused) = in->ReadInt32();
 }
 
-static void ReadAnimatedButtons_Aligned(Stream *in) {
+void ReadAnimatedButtons_Aligned(Stream *in, int num_abuts) {
 	AlignedStream align_s(in, Shared::kAligned_Read);
-	for (int i = 0; i < _G(numAnimButs); ++i) {
-		_G(animbuts)[i].ReadFromFile(&align_s);
+	for (int i = 0; i < num_abuts; ++i) {
+		AnimatingGUIButton abtn;
+		abtn.ReadFromFile(&align_s);
+		AddButtonAnimation(abtn);
 		align_s.Reset();
 	}
 }
 
 static HSaveError restore_game_gui(Stream *in, int numGuisWas) {
-	HError err = GUI::ReadGUI(_GP(guis), in, true);
+	HError err = GUI::ReadGUI(in, true);
 	if (!err)
 		return new SavegameError(kSvgErr_GameObjectInitFailed, err);
 	_GP(game).numgui = _GP(guis).size();
@@ -230,8 +232,9 @@ static HSaveError restore_game_gui(Stream *in, int numGuisWas) {
 		return new SavegameError(kSvgErr_GameContentAssertion, "Mismatching number of GUI.");
 	}
 
-	_G(numAnimButs) = in->ReadInt32();
-	ReadAnimatedButtons_Aligned(in);
+	RemoveAllButtonAnimations();
+	int anim_count = in->ReadInt32();
+	ReadAnimatedButtons_Aligned(in, anim_count);
 	return HSaveError::None();
 }
 
@@ -254,11 +257,11 @@ static void restore_game_thisroom(Stream *in, RestoredData &r_data) {
 }
 
 static void restore_game_ambientsounds(Stream *in, RestoredData &r_data) {
-	for (int i = 0; i < MAX_SOUND_CHANNELS; ++i) {
+	for (int i = 0; i < MAX_GAME_CHANNELS_v320; ++i) {
 		_GP(ambient)[i].ReadFromFile(in);
 	}
 
-	for (int bb = 1; bb < MAX_SOUND_CHANNELS; bb++) {
+	for (int bb = NUM_SPEECH_CHANS; bb < MAX_GAME_CHANNELS_v320; bb++) {
 		if (_GP(ambient)[bb].channel == 0)
 			r_data.DoAmbient[bb] = 0;
 		else {
@@ -268,20 +271,21 @@ static void restore_game_ambientsounds(Stream *in, RestoredData &r_data) {
 	}
 }
 
-static void ReadOverlays_Aligned(Stream *in) {
+static void ReadOverlays_Aligned(Stream *in, size_t num_overs) {
 	AlignedStream align_s(in, Shared::kAligned_Read);
-	for (int i = 0; i < _G(numscreenover); ++i) {
-		_G(screenover)[i].ReadFromFile(&align_s, 0);
+	for (size_t i = 0; i < num_overs; ++i) {
+		_GP(screenover)[i].ReadFromFile(&align_s, 0);
 		align_s.Reset();
 	}
 }
 
 static void restore_game_overlays(Stream *in) {
-	_G(numscreenover) = in->ReadInt32();
-	ReadOverlays_Aligned(in);
-	for (int bb = 0; bb < _G(numscreenover); bb++) {
-		if (_G(screenover)[bb].hasSerializedBitmap)
-			_G(screenover)[bb].pic = read_serialized_bitmap(in);
+	size_t num_overs = in->ReadInt32();
+	_GP(screenover).resize(num_overs);
+	ReadOverlays_Aligned(in, num_overs);
+	for (size_t i = 0; i < num_overs; ++i) {
+		if (_GP(screenover)[i].hasSerializedBitmap)
+			_GP(screenover)[i].pic = read_serialized_bitmap(in);
 	}
 }
 
@@ -316,7 +320,7 @@ static void restore_game_displayed_room_status(Stream *in, RestoredData &r_data)
 		if (bb)
 			_G(raw_saved_screen) = read_serialized_bitmap(in);
 
-		// get the current _GP(troom), in case they save in room 600 or whatever
+		// get the current troom, in case they save in room 600 or whatever
 		ReadRoomStatus_Aligned(&_GP(troom), in);
 
 		if (_GP(troom).tsdatasize > 0) {
@@ -344,10 +348,10 @@ static HSaveError restore_game_views(Stream *in) {
 	}
 
 	for (int bb = 0; bb < _GP(game).numviews; bb++) {
-		for (int cc = 0; cc < _G(views)[bb].numLoops; cc++) {
-			for (int dd = 0; dd < _G(views)[bb].loops[cc].numFrames; dd++) {
-				_G(views)[bb].loops[cc].frames[dd].sound = in->ReadInt32();
-				_G(views)[bb].loops[cc].frames[dd].pic = in->ReadInt32();
+		for (int cc = 0; cc < _GP(views)[bb].numLoops; cc++) {
+			for (int dd = 0; dd < _GP(views)[bb].loops[cc].numFrames; dd++) {
+				_GP(views)[bb].loops[cc].frames[dd].sound = in->ReadInt32();
+				_GP(views)[bb].loops[cc].frames[dd].pic = in->ReadInt32();
 			}
 		}
 	}
@@ -359,7 +363,7 @@ static HSaveError restore_game_audioclips_and_crossfade(Stream *in, RestoredData
 		return new SavegameError(kSvgErr_GameContentAssertion, "Mismatching number of Audio Clips.");
 	}
 
-	for (int i = 0; i <= MAX_SOUND_CHANNELS; ++i) {
+	for (int i = 0; i < TOTAL_AUDIO_CHANNELS_v320; ++i) {
 		RestoredData::ChannelInfo &chan_info = r_data.AudioChans[i];
 		chan_info.Pos = 0;
 		chan_info.ClipID = in->ReadInt32();
@@ -374,9 +378,9 @@ static HSaveError restore_game_audioclips_and_crossfade(Stream *in, RestoredData
 			chan_info.Priority = in->ReadInt32();
 			chan_info.Repeat = in->ReadInt32();
 			chan_info.Vol = in->ReadInt32();
-			chan_info.Pan = in->ReadInt32();
+			in->ReadInt32(); // unused
 			chan_info.VolAsPercent = in->ReadInt32();
-			chan_info.PanAsPercent = in->ReadInt32();
+			chan_info.Pan = in->ReadInt32();
 			chan_info.Speed = 1000;
 			if (_G(loaded_game_file_version) >= kGameVersion_340_2)
 				chan_info.Speed = in->ReadInt32();

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -52,7 +51,7 @@ typedef SeekableReadStream InSaveFile;
  * That typically means "save games", but also includes things like the
  * IQ points in Indy3.
  */
-class OutSaveFile: public WriteStream {
+class OutSaveFile: public SeekableWriteStream {
 protected:
 	WriteStream *_wrapped; /*!< @todo Doc required. */
 
@@ -65,12 +64,12 @@ public:
 	 * This flag is never cleared automatically. In order to clear it,
 	 * you must call clearErr() explicitly.
 	 */
-	virtual bool err() const;
+	bool err() const override;
 
 	/**
 	 * Reset the I/O error status as returned by err().
 	 */
-	virtual void clearErr();
+	void clearErr() override;
 
 	/**
 	 * Finalize and close this stream. To be called right before this
@@ -83,14 +82,14 @@ public:
 	 *
 	 * By default, this just flushes the stream.
 	 */
-	virtual void finalize();
+	void finalize() override;
 
 	/**
 	 * Commit any buffered data to the underlying channel or
 	 * storage medium. Unbuffered streams can use the default
 	 * implementation
 	 */
-	virtual bool flush();
+	bool flush() override;
 
 	/**
 	 * Write data into the stream.
@@ -98,7 +97,7 @@ public:
 	 * @param dataPtr	Pointer to the data to be written.
 	 * @param dataSize	Number of bytes to be written.
 	 */
-	virtual uint32 write(const void *dataPtr, uint32 dataSize);
+	uint32 write(const void *dataPtr, uint32 dataSize) override;
 
 	/**
 	* Obtain the current value of the stream position indicator of the
@@ -106,7 +105,19 @@ public:
 	*
 	* @return The current position indicator, or -1 if an error occurred.
 	 */
-	virtual int32 pos() const;
+	int64 pos() const override;
+
+	/**
+	 * Seeks to a new position within the file.
+	 * This is only supported when creating uncompressed save files.
+	 */
+	bool seek(int64 offset, int whence) override;
+
+	/**
+	 * Returns the size of the save file
+	 * This is only supported when creating uncompressed save files.
+	 */
+	int64 size() const override;
 };
 
 /**
@@ -256,6 +267,15 @@ public:
 	 * for saving or loading because they are being synced by CloudManager.
 	 */
 	virtual void updateSavefilesList(StringArray &lockedFiles) = 0;
+
+	/**
+	 * Checks if the savefile exists.
+	 *
+	 * @param name Name of the save file.
+	 *
+	 * @return true if the file exists. false otherwise.
+	 */
+	virtual bool exists(const String &name) = 0;
 };
 
 /** @} */

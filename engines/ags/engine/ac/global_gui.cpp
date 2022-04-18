@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -40,9 +39,6 @@
 namespace AGS3 {
 
 using namespace AGS::Shared;
-
-
-
 
 int IsGUIOn(int guinum) {
 	if ((guinum < 0) || (guinum >= _GP(game).numgui))
@@ -178,7 +174,7 @@ int GetTextWidth(const char *text, int fontnum) {
 	if ((fontnum < 0) || (fontnum >= _GP(game).numfonts))
 		quit("!GetTextWidth: invalid font number.");
 
-	return game_to_data_coord(wgettextwidth_compensate(text, fontnum));
+	return game_to_data_coord(get_text_width_outlined(text, fontnum));
 }
 
 int GetTextHeight(const char *text, int fontnum, int width) {
@@ -186,21 +182,21 @@ int GetTextHeight(const char *text, int fontnum, int width) {
 	if ((fontnum < 0) || (fontnum >= _GP(game).numfonts))
 		quit("!GetTextHeight: invalid font number.");
 
-	if (break_up_text_into_lines(text, Lines, data_to_game_coord(width), fontnum) == 0)
+	if (break_up_text_into_lines(text, _GP(Lines), data_to_game_coord(width), fontnum) == 0)
 		return 0;
-	return game_to_data_coord(getheightoflines(fontnum, Lines.Count()));
+	return game_to_data_coord(get_text_lines_height(fontnum, _GP(Lines).Count()));
 }
 
 int GetFontHeight(int fontnum) {
 	if ((fontnum < 0) || (fontnum >= _GP(game).numfonts))
 		quit("!GetFontHeight: invalid font number.");
-	return game_to_data_coord(getfontheight_outlined(fontnum));
+	return game_to_data_coord(get_font_height_outlined(fontnum));
 }
 
 int GetFontLineSpacing(int fontnum) {
 	if ((fontnum < 0) || (fontnum >= _GP(game).numfonts))
 		quit("!GetFontLineSpacing: invalid font number.");
-	return game_to_data_coord(getfontspacing_outlined(fontnum));
+	return game_to_data_coord(get_font_linespacing(fontnum));
 }
 
 void SetGUIBackgroundPic(int guin, int slotn) {
@@ -211,8 +207,9 @@ void SetGUIBackgroundPic(int guin, int slotn) {
 }
 
 void DisableInterface() {
-	if (_GP(play).disabled_user_interface == 0 && // only if was enabled before
-	        _G(gui_disabled_style) != GUIDIS_UNCHANGED) { // If GUI looks change when disabled, then update them all
+	if ((_GP(play).disabled_user_interface == 0) && // only if was enabled before
+		(GUI::Options.DisabledStyle != kGuiDis_Unchanged)) {
+		// If GUI looks change when disabled, then update them all
 		GUI::MarkAllGUIForUpdate();
 	}
 	_GP(play).disabled_user_interface++;
@@ -224,11 +221,12 @@ void EnableInterface() {
 	if (_GP(play).disabled_user_interface < 1) {
 		_GP(play).disabled_user_interface = 0;
 		set_default_cursor();
-		if (_G(gui_disabled_style) != GUIDIS_UNCHANGED) { // If GUI looks change when disabled, then update them all
+		if (GUI::Options.DisabledStyle != kGuiDis_Unchanged) { // If GUI looks change when disabled, then update them all
 			GUI::MarkAllGUIForUpdate();
 		}
 	}
 }
+
 // Returns 1 if user interface is enabled, 0 if disabled
 int IsInterfaceEnabled() {
 	return (_GP(play).disabled_user_interface > 0) ? 0 : 1;

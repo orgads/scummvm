@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -103,7 +102,7 @@ void OSystem_iOS7::initVideoContext() {
 Common::List<Graphics::PixelFormat> OSystem_iOS7::getSupportedFormats() const {
 	Common::List<Graphics::PixelFormat> list;
 	// RGB565
-	list.push_back(Graphics::createPixelFormat<565>());
+	list.push_back(Graphics::PixelFormat(2, 5, 6, 5, 0, 11, 5, 0, 0));
 	// CLUT8
 	list.push_back(Graphics::PixelFormat::createFormatCLUT8());
 	return list;
@@ -117,6 +116,10 @@ static inline void execute_on_main_thread(void (^block)(void)) {
 	else {
 		dispatch_sync(dispatch_get_main_queue(), block);
 	}
+}
+
+float OSystem_iOS7::getHiDPIScreenFactor() const {
+	return [UIScreen mainScreen].scale;
 }
 
 void OSystem_iOS7::initSize(uint width, uint height, const Graphics::PixelFormat *format) {
@@ -201,8 +204,8 @@ void OSystem_iOS7::setPalette(const byte *colors, uint start, uint num) {
 	const byte *b = colors;
 
 	for (uint i = start; i < start + num; ++i) {
-		_gamePalette[i] = Graphics::RGBToColor<Graphics::ColorMasks<565> >(b[0], b[1], b[2]);
-		_gamePaletteRGBA5551[i] = Graphics::RGBToColor<Graphics::ColorMasks<5551> >(b[0], b[1], b[2]);
+		_gamePalette[i] = _videoContext->screenTexture.format.RGBToColor(b[0], b[1], b[2]);
+		_gamePaletteRGBA5551[i] = _videoContext->mouseTexture.format.RGBToColor(b[0], b[1], b[2]);
 		b += 3;
 	}
 
@@ -220,7 +223,7 @@ void OSystem_iOS7::grabPalette(byte *colors, uint start, uint num) const {
 	byte *b = colors;
 
 	for (uint i = start; i < start + num; ++i) {
-		Graphics::colorToRGB<Graphics::ColorMasks<565> >(_gamePalette[i], b[0], b[1], b[2]);
+		_videoContext->screenTexture.format.colorToRGB(_gamePalette[i], b[0], b[1], b[2]);
 		b += 3;
 	}
 }
@@ -382,15 +385,14 @@ void OSystem_iOS7::clearOverlay() {
 
 void OSystem_iOS7::grabOverlay(Graphics::Surface &surface) {
 	//printf("grabOverlay()\n");
-	int h = _videoContext->overlayHeight;
+	assert(surface.w >= (int16)_videoContext->overlayWidth);
+	assert(surface.h >= (int16)_videoContext->overlayHeight);
+	assert(surface.format.bytesPerPixel == sizeof(uint16));
 
-	byte *dst = (byte *)surface.getPixels();
 	const byte *src = (const byte *)_videoContext->overlayTexture.getPixels();
-	do {
-		memcpy(dst, src, _videoContext->overlayWidth * sizeof(uint16));
-		src += _videoContext->overlayTexture.pitch;
-		dst += surface.pitch;
-	} while (--h);
+	byte *dst = (byte *)surface.getPixels();
+	Graphics::copyBlit(dst, src, surface.pitch,  _videoContext->overlayTexture.pitch,
+		_videoContext->overlayWidth, _videoContext->overlayHeight, sizeof(uint16));
 }
 
 void OSystem_iOS7::copyRectToOverlay(const void *buf, int pitch, int x, int y, int w, int h) {
@@ -439,6 +441,10 @@ int16 OSystem_iOS7::getOverlayWidth() {
 	return _videoContext->overlayWidth;
 }
 
+Graphics::PixelFormat OSystem_iOS7::getOverlayFormat() const {
+	return _videoContext->overlayTexture.format;
+}
+
 bool OSystem_iOS7::showMouse(bool visible) {
 	//printf("showMouse(%d)\n", visible);
 	bool last = _videoContext->mouseIsVisible;
@@ -485,7 +491,7 @@ void OSystem_iOS7::setMouseCursor(const void *buf, uint w, uint h, int hotspotX,
 #endif
 	assert(pixelFormat.bytesPerPixel == 1 || pixelFormat.bytesPerPixel == 2 || pixelFormat.bytesPerPixel == 4);
 
-	if (_mouseBuffer.w != w || _mouseBuffer.h != h || _mouseBuffer.format != pixelFormat || !_mouseBuffer.getPixels())
+	if (_mouseBuffer.w != (int16)w || _mouseBuffer.h != (int16)h || _mouseBuffer.format != pixelFormat || !_mouseBuffer.getPixels())
 		_mouseBuffer.create(w, h, pixelFormat);
 
 	_videoContext->mouseWidth = w;
@@ -507,7 +513,7 @@ void OSystem_iOS7::setCursorPalette(const byte *colors, uint start, uint num) {
 	assert(start + num <= 256);
 
 	for (uint i = start; i < start + num; ++i, colors += 3)
-		_mouseCursorPalette[i] = Graphics::RGBToColor<Graphics::ColorMasks<5551> >(colors[0], colors[1], colors[2]);
+		_mouseCursorPalette[i] = _videoContext->mouseTexture.format.RGBToColor(colors[0], colors[1], colors[2]);
 
 	// FIXME: This is just stupid, our client code seems to assume that this
 	// automatically enables the cursor palette.
@@ -518,12 +524,12 @@ void OSystem_iOS7::setCursorPalette(const byte *colors, uint start, uint num) {
 }
 
 void OSystem_iOS7::updateMouseTexture() {
-	uint texWidth = getSizeNextPOT(_videoContext->mouseWidth);
-	uint texHeight = getSizeNextPOT(_videoContext->mouseHeight);
+	int texWidth = getSizeNextPOT(_videoContext->mouseWidth);
+	int texHeight = getSizeNextPOT(_videoContext->mouseHeight);
 
 	Graphics::Surface &mouseTexture = _videoContext->mouseTexture;
 	if (mouseTexture.w != texWidth || mouseTexture.h != texHeight)
-		mouseTexture.create(texWidth, texHeight, Graphics::createPixelFormat<5551>());
+		mouseTexture.create(texWidth, texHeight, Graphics::PixelFormat(2, 5, 5, 5, 1, 11, 6, 1, 0));
 
 	if (_mouseBuffer.format.bytesPerPixel == 1) {
 		const uint16 *palette;
@@ -551,9 +557,9 @@ void OSystem_iOS7::updateMouseTexture() {
 
 			uint8 *dstRaw = (uint8 *)mouseTexture.getPixels();
 
-			for (uint y = 0; y < _mouseBuffer.h; ++y, dstRaw += mouseTexture.pitch) {
+			for (int y = 0; y < _mouseBuffer.h; ++y, dstRaw += mouseTexture.pitch) {
 				uint16 *dst = (uint16 *)dstRaw;
-				for (uint x = 0; x < _mouseBuffer.w; ++x, ++dst, src += srcBpp) {
+				for (int x = 0; x < _mouseBuffer.w; ++x, ++dst, src += srcBpp) {
 					if (
 						(srcBpp == 2 && *((const uint16*)src) == _mouseKeyColor) ||
 						(srcBpp == 4 && *((const uint32*)src) == _mouseKeyColor)

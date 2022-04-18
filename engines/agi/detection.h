@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,14 +37,14 @@ enum AgiGameID {
 	GID_AGIDEMO,
 	GID_BC,
 	GID_DDP,
-	GID_GOLDRUSH,
+	GID_GOLDRUSH,	// V3
 	GID_KQ1,
 	GID_KQ2,
 	GID_KQ3,
 	GID_KQ4,
 	GID_LSL1,
-	GID_MH1,
-	GID_MH2,
+	GID_MH1,		// V3
+	GID_MH2,		// V3
 	GID_MIXEDUP,
 	GID_PQ1,
 	GID_SQ1,
@@ -66,10 +65,9 @@ enum AgiGameFeatures {
 	GF_AGIMOUSE    = (1 << 0), // this disables "Click-to-walk mouse interface"
 	GF_AGDS        = (1 << 1),
 	GF_AGI256      = (1 << 2), // marks fanmade AGI-256 games
-	GF_MACGOLDRUSH = (1 << 3), // use "grdir" instead of "dir" for volume loading
-	GF_FANMADE     = (1 << 4), // marks fanmade games
-	GF_OLDAMIGAV20 = (1 << 5),
-	GF_2GSOLDSOUND = (1 << 6)
+	GF_FANMADE     = (1 << 3), // marks fanmade games
+	GF_OLDAMIGAV20 = (1 << 4),
+	GF_2GSOLDSOUND = (1 << 5)
 };
 
 enum BooterDisks {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -347,13 +346,13 @@ int GameState::GetRoomCameraCount() const {
 
 ScriptViewport *GameState::GetScriptViewport(int index) {
 	if (index < 0 || (size_t)index >= _roomViewports.size())
-		return NULL;
+		return nullptr;
 	return _scViewportRefs[index].first;
 }
 
 ScriptCamera *GameState::GetScriptCamera(int index) {
 	if (index < 0 || (size_t)index >= _roomCameras.size())
-		return NULL;
+		return nullptr;
 	return _scCameraRefs[index].first;
 }
 
@@ -370,6 +369,20 @@ void GameState::ClearIgnoreInput() {
 	_ignoreUserInputUntilTime = AGS_Clock::now();
 }
 
+void GameState::SetWaitSkipResult(int how, int data) {
+	wait_counter = 0;
+	wait_skipped_by = how;
+	wait_skipped_by_data = data;
+}
+
+int GameState::GetWaitSkipResult() const {
+	switch (wait_skipped_by) {
+	case SKIP_KEYPRESS: return wait_skipped_by_data;
+	case SKIP_MOUSECLICK: return -(wait_skipped_by_data + 1); // convert to 1-based code and negate
+	default: return 0;
+	}
+}
+
 bool GameState::IsBlockingVoiceSpeech() const {
 	return speech_has_voice && speech_voice_blocking;
 }
@@ -380,7 +393,7 @@ bool GameState::IsNonBlockingVoiceSpeech() const {
 
 bool GameState::ShouldPlayVoiceSpeech() const {
 	return !_GP(play).fast_forward &&
-	       (_GP(play).want_speech >= 1) && (!_GP(ResPaths).SpeechPak.Name.IsEmpty());
+		(_GP(play).speech_mode != kSpeech_TextOnly) && (_GP(play).voice_avail);
 }
 
 void GameState::ReadFromSavegame(Shared::Stream *in, GameStateSvgVersion svg_ver, RestoredData &r_data) {
@@ -509,7 +522,7 @@ void GameState::ReadFromSavegame(Shared::Stream *in, GameStateSvgVersion svg_ver
 	entered_at_x = in->ReadInt32();
 	entered_at_y = in->ReadInt32();
 	entered_edge = in->ReadInt32();
-	want_speech = in->ReadInt32();
+	speech_mode = (SpeechMode)in->ReadInt32();
 	cant_skip_speech = in->ReadInt32();
 	in->ReadArrayOfInt32(script_timers, MAX_TIMERS);
 	sound_volume = in->ReadInt32();
@@ -518,7 +531,7 @@ void GameState::ReadFromSavegame(Shared::Stream *in, GameStateSvgVersion svg_ver
 	speech_font = in->ReadInt32();
 	key_skip_wait = in->ReadInt8();
 	swap_portrait_lastchar = in->ReadInt32();
-	separate_music_lib = in->ReadInt32();
+	separate_music_lib = in->ReadInt32() != 0;
 	in_conversation = in->ReadInt32();
 	screen_tint = in->ReadInt32();
 	num_parsed_words = in->ReadInt32();
@@ -713,7 +726,7 @@ void GameState::WriteForSavegame(Shared::Stream *out) const {
 	out->WriteInt32(entered_at_x);
 	out->WriteInt32(entered_at_y);
 	out->WriteInt32(entered_edge);
-	out->WriteInt32(want_speech);
+	out->WriteInt32(speech_mode);
 	out->WriteInt32(cant_skip_speech);
 	out->WriteArrayOfInt32(script_timers, MAX_TIMERS);
 	out->WriteInt32(sound_volume);
@@ -722,7 +735,7 @@ void GameState::WriteForSavegame(Shared::Stream *out) const {
 	out->WriteInt32(speech_font);
 	out->WriteInt8(key_skip_wait);
 	out->WriteInt32(swap_portrait_lastchar);
-	out->WriteInt32(separate_music_lib);
+	out->WriteInt32(separate_music_lib ? 1 : 0);
 	out->WriteInt32(in_conversation);
 	out->WriteInt32(screen_tint);
 	out->WriteInt32(num_parsed_words);

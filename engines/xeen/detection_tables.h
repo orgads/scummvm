@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,6 +32,22 @@ static const XeenGameDescription gameDescriptions[] = {
 			Common::EN_ANY,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
+			GUIO2(GAMEOPTION_SHOW_ITEM_COSTS, GAMEOPTION_DURABLE_ARMOR)
+		},
+		GType_WorldOfXeen,
+		0
+	},
+
+	{
+		// World of Xeen (Monster Spawn Mod v1.0), Bugreport #12714
+		{
+			"worldofxeen",
+			"Monster Spawn Mod v1.0",
+			AD_ENTRY2s("xeen.cc", "37767811a52fb54a8f2be3b45acc91a9", 13536623,
+					   "dark.cc", "a4dcb0731ad3818fdd908f17230ee773", 11222393),
+			Common::EN_ANY,
+			Common::kPlatformDOS,
+			ADGF_UNSTABLE,
 			GUIO2(GAMEOPTION_SHOW_ITEM_COSTS, GAMEOPTION_DURABLE_ARMOR)
 		},
 		GType_WorldOfXeen,
@@ -101,7 +116,7 @@ static const XeenGameDescription gameDescriptions[] = {
 					   "dark.cc",  "437618b6b5e76f174719dcb529edbfbb", 11152923),
 			Common::FR_FRA,
 			Common::kPlatformDOS,
-			ADGF_TESTING,
+			ADGF_NO_FLAGS,
 			GUIO2(GAMEOPTION_SHOW_ITEM_COSTS, GAMEOPTION_DURABLE_ARMOR)
 		},
 		GType_WorldOfXeen,
@@ -177,7 +192,7 @@ static const XeenGameDescription gameDescriptions[] = {
 			AD_ENTRY1s("xeen.cc", "b9bb33bbd3783e7930ddedb189d7ba54", 13203565),
 			Common::FR_FRA,
 			Common::kPlatformDOS,
-			ADGF_TESTING,
+			ADGF_NO_FLAGS,
 			GUIO2(GAMEOPTION_SHOW_ITEM_COSTS, GAMEOPTION_DURABLE_ARMOR)
 		},
 		GType_Clouds,
@@ -254,7 +269,7 @@ static const XeenGameDescription gameDescriptions[] = {
 			AD_ENTRY1s("dark.cc", "437618b6b5e76f174719dcb529edbfbb", 11152923),
 			Common::FR_FRA,
 			Common::kPlatformDOS,
-			ADGF_TESTING,
+			ADGF_NO_FLAGS,
 			GUIO2(GAMEOPTION_SHOW_ITEM_COSTS, GAMEOPTION_DURABLE_ARMOR)
 		},
 		GType_DarkSide,

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -125,7 +124,7 @@ static const byte defaultSci32GMPatch[] = {
 };
 #endif
 
-Mt32ToGmMapList *Mt32dynamicMappings = NULL;
+Mt32ToGmMapList *Mt32dynamicMappings = nullptr;
 
 class MidiPlayer_Midi : public MidiPlayer {
 public:
@@ -149,6 +148,7 @@ public:
 	void close() override;
 	void send(uint32 b) override;
 	void sysEx(const byte *msg, uint16 length) override;
+	uint16 sysExNoDelay(const byte *msg, uint16 length) override;
 	bool hasRhythmChannel() const override { return true; }
 	byte getPlayId() const override;
 	int getPolyphony() const override {
@@ -179,8 +179,8 @@ private:
 	uint8 lookupGmRhythmKey(const char *iname);
 	uint8 getGmInstrument(const Mt32ToGmMap &Mt32Ins);
 
-	void sendMt32SysEx(const uint32 addr, Common::SeekableReadStream &data, const int len, bool noDelay);
-	void sendMt32SysEx(const uint32 addr, const SciSpan<const byte> &data, bool noDelay);
+	void sendMt32SysEx(const uint32 addr, Common::SeekableReadStream &data, const int len, bool noDelay, bool mainThread);
+	void sendMt32SysEx(const uint32 addr, const SciSpan<const byte> &data, bool noDelay, bool mainThread);
 	void setMt32Volume(byte volume);
 	void resetMt32();
 
@@ -259,7 +259,7 @@ MidiPlayer_Midi::~MidiPlayer_Midi() {
 	const Mt32ToGmMapList::iterator end = Mt32dynamicMappings->end();
 	for (Mt32ToGmMapList::iterator it = Mt32dynamicMappings->begin(); it != end; ++it) {
 		delete[] (*it).name;
-		(*it).name = 0;
+		(*it).name = nullptr;
 	}
 
 	Mt32dynamicMappings->clear();
@@ -507,7 +507,7 @@ void MidiPlayer_Midi::setReverb(int8 reverb) {
 	assert(reverb < kReverbConfigNr);
 
 	if (_hasReverb && _reverb != reverb) {
-		sendMt32SysEx(0x100001, SciSpan<const byte>(_reverbConfig[reverb], 3), true);
+		sendMt32SysEx(0x100001, SciSpan<const byte>(_reverbConfig[reverb], 3), true, true);
 	}
 
 	_reverb = reverb;
@@ -580,7 +580,7 @@ void MidiPlayer_Midi::initTrack(SciSpan<const byte> &header) {
 	// assign channels
 	debugC(5, kDebugLevelSound, "MidiPlayer_Midi::initTrack(): Channels assigned to MT-32 parts: 0x%.02x 0x%.02x 0x%.02x 0x%.02x 0x%.02x 0x%.02x 0x%.02x 0x%.02x 0x%.02x", msg[0], msg[1], msg[2], msg[3], msg[4], msg[5], msg[6], msg[7], msg[8]);
  	Sci::SciSpan<const byte> s(msg, 9);
-	sendMt32SysEx(0x10000D, s, false);
+	sendMt32SysEx(0x10000D, s, false, false);
 }
 
 bool MidiPlayer_Midi::isMt32GmPatch(const SciSpan<const byte> &data) {
@@ -632,7 +632,7 @@ bool MidiPlayer_Midi::isMt32GmPatch(const SciSpan<const byte> &data) {
 	return isMt32Gm;
 }
 
-void MidiPlayer_Midi::sendMt32SysEx(const uint32 addr, Common::SeekableReadStream &stream, int len, bool noDelay = false) {
+void MidiPlayer_Midi::sendMt32SysEx(const uint32 addr, Common::SeekableReadStream &stream, int len, bool noDelay = false, bool mainThread = true) {
 	if (len + 8 > kMaxSysExSize) {
 		warning("SysEx message exceed maximum size; ignoring");
 		return;
@@ -651,15 +651,24 @@ void MidiPlayer_Midi::sendMt32SysEx(const uint32 addr, Common::SeekableReadStrea
 
 	_sysExBuf[7 + len] = chk & 0x7f;
 
-	if (noDelay)
-		_driver->sysEx(_sysExBuf, len + 8);
-	else
-		sysEx(_sysExBuf, len + 8);
+	uint16 delay = sysExNoDelay(_sysExBuf, len + 8);
+	if (!noDelay && delay > 0) {
+		// Use the appropriate delay technique based on the current thread.
+		// On the main thread, use SciEngine::sleep() to keep the UI responsive,
+		// which is important because loading patches can take several seconds.
+		// On a timer thread however, SciEngine::sleep() can't be used because
+		// it polls events and updates the screen, which isn't thread safe. (bug #12947)
+		if (mainThread) {
+			g_sci->sleep(delay);
+		} else {
+			g_system->delayMillis(delay);
+		}
+	}
 }
 
-void MidiPlayer_Midi::sendMt32SysEx(const uint32 addr, const SciSpan<const byte> &buf, bool noDelay = false) {
+void MidiPlayer_Midi::sendMt32SysEx(const uint32 addr, const SciSpan<const byte> &buf, bool noDelay = false, bool mainThread = true) {
 	Common::MemoryReadStream stream(buf.toStream());
-	sendMt32SysEx(addr, stream, buf.size(), noDelay);
+	sendMt32SysEx(addr, stream, buf.size(), noDelay, mainThread);
 }
 
 
@@ -930,7 +939,7 @@ bool MidiPlayer_Midi::readD110DrvData() {
 	}
 
 	if (f.size() != 3500)
-		error("Unknown '%s' size (%d)", fileName, f.size());
+		error("Unknown '%s' size (%d)", fileName, (int)f.size());
 
 	f.seek(42);
 
@@ -1050,7 +1059,7 @@ bool MidiPlayer_Midi::readD110SysEx() {
 byte MidiPlayer_Midi::lookupGmInstrument(const char *iname) {
 	int i = 0;
 
-	if (Mt32dynamicMappings != NULL) {
+	if (Mt32dynamicMappings != nullptr) {
 		const Mt32ToGmMapList::iterator end = Mt32dynamicMappings->end();
 		for (Mt32ToGmMapList::iterator it = Mt32dynamicMappings->begin(); it != end; ++it) {
 			if (scumm_strnicmp(iname, (*it).name, 10) == 0)
@@ -1070,7 +1079,7 @@ byte MidiPlayer_Midi::lookupGmInstrument(const char *iname) {
 byte MidiPlayer_Midi::lookupGmRhythmKey(const char *iname) {
 	int i = 0;
 
-	if (Mt32dynamicMappings != NULL) {
+	if (Mt32dynamicMappings != nullptr) {
 		const Mt32ToGmMapList::iterator end = Mt32dynamicMappings->end();
 		for (Mt32ToGmMapList::iterator it = Mt32dynamicMappings->begin(); it != end; ++it) {
 			if (scumm_strnicmp(iname, (*it).name, 10) == 0)
@@ -1229,12 +1238,12 @@ void MidiPlayer_Midi::resetMt32() {
 
 	if (_mt32Type != kMt32TypeEmulated) {
 		// This seems to require a longer delay than usual
-		g_sci->sleep(150);
+		g_sci->sleep(150); // note that sleep() can only be called from main thread, see bug #12947
 	}
 }
 
 int MidiPlayer_Midi::open(ResourceManager *resMan) {
-	assert(resMan != NULL);
+	assert(resMan != nullptr);
 
 	int retval = _driver->open();
 	if (retval != 0) {
@@ -1404,24 +1413,31 @@ void MidiPlayer_Midi::close() {
 		sendMt32SysEx(0x200000, SciSpan<const byte>(_goodbyeMsg, _mt32LCDSize), true);
 	}
 
-	_driver->setTimerCallback(NULL, NULL);
+	_driver->setTimerCallback(nullptr, nullptr);
 	_driver->close();
 }
 
 void MidiPlayer_Midi::sysEx(const byte *msg, uint16 length) {
+	uint16 delay = sysExNoDelay(msg, length);
+
+	if (delay > 0)
+		g_system->delayMillis(delay);
+}
+
+uint16 MidiPlayer_Midi::sysExNoDelay(const byte *msg, uint16 length) {
 	_driver->sysEx(msg, length);
 
+	uint16 delay = 0;
 	if (_mt32Type != kMt32TypeEmulated) {
 		// Wait the time it takes to send the SysEx data
-		uint32 delay = (length + 2) * 1000 / 3125;
+		delay = (length + 2) * 1000 / 3125;
 
 		// Plus an additional delay for the MT-32 rev00
 		if (_mt32Type == kMt32TypeReal)
 			delay += 40;
-
-		g_system->updateScreen();
-		g_sci->sleep(delay);
 	}
+
+	return delay;
 }
 
 byte MidiPlayer_Midi::getPlayId() const {

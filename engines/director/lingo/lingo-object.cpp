@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,12 +15,13 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "common/endian.h"
+
+#include "graphics/macgui/mactext.h"
 
 #include "director/director.h"
 #include "director/cast.h"
@@ -32,11 +33,23 @@
 #include "director/lingo/lingo-code.h"
 #include "director/lingo/lingo-object.h"
 #include "director/lingo/lingo-the.h"
-#include "director/lingo/lingo-gr.h"
+
+#include "director/lingo/xlibs/cdromxobj.h"
 #include "director/lingo/xlibs/fileio.h"
-#include "director/lingo/xlibs/palxobj.h"
 #include "director/lingo/xlibs/flushxobj.h"
+#include "director/lingo/xlibs/fplayxobj.h"
+#include "director/lingo/xlibs/labeldrvxobj.h"
+#include "director/lingo/xlibs/memoryxobj.h"
+#include "director/lingo/xlibs/movemousexobj.h"
+#include "director/lingo/xlibs/orthoplayxobj.h"
+#include "director/lingo/xlibs/palxobj.h"
+#include "director/lingo/xlibs/popupmenuxobj.h"
+#include "director/lingo/xlibs/registercomponent.h"
+#include "director/lingo/xlibs/serialportxobj.h"
+#include "director/lingo/xlibs/soundjam.h"
+#include "director/lingo/xlibs/videodiscxobj.h"
 #include "director/lingo/xlibs/winxobj.h"
+#include "director/lingo/xlibs/xplayanim.h"
 
 namespace Director {
 
@@ -65,7 +78,7 @@ static struct PredefinedProto {
 	// script object and Xtra
 	{ "birth",					LM::m_new,					-1, 0,	kScriptObj | kXtraObj, 	400 },			// D4
 
-	{ 0, 0, 0, 0, 0, 0 }
+	{ nullptr, nullptr, 0, 0, 0, 0 }
 };
 
 static MethodProto windowMethods[] = {
@@ -75,7 +88,7 @@ static MethodProto windowMethods[] = {
 	{ "open",					LM::m_open,					 0, 0,	400 },			// D4
 	{ "moveToBack",				LM::m_moveToBack,			 0, 0,	400 },			// D4
 	{ "moveToFront",			LM::m_moveToFront,			 0, 0,	400 },			// D4
-	{ 0, 0, 0, 0, 0 }
+	{ nullptr, nullptr, 0, 0, 0 }
 };
 
 void Lingo::initMethods() {
@@ -101,61 +114,110 @@ void Lingo::cleanupMethods() {
 }
 
 static struct XLibProto {
-	const char *name;
-	void (*initializer)(int);
+	const char **names;
+	XLibFunc opener;
+	XLibFunc closer;
 	int type;
 	int version;
 } xlibs[] = {
-	{ "FileIO",					FileIO::initialize,					kXObj | kFactoryObj,	200 },	// D2
-	{ "FlushXObj",				FlushXObj::initialize,				kXObj,					400 },	// D4
-	{ "PalXObj",				PalXObj:: initialize,				kXObj,					400 }, 	// D4
-	{ "winXObj",				RearWindowXObj::initialize,			kXObj,					400 },	// D4
-	{ 0, 0, 0, 0 }
+	{ CDROMXObj::fileNames,			CDROMXObj::open,		CDROMXObj::close,			kXObj,					200 },	// D2
+	{ FileIO::fileNames,			FileIO::open,			FileIO::close,				kXObj | kXtraObj,		200 },	// D2
+	{ FlushXObj::fileNames,			FlushXObj::open,		FlushXObj::close,			kXObj,					400 },	// D4
+	{ FPlayXObj::fileNames,			FPlayXObj::open,		FPlayXObj::close,			kXObj,					200 },	// D2
+	{ LabelDrvXObj::fileNames,		LabelDrvXObj::open,		LabelDrvXObj::close,		kXObj,					400 }, 	// D4
+	{ OrthoPlayXObj::fileNames,		OrthoPlayXObj::open,	OrthoPlayXObj::close,		kXObj,					400 }, 	// D4
+	{ PalXObj::fileNames,			PalXObj::open,			PalXObj::close,				kXObj,					400 }, 	// D4
+	{ MemoryXObj::fileNames,		MemoryXObj::open,		MemoryXObj::close,			kXObj,					400 }, 	// D4
+	{ PopUpMenuXObj::fileNames,		PopUpMenuXObj::open,	PopUpMenuXObj::close,		kXObj,					200 }, 	// D2
+	{ SerialPortXObj::fileNames,	SerialPortXObj::open,	SerialPortXObj::close,		kXObj,					200 },	// D2
+	{ SoundJam::fileNames,			SoundJam::open,			SoundJam::close,			kXObj,					400 },	// D4
+	{ RegisterComponent::fileNames,	RegisterComponent::open,RegisterComponent::close,	kXObj,					400 },	// D4
+	{ VideodiscXObj::fileNames,		VideodiscXObj::open,	VideodiscXObj::close,		kXObj,					200 }, 	// D2
+	{ RearWindowXObj::fileNames,	RearWindowXObj::open,	RearWindowXObj::close,		kXObj,					400 },	// D4
+	{ MoveMouseXObj::fileNames,		MoveMouseXObj::open,	MoveMouseXObj::close,		kXObj,					400 },	// D4
+	{ XPlayAnim::fileNames,			XPlayAnim::open,		XPlayAnim::close, 			kXObj,					300 },	// D3
+	{ nullptr, nullptr, nullptr, 0, 0 }
 
 };
 
 void Lingo::initXLibs() {
-	for (XLibProto *lib = xlibs; lib->name; lib++) {
+	for (XLibProto *lib = xlibs; lib->names; lib++) {
 		if (lib->version > _vm->getVersion())
 			continue;
 
-		Symbol sym;
-		sym.name = new Common::String(lib->name);
-		sym.type = HBLTIN;
-		sym.nargs = 0;
-		sym.maxArgs = 0;
-		sym.targetType = lib->type;
-		sym.u.bltin = lib->initializer;
-		Common::String xlibName = lib->name;
-		xlibName.toLowercase();
-		_xlibInitializers[xlibName] = sym;
+		for (uint i = 0; lib->names[i]; i++) {
+			_xlibOpeners[lib->names[i]] = lib->opener;
+			_xlibClosers[lib->names[i]] = lib->closer;
+		}
 	}
 }
 
 void Lingo::cleanupXLibs() {
-	_xlibInitializers.clear();
+	_xlibOpeners.clear();
+	_xlibClosers.clear();
 }
 
-void Lingo::openXLib(Common::String name, ObjectType type) {
-
+Common::String Lingo::normalizeXLibName(Common::String name) {
 	Common::Platform platform = _vm->getPlatform();
-	if (platform == Common::kPlatformMacintosh) {
+	if (platform == Common::kPlatformMacintosh || platform == Common::kPlatformMacintoshII) {
 		int pos = name.findLastOf(':');
 		name = name.substr(pos + 1, name.size());
+		if (name.hasSuffixIgnoreCase(".xlib"))
+			name = name.substr(0, name.size() - 5);
 	} else if (platform == Common::kPlatformWindows) {
 		if (name.hasSuffixIgnoreCase(".dll"))
 			name = name.substr(0, name.size() - 4);
 	}
 
-	// normalize xlib name
-	name.toLowercase();
 	name.trim();
 
-	if (_xlibInitializers.contains(name)) {
-		Symbol sym = _xlibInitializers[name];
-		(*sym.u.bltin)(type);
+	return name;
+}
+
+void Lingo::openXLib(Common::String name, ObjectType type) {
+	name = normalizeXLibName(name);
+
+	if (_openXLibs.contains(name))
+		return;
+
+	_openXLibs[name] = type;
+
+	if (_xlibOpeners.contains(name)) {
+		(*_xlibOpeners[name])(type);
 	} else {
-		warning("Unimplemented xlib: '%s'", name.c_str());
+		warning("Lingo::openXLib: Unimplemented xlib: '%s'", name.c_str());
+	}
+}
+
+void Lingo::closeXLib(Common::String name) {
+	name = normalizeXLibName(name);
+
+	if (!_openXLibs.contains(name)) {
+		warning("Lingo::closeXLib: xlib %s is not open", name.c_str());
+		return;
+	}
+
+	ObjectType type = _openXLibs[name];
+	_openXLibs.erase(name);
+
+	if (_xlibClosers.contains(name)) {
+		(*_xlibClosers[name])(type);
+	} else {
+		warning("Lingo::closeXLib: Unimplemented xlib: '%s'", name.c_str());
+	}
+}
+
+void Lingo::closeOpenXLibs() {
+	for (OpenXLibsHash::iterator it = _openXLibs.begin(); it != _openXLibs.end(); ++it) {
+		closeXLib(it->_key);
+	}
+}
+
+void Lingo::reloadOpenXLibs() {
+	OpenXLibsHash openXLibsCopy = _openXLibs;
+	for (OpenXLibsHash::iterator it = openXLibsCopy.begin(); it != openXLibsCopy.end(); ++it) {
+		closeXLib(it->_key);
+		openXLib(it->_key, it->_value);
 	}
 }
 
@@ -173,8 +235,8 @@ void LM::m_dispose(int nargs) {
 
 /* ScriptContext */
 
-ScriptContext::ScriptContext(Common::String name, LingoArchive *archive, ScriptType type, int id)
-	: Object<ScriptContext>(name), _archive(archive), _scriptType(type), _id(id) {
+ScriptContext::ScriptContext(Common::String name, ScriptType type, int id)
+	: Object<ScriptContext>(name), _scriptType(type), _id(id) {
 	_objType = kScriptObj;
 }
 
@@ -192,7 +254,6 @@ ScriptContext::ScriptContext(const ScriptContext &sc) : Object<ScriptContext>(sc
 	_constants = sc._constants;
 	_properties = sc._properties;
 
-	_archive = sc._archive;
 	_id = sc._id;
 }
 
@@ -200,6 +261,35 @@ ScriptContext::~ScriptContext() {}
 
 Common::String ScriptContext::asString() {
 	return Common::String::format("script: #%s %d %p", _name.c_str(), _inheritanceLevel, (void *)this);
+}
+
+Symbol ScriptContext::define(const Common::String &name, ScriptData *code, Common::Array<Common::String> *argNames, Common::Array<Common::String> *varNames) {
+	Symbol sym;
+	sym.name = new Common::String(name);
+	sym.type = HANDLER;
+	sym.u.defn = code;
+	sym.nargs = argNames->size();
+	sym.maxArgs = argNames->size();
+	sym.argNames = argNames;
+	sym.varNames = varNames;
+	sym.ctx = this;
+
+	if (debugChannelSet(1, kDebugCompile)) {
+		uint pc = 0;
+		while (pc < sym.u.defn->size()) {
+			uint spc = pc;
+			Common::String instr = g_lingo->decodeInstruction(sym.u.defn, pc, &pc);
+			debugC(1, kDebugCompile, "[%5d] %s", spc, instr.c_str());
+		}
+		debugC(1, kDebugCompile, "<end define code>");
+	}
+
+	_functionHandlers[name] = sym;
+	if (g_lingo->_eventHandlerTypeIds.contains(name)) {
+		_eventHandlers[g_lingo->_eventHandlerTypeIds[name]] = sym;
+	}
+
+	return sym;
 }
 
 Symbol ScriptContext::getMethod(const Common::String &methodName) {
@@ -304,10 +394,12 @@ void LM::m_put(int nargs) {
 void LM::m_perform(int nargs) {
 	// Lingo doesn't seem to bother cloning the object when
 	// mNew is called with mPerform
-	AbstractObject *me = g_lingo->_currentMe.u.obj;
+	Datum d(g_lingo->_currentMe);
+	AbstractObject *me = d.u.obj;
 	Datum methodName = g_lingo->_stack.remove_at(g_lingo->_stack.size() - nargs); // Take method name out of stack
-	nargs -= 1;
 	Symbol funcSym = me->getMethod(*methodName.u.s);
+	// Object methods expect the first argument to be the object
+	g_lingo->_stack.insert_at(g_lingo->_stack.size() - nargs + 1, d);
 	LC::call(funcSym, nargs, true);
 }
 
@@ -388,6 +480,7 @@ bool Window::hasField(int field) {
 	case kTheDrawRect:
 	case kTheFileName:
 	case kTheModal:
+	case kTheRect:
 	case kTheSourceRect:
 	case kTheTitle:
 	case kTheTitleVisible:
@@ -410,6 +503,9 @@ Datum Window::getField(int field) {
 		return isVisible();
 	case kTheWindowType:
 		return getWindowType();
+	case kTheRect:
+		return getStageRect();
+
 	default:
 		warning("Window::getField: unhandled field '%s'", g_lingo->field2str(field));
 		return Datum();
@@ -443,27 +539,27 @@ void LM::m_close(int nargs) {
 
 void LM::m_forget(int nargs) {
 	Window *me = static_cast<Window *>(g_lingo->_currentMe.u.obj);
-	DatumArray *windowList = g_lingo->_windowList.u.farr;
+	FArray *windowList = g_lingo->_windowList.u.farr;
 
 	uint i;
-	for (i = 0; i < windowList->size(); i++) {
-		if ((*windowList)[i].type != OBJECT || (*windowList)[i].u.obj->getObjType() != kWindowObj)
+	for (i = 0; i < windowList->arr.size(); i++) {
+		if (windowList->arr[i].type != OBJECT || windowList->arr[i].u.obj->getObjType() != kWindowObj)
 			continue;
 
-		Window *window = static_cast<Window *>((*windowList)[i].u.obj);
+		Window *window = static_cast<Window *>(windowList->arr[i].u.obj);
 		if (window == me)
 			break;
 	}
 
-	if (i < windowList->size())
-		windowList->remove_at(i);
+	if (i < windowList->arr.size())
+		windowList->arr.remove_at(i);
 
 	// remove me from global vars
 	for (DatumHash::iterator it = g_lingo->_globalvars.begin(); it != g_lingo->_globalvars.end(); ++it) {
 		if (it->_value.type != OBJECT || it->_value.u.obj->getObjType() != kWindowObj)
 			continue;
 
-		Window *window = static_cast<Window *>((*windowList)[i].u.obj);
+		Window *window = static_cast<Window *>(windowList->arr[i].u.obj);
 		if (window == me)
 			g_lingo->_globalvars[it->_key] = 0;
 	}
@@ -546,11 +642,12 @@ Datum CastMember::getField(int field) {
 		d = (int)getBackColor();
 		break;
 	case kTheCastType:
-		d = _type;
+		d.type = SYMBOL;
+		d.u.s = new Common::String(castTypeToString(_type));
 		break;
 	case kTheFileName:
 		if (castInfo)
-			d = Datum(castInfo->fileName);
+			d = Datum(castInfo->directory + g_director->_dirSeparator + castInfo->fileName);
 		break;
 	case kTheForeColor:
 		d = (int)getForeColor();
@@ -572,7 +669,8 @@ Datum CastMember::getField(int field) {
 		d = _castId;
 		break;
 	case kTheRect:
-		warning("STUB: CastMember::getField(): Unprocessed getting field \"%s\" of cast %d", g_lingo->field2str(field), _castId);
+		// not sure get the initial rect would be fine to castmember
+		d = Datum(_cast->getCastMember(_castId)->_initialRect);
 		break;
 	case kThePurgePriority:
 		d = _purgePriority;
@@ -636,7 +734,7 @@ bool CastMember::setField(int field, const Datum &d) {
 			warning("CastMember::setField(): CastMember info for %d not found", _castId);
 			return false;
 		}
-		_cast->_lingoArchive->addCode(d.u.s->c_str(), kCastScript, _castId);
+		_cast->_lingoArchive->replaceCode(*d.u.s, kCastScript, _castId);
 		castInfo->script = d.asString();
 		return true;
 	case kTheWidth:
@@ -689,7 +787,10 @@ Datum DigitalVideoCastMember::getField(int field) {
 		d = _directToStage;
 		break;
 	case kTheDuration:
-		d = _duration;
+		// sometimes, we will get duration before we start video.
+		// _duration is initialized in startVideo, thus we will not get the correct number.
+		d.type = INT;
+		d.u.i = getDuration();
 		break;
 	case kTheFrameRate:
 		d = _frameRate;
@@ -843,7 +944,7 @@ Datum TextCastMember::getField(int field) {
 		d = _hilite;
 		break;
 	case kTheText:
-		d = getText();
+		d = getText().encode(Common::kUtf8);
 		break;
 	case kTheTextAlign:
 		d.type = STRING;
@@ -863,16 +964,16 @@ Datum TextCastMember::getField(int field) {
 		}
 		break;
 	case kTheTextFont:
-		warning("TextCastMember::getField(): Unprocessed getting field \"%s\" of field %d", g_lingo->field2str(field), _castId);
+		d.u.i = _fontId;
 		break;
 	case kTheTextHeight:
-		warning("TextCastMember::getField(): Unprocessed getting field \"%s\" of field %d", g_lingo->field2str(field), _castId);
+		d.u.i = getTextHeight();
 		break;
 	case kTheTextSize:
-		warning("TextCastMember::getField(): Unprocessed getting field \"%s\" of field %d", g_lingo->field2str(field), _castId);
+		d.u.i = getTextSize();
 		break;
 	case kTheTextStyle:
-		warning("TextCastMember::getField(): Unprocessed getting field \"%s\" of field %d", g_lingo->field2str(field), _castId);
+		d.u.i = _textSlant;
 		break;
 	default:
 		d = CastMember::getField(field);
@@ -897,14 +998,13 @@ bool TextCastMember::setField(int field, const Datum &d) {
 		return true;
 	case kTheHilite:
 		// TODO: Understand how texts can be selected programmatically as well.
-		if (_type == kCastButton) {
-			_hilite = (bool)d.asInt();
-			_modified = true;
-			return true;
-		}
+		// since hilite won't affect text castmember, and we may have button info in text cast in D2/3. so don't check type here
+		_hilite = (bool)d.asInt();
+		_modified = true;
+		return true;
 		break;
 	case kTheText:
-		setText(d.asString().c_str());
+		setText(d.asString());
 		return true;
 	case kTheTextAlign:
 		{
@@ -925,25 +1025,117 @@ bool TextCastMember::setField(int field, const Datum &d) {
 
 			_textAlign = align;
 			_modified = true;
-		}
+	}
 		return true;
 	case kTheTextFont:
-		warning("TextCastMember::setField(): Unprocessed setting field \"%s\" of field %d", g_lingo->field2str(field), _castId);
+		_fontId = d.asInt();
+		_modified = true;
 		return false;
 	case kTheTextHeight:
-		warning("TextCastMember::setField(): Unprocessed setting field \"%s\" of field %d", g_lingo->field2str(field), _castId);
+		_lineSpacing = d.asInt();
+		_modified = true;
 		return false;
 	case kTheTextSize:
-		warning("TextCastMember::setField(): Unprocessed setting field \"%s\" of field %d", g_lingo->field2str(field), _castId);
+		setTextSize(d.asInt());
 		return false;
 	case kTheTextStyle:
-		warning("TextCastMember::setField(): Unprocessed setting field \"%s\" of field %d", g_lingo->field2str(field), _castId);
+		_textSlant = d.asInt();
+		_modified = true;
 		return false;
 	default:
 		break;
 	}
 
 	return CastMember::setField(field, d);
+}
+
+bool TextCastMember::hasChunkField(int field) {
+	switch (field) {
+	case kTheForeColor:
+	case kTheTextFont:
+	case kTheTextHeight:
+	case kTheTextSize:
+	case kTheTextStyle:
+		return true;
+	default:
+		break;
+	}
+	return false;
+}
+
+Datum TextCastMember::getChunkField(int field, int start, int end) {
+	Datum d;
+
+	Graphics::MacText *macText = ((Graphics::MacText *)_widget);
+	if (!_widget)
+		warning("TextCastMember::getChunkField getting chunk field when there is no linked widget, returning the default value");
+
+	switch (field) {
+	case kTheForeColor:
+		if (_widget)
+			d.u.i = macText->getTextColor(start, end);
+		else
+			d.u.i = getForeColor();
+		break;
+	case kTheTextFont:
+		if (_widget)
+			d.u.i = macText->getTextFont(start, end);
+		else
+			d.u.i = _fontId;
+		break;
+	case kTheTextHeight:
+		warning("TextCastMember::getChunkField getting text height(line spacing) is not implemented yet, returning the default one");
+		d.u.i = _lineSpacing;
+		break;
+	case kTheTextSize:
+		if (_widget)
+			d.u.i = macText->getTextSize(start, end);
+		else
+			d.u.i = _fontSize;
+		break;
+	case kTheTextStyle:
+		if (_widget)
+			d.u.i = macText->getTextSlant(start, end);
+		else
+			d.u.i = _textSlant;
+		break;
+	default:
+		break;
+	}
+
+	return d;
+}
+
+bool TextCastMember::setChunkField(int field, int start, int end, const Datum &d) {
+	Graphics::MacText *macText = ((Graphics::MacText *)_widget);
+	if (!_widget)
+		warning("TextCastMember::setChunkField setting chunk field when there is no linked widget");
+
+	switch (field) {
+	case kTheForeColor:
+		if (_widget)
+			macText->setTextColor(d.asInt(), start, end);
+		return true;
+	case kTheTextFont:
+		if (_widget)
+			macText->setTextFont(d.asInt(), start, end);
+		return true;
+	case kTheTextHeight:
+		warning("TextCastMember::setChunkField setting text height(line spacing) is not implemented yet");
+		return false;
+	case kTheTextSize:
+		if (_widget)
+			macText->setTextSize(d.asInt(), start, end);
+		return true;
+	case kTheTextStyle:
+		if (_widget)
+			macText->setTextSlant(d.asInt(), start, end);
+		return true;
+	default:
+		break;
+	}
+
+	return false;
 }
 
 } // End of namespace Director

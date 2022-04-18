@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -290,7 +289,7 @@ void AGOSEngine::playMusic(uint16 music, uint16 track) {
 	} else {
 		_midi->setLoop(true); // Must do this BEFORE loading music.
 
-		Common::SeekableReadStream *str = 0;
+		Common::SeekableReadStream *str = nullptr;
 		if (getPlatform() == Common::kPlatformPC98) {
 			str = createPak98FileStream(Common::String::format("MOD%d.PAK", music).c_str());
 			if (!str)
@@ -394,7 +393,7 @@ bool AGOSEngine::loadVGASoundFile(uint16 id, uint8 type) {
 	dstSize = srcSize = in.size();
 	if (getGameType() == GType_PN && (getFeatures() & GF_CRUNCHED)) {
 		Common::Stack<uint32> data;
-		byte *dataOut = 0;
+		byte *dataOut = nullptr;
 		int dataOutSize = 0;
 
 		for (uint i = 0; i < srcSize / 4; ++i)
@@ -507,7 +506,7 @@ void AGOSEngine::loadSound(uint16 sound, int16 pan, int16 vol, uint16 type) {
 		dst = (byte *)malloc(dstSize);
 		decompressData(filename, dst, offset, srcSize, dstSize);
 	} else {
-		if (_curSfxFile == NULL)
+		if (_curSfxFile == nullptr)
 			return;
 
 		dst = _curSfxFile + READ_LE_UINT32(_curSfxFile + sound * 4);
@@ -526,7 +525,7 @@ void AGOSEngine::loadSound(uint16 sound, uint16 freq, uint16 flags) {
 	uint32 offs, size = 0;
 	uint32 rate = 8000;
 
-	if (_curSfxFile == NULL)
+	if (_curSfxFile == nullptr)
 		return;
 
 	dst = _curSfxFile;

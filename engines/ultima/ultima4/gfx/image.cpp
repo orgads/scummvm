@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -284,15 +283,15 @@ void Image::performTransparencyHack(uint colorValue, uint numFrames,
 									uint currentFrameIndex, uint haloWidth,
 									uint haloOpacityIncrementByPixelDistance) {
 	Common::List<Std::pair<uint, uint> > opaqueXYs;
-	uint x, y;
+	int x, y;
 	byte t_r, t_g, t_b;
 
 	_surface->format.colorToRGB(colorValue, t_r, t_g, t_b);
 
-	uint frameHeight = _surface->h / numFrames;
+	int frameHeight = _surface->h / numFrames;
 	//Min'd so that they never go out of range (>=h)
-	uint top = MIN(_surface->h, (uint16)(currentFrameIndex * frameHeight));
-	uint bottom = MIN(_surface->h, (uint16)(top + frameHeight));
+	int top = MIN(_surface->h, (int16)(currentFrameIndex * frameHeight));
+	int bottom = MIN(_surface->h, (int16)(top + frameHeight));
 
 	for (y = top; y < bottom; y++) {
 
@@ -317,11 +316,11 @@ void Image::performTransparencyHack(uint colorValue, uint numFrames,
 		ox = xy->first;
 		oy = xy->second;
 		int span = int(haloWidth);
-		uint x_start = MAX(0, ox - span);
-		uint x_finish = MIN(int(_surface->w), ox + span + 1);
+		int x_start = MAX(0, ox - span);
+		int x_finish = MIN(int(_surface->w), ox + span + 1);
 		for (x = x_start; x < x_finish; ++x) {
-			uint y_start = MAX(int(top), oy - span);
-			uint y_finish = MIN(int(bottom), oy + span + 1);
+			int y_start = MAX(int(top), oy - span);
+			int y_finish = MIN(int(bottom), oy + span + 1);
 			for (y = y_start; y < y_finish; ++y) {
 
 				int divisor = 1 + span * 2 - abs(int(ox - x)) - abs(int(oy - y));
@@ -477,8 +476,8 @@ void Image::dump() {
 
 void Image::drawHighlighted() {
 	RGBA c;
-	for (unsigned i = 0; i < _surface->h; i++) {
-		for (unsigned j = 0; j < _surface->w; j++) {
+	for (int i = 0; i < _surface->h; i++) {
+		for (int j = 0; j < _surface->w; j++) {
 			getPixel(j, i, c.r, c.g, c.b, c.a);
 			putPixel(j, i, 0xff - c.r, 0xff - c.g, 0xff - c.b, c.a);
 		}

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -30,8 +29,11 @@ namespace AGS3 {
 using AGS::Shared::GUIMain;
 
 // options for 'disp_type' parameter
+// blocking speech
 #define DISPLAYTEXT_SPEECH        0
+// super-blocking message box
 #define DISPLAYTEXT_MESSAGEBOX    1
+// regular non-blocking overlay
 #define DISPLAYTEXT_NORMALOVERLAY 2
 // also accepts explicit overlay ID >= OVER_CUSTOM
 
@@ -47,19 +49,11 @@ bool ShouldAntiAliasText();
 int GetTextDisplayLength(const char *text);
 // Calculates number of game loops for displaying a text on screen
 int GetTextDisplayTime(const char *text, int canberel = 0);
+// Draw an outline if requested, then draw the text on top
 void wouttext_outline(Shared::Bitmap *ds, int xxp, int yyp, int usingfont, color_t text_color, const char *texx);
 void wouttext_aligned(Shared::Bitmap *ds, int usexp, int yy, int oriwid, int usingfont, color_t text_color, const char *text, HorAlignment align);
-// TODO: GUI classes located in Common library do not make use of outlining,
-// need to find a way to make all code use same functions.
-// Get the maximal height of the given font, with possible outlining in mind
-int getfontheight_outlined(int font);
-// Get line spacing for the given font, with possible outlining in mind
-int getfontspacing_outlined(int font);
-// Get the distance between bottom one one line and top of the next line (may be negative!)
-int getfontlinegap(int font);
-// Gets the total maximal height of the given number of lines printed with the given font
-int getheightoflines(int font, int numlines);
-int wgettextwidth_compensate(const char *tex, int font);
+// Get the maximal width of the given font, with corresponding outlining
+int get_text_width_outlined(const char *tex, int font);
 void do_corner(Shared::Bitmap *ds, int sprn, int xx1, int yy1, int typx, int typy);
 // Returns the image of a button control on the GUI under given child index
 int get_but_pic(GUIMain *guo, int indx);

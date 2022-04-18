@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -39,7 +38,7 @@
 namespace Cine {
 
 byte *collisionPage;
-FWRenderer *renderer = NULL;
+FWRenderer *renderer = nullptr;
 
 #define DEFAULT_MESSAGE_BG 1
 #define DEFAULT_CMD_Y 185
@@ -119,7 +118,7 @@ void plotPoint(int x, int y, int color, void *data) {
 /**
  * Initialize renderer
  */
-FWRenderer::FWRenderer() : _savedBackBuffers(), _background(NULL), _backupPal(), _cmd(""),
+FWRenderer::FWRenderer() : _savedBackBuffers(), _background(nullptr), _backupPal(), _cmd(""),
 	_messageBg(DEFAULT_MESSAGE_BG), _cmdY(DEFAULT_CMD_Y), _backBuffer(new byte[_screenSize]),
 	_activePal(), _changePal(0), _showCollisionPage(false), _fadeToBlackLastCalledMs(0) {
 
@@ -162,7 +161,7 @@ bool FWRenderer::initialize() {
 void FWRenderer::clear() {
 	delete[] _background;
 
-	_background = NULL;
+	_background = nullptr;
 	_backupPal.clear();
 	_activePal.clear();
 
@@ -330,15 +329,29 @@ void FWRenderer::drawString(const char *string, byte param) {
  * @param y Top left message box corner coordinate
  * @param width Message box width
  * @param color Message box background color (Or if negative draws only the text)
+ * @param draw Draw the message box and its contents? If false then draw nothing
+ * but simply return the maximum Y position used by the message box.
  * @note Negative colors are used in Operation Stealth's timed cutscenes
  * (e.g. when first meeting The Movement for the Liberation of Santa Paragua).
+ * @return The maximum Y position used by the message box (Inclusive)
  */
-void FWRenderer::drawMessage(const char *str, int x, int y, int width, int color) {
+int FWRenderer::drawMessage(const char *str, int x, int y, int width, int color, bool draw) {
+	// Keep a vertically overflowing message box inside the main screen (Fixes bug #11708).
+	if (draw) {
+		int maxY = this->drawMessage(str, x, y, width, color, false);
+		if (maxY > 199) {
+			y -= (maxY - 199);
+			if (y < 0) {
+				y = 0;
+			}
+		}
+	}
+
 	int i, tx, ty, tw;
 	int line = 0, words = 0, cw = 0;
 	int space = 0, extraSpace = 0;
 
-	if (color >= 0) {
+	if (draw && color >= 0) {
 		if (useTransparentDialogBoxes())
 			drawTransparentBox(x, y, width, 4);
 		else
@@ -364,7 +377,7 @@ void FWRenderer::drawMessage(const char *str, int x, int y, int width, int color
 			}
 
 			ty += 9;
-			if (color >= 0) {
+			if (draw && color >= 0) {
 				if (useTransparentDialogBoxes())
 					drawTransparentBox(x, ty, width, 9);
 				else
@@ -381,18 +394,20 @@ void FWRenderer::drawMessage(const char *str, int x, int y, int width, int color
 				extraSpace = 0;
 			}
 		} else {
-			tx = drawChar(str[i], tx, ty);
+			tx = drawChar(str[i], tx, ty, draw);
 		}
 	}
 
 	ty += 9;
-	if (color >= 0) {
+	if (draw && color >= 0) {
 		if (useTransparentDialogBoxes())
 			drawTransparentBox(x, ty, width, 4);
 		else
 			drawPlainBox(x, ty, width, 4, color);
 		drawDoubleBorder(x, y, width, ty - y + 4, (useTransparentDialogBoxes() ? transparentDialogBoxStartColor() : 0) + 2);
 	}
+
+	return ty + 4;
 }
 
 /**
@@ -503,15 +518,18 @@ void FWRenderer::drawDoubleBorder(int x, int y, int width, int height, byte colo
  * @param character Character to draw
  * @param x Character coordinate
  * @param y Character coordinate
+ * @param draw Draw the character?
  */
-int FWRenderer::drawChar(char character, int x, int y) {
+int FWRenderer::drawChar(char character, int x, int y, bool draw) {
 	int width;
 
 	if (character == ' ') {
 		x += 5;
 	} else if ((width = g_cine->_textHandler.fontParamTable[(unsigned char)character].characterWidth)) {
 		int idx = g_cine->_textHandler.fontParamTable[(unsigned char)character].characterIdx;
-		drawSpriteRaw(g_cine->_textHandler.textTable[idx][FONT_DATA], g_cine->_textHandler.textTable[idx][FONT_MASK], FONT_WIDTH, FONT_HEIGHT, _backBuffer, x, y);
+		if (draw) {
+			drawSpriteRaw(g_cine->_textHandler.textTable[idx][FONT_DATA], g_cine->_textHandler.textTable[idx][FONT_MASK], FONT_WIDTH, FONT_HEIGHT, _backBuffer, x, y);
+		}
 		x += width + 1;
 	}
 
@@ -653,7 +671,7 @@ void FWRenderer::renderOverlay(const Common::List<overlay>::iterator &it) {
 		sprite = &g_cine->_animDataTable[g_cine->_objectTable[it->objIdx].frame];
 		len = sprite->_realWidth * sprite->_height;
 		mask = new byte[len];
-		if (sprite->mask() != NULL) {
+		if (sprite->mask() != nullptr) {
 			memcpy(mask, sprite->mask(), len);
 		} else {
 			// This case happens in French Amiga Future Wars (Bug #10643) when
@@ -1183,7 +1201,7 @@ void FWRenderer::pushMenu(Menu *menu) {
 
 Menu *FWRenderer::popMenu() {
 	if (_menuStack.empty())
-		return 0;
+		return nullptr;
 
 	Menu *menu = _menuStack.top();
 	_menuStack.pop();
@@ -1191,8 +1209,8 @@ Menu *FWRenderer::popMenu() {
 }
 
 void FWRenderer::clearMenuStack() {
-	Menu *menu = 0;
-	while ((menu = popMenu()) != 0)
+	Menu *menu = nullptr;
+	while ((menu = popMenu()) != nullptr)
 		delete menu;
 }
 
@@ -1469,15 +1487,18 @@ void OSRenderer::incrustSprite(const BGIncrust &incrust) {
  * @param character Character to draw
  * @param x Character coordinate
  * @param y Character coordinate
+ * @param draw Draw the character?
  */
-int OSRenderer::drawChar(char character, int x, int y) {
+int OSRenderer::drawChar(char character, int x, int y, bool draw) {
 	int width;
 
 	if (character == ' ') {
 		x += 5;
 	} else if ((width = g_cine->_textHandler.fontParamTable[(unsigned char)character].characterWidth)) {
 		int idx = g_cine->_textHandler.fontParamTable[(unsigned char)character].characterIdx;
-		drawSpriteRaw2(g_cine->_textHandler.textTable[idx][FONT_DATA], 0, FONT_WIDTH, FONT_HEIGHT, _backBuffer, x, y);
+		if (draw) {
+			drawSpriteRaw2(g_cine->_textHandler.textTable[idx][FONT_DATA], 0, FONT_WIDTH, FONT_HEIGHT, _backBuffer, x, y);
+		}
 		x += width + 1;
 	}
 
@@ -2114,7 +2135,7 @@ void drawSpriteRaw(const byte *spritePtr, const byte *maskPtr, int16 width, int1
 }
 
 void OSRenderer::drawSprite(overlay *overlayPtr, const byte *spritePtr, int16 width, int16 height, byte *page, int16 x, int16 y, byte transparentColor, byte bpp) {
-	byte *pMask = NULL;
+	byte *pMask = nullptr;
 
 	// draw the mask based on next objects in the list
 	Common::List<overlay>::iterator it;
@@ -2129,7 +2150,7 @@ void OSRenderer::drawSprite(overlay *overlayPtr, const byte *spritePtr, int16 wi
 		if ((pCurrentOverlay->type == 5) || ((pCurrentOverlay->type == 21) && (pCurrentOverlay->x == overlayPtr->objIdx))) {
 			AnimData *sprite = &g_cine->_animDataTable[g_cine->_objectTable[it->objIdx].frame];
 
-			if (pMask == NULL) {
+			if (pMask == nullptr) {
 				pMask = new byte[width * height];
 
 				for (int i = 0; i < height; i++) {

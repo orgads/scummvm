@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -27,7 +26,7 @@
 #include "scumm/charset.h"
 #include "scumm/file.h"
 #include "scumm/imuse/imuse.h"
-#include "scumm/imuse_digi/dimuse.h"
+#include "scumm/imuse_digi/dimuse_engine.h"
 #include "scumm/insane/insane.h"
 #include "scumm/object.h"
 #include "scumm/resource.h"
@@ -373,7 +372,7 @@ int ScummEngine_v6::findFreeArrayId() {
 ScummEngine_v6::ArrayHeader *ScummEngine_v6::getArray(int array) {
 	ArrayHeader *ah = (ArrayHeader *)getResourceAddress(rtString, readVar(array));
 	if (!ah)
-		return 0;
+		return nullptr;
 
 	if (_game.heversion == 0) {
 		// Workaround for a long standing bug where we saved array headers in native
@@ -1116,7 +1115,7 @@ void ScummEngine_v6::o6_setCameraAt() {
 
 void ScummEngine_v6::o6_loadRoom() {
 	int room = pop();
-	startScene(room, 0, 0);
+	startScene(room, nullptr, 0);
 	if (_game.heversion >= 61) {
 		setCameraAt(camera._cur.x, 0);
 	}
@@ -1152,7 +1151,7 @@ void ScummEngine_v6::o6_walkActorToObj() {
 		a->startWalkActor(x, y, dir);
 	} else {
 		a2 = derefActorSafe(obj, "o6_walkActorToObj(2)");
-		if (_game.id == GID_SAMNMAX && a2 == 0) {
+		if (_game.id == GID_SAMNMAX && a2 == nullptr) {
 			// WORKAROUND bug #801 SAM: Fish Farm. Note quite sure why it
 			// happens, whether it's normal or due to a bug in the ScummVM code.
 			debug(0, "o6_walkActorToObj: invalid actor %d", obj);
@@ -1421,7 +1420,7 @@ void ScummEngine_v6::o6_getAnimateVariable() {
 	// We fix that by forcing Pete to play the return animation
 	// regardless if the ball's foul or not.
 	if ((_game.id == GID_BASEBALL2001 || _game.id == GID_BASEBALL2003) && \
-	 		_currentRoom == ((_game.id == GID_BASEBALL2001) ? 4 : 3) && \
+			_currentRoom == ((_game.id == GID_BASEBALL2001) ? 4 : 3) && \
 			vm.slot[_currentScript].number == 2105 && \
 			a->_costume == ((_game.id == GID_BASEBALL2001) ? 107 : 99) && \
 			// Room variable 5 to ensure this workaround executes only once at
@@ -1828,7 +1827,7 @@ void ScummEngine_v6::o6_actorOps() {
 		a->_talkColor = pop();
 		break;
 	case 88:		// SO_ACTOR_NAME
-		loadPtrToResource(rtActorName, a->_number, NULL);
+		loadPtrToResource(rtActorName, a->_number, nullptr);
 		break;
 	case 89:		// SO_INIT_ANIMATION
 		a->_initFrame = pop();
@@ -1937,7 +1936,7 @@ void ScummEngine_v6::o6_verbOps() {
 		}
 		break;
 	case 125:		// SO_VERB_NAME
-		loadPtrToResource(rtVerb, slot, NULL);
+		loadPtrToResource(rtVerb, slot, nullptr);
 		vs->type = kTextVerbType;
 		vs->imgindex = 0;
 		break;
@@ -2375,7 +2374,8 @@ void ScummEngine_v6::o6_talkActor() {
 	// Original script did not check for VAR_EGO == 2 before executing
 	// a talkActor opcode.
 	if (_game.id == GID_TENTACLE && vm.slot[_currentScript].number == 307
-			&& VAR(VAR_EGO) != 2 && _actorToPrintStrFor == 2) {
+			&& VAR(VAR_EGO) != 2 && _actorToPrintStrFor == 2
+			&& _enableEnhancements) {
 		_scriptPointer += resStrLen(_scriptPointer) + 1;
 		return;
 	}
@@ -2586,7 +2586,7 @@ void ScummEngine_v7::o6_kernelSetFunctions() {
 		break;
 	case 16:
 	case 17:
-		enqueueText(getStringAddressVar(VAR_STRING2DRAW), args[3], args[4], args[2], args[1], (args[0] == 16));
+		enqueueText(getStringAddressVar(VAR_STRING2DRAW), args[3], args[4], args[2], args[1], (args[0] == 16) ? kStyleAlignCenter : kStyleAlignLeft);
 		break;
 	case 20:
 		_imuseDigital->setRadioChatterSFX(args[1]);
@@ -2860,6 +2860,20 @@ int ScummEngine::getKeyState(int key) {
 }
 
 void ScummEngine_v6::o6_delayFrames() {
+	// WORKAROUND:  At startup, Moonbase Commander will pause for 20 frames before
+	// showing the Infogrames logo.  The purpose of this break is to give time for the
+	// GameSpy Arcade application to fill with the Online game infomation.
+	// 
+	// [0000] (84) localvar2 = max(readConfigFile.number(":var263:","user","wait-for-gamespy"),10)
+	// [0029] (08) delayFrames((localvar2 * 2))
+	// 
+	// But since we don't support GameSpy and have our own Online support, this break
+	// has become redundant and only wastes time.
+	if (_game.id == GID_MOONBASE && vm.slot[_currentScript].number == 69) {
+		pop();
+		return;
+	}
+
 	ScriptSlot *ss = &vm.slot[_currentScript];
 	if (ss->delayFrameCount == 0) {
 		ss->delayFrameCount = pop();
@@ -3050,7 +3064,7 @@ void ScummEngine_v6::o6_getPixel() {
 
 	VirtScreen *vs = findVirtScreen(y);
 
-	if (vs == NULL || x > _screenWidth - 1 || x < 0) {
+	if (vs == nullptr || x > _screenWidth - 1 || x < 0) {
 		push(-1);
 		return;
 	}
@@ -3063,7 +3077,7 @@ void ScummEngine_v6::o6_setBoxSet() {
 	int arg = pop() - 1;
 
 	const byte *room = getResourceAddress(rtRoom, _roomResource);
-	const byte *boxd = NULL, *boxm = NULL;
+	const byte *boxd = nullptr, *boxm = nullptr;
 	int32 dboxSize, mboxSize;
 	int i;
 

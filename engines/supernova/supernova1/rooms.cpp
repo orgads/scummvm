@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -762,10 +761,10 @@ void ShipSleepCabin::animation() {
 void ShipSleepCabin::onEntrance() {
 	if (_gm->_state._dream && (_gm->_rooms[CAVE]->getObject(1)->_exitRoom == MEETUP3)) {
 		_vm->renderMessage(kStringShipSleepCabin14);
-		_gm->wait(_gm->_messageDuration, true);
+		_gm->wait(_gm->_messageDuration, true, true);
 		_vm->removeMessage();
 		_vm->renderMessage(kStringShipSleepCabin15);
-		_gm->wait(_gm->_messageDuration, true);
+		_gm->wait(_gm->_messageDuration, true, true);
 		_vm->removeMessage();
 		_vm->renderMessage(kStringShipSleepCabin16);
 		_gm->_state._dream = false;
@@ -2089,7 +2088,7 @@ bool ArsanoEntrance::interact(Action verb, Object &obj1, Object &obj2) {
 				_vm->renderMessage(kStringArsanoEntrance20);
 			else {
 				_vm->renderMessage(kStringArsanoEntrance21);
-				_gm->wait(_gm->_messageDuration, true);
+				_gm->wait(_gm->_messageDuration, true, true);
 				_vm->removeMessage();
 				_vm->renderMessage(kStringArsanoEntrance22);
 				_gm->takeObject(*getObject(16));
@@ -2136,7 +2135,7 @@ bool ArsanoEntrance::interact(Action verb, Object &obj1, Object &obj2) {
 			_gm->_rooms[AIRLOCK]->getObject(4)->setProperty(WORN);
 			_gm->_rooms[AIRLOCK]->getObject(5)->setProperty(WORN);
 			_gm->_rooms[AIRLOCK]->getObject(6)->setProperty(WORN);
-			_gm->wait(_gm->_messageDuration, true);
+			_gm->wait(_gm->_messageDuration, true, true);
 			_vm->removeMessage();
 		}
 		return false;
@@ -2456,7 +2455,7 @@ bool ArsanoRoger::interact(Action verb, Object &obj1, Object &obj2) {
 		_vm->_screen->setGuiBrightness(255);
 		_vm->paletteBrightness();
 		_vm->renderMessage(kStringArsanoRoger39);
-		_gm->wait(_gm->_messageDuration, true);
+		_gm->wait(_gm->_messageDuration, true, true);
 		_vm->removeMessage();
 		_vm->_screen->setGuiBrightness(0);
 		_vm->paletteBrightness();
@@ -2473,7 +2472,7 @@ bool ArsanoRoger::interact(Action verb, Object &obj1, Object &obj2) {
 		getObject(6)->_click = 7;
 		_vm->paletteFadeIn();
 		_vm->renderMessage(kStringArsanoRoger40);
-		_gm->wait(_gm->_messageDuration, true);
+		_gm->wait(_gm->_messageDuration, true, true);
 		_vm->removeMessage();
 	} else
 		return false;
@@ -2703,7 +2702,7 @@ bool ArsanoMeetup2::interact(Action verb, Object &obj1, Object &obj2) {
 				_gm->wait(18);
 				_vm->renderMessage(kStringArsanoMeetup2_12);
 				_gm->great(0);
-				_gm->wait(_gm->_messageDuration, true);
+				_gm->wait(_gm->_messageDuration, true, true);
 				_vm->removeMessage();
 				_vm->paletteFadeOut();
 				g_system->fillScreen(kColorBlack);
@@ -4017,7 +4016,7 @@ bool AxacussElevator::interact(Action verb, Object &obj1, Object &obj2) {
 		_vm->_screen->setGuiBrightness(255);
 		_vm->paletteBrightness();
 		_vm->renderMessage(kStringAxacussElevator_3);
-		_gm->wait(_gm->_messageDuration, true);
+		_gm->wait(_gm->_messageDuration, true, true);
 		_vm->removeMessage();
 		_vm->_screen->setGuiBrightness(0);
 		_vm->paletteBrightness();

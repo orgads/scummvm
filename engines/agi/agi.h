@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -400,7 +399,7 @@ struct AgiGame {
 
 	unsigned int numObjects;
 
-	bool controllerOccured[MAX_CONTROLLERS];  /**< keyboard keypress events */
+	bool controllerOccurred[MAX_CONTROLLERS];  /**< keyboard keypress events */
 	AgiControllerKeyMapping controllerKeyMapping[MAX_CONTROLLER_KEYMAPPINGS];
 
 	char strings[MAX_STRINGS + 1][MAX_STRINGLEN]; /**< strings */
@@ -495,8 +494,8 @@ struct AgiGame {
 
 		numObjects = 0;
 
-		for (uint16 i = 0; i < ARRAYSIZE(controllerOccured); i++) {
-			controllerOccured[i] = false;
+		for (uint16 i = 0; i < ARRAYSIZE(controllerOccurred); i++) {
+            controllerOccurred[i] = false;
 		}
 
 		// controllerKeyMapping defaulted by AgiControllerKeyMapping constructor
@@ -875,8 +874,7 @@ public:
 	void setVar(int16 varNr, byte newValue);
 
 private:
-	void setVolumeViaScripts(byte newVolume);
-	void setVolumeViaSystemSetting();
+	void applyVolumeToMixer();
 
 public:
 	void syncSoundSettings() override;

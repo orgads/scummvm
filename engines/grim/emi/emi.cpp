@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
+ * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -29,8 +28,8 @@
 #include "engines/grim/set.h"
 #include "engines/grim/gfx_base.h"
 #include "engines/grim/actor.h"
-#include "graphics/pixelbuffer.h"
 
+#include "graphics/surface.h"
 
 namespace Grim {
 
@@ -222,19 +221,19 @@ void EMIEngine::storeSaveGameImage(SaveGame *state) {
 	// copy the actual screenshot to the correct position
 	unsigned int texWidth = 256, texHeight = 128;
 	unsigned int size = texWidth * texHeight;
-	Graphics::PixelBuffer buffer = Graphics::PixelBuffer::createBuffer<565>(size, DisposeAfterUse::YES);
-	buffer.clear(size);
-	for (unsigned int j = 0; j < 120; j++) {
-		buffer.copyBuffer(j * texWidth, j * width, width, screenshot->getData(0));
-	}
+	Graphics::Surface tmp = screenshot->getData(0);
+	Graphics::Surface *buffer = tmp.scale(texWidth, texHeight, true);
+	buffer->convertToInPlace(Graphics::PixelFormat(2, 5, 6, 5, 0, 11, 5, 0, 0));
 
 	state->beginSection('SIMG');
-	uint16 *data = (uint16 *)buffer.getRawBuffer();
+	uint16 *data = (uint16 *)buffer->getPixels();
 	for (unsigned int l = 0; l < size; l++) {
 		state->writeLEUint16(data[l]);
 	}
 	state->endSection();
 	delete screenshot;
+	buffer->free();
+	delete buffer;
 }
 
 void EMIEngine::temporaryStoreSaveGameImage() {
@@ -315,8 +314,8 @@ bool EMIEngine::compareActor(const Actor *x, const Actor *y) {
 
 		Math::Vector3d xp(x->getWorldPos() - setup->_pos);
 		Math::Vector3d yp(y->getWorldPos() - setup->_pos);
-		camRot.inverseRotate(&xp);
-		camRot.inverseRotate(&yp);
+		xp = xp * camRot.getRotation();
+		yp = yp * camRot.getRotation();
 
 		if (fabs(xp.z() - yp.z()) < 0.001f) {
 			return x->getId() < y->getId();

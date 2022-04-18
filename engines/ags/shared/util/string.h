@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -93,7 +92,7 @@ public:
 	bool IsNullOrSpace() const;
 
 	// Those getters are for tests only, hence if AGS_PLATFORM_DEBUG
-#if AGS_PLATFORM_TEST
+#if defined(AGS_PLATFORM_TEST) && AGS_PLATFORM_TEST
 	inline const char *GetBuffer() const {
 		return _buf;
 	}
@@ -281,10 +280,15 @@ public:
 	// Appends another string to this string
 	void    Append(const String &str);
 	void    Append(const char *cstr) {
-		String str = String::Wrapper(cstr); Append(str);
+		String str = String::Wrapper(cstr);
+		Append(str);
 	}
+	void    Append(const char *cstr, size_t len);
 	// Appends a single character
 	void    AppendChar(char c);
+	// Appends a formatted string
+	void    AppendFmt(MSVC_PRINTF const char *fcstr, ...) GCC_PRINTF(2, 3);
+	void    AppendFmtv(const char *fcstr, va_list argptr);
 	// Clip* methods decrease the string, removing defined part
 	// Cuts off leftmost N characters
 	void    ClipLeft(size_t count);
@@ -327,9 +331,9 @@ public:
 	}
 	// Prepends a single character
 	void    PrependChar(char c);
-	// Replaces all occurences of one character with another character
+	// Replaces all occurrences of one character with another character
 	void    Replace(char what, char with);
-	// Replaces all occurences of one substring with another substring
+	// Replaces all occurrences of one substring with another substring
 	void    Replace(const String &what, const String &with);
 	void    Replace(const char *what, const char *with) {
 		String whats = String::Wrapper(what), withs = String::Wrapper(with); Replace(whats, withs);
@@ -342,6 +346,10 @@ public:
 	}
 	// Reverses the string
 	void    Reverse();
+	// Reverse the multibyte unicode string
+	// FIXME: name? invent some consistent naming for necessary multibyte funcs,
+	// proper utf8 support where necessary
+	void    ReverseUTF8();
 	// Overwrite the Nth character of the string; does not change string's length
 	void    SetAt(size_t index, char c);
 	// Makes a new string by copying up to N chars from C-string
@@ -414,6 +422,9 @@ public:
 	// Fixes compilation error in script_set
 	operator bool() const {
 		return !IsEmpty();
+	}
+	operator const char *() const {
+		return GetCStr();
 	}
 
 private:

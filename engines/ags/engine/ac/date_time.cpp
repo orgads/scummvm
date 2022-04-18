@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -127,17 +126,6 @@ void RegisterDateTimeAPI() {
 	ccAddExternalObjectFunction("DateTime::get_RawTime", Sc_DateTime_GetRawTime);
 	ccAddExternalObjectFunction("DateTime::get_Second", Sc_DateTime_GetSecond);
 	ccAddExternalObjectFunction("DateTime::get_Year", Sc_DateTime_GetYear);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("DateTime::get_Now", (void *)DateTime_Now);
-	ccAddExternalFunctionForPlugin("DateTime::get_DayOfMonth", (void *)DateTime_GetDayOfMonth);
-	ccAddExternalFunctionForPlugin("DateTime::get_Hour", (void *)DateTime_GetHour);
-	ccAddExternalFunctionForPlugin("DateTime::get_Minute", (void *)DateTime_GetMinute);
-	ccAddExternalFunctionForPlugin("DateTime::get_Month", (void *)DateTime_GetMonth);
-	ccAddExternalFunctionForPlugin("DateTime::get_RawTime", (void *)DateTime_GetRawTime);
-	ccAddExternalFunctionForPlugin("DateTime::get_Second", (void *)DateTime_GetSecond);
-	ccAddExternalFunctionForPlugin("DateTime::get_Year", (void *)DateTime_GetYear);
 }
 
 } // namespace AGS3

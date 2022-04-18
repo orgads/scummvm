@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -112,6 +111,7 @@ protected:
 	void setSubtitleSettingsState(bool enabled);
 
 	virtual void setupGraphicsTab();
+	void updateScaleFactors(uint32 tag);
 
 	bool loadMusicDeviceSetting(PopUpWidget *popup, Common::String setting, MusicType preferredType = MT_AUTO);
 	void saveMusicDeviceSetting(PopUpWidget *popup, Common::String setting);
@@ -129,8 +129,6 @@ private:
 	bool _enableControlSettings;
 
 	CheckboxWidget *_touchpadCheckbox;
-	CheckboxWidget *_onscreenCheckbox;
-	CheckboxWidget *_swapMenuAndBackBtnsCheckbox;
 
 	StaticTextWidget *_kbdMouseSpeedDesc;
 	SliderWidget *_kbdMouseSpeedSlider;
@@ -152,6 +150,8 @@ private:
 	PopUpWidget *_gfxPopUp;
 	StaticTextWidget *_stretchPopUpDesc;
 	PopUpWidget *_stretchPopUp;
+	StaticTextWidget *_scalerPopUpDesc;
+	PopUpWidget *_scalerPopUp, *_scaleFactorPopUp;
 	CheckboxWidget *_fullscreenCheckbox;
 	CheckboxWidget *_filteringCheckbox;
 	CheckboxWidget *_aspectCheckbox;
@@ -205,6 +205,7 @@ private:
 	//
 	int getSubtitleMode(bool subtitles, bool speech_mute);
 	bool _enableSubtitleSettings;
+	bool _enableSubtitleToggle;
 	StaticTextWidget *_subToggleDesc;
 	RadiobuttonGroup *_subToggleGroup;
 	RadiobuttonWidget *_subToggleSubOnly;
@@ -280,12 +281,16 @@ protected:
 	ButtonWidget	 *_savePathClearButton;
 	StaticTextWidget *_themePath;
 	ButtonWidget	 *_themePathClearButton;
+	StaticTextWidget *_iconPath;
+	ButtonWidget	 *_iconPathClearButton;
 	StaticTextWidget *_extraPath;
 	ButtonWidget	 *_extraPathClearButton;
 #ifdef DYNAMIC_MODULES
 	StaticTextWidget *_pluginsPath;
 	ButtonWidget	 *_pluginsPathClearButton;
 #endif
+	StaticTextWidget *_browserPath;
+	ButtonWidget	 *_browserPathClearButton;
 
 	void addPathsControls(GuiObject *boss, const Common::String &prefix, bool lowres);
 
@@ -312,6 +317,7 @@ protected:
 	PopUpWidget *_updatesPopUp;
 #endif
 
+	bool updateAutosavePeriod(int newValue);
 	void addMiscControls(GuiObject *boss, const Common::String &prefix, bool lowres);
 
 #ifdef USE_CLOUD
@@ -387,6 +393,10 @@ protected:
 	PopUpWidget *_ttsVoiceSelectionPopUp;
 
 	void addAccessibilityControls(GuiObject *boss, const Common::String &prefix);
+#endif
+#ifdef USE_DISCORD
+	bool _enableDiscordRpc;
+	CheckboxWidget *_discordRpcCheckbox;
 #endif
 };
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -124,7 +123,7 @@ void engine_setup_system_gamesize() {
 
 void engine_init_resolution_settings(const Size game_size) {
 	Debug::Printf("Initializing resolution settings");
-	_GP(usetup).textheight = getfontheight_outlined(0) + 1;
+	_GP(usetup).textheight = get_font_height_outlined(0) + 1;
 
 	Debug::Printf(kDbgMsg_Info, "Game native resolution: %d x %d (%d bit)%s", game_size.Width, game_size.Height, _GP(game).color_depth * 8,
 	              _GP(game).IsLegacyLetterbox() ? " letterbox-by-design" : "");
@@ -136,6 +135,23 @@ void engine_init_resolution_settings(const Size game_size) {
 	_GP(play).SetMainViewport(viewport);
 	_GP(play).SetUIViewport(viewport);
 	engine_setup_system_gamesize();
+}
+
+void engine_adjust_for_rotation_settings() {
+#if 0
+	switch (_GP(usetup).rotation) {
+	case ScreenRotation::kScreenRotation_Portrait:
+		SDL_SetHint(SDL_HINT_ORIENTATIONS, "Portrait PortraitUpsideDown");
+		break;
+	case ScreenRotation::kScreenRotation_Landscape:
+		SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+		break;
+	case kScreenRotation_Unlocked:
+		// let the user rotate as wished. No adjustment needed.
+	default:
+		break;
+	}
+#endif
 }
 
 // Setup gfx driver callbacks and options
@@ -171,7 +187,7 @@ void engine_pre_gfxsystem_screen_destroy() {
 
 // Setup color conversion parameters
 void engine_setup_color_conversions(int coldepth) {
-	// default shifts for how we store the sprite data1
+	// default shifts for how we store the sprite data
 	_G(_rgb_r_shift_32) = 16;
 	_G(_rgb_g_shift_32) = 8;
 	_G(_rgb_b_shift_32) = 0;
@@ -182,31 +198,10 @@ void engine_setup_color_conversions(int coldepth) {
 	_G(_rgb_g_shift_15) = 5;
 	_G(_rgb_b_shift_15) = 0;
 
-	// Most cards do 5-6-5 RGB, which is the format the files are saved in
-	// Some do 5-6-5 BGR, or  6-5-5 RGB, in which case convert the gfx
-	if ((coldepth == 16) && ((_G(_rgb_b_shift_16) != 0) || (_G(_rgb_r_shift_16) != 11))) {
-		_G(convert_16bit_bgr) = 1;
-		if (_G(_rgb_r_shift_16) == 10) {
-			// some very old graphics cards lie about being 16-bit when they
-			// are in fact 15-bit ... get around this
-			_G(places_r) = 3;
-			_G(places_g) = 3;
-		}
-	}
-	if (coldepth > 16) {
-		// when we're using 32-bit colour, it converts hi-color images
-		// the wrong way round - so fix that
-
-		_G(_rgb_r_shift_16) = 11;
-		_G(_rgb_g_shift_16) = 5;
-		_G(_rgb_b_shift_16) = 0;
-	} else if (coldepth == 16) {
-		// ensure that any 32-bit graphics displayed are converted
-		// properly to the current depth
-		_G(_rgb_r_shift_32) = 16;
-		_G(_rgb_g_shift_32) = 8;
-		_G(_rgb_b_shift_32) = 0;
-	} else if (coldepth < 16) {
+	// TODO: investigate if this is still necessary, and under which circumstances?
+	// the color conversion should likely be done when preparing textures or
+	// rendering to final output instead, not in the main engine code.
+	if (coldepth < 16) {
 		// ensure that any 32-bit graphics displayed are converted
 		// properly to the current depth
 #if AGS_PLATFORM_OS_WINDOWS
@@ -274,7 +269,7 @@ void engine_pre_gfxmode_mouse_cleanup() {
 // Fill in _GP(scsystem) struct with display mode parameters
 void engine_setup_scsystem_screen(const DisplayMode &dm) {
 	_GP(scsystem).coldepth = dm.ColorDepth;
-	_GP(scsystem).windowed = dm.Windowed;
+	_GP(scsystem).windowed = dm.IsWindowed();
 	_GP(scsystem).vsync = dm.Vsync;
 }
 
@@ -292,7 +287,6 @@ void engine_post_gfxmode_setup(const Size &init_desktop) {
 	engine_post_gfxmode_screen_setup(dm, has_driver_changed);
 	engine_post_gfxmode_mouse_setup(dm, init_desktop);
 
-	video_on_gfxmode_changed();
 	invalidate_screen();
 }
 

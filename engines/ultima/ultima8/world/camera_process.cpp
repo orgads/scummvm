@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,14 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "ultima/ultima8/world/camera_process.h"
 #include "ultima/ultima8/world/world.h"
 #include "ultima/ultima8/world/current_map.h"
+#include "ultima/ultima8/world/coord_utils.h"
 #include "ultima/ultima8/world/actors/actor.h"
 #include "ultima/ultima8/kernel/kernel.h"
 #include "ultima/ultima8/ultima8.h"
@@ -82,14 +82,15 @@ void CameraProcess::GetCameraLocation(int32 &x, int32 &y, int32 &z) {
 		World *world = World::get_instance();
 		CurrentMap *map = world->getCurrentMap();
 		int map_num = map->getNum();
-		Actor *av = getActor(1);
+		Actor *av = getControlledActor();
 
 		if (!av || av->getMapNum() != map_num) {
 			x = 8192;
 			y = 8192;
 			z = 64;
-		} else
+		} else {
 			av->getLocation(x, y, z);
+		}
 
 		if (_earthquake) {
 			x += 2 * _eqX + 4 * _eqY;
@@ -337,13 +338,10 @@ uint32 CameraProcess::I_moveTo(const uint8 *args, unsigned int argsize) {
 	ARG_UINT16(y);
 	ARG_UINT8(z);
 	if (argsize > 6) {
-		ARG_SINT16(unk);
+		ARG_NULL16(); // sint16? what is this?
 	}
 
-	if (GAME_IS_CRUSADER) {
-		x *= 2;
-		y *= 2;
-	}
+	World_FromUsecodeXY(x, y);
 	CameraProcess::SetCameraProcess(new CameraProcess(x, y, z));
 	return 0;
 }
@@ -360,13 +358,9 @@ uint32 CameraProcess::I_scrollTo(const uint8 *args, unsigned int /*argsize*/) {
 	ARG_UINT16(x);
 	ARG_UINT16(y);
 	ARG_UINT8(z);
-	ARG_SINT16(unk);
+	ARG_NULL16(); // some uint16?
 
-	if (GAME_IS_CRUSADER) {
-		x *= 2;
-		y *= 2;
-	}
-
+	World_FromUsecodeXY(x, y);
 	return CameraProcess::SetCameraProcess(new CameraProcess(x, y, z, 25));
 }
 
@@ -387,14 +381,14 @@ uint32 CameraProcess::I_getCameraX(const uint8 *args, unsigned int argsize) {
 	int32 x, y, z;
 	assert(GAME_IS_CRUSADER);
 	GetCameraLocation(x, y, z);
-	return x / 2;
+	return World_ToUsecodeCoord(x);
 }
 
 uint32 CameraProcess::I_getCameraY(const uint8 *args, unsigned int argsize) {
 	int32 x, y, z;
 	assert(GAME_IS_CRUSADER);
 	GetCameraLocation(x, y, z);
-	return y / 2;
+	return World_ToUsecodeCoord(y);
 }
 
 uint32 CameraProcess::I_getCameraZ(const uint8 *args, unsigned int argsize) {

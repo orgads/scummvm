@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,10 +37,12 @@ static const DebugChannelDef debugFlagList[] = {
 namespace CGE2 {
 
 #define GAMEOPTION_COLOR_BLIND_DEFAULT_OFF  GUIO_GAMEOPTIONS1
+#define GAMEOPTION_TTS_OBJECTS				GUIO_GAMEOPTIONS2
+#define GAMEOPTION_TTS_SPEECH				GUIO_GAMEOPTIONS3
 
 static const PlainGameDescriptor CGE2Games[] = {
 		{ "sfinx", "Sfinx" },
-		{ 0, 0 }
+		{ nullptr, nullptr }
 };
 
 static const ADGameDescription gameDescriptions[] = {
@@ -49,42 +50,49 @@ static const ADGameDescription gameDescriptions[] = {
 			"sfinx", "Freeware",
 			AD_ENTRY2s("vol.cat", "21197b287d397c53261b6616bf0dd880", 129024,
 					   "vol.dat", "de14291869a8eb7c2732ab783c7542ef", 34180844),
-			Common::PL_POL, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO1(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF)
+			Common::PL_POL, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO2(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF, GAMEOPTION_TTS_OBJECTS)
 		},
 
 		{
 			"sfinx", "Freeware v1.0",
 			AD_ENTRY2s("vol.cat", "aa402aed24a72c53a4d1211c456b79dd", 129024,
 					   "vol.dat", "5966ac26d91d664714349669f9dd09b5", 34180164),
-			Common::PL_POL, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO1(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF)
+			Common::PL_POL, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO2(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF, GAMEOPTION_TTS_OBJECTS)
 		},
 
 		{
 			"sfinx", "Freeware v1.1",
 			AD_ENTRY2s("vol.cat", "aa402aed24a72c53a4d1211c456b79dd", 129024,
 					   "vol.dat", "5966ac26d91d664714349669f9dd09b5", 34180367),
-			Common::PL_POL, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO1(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF)
+			Common::PL_POL, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO2(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF, GAMEOPTION_TTS_OBJECTS)
+		},
+
+		{
+			"sfinx", "Demo",
+			AD_ENTRY2s("vol.cat", "68271dc56aa37c4e83b792df69625a00", 24576,
+					   "vol.dat", "989c26861bc56fafa3a85784e374ca15", 2710971),
+			Common::PL_POL, Common::kPlatformDOS, ADGF_DEMO, GUIO3(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF, GAMEOPTION_TTS_OBJECTS, GAMEOPTION_TTS_SPEECH)
 		},
 
 		{
 			"sfinx", "Freeware v0.3",
 			AD_ENTRY2s("vol.cat", "f158e469dccbebc5a632eb848df89779", 129024,
 					   "vol.dat", "d40a6b4ae173d6930be54ba56bee15d5", 34183430),
-			Common::EN_ANY, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO1(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF)
+			Common::EN_ANY, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO3(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF, GAMEOPTION_TTS_OBJECTS, GAMEOPTION_TTS_SPEECH)
 		},
 
 		{
 			"sfinx", "Freeware v1.0",
 			AD_ENTRY2s("vol.cat", "f158e469dccbebc5a632eb848df89779", 129024,
 					   "vol.dat", "d40a6b4ae173d6930be54ba56bee15d5", 34183443),
-			Common::EN_ANY, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO1(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF)
+			Common::EN_ANY, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO3(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF, GAMEOPTION_TTS_OBJECTS, GAMEOPTION_TTS_SPEECH)
 		},
 
 		{
 			"sfinx", "Freeware v1.1",
 			AD_ENTRY2s("vol.cat", "f158e469dccbebc5a632eb848df89779", 129024,
 					   "vol.dat", "d40a6b4ae173d6930be54ba56bee15d5", 34182773),
-			Common::EN_ANY, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO1(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF)
+			Common::EN_ANY, Common::kPlatformDOS, ADGF_NO_FLAGS, GUIO3(GAMEOPTION_COLOR_BLIND_DEFAULT_OFF, GAMEOPTION_TTS_OBJECTS, GAMEOPTION_TTS_SPEECH)
 		},
 
 		AD_TABLE_END_MARKER
@@ -100,6 +108,28 @@ static const ADExtraGuiOptionsMap optionsList[] = {
 				false
 			}
 		},
+
+#ifdef USE_TTS
+	{
+		GAMEOPTION_TTS_OBJECTS,
+		{
+			_s("Enable Text to Speech for Objects and Options"),
+			_s("Use TTS to read the descriptions (if TTS is available)"),
+			"tts_enabled_objects",
+			false
+		}
+	},
+
+	{
+		GAMEOPTION_TTS_SPEECH,
+		{
+			_s("Enable Text to Speech for Subtitles"),
+			_s("Use TTS to read the subtitles (if TTS is available)"),
+			"tts_enabled_speech",
+			false
+		}
+	},
+#endif
 
 		AD_EXTRA_GUI_OPTIONS_TERMINATOR
 };
@@ -131,7 +161,7 @@ public:
 static ADGameDescription s_fallbackDesc = {
 	"sfinx",
 	"Unknown version",
-	AD_ENTRY1(0, 0), // This should always be AD_ENTRY1(0, 0) in the fallback descriptor
+	AD_ENTRY1(nullptr, nullptr), // This should always be AD_ENTRY1(0, 0) in the fallback descriptor
 	Common::UNK_LANG,
 	Common::kPlatformDOS,
 	ADGF_NO_FLAGS,
@@ -139,8 +169,8 @@ static ADGameDescription s_fallbackDesc = {
 };
 
 static const ADFileBasedFallback fileBasedFallback[] = {
-	{ &s_fallbackDesc, { "vol.cat", "vol.dat", 0 } },
-	{ 0, { 0 } }
+	{ &s_fallbackDesc, { "vol.cat", "vol.dat", nullptr } },
+	{ nullptr, { nullptr } }
 };
 
 // This fallback detection looks identical to the one used for CGE. In fact, the difference resides

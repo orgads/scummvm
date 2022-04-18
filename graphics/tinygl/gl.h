@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,14 +15,13 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 /*
- * This file is based on, or a modified version of code from TinyGL (C) 1997-1998 Fabrice Bellard,
- * which is licensed under the zlib-license (see LICENSE).
+ * This file is based on, or a modified version of code from TinyGL (C) 1997-2022 Fabrice Bellard,
+ * which is licensed under the MIT license (see LICENSE).
  * It also has modifications by the ResidualVM-team, which are covered under the GPLv2 (or later).
  */
 
@@ -328,6 +327,8 @@ enum {
 	TGL_REPLACE                     = 0x1E01,
 	TGL_INCR                        = 0x1E02,
 	TGL_DECR                        = 0x1E03,
+	TGL_INCR_WRAP                   = 0x8507,
+	TGL_DECR_WRAP                   = 0x8508,
 
 	// Buffers, Pixel Drawing/Reading
 	TGL_NONE                        = 0,
@@ -537,8 +538,8 @@ enum {
 	TGL_NEAREST                     = 0x2600,
 	TGL_REPEAT                      = 0x2901,
 	TGL_CLAMP                       = 0x2900,
-	TGL_CLAMP_TO_EDGE		= 0x812F,
-	TGL_MIRRORED_REPEAT		= 0x8370,
+	TGL_CLAMP_TO_EDGE               = 0x812F,
+	TGL_MIRRORED_REPEAT             = 0x8370,
 	TGL_S                           = 0x2000,
 	TGL_T                           = 0x2001,
 	TGL_R                           = 0x2002,
@@ -593,6 +594,8 @@ enum {
 	TGL_UNSIGNED_INT_8_8_8_8_REV    = 0x8367,
 	TGL_UNSIGNED_SHORT_5_5_5_1      = 0x8034,
 	TGL_UNSIGNED_SHORT_1_5_5_5_REV  = 0x8366,
+	TGL_UNSIGNED_SHORT_4_4_4_4      = 0x8033,
+	TGL_UNSIGNED_SHORT_4_4_4_4_REV  = 0x8365,
 
 	// Utility
 	TGL_VENDOR                      = 0x1F00,
@@ -705,42 +708,45 @@ typedef unsigned int    TGLuint;    // 4-byte unsigned
 typedef float           TGLfloat;   // single precision float
 typedef double          TGLdouble;  // double precision float
 typedef int             TGLsizei;
+typedef unsigned int    TGLbitfield;
+typedef float           TGLclampf;
+typedef double          TGLclampd;
 
 // functions
 
-void tglEnable(int code);
-void tglDisable(int code);
+void tglEnable(TGLenum code);
+void tglDisable(TGLenum code);
 
-void tglShadeModel(int mode);
-void tglCullFace(int mode);
-void tglPolygonMode(int face, int mode);
+void tglShadeModel(TGLenum mode);
+void tglCullFace(TGLenum mode);
+void tglPolygonMode(TGLenum face, TGLenum mode);
 
-void tglBegin(int type);
+void tglBegin(TGLenum type);
 void tglEnd();
 
-#define PROTO_GL1(name)				\
-void tgl ## name ## 1f(float);		\
-void tgl ## name ## 1d(double);		\
-void tgl ## name ## 1fv(const float *);	\
-void tgl ## name ## 1dv(const double *);
+#define PROTO_GL1(name)                   \
+void tgl ## name ## 1f(TGLfloat);            \
+void tgl ## name ## 1d(TGLdouble);           \
+void tgl ## name ## 1fv(const TGLfloat *);   \
+void tgl ## name ## 1dv(const TGLdouble *);
 
-#define PROTO_GL2(name)					\
-void tgl ## name ## 2f(float, float);	\
-void tgl ## name ## 2d(double, double);	\
-void tgl ## name ## 2fv(const float *);		\
-void tgl ## name ## 2dv(const double *);
+#define PROTO_GL2(name)                   \
+void tgl ## name ## 2f(TGLfloat, TGLfloat);     \
+void tgl ## name ## 2d(TGLdouble, TGLdouble);   \
+void tgl ## name ## 2fv(const TGLfloat *);   \
+void tgl ## name ## 2dv(const TGLdouble *);
 
-#define PROTO_GL3(name)							\
-void tgl ## name ## 3f(float, float, float);	\
-void tgl ## name ## 3d(double, double, double);	\
-void tgl ## name ## 3fv(const float *);				\
-void tgl ## name ## 3dv(const double *);
+#define PROTO_GL3(name)                         \
+void tgl ## name ## 3f(TGLfloat, TGLfloat, TGLfloat);    \
+void tgl ## name ## 3d(TGLdouble, TGLdouble, TGLdouble); \
+void tgl ## name ## 3fv(const TGLfloat *);         \
+void tgl ## name ## 3dv(const TGLdouble *);
 
-#define PROTO_GL4(name)									\
-void tgl ## name ## 4f(float, float, float, float);		\
-void tgl ## name ## 4d(double, double, double, double);	\
-void tgl ## name ## 4fv(const float *);						\
-void tgl ## name ## 4dv(const double *);
+#define PROTO_GL4(name)                                 \
+void tgl ## name ## 4f(TGLfloat, TGLfloat, TGLfloat, TGLfloat);     \
+void tgl ## name ## 4d(TGLdouble, TGLdouble, TGLdouble, TGLdouble); \
+void tgl ## name ## 4fv(const TGLfloat *);                 \
+void tgl ## name ## 4dv(const TGLdouble *);
 
 PROTO_GL2(Vertex)
 PROTO_GL3(Vertex)
@@ -748,9 +754,8 @@ PROTO_GL4(Vertex)
 
 PROTO_GL3(Color)
 PROTO_GL4(Color)
-void tglColor3ub(unsigned char r, unsigned char g, unsigned char b);
-void tglColor4ub(unsigned char r, unsigned char g, unsigned char b,
-				 unsigned char a);
+void tglColor3ub(TGLubyte r, TGLubyte g, TGLubyte b);
+void tglColor4ub(TGLubyte r, TGLubyte g, TGLubyte b, TGLubyte a);
 
 PROTO_GL3(Normal)
 
@@ -759,104 +764,99 @@ PROTO_GL2(TexCoord)
 PROTO_GL3(TexCoord)
 PROTO_GL4(TexCoord)
 
-void tglEdgeFlag(int flag);
+void tglEdgeFlag(TGLboolean flag);
 
 // matrix
-void tglMatrixMode(int mode);
-void tglLoadMatrixf(const float *m);
+void tglMatrixMode(TGLenum mode);
+void tglLoadMatrixf(const TGLfloat *m);
 void tglLoadIdentity();
-void tglMultMatrixf(const float *m);
+void tglMultMatrixf(const TGLfloat *m);
 void tglPushMatrix();
 void tglPopMatrix();
-void tglRotatef(float angle, float x, float y, float z);
-void tglTranslatef(float x, float y, float z);
-void tglScalef(float x, float y, float z);
+void tglRotatef(TGLfloat angle, TGLfloat x, TGLfloat y, TGLfloat z);
+void tglTranslatef(TGLfloat x, TGLfloat y, TGLfloat z);
+void tglScalef(TGLfloat x, TGLfloat y, TGLfloat z);
 
-void tglViewport(int x, int y, int width, int height);
-void tglFrustum(double left, double right, double bottom, double top,
-				double nearv, double farv);
-void tglOrtho(double left, double right, double bottom, double top, double zNear, double zFar);
+void tglViewport(TGLint x, TGLint y, TGLsizei width, TGLsizei height);
+void tglFrustum(TGLdouble left, TGLdouble right, TGLdouble bottom, TGLdouble top,
+                TGLdouble nearv, TGLdouble farv);
+void tglOrtho(TGLdouble left, TGLdouble right, TGLdouble bottom, TGLdouble top,
+              TGLdouble zNear, TGLdouble zFar);
 
 // lists
-unsigned int tglGenLists(int range);
-int tglIsList(unsigned int list);
-void tglNewList(unsigned int list, int mode);
+TGLuint tglGenLists(TGLsizei range);
+TGLboolean tglIsList(TGLuint list);
+void tglNewList(TGLuint list, TGLenum mode);
 void tglEndList();
-void tglCallList(unsigned int list);
+void tglCallList(TGLuint list);
 
 // clear
-void tglClear(int mask);
-void tglClearColor(float r, float g, float b, float a);
-void tglClearDepth(double depth);
+void tglClear(TGLbitfield mask);
+void tglClearColor(TGLfloat r, TGLfloat g, TGLfloat b, TGLfloat a);
+void tglClearDepth(TGLdouble depth);
+void tglClearStencil(TGLint s);
+
+// stencil buffer
+void tglStencilFunc(TGLenum func, TGLint ref, TGLuint mask);
+void tglStencilOp(TGLenum sfail, TGLenum dpfail, TGLenum dppass);
+void tglStencilMask(TGLuint mask);
 
 // selection
-int tglRenderMode(int mode);
-void tglSelectBuffer(int size, unsigned int *buf);
+int tglRenderMode(TGLenum mode);
+void tglSelectBuffer(TGLsizei size, TGLuint *buffer);
 
 void tglInitNames();
-void tglPushName(unsigned int name);
+void tglPushName(TGLuint name);
 void tglPopName();
-void tglLoadName(unsigned int name);
+void tglLoadName(TGLuint name);
 
 // textures
-void tglGenTextures(int n, unsigned int *textures);
-void tglDeleteTextures(int n, const unsigned int *textures);
-void tglBindTexture(int target, int texture);
-void tglTexImage2D(int target, int level, int components,
-				   int width, int height, int border,
-				   int format, int type, void *pixels);
-void tglTexEnvi(int target, int pname, int param);
-void tglTexParameteri(int target, int pname, int param);
-void tglPixelStorei(int pname, int param);
+void tglGenTextures(TGLsizei n, TGLuint *textures);
+void tglDeleteTextures(TGLsizei n, const TGLuint *textures);
+void tglBindTexture(TGLenum target, TGLuint texture);
+void tglTexImage2D(TGLenum target, TGLint level, TGLint internalformat,
+                   TGLsizei width, TGLsizei height, TGLint border,
+                   TGLenum format, TGLenum type, const void *pixels);
+void tglTexEnvi(TGLenum target, TGLenum pname, TGLint param);
+void tglTexParameteri(TGLenum target, TGLenum pname, TGLint param);
+void tglPixelStorei(TGLenum pname, TGLint param);
+
+// material
+void tglMaterialfv(TGLenum mode, TGLenum type, const TGLfloat *v);
+void tglMaterialf(TGLenum mode, TGLenum type, TGLfloat v);
+void tglColorMaterial(TGLenum mode, TGLenum type);
 
 // lighting
+void tglLightfv(TGLenum light, TGLenum type, const TGLfloat *v);
+void tglLightf(TGLenum light, TGLenum type, const TGLfloat v);
+void tglLightModeli(TGLenum pname, TGLint param);
+void tglLightModelfv(TGLenum pname, const TGLfloat *param);
 
-void tglMaterialfv(int mode, int type, const float *v);
-void tglMaterialf(int mode, int type, float v);
-void tglColorMaterial(int mode, int type);
-
-void tglLightfv(int light, int type, const float *v);
-void tglLightf(int light, int type, const float v);
-void tglLightModeli(int pname, int param);
-void tglLightModelfv(int pname, const float *param);
 
 // misc
-
 void tglFlush();
-void tglHint(int target, int mode);
-void tglGetIntegerv(int pname, int *params);
-void tglGetFloatv(int pname, float *v);
-void tglFrontFace(int mode);
+void tglHint(TGLenum target, TGLenum mode);
+void tglGetIntegerv(TGLenum pname, TGLint *data);
+void tglGetFloatv(TGLenum pname, TGLfloat *data);
+void tglFrontFace(TGLenum mode);
 void tglColorMask(TGLboolean r, TGLboolean g, TGLboolean b, TGLboolean a);
-void tglDepthMask(int enableWrite);
+void tglDepthMask(TGLboolean flag);
 void tglBlendFunc(TGLenum sfactor, TGLenum dfactor);
-void tglAlphaFunc(TGLenum func, float ref);
+void tglAlphaFunc(TGLenum func, TGLclampf ref);
 void tglDepthFunc(TGLenum func);
 
-void tglSetShadowMaskBuf(unsigned char *buf);
-void tglSetShadowColor(unsigned char r, unsigned char g, unsigned char b);
-
-// opengl 1.2 arrays
+// arrays
 void tglEnableClientState(TGLenum array);
 void tglDisableClientState(TGLenum array);
 void tglArrayElement(TGLint i);
 void tglDrawArrays(TGLenum mode, TGLint first, TGLsizei count);
+void tglDrawElements(TGLenum mode, TGLsizei count, TGLenum type, const TGLvoid *indices);
 void tglVertexPointer(TGLint size, TGLenum type, TGLsizei stride, const TGLvoid *pointer);
 void tglColorPointer(TGLint size, TGLenum type, TGLsizei stride, const TGLvoid *pointer);
 void tglNormalPointer(TGLenum type, TGLsizei stride, const TGLvoid *pointer);
 void tglTexCoordPointer(TGLint size, TGLenum type, TGLsizei stride, const TGLvoid *pointer);
 
-// opengl 1.2 polygon offset
+// polygon offset
 void tglPolygonOffset(TGLfloat factor, TGLfloat units);
-
-void tglEnableDirtyRects(bool enable);
-
-void tglDebug(int mode);
-
-namespace TinyGL {
-
-void tglPresentBuffer();
-
-} // end of namespace TinyGL
 
 #endif

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -78,11 +77,10 @@ class Debug {
 private:
 	TwinEEngine *_engine;
 
-	DebugWindowStruct debugWindows[10];
-	int32 numDebugWindows = 0;
+	DebugWindowStruct _debugWindows[10];
+	int32 _numDebugWindows = 0;
 	void debugFillButton(int32 x, int32 y, int32 width, int32 height, int8 color);
 	void debugDrawButton(const Common::Rect &rect, const char *text, int32 textLeft, int32 textTop, int32 isActive, int8 color);
-	void debugDrawWindowBox(const Common::Rect &rect, int32 alpha);
 	void debugDrawWindowButtons(int32 w);
 	void debugDrawWindow(int32 w);
 	int32 debugTypeUseMenu(int32 type);

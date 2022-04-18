@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -39,10 +38,9 @@
 #include "backends/keymapper/keymap.h"
 #include "backends/keymapper/standard-actions.h"
 
-#include "graphics/pixelbuffer.h"
 #include "graphics/renderer.h"
 
-#if defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS) || defined(USE_GLES2)
+#if defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS)
 #include "graphics/opengl/context.h"
 #endif
 
@@ -159,6 +157,7 @@ GrimEngine::GrimEngine(OSystem *syst, uint32 gameFlags, GrimGameType gameType, C
 	_fps[0] = 0;
 	_iris = new Iris();
 	_buildActiveActorsList = false;
+	_justSaveLoaded = false;
 
 	Color c(0, 0, 0);
 
@@ -193,7 +192,7 @@ GrimEngine::GrimEngine(OSystem *syst, uint32 gameFlags, GrimGameType gameType, C
 
 
 	//Remastered:
-	if (getGameFlags() & ADGF_REMASTERED) {
+	if (isRemastered()) {
 		for (uint32 i = 0; i < kNumCutscenes; i++) {
 			_cutsceneEnabled[i] = false;
 		}
@@ -260,7 +259,7 @@ void GrimEngine::clearPools() {
 }
 
 LuaBase *GrimEngine::createLua() {
-	if (getGameFlags() == ADGF_REMASTERED) {
+	if (isRemastered()) {
 		return new Lua_Remastered();
 	} else {
 		return new Lua_V1();
@@ -269,8 +268,29 @@ LuaBase *GrimEngine::createLua() {
 
 GfxBase *GrimEngine::createRenderer(int screenW, int screenH) {
 	Common::String rendererConfig = ConfMan.get("renderer");
-	Graphics::RendererType desiredRendererType = Graphics::parseRendererTypeCode(rendererConfig);
-	Graphics::RendererType matchingRendererType = Graphics::getBestMatchingAvailableRendererType(desiredRendererType);
+	Graphics::RendererType desiredRendererType = Graphics::Renderer::parseTypeCode(rendererConfig);
+	uint32 availableRendererTypes = Graphics::Renderer::getAvailableTypes();
+
+	availableRendererTypes &=
+#if defined(USE_OPENGL_GAME)
+			Graphics::kRendererTypeOpenGL |
+#endif
+#if defined(USE_OPENGL_SHADERS)
+			Graphics::kRendererTypeOpenGLShaders |
+#endif
+#if defined(USE_TINYGL)
+			Graphics::kRendererTypeTinyGL |
+#endif
+			0;
+
+	// For Grim Fandango, OpenGL renderer without shaders is preferred if available
+	if (desiredRendererType == Graphics::kRendererTypeDefault &&
+		(availableRendererTypes & Graphics::kRendererTypeOpenGL) &&
+	    getGameType() == GType_GRIM) {
+		availableRendererTypes &= ~Graphics::kRendererTypeOpenGLShaders;
+	}
+
+	Graphics::RendererType matchingRendererType = Graphics::Renderer::getBestMatchingType(desiredRendererType, availableRendererTypes);
 
 	_softRenderer = matchingRendererType == Graphics::kRendererTypeTinyGL;
 	if (!_softRenderer) {
@@ -279,39 +299,26 @@ GfxBase *GrimEngine::createRenderer(int screenW, int screenH) {
 		initGraphics(screenW, screenH, nullptr);
 	}
 
-#if defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS) || defined(USE_GLES2)
-	bool backendCapableOpenGL = g_system->hasFeature(OSystem::kFeatureOpenGLForGame);
-#endif
-
-#if defined(USE_OPENGL_GAME)
-	// Check the OpenGL context actually supports shaders
-	if (backendCapableOpenGL && matchingRendererType == Graphics::kRendererTypeOpenGLShaders && !OpenGLContext.shadersSupported) {
-		matchingRendererType = Graphics::kRendererTypeOpenGL;
-	}
-#endif
-
-	if (matchingRendererType != desiredRendererType && desiredRendererType != Graphics::kRendererTypeDefault) {
-		// Display a warning if unable to use the desired renderer
-		warning("Unable to create a '%s' renderer", rendererConfig.c_str());
-	}
-
 	GfxBase *renderer = nullptr;
-#if defined(USE_GLES2) || defined(USE_OPENGL_SHADERS)
-	if (backendCapableOpenGL && matchingRendererType == Graphics::kRendererTypeOpenGLShaders) {
+#if defined(USE_OPENGL_SHADERS)
+	if (matchingRendererType == Graphics::kRendererTypeOpenGLShaders) {
 		renderer = CreateGfxOpenGLShader();
 	}
 #endif
-#if defined(USE_OPENGL_GAME) && !defined(USE_GLES2)
-	if (backendCapableOpenGL && matchingRendererType == Graphics::kRendererTypeOpenGL) {
+#if defined(USE_OPENGL_GAME)
+	if (matchingRendererType == Graphics::kRendererTypeOpenGL) {
 		renderer = CreateGfxOpenGL();
 	}
 #endif
+#if defined(USE_TINYGL)
 	if (matchingRendererType == Graphics::kRendererTypeTinyGL) {
 		renderer = CreateGfxTinyGL();
 	}
+#endif
 
 	if (!renderer) {
-		error("Unable to create a '%s' renderer", rendererConfig.c_str());
+		/* We should never end up here, getBestMatchingRendererType would have failed before */
+		error("Unable to create a renderer");
 	}
 
 	renderer->setupScreen(screenW, screenH);
@@ -345,7 +352,7 @@ Common::Error GrimEngine::run() {
 	}
 
 	ConfMan.registerDefault("check_gamedata", true);
-	if (ConfMan.getBool("check_gamedata") && getGameFlags() != ADGF_REMASTERED && false) { // HACK
+	if (ConfMan.getBool("check_gamedata") && !isRemastered() && false) { // HACK
 		MD5CheckDialog d;
 		if (!d.runModal()) {
 			Common::U32String confirmString = Common::U32String::format(_(
@@ -355,7 +362,7 @@ Common::Error GrimEngine::run() {
 			GType_MONKEY4 == getGameType() ? "Escape From Monkey Island" : "Grim Fandango"
 			 );
 			GUI::MessageDialog msg(confirmString, _("Yes"), _("No"));
-			if (!msg.runModal()) {
+			if (msg.runModal() != GUI::kMessageOK) {
 				return Common::kUserCanceled;
 			}
 		}
@@ -377,7 +384,7 @@ Common::Error GrimEngine::run() {
 	if (getGameType() == GType_GRIM) {
 		g_imuse = new Imuse(20, demo);
 		g_emiSound = nullptr;
-		if (g_grim->getGameFlags() & ADGF_REMASTERED) {
+		if (g_grim->isRemastered()) {
 			// This must happen here, since we need the resource loader set up.
 			_commentary = new Commentary();
 		}
@@ -387,7 +394,7 @@ Common::Error GrimEngine::run() {
 	}
 	g_sound = new SoundPlayer();
 
-	if (getGameType() == GType_GRIM && (g_grim->getGameFlags() & ADGF_REMASTERED)) {
+	if (getGameType() == GType_GRIM && g_grim->isRemastered()) {
 		g_driver = createRenderer(1600, 900);
 	} else if (ConfMan.hasKey("gameWidth") && ConfMan.hasKey("gameHeight")) {
 		g_driver->setupScreen(ConfMan.getInt("gameWidth"), ConfMan.getInt("gameHeight"));
@@ -486,22 +493,22 @@ Common::KeymapArray GrimEngine::initKeymapsGrim(const char *target) {
 	engineKeyMap->addAction(act);
 
 	act = new Action("EXAM", _("Examine"));
-	act->setKeyEvent(KeyState(KEYCODE_s, 'e'));
+	act->setKeyEvent(KeyState(KEYCODE_e, 'e'));
 	act->addDefaultInputMapping("JOY_X");
 	engineKeyMap->addAction(act);
 
 	act = new Action("BUSE", _("Use/Talk"));
-	act->setKeyEvent(KeyState(KEYCODE_w, 'u'));
+	act->setKeyEvent(KeyState(KEYCODE_u, 'u'));
 	act->addDefaultInputMapping("JOY_A");
 	engineKeyMap->addAction(act);
 
 	act = new Action("PICK", _("Pick up/Put away"));
-	act->setKeyEvent(KeyState(KEYCODE_a, 'p'));
+	act->setKeyEvent(KeyState(KEYCODE_p, 'p'));
 	act->addDefaultInputMapping("JOY_B");
 	engineKeyMap->addAction(act);
 
 	act = new Action("INVT", _("Inventory"));
-	act->setKeyEvent(KeyState(KEYCODE_d, 'i'));
+	act->setKeyEvent(KeyState(KEYCODE_i, 'i'));
 	act->addDefaultInputMapping("JOY_Y");
 	engineKeyMap->addAction(act);
 
@@ -526,6 +533,10 @@ Common::KeymapArray GrimEngine::initKeymapsGrim(const char *target) {
 	act = new Action("GMNU", _("Menu"));
 	act->setKeyEvent(KeyState(KEYCODE_F1));
 	act->addDefaultInputMapping("JOY_GUIDE");
+	engineKeyMap->addAction(act);
+
+	act = new Action("PAUSE", _("Pause"));
+	act->setKeyEvent(KeyState(KEYCODE_PAUSE));
 	engineKeyMap->addAction(act);
 
 	return Keymap::arrayOf(engineKeyMap);
@@ -578,7 +589,7 @@ Common::KeymapArray GrimEngine::initKeymapsEMI(const char *target) {
 	engineKeyMap->addAction(act);
 
 	act = new Action("EXAM", _("Examine/Look"));
-	act->setKeyEvent(KeyState(KEYCODE_l, 'e'));
+	act->setKeyEvent(KeyState(KEYCODE_e, 'e'));
 	act->addDefaultInputMapping("JOY_X");
 	engineKeyMap->addAction(act);
 
@@ -588,7 +599,7 @@ Common::KeymapArray GrimEngine::initKeymapsEMI(const char *target) {
 	engineKeyMap->addAction(act);
 
 	act = new Action("PICK", _("Pick up/Put away"));
-	act->setKeyEvent(KeyState(KEYCODE_KP_PLUS, 'p'));
+	act->setKeyEvent(KeyState(KEYCODE_KP_PLUS, '+'));
 	act->addDefaultInputMapping("JOY_B");
 	engineKeyMap->addAction(act);
 
@@ -1197,6 +1208,13 @@ void GrimEngine::mainLoop() {
 			g_imuseState = -1;
 		}
 
+#if defined(__EMSCRIPTEN__)
+		// If SDL_HINT_EMSCRIPTEN_ASYNCIFY is enabled, SDL pauses the application and gives
+		// back control to the browser automatically by calling emscripten_sleep via SDL_Delay.
+		// Without this the page would completely lock up.
+		g_system->delayMillis(0);
+#endif
+
 		uint32 endTime = g_system->getMillis();
 		if (startTime > endTime)
 			continue;
@@ -1303,6 +1321,8 @@ void GrimEngine::savegameRestore() {
 
 	delete _savedState;
 
+	_justSaveLoaded = true;
+
 	//Re-read the values, since we may have been in some state that changed them when loading the savegame,
 	//e.g. running a cutscene, which sets the sfx volume to 0.
 	_mixer->setVolumeForSoundType(Audio::Mixer::kSFXSoundType, ConfMan.getInt("sfx_volume"));
@@ -1362,7 +1382,7 @@ void GrimEngine::restoreGRIM() {
 }
 
 void GrimEngine::storeSaveGameMetadata(SaveGame *state) {
-	if (!(g_grim->getGameFlags() & ADGF_REMASTERED)) {
+	if (!g_grim->isRemastered()) {
 		return;
 	}
 	state->beginSection('META');
@@ -1385,7 +1405,7 @@ void GrimEngine::storeSaveGameImage(SaveGame *state) {
 		int size = screenshot->getWidth() * screenshot->getHeight();
 		screenshot->setActiveImage(0);
 		screenshot->getBitmapData()->convertToColorFormat(image_format);
-		uint16 *data = (uint16 *)screenshot->getData().getRawBuffer();
+		const uint16 *data = (const uint16 *)screenshot->getData().getPixels();
 		for (int l = 0; l < size; l++) {
 			state->writeLEUint16(data[l]);
 		}
@@ -1688,9 +1708,8 @@ void GrimEngine::setMode(EngineMode mode) {
 }
 
 void GrimEngine::clearEventQueue() {
-	Common::Event event;
-	while (g_system->getEventManager()->pollEvent(event)) {
-	}
+	g_system->getEventManager()->purgeKeyboardEvents();
+	g_system->getEventManager()->purgeMouseEvents();
 
 	for (int i = 0; i < KEYCODE_EXTRA_LAST; ++i) {
 		_controlsState[i] = false;

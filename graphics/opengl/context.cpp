@@ -1,22 +1,21 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
+ * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -29,7 +28,37 @@
 
 #include "graphics/opengl/system_headers.h"
 
-#if defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS) || defined(USE_GLES2)
+#if defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS)
+
+#ifdef USE_GLAD
+
+#ifdef SDL_BACKEND
+#include "backends/platform/sdl/sdl-sys.h"
+
+static GLADapiproc loadFunc(void *userptr, const char *name) {
+	return (GLADapiproc)SDL_GL_GetProcAddress(name);
+}
+
+#elif defined(__ANDROID__)
+// To keep includes light, don't include EGL here and don't include Android headers
+void *androidGLgetProcAddress(const char *name);
+
+static GLADapiproc loadFunc(void *userptr, const char *name) {
+	return (GLADapiproc)androidGLgetProcAddress(name);
+}
+
+#elif defined(IPHONE_IOS7)
+#include "backends/platform/ios7/ios7_common.h"
+
+static GLADapiproc loadFunc(void *userptr, const char *name) {
+	return (GLADapiproc)iOS7_getProcAddress(name);
+}
+
+#else
+#error Not implemented
+#endif
+
+#endif
 
 namespace Common {
 DECLARE_SINGLETON(OpenGL::ContextGL);
@@ -42,6 +71,7 @@ ContextGL::ContextGL() {
 }
 
 void ContextGL::reset() {
+	type = kOGLContextNone;
 	maxTextureSize = 0;
 
 	NPOTSupported = false;
@@ -57,8 +87,26 @@ void ContextGL::reset() {
 void ContextGL::initialize(ContextOGLType contextType) {
 	// Initialize default state.
 	reset();
+	if (contextType == kOGLContextNone) {
+		return;
+	}
 
 	type = contextType;
+
+#ifdef USE_GLAD
+	switch (type) {
+	case kOGLContextGL:
+		gladLoadGLUserPtr(loadFunc, this);
+		break;
+
+	case kOGLContextGLES2:
+		gladLoadGLES2UserPtr(loadFunc, this);
+		break;
+
+	default:
+		break;
+	}
+#endif
 
 	// Obtain maximum texture size.
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, (GLint *)&maxTextureSize);
@@ -134,6 +182,9 @@ void ContextGL::initialize(ContextOGLType contextType) {
 
 	// Log context type.
 	switch (type) {
+		case kOGLContextNone:
+			/* Shouldn't happen */
+			break;
 		case kOGLContextGL:
 			debug(5, "OpenGL: GL context initialized");
 			break;

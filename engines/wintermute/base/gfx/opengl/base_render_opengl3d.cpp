@@ -1,22 +1,21 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
+ * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -26,10 +25,12 @@
 #include "engines/wintermute/base/base_game.h"
 #include "engines/wintermute/base/gfx/3ds/camera3d.h"
 #include "engines/wintermute/base/gfx/3ds/light3d.h"
+
 #include "graphics/opengl/system_headers.h"
+
 #include "math/glmath.h"
 
-#if (defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS)) && !defined(USE_GLES2)
+#if defined(USE_OPENGL_GAME)
 
 #include "engines/wintermute/base/gfx/opengl/base_render_opengl3d.h"
 #include "engines/wintermute/base/gfx/opengl/base_surface_opengl3d.h"
@@ -37,37 +38,18 @@
 #include "engines/wintermute/base/gfx/opengl/meshx_opengl.h"
 #include "engines/wintermute/base/gfx/opengl/shadow_volume_opengl.h"
 
-#if defined(__MINGW32__) && defined (SDL_BACKEND) && !defined(USE_GLEW)
-// We need SDL.h for SDL_GL_GetProcAddress.
-#include "backends/platform/sdl/sdl-sys.h"
-PFNGLACTIVETEXTUREPROC glActiveTexturePtr;
-#endif
-
 namespace Wintermute {
 BaseRenderer3D *makeOpenGL3DRenderer(BaseGame *inGame) {
 	return new BaseRenderOpenGL3D(inGame);
 }
 
-BaseRenderOpenGL3D::BaseRenderOpenGL3D(BaseGame *inGame)
-	: BaseRenderer3D(inGame), _spriteBatchMode(false)  {
+BaseRenderOpenGL3D::BaseRenderOpenGL3D(BaseGame *inGame) : BaseRenderer3D(inGame),
+                                                           _spriteBatchMode(false) {
 	setDefaultAmbientLightColor();
 
 	_lightPositions.resize(maximumLightsCount());
 	_lightDirections.resize(maximumLightsCount());
 	(void)_spriteBatchMode; // silence warning
-
-#if defined(__MINGW32__) && defined (SDL_BACKEND) && !defined(USE_GLEW)
-	union {
-		void *obj_ptr;
-		void (APIENTRY *func_ptr)();
-	} u;
-	// We're casting from an object pointer to a function pointer, the
-	// sizes need to be the same for this to work.
-	assert(sizeof(u.obj_ptr) == sizeof(u.func_ptr));
-	u.obj_ptr = SDL_GL_GetProcAddress("glActiveTexture");
-	glActiveTexturePtr = (PFNGLACTIVETEXTUREPROC)u.func_ptr;
-	assert(glActiveTexturePtr);
-#endif
 }
 
 BaseRenderOpenGL3D::~BaseRenderOpenGL3D() {
@@ -209,7 +191,7 @@ void BaseRenderOpenGL3D::displayShadow(BaseObject *object, const Math::Vector3d 
 
 	glLoadMatrixf(worldTransformation.getData());
 
-	glDepthMask(false);
+	glDepthMask(GL_FALSE);
 	glEnable(GL_TEXTURE_2D);
 	static_cast<BaseSurfaceOpenGL3D *>(shadowImage)->setTexture();
 
@@ -223,7 +205,11 @@ void BaseRenderOpenGL3D::displayShadow(BaseObject *object, const Math::Vector3d 
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-	glDepthMask(true);
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+	glDepthMask(GL_TRUE);
 	glLoadMatrixf(_lastViewMatrix.getData());
 }
 
@@ -287,6 +273,7 @@ void BaseRenderOpenGL3D::fadeToColor(byte r, byte g, byte b, byte a) {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_TEXTURE_2D);
 
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
@@ -296,11 +283,14 @@ void BaseRenderOpenGL3D::fadeToColor(byte r, byte g, byte b, byte a) {
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+
 	setup2D(true);
 }
 
 bool BaseRenderOpenGL3D::fill(byte r, byte g, byte b, Common::Rect *rect) {
-	glClearColor(float(r) / 255.0f, float(g) / 255.0f, float(b) / 255.0f, 1.0f);
+	glClearColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	return true;
 }
@@ -318,9 +308,9 @@ bool BaseRenderOpenGL3D::drawLine(int x1, int y1, int x2, int y2, uint32 color) 
 	byte b = RGBCOLGetB(color);
 
 	glBegin(GL_LINES);
-	glColor4b(r, g, b, a);
-	glVertex3f(x1, y1, 0.9f);
-	glVertex3f(x2, y2, 0.9f);
+		glColor4ub(r, g, b, a);
+		glVertex3f(x1, y1, 0.9f);
+		glVertex3f(x2, y2, 0.9f);
 	glEnd();
 
 	return true;
@@ -337,10 +327,10 @@ bool BaseRenderOpenGL3D::setProjection() {
 	float viewportHeight = _viewportRect.bottom - _viewportRect.top;
 
 	float verticalViewAngle = _fov;
-	float aspectRatio = float(viewportWidth) / float(viewportHeight);
+	float aspectRatio = viewportWidth / viewportHeight;
 	float top = _nearPlane * tanf(verticalViewAngle * 0.5f);
 
-	float scaleMod = static_cast<float>(_height) / static_cast<float>(viewportHeight);
+	float scaleMod = _height / viewportHeight;
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -431,12 +421,6 @@ bool BaseRenderOpenGL3D::initRenderer(int width, int height, bool windowed) {
 	_simpleShadow[3].u = 1.0f;
 	_simpleShadow[3].v = 0.0f;
 
-	// The ShaderSurfaceRenderer sets an array buffer which appearently conflicts with us
-	// Reset it!
-#if defined(USE_OPENGL_SHADERS)
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif // defined(USE_GLES2) || defined(USE_OPENGL_SHADERS)
-
 	return true;
 }
 
@@ -464,9 +448,7 @@ bool BaseRenderOpenGL3D::setup2D(bool force) {
 		glDisable(GL_LIGHTING);
 		glDisable(GL_DEPTH_TEST);
 		glDisable(GL_STENCIL_TEST);
-		glDisable(GL_CLIP_PLANE0);
 		glDisable(GL_FOG);
-		glLightModeli(GL_LIGHT_MODEL_AMBIENT, 0);
 
 		glEnable(GL_CULL_FACE);
 		glFrontFace(GL_CCW);
@@ -475,38 +457,6 @@ bool BaseRenderOpenGL3D::setup2D(bool force) {
 		glAlphaFunc(GL_GEQUAL, 0.0f);
 		glPolygonMode(GL_FRONT, GL_FILL);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-#if defined(__MINGW32__) && defined (SDL_BACKEND) && !defined(USE_GLEW)
-		glActiveTexturePtr(GL_TEXTURE0);
-#elif defined(__MORPHOS__)
-		glActiveTextureARB(GL_TEXTURE0);
-#else
-		glActiveTexture(GL_TEXTURE0);
-#endif
-		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_TEXTURE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_PRIMARY_COLOR);
-		glTexEnvf(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_MODULATE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SRC1_ALPHA, GL_TEXTURE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SRC0_ALPHA, GL_PRIMARY_COLOR);
-
-#if defined(__MINGW32__) && defined (SDL_BACKEND) && !defined(USE_GLEW)
-		glActiveTexturePtr(GL_TEXTURE1);
-#elif defined(__MORPHOS__)
-		glActiveTextureARB(GL_TEXTURE1);
-#else
-		glActiveTexture(GL_TEXTURE1);
-#endif
-		glDisable(GL_TEXTURE_2D);
-
-#if defined(__MINGW32__) && defined (SDL_BACKEND) && !defined(USE_GLEW)
-		glActiveTexturePtr(GL_TEXTURE0);
-#elif defined(__MORPHOS__)
-		glActiveTextureARB(GL_TEXTURE0);
-#else
-		glActiveTexture(GL_TEXTURE0);
-#endif
 
 		glViewport(0, 0, _width, _height);
 		setProjection2D();
@@ -565,7 +515,10 @@ bool BaseRenderOpenGL3D::setup3D(Camera3D *camera, bool force) {
 			glFogf(GL_FOG_END, fogParameters._end);
 
 			uint32 fogColor = fogParameters._color;
-			GLfloat color[4] = { RGBCOLGetR(fogColor) / 255.0f, RGBCOLGetG(fogColor) / 255.0f, RGBCOLGetB(fogColor) / 255.0f, RGBCOLGetA(fogColor) / 255.0f };
+			GLfloat color[4] = { RGBCOLGetR(fogColor) / 255.0f,
+			                     RGBCOLGetG(fogColor) / 255.0f,
+			                     RGBCOLGetB(fogColor) / 255.0f,
+			                     RGBCOLGetA(fogColor) / 255.0f };
 			glFogfv(GL_FOG_COLOR, color);
 		} else {
 			glDisable(GL_FOG);
@@ -587,6 +540,7 @@ bool BaseRenderOpenGL3D::setupLines() {
 		glDisable(GL_DEPTH_TEST);
 		glEnable(GL_BLEND);
 		glEnable(GL_ALPHA_TEST);
+		glDisable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
@@ -597,26 +551,22 @@ BaseSurface *Wintermute::BaseRenderOpenGL3D::createSurface() {
 	return new BaseSurfaceOpenGL3D(_gameRef, this);
 }
 
-#include "common/pack-start.h"
-
 struct SpriteVertex {
 	float u;
 	float v;
+	float x;
+	float y;
+	float z;
 	uint8 r;
 	uint8 g;
 	uint8 b;
 	uint8 a;
-	float x;
-	float y;
-	float z;
-} PACKED_STRUCT;
-
-#include "common/pack-end.h"
+};
 
 bool BaseRenderOpenGL3D::drawSpriteEx(BaseSurfaceOpenGL3D &tex, const Wintermute::Rect32 &rect,
-									  const Wintermute::Vector2 &pos, const Wintermute::Vector2 &rot, const Wintermute::Vector2 &scale,
-									  float angle, uint32 color, bool alphaDisable, Graphics::TSpriteBlendMode blendMode,
-									  bool mirrorX, bool mirrorY) {
+	                              const Wintermute::Vector2 &pos, const Wintermute::Vector2 &rot, const Wintermute::Vector2 &scale,
+	                              float angle, uint32 color, bool alphaDisable, Graphics::TSpriteBlendMode blendMode,
+	                              bool mirrorX, bool mirrorY) {
 	// original wme has a batch mode for sprites, we ignore this for the moment
 
 	if (_forceAlphaColor != 0) {
@@ -729,6 +679,10 @@ bool BaseRenderOpenGL3D::drawSpriteEx(BaseSurfaceOpenGL3D &tex, const Wintermute
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+	glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
 	if (alphaDisable) {
 		glEnable(GL_ALPHA_TEST);
 	}
@@ -737,7 +691,7 @@ bool BaseRenderOpenGL3D::drawSpriteEx(BaseSurfaceOpenGL3D &tex, const Wintermute
 }
 
 void BaseRenderOpenGL3D::renderSceneGeometry(const BaseArray<AdWalkplane *> &planes, const BaseArray<AdBlock *> &blocks,
-											 const BaseArray<AdGeneric *> &generics, const BaseArray<Light3D *> &lights, Camera3D *camera) {
+	                                     const BaseArray<AdGeneric *> &generics, const BaseArray<Light3D *> &lights, Camera3D *camera) {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	_gameRef->_renderer3D->setup3D(camera, true);
@@ -746,10 +700,10 @@ void BaseRenderOpenGL3D::renderSceneGeometry(const BaseArray<AdWalkplane *> &pla
 	glDisable(GL_DEPTH_TEST);
 	glFrontFace(GL_CCW);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glDisableClientState(GL_COLOR_ARRAY);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
 
+	glDisable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// render walk planes
@@ -804,7 +758,9 @@ void BaseRenderOpenGL3D::renderSceneGeometry(const BaseArray<AdWalkplane *> &pla
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void BaseRenderOpenGL3D::renderShadowGeometry(const BaseArray<AdWalkplane *> &planes, const BaseArray<AdBlock *> &blocks, const BaseArray<AdGeneric *> &generics, Camera3D *camera) {
+void BaseRenderOpenGL3D::renderShadowGeometry(const BaseArray<AdWalkplane *> &planes,
+                                              const BaseArray<AdBlock *> &blocks,
+                                              const BaseArray<AdGeneric *> &generics, Camera3D *camera) {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	setup3D(camera, true);
@@ -813,6 +769,7 @@ void BaseRenderOpenGL3D::renderShadowGeometry(const BaseArray<AdWalkplane *> &pl
 	glBlendFunc(GL_ZERO, GL_ONE);
 
 	glFrontFace(GL_CCW);
+	glDisable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// render walk planes
@@ -853,4 +810,4 @@ ShadowVolume *BaseRenderOpenGL3D::createShadowVolume() {
 
 } // namespace Wintermute
 
-#endif // defined(USE_OPENGL) && !defined(USE_GLES2)
+#endif // defined(USE_OPENGL_GAME)

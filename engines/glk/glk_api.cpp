@@ -4,19 +4,18 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software{} you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation{} either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY{} without even the implied warranty of
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program{} if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -207,7 +206,7 @@ void GlkAPI::glk_window_get_arrangement(winid_t win, uint *method,
 }
 
 winid_t GlkAPI::glk_window_iterate(winid_t win, uint *rock) {
-	win = win ? win->_next : _windows->getRoot();
+	win = win ? win->_next : *_windows->begin();
 
 	if (win) {
 		if (rock)
@@ -242,7 +241,7 @@ uint GlkAPI::glk_window_get_type(winid_t win) {
 winid_t GlkAPI::glk_window_get_parent(winid_t win) {
 	if (!win) {
 		warning("window_get_parent: invalid ref");
-		return 0;
+		return nullptr;
 	}
 
 	return win->_parent;
@@ -922,7 +921,7 @@ bool GlkAPI::glk_image_draw_scaled(winid_t win, const Graphics::Surface &image, 
 	if (!win) {
 		warning("image_draw_scaled: invalid ref");
 	} else if (g_conf->_graphics) {
-		if (image.w == width && image.h == height) {
+		if (image.w == (int16)width && image.h == (int16)height) {
 			return glk_image_draw(win, image, transColor, xp, yp);
 
 		} else {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -100,9 +99,6 @@ struct ZoneStruct {
 	} infoData;
 };
 
-#define OWN_ACTOR_SCENE_INDEX 0
-#define IS_HERO(x) (x) == OWN_ACTOR_SCENE_INDEX
-
 class TwinEEngine;
 
 /**
@@ -163,61 +159,64 @@ private:
 
 	int32 _currentGameOverScene = 0;
 
+	uint8 *_currentScene = nullptr;
+	void dumpSceneScripts() const;
+	void dumpSceneScript(const char *type, int actorIdx, const uint8* script, int size) const;
 public:
 	Scene(TwinEEngine *engine) : _engine(engine) {}
 	~Scene();
 
+	int32 _needChangeScene = LBA1SceneId::Citadel_Island_Prison;
+	int32 _currentSceneIdx = LBA1SceneId::Citadel_Island_Prison;
+	int32 _previousSceneIdx = LBA1SceneId::Citadel_Island_Prison;
+
+	int32 _holomapTrajectory = -1;
+
+	TextBankId _sceneTextBank = TextBankId::None;
+	int32 _alphaLight = ANGLE_315;
+	int32 _betaLight = ANGLE_334;
+
+	IVec3 _newHeroPos;
+
+	/** Hero Y coordinate before fall */
+	int16 _startYFalling = 0;
+
+	/** Hero type of position in scene */
+	ScenePositionType _heroPositionType = ScenePositionType::kNoPosition; // twinsenPositionModeInNewCube
+
+	// ACTORS
+	int32 _sceneNumActors = 0;
+	ActorStruct *_sceneHero = nullptr;
+
+	/** Meca penguin actor index */
+	int16 _mecaPenguinIdx = 0;
+
+	/** Current followed actor in scene */
+	int16 _currentlyFollowedActor = OWN_ACTOR_SCENE_INDEX;
+	/** Current actor in zone - climbing a ladder */
+	bool _currentActorInZone = false;
+	bool _enableEnhancements = false;
+	/** Current actor manipulated in scripts */
+	int16 _currentScriptValue = 0;
+
+	int16 _talkingActor = 0;
+
+	// TRACKS Tell the actor where to go
+	int32 _sceneNumTracks = 0;
+	IVec3 _sceneTracks[NUM_MAX_TRACKS];
+
+	bool _enableGridTileRendering = true;
+
+	uint8 _sceneFlags[NUM_SCENES_FLAGS]{0};
+
+	int32 _sceneNumZones = 0;
+	ZoneStruct _sceneZones[NUM_MAX_ZONES];
+
+	ActorStruct *getActor(int32 actorIdx);
+
 	void playSceneMusic();
 
 	void reloadCurrentScene();
-	uint8 *currentScene = nullptr;
-
-	int32 needChangeScene = LBA1SceneId::Citadel_Island_Prison;
-	int32 currentSceneIdx = LBA1SceneId::Citadel_Island_Prison;
-	int32 previousSceneIdx = LBA1SceneId::Citadel_Island_Prison;
-
-	int32 holomapTrajectory = -1;
-
-	TextBankId sceneTextBank = TextBankId::None;
-	int32 alphaLight = ANGLE_0;
-	int32 betaLight = ANGLE_0;
-
-	IVec3 newHeroPos;
-
-	/** Hero Y coordinate before fall */
-	int16 heroYBeforeFall = 0;
-
-	/** Hero type of position in scene */
-	ScenePositionType heroPositionType = ScenePositionType::kNoPosition; // twinsenPositionModeInNewCube
-
-	// ACTORS
-	int32 sceneNumActors = 0;
-	ActorStruct *sceneHero = nullptr;
-	ActorStruct *getActor(int32 actorIdx);
-
-	/** Meca pinguin actor index */
-	int16 mecaPinguinIdx = 0; // currentPingouin
-
-	/** Current followed actor in scene */
-	int16 currentlyFollowedActor = OWN_ACTOR_SCENE_INDEX;
-	/** Current actor in zone - climbing a ladder */
-	bool currentActorInZone = false;
-	/** Current actor manipulated in scripts */
-	int16 currentScriptValue = 0; // manipActorResult
-
-	int16 talkingActor = 0;
-
-	// TRACKS Tell the actor where to go
-
-	int32 sceneNumTracks = 0;
-	IVec3 sceneTracks[NUM_MAX_TRACKS];
-
-	bool enableGridTileRendering = true;
-
-	uint8 sceneFlags[NUM_SCENES_FLAGS]{0}; // cubeFlags
-
-	int32 sceneNumZones = 0;
-	ZoneStruct sceneZones[NUM_MAX_ZONES];
 
 	/** Change to another scene */
 	void changeScene();
@@ -237,7 +236,7 @@ public:
 };
 
 inline bool Scene::isGameRunning() const {
-	return currentScene != nullptr;
+	return _currentScene != nullptr;
 }
 
 } // namespace TwinE

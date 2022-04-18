@@ -1,23 +1,23 @@
 /* ScummVM - Graphic Adventure Engine
-*
-* ScummVM is the legal property of its developers, whose names
-* are too numerous to list here. Please refer to the COPYRIGHT
-* file distributed with this source distribution.
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-*/
+ *
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
 
 #include "common/system.h"
 #include "graphics/macgui/macwindowmanager.h"
@@ -119,18 +119,13 @@ void DirectorEngine::clearPalettes() {
 	}
 }
 
-void DirectorEngine::setCursor(int type) {
+void DirectorEngine::setCursor(DirectorCursor type) {
 	switch (type) {
-	case kCursorDefault:
-		_wm->popCursor();
-		break;
-
 	case kCursorMouseDown:
-		_wm->pushCustomCursor(mouseDown, 16, 16, 0, 0, 3);
+		_wm->replaceCustomCursor(mouseDown, 16, 16, 0, 0, 3);
 		break;
-
 	case kCursorMouseUp:
-		_wm->pushCustomCursor(mouseUp, 16, 16, 0, 0, 3);
+		_wm->replaceCustomCursor(mouseUp, 16, 16, 0, 0, 3);
 		break;
 	}
 }
@@ -155,7 +150,7 @@ void inkDrawPixel(int x, int y, int src, void *data) {
 
 	if (p->ms) {
 		// Get the pixel that macDrawPixel will give us, but store it to apply the
-		// ink later.
+		// ink later
 		tmpDst = *dst;
 		(p->_wm->getDrawPixel())(x, y, src, p->ms->pd);
 		src = *dst;
@@ -247,9 +242,6 @@ void inkDrawPixel(int x, int y, int src, void *data) {
 		break;
 		// Arithmetic ink types
 	default: {
-		if ((uint32)src == p->colorWhite)
-			break;
-
 		byte rSrc, gSrc, bSrc;
 		byte rDst, gDst, bDst;
 
@@ -264,7 +256,9 @@ void inkDrawPixel(int x, int y, int src, void *data) {
 				*dst = p->_wm->findBestColor(MIN((rSrc + rDst), 0xff), MIN((gSrc + gDst), 0xff), MIN((bSrc + bDst), 0xff));
 			break;
 		case kInkTypeAdd:
-				*dst = p->_wm->findBestColor(abs(rSrc + rDst) % 0xff + 1, abs(gSrc + gDst) % 0xff + 1, abs(bSrc + bDst) % 0xff + 1);
+			// in basilisk, D3.1 is exactly using this method, adding color directly without preventing the overflow.
+			// but i think min(src + dst, 255) will give us a better visual effect
+				*dst = p->_wm->findBestColor(rSrc + rDst, gSrc + gDst, bSrc + bDst);
 			break;
 		case kInkTypeSubPin:
 				*dst = p->_wm->findBestColor(MAX(rSrc - rDst, 0), MAX(gSrc - gDst, 0), MAX(bSrc - bDst, 0));
@@ -295,33 +289,194 @@ Graphics::MacDrawPixPtr DirectorEngine::getInkDrawPixel() {
 void DirectorPlotData::setApplyColor() {
 	applyColor = false;
 
-	if (foreColor == colorBlack && backColor == colorWhite)
-		applyColor = false;
-
-	switch (ink) {
-	case kInkTypeReverse:
-	case kInkTypeNotReverse:
-	case kInkTypeAddPin:
-	case kInkTypeAdd:
- 	case kInkTypeSubPin:
-	case kInkTypeLight:
-	case kInkTypeSub:
-	case kInkTypeDark:
-	case kInkTypeBackgndTrans:
-		applyColor = false;
-	default:
-		break;
-	}
-
 	if (foreColor != colorBlack) {
 		if (ink != kInkTypeGhost && ink != kInkTypeNotGhost)
 			applyColor = true;
 	}
 
 	if (backColor != colorWhite) {
-		if (ink != kInkTypeTransparent &&
-				ink != kInkTypeNotTrans)
+		if (ink != kInkTypeTransparent && ink != kInkTypeNotTrans && ink != kInkTypeBackgndTrans)
 			applyColor = true;
+	}
+}
+
+uint32 DirectorPlotData::preprocessColor(uint32 src) {
+	// HACK: Right now this method is just used for adjusting the colourization on text
+	// sprites, as it would be costly to colourize the chunks on the fly each
+	// time a section needs drawing. It's ugly but mostly works.
+	if (sprite == kTextSprite) {
+		switch(ink) {
+		case kInkTypeMask:
+			src = (src == backColor ? foreColor : 0xff);
+			break;
+		case kInkTypeReverse:
+			src = (src == foreColor ? 0 : colorWhite);
+			break;
+		case kInkTypeNotReverse:
+			src = (src == backColor ? colorWhite : 0);
+			break;
+			// looks like this part is wrong, maybe it's very same as reverse?
+			// check warlock/DATA/WARLOCKSHIP/ENG/ABOUT to see more detail.
+//		case kInkTypeGhost:
+//			src = (src == foreColor ? backColor : colorWhite);
+//			break;
+		case kInkTypeNotGhost:
+			src = (src == backColor ? colorWhite : backColor);
+			break;
+		case kInkTypeNotCopy:
+			src = (src == foreColor ? backColor : foreColor);
+			break;
+		case kInkTypeNotTrans:
+			src = (src == foreColor ? backColor : colorWhite);
+			break;
+		default:
+			break;
+		}
+	}
+
+	return src;
+}
+
+void DirectorPlotData::inkBlitShape(Common::Rect &srcRect) {
+	if (!ms)
+		return;
+
+	// Preprocess shape colours
+	switch (ink) {
+	case kInkTypeNotTrans:
+	case kInkTypeNotReverse:
+	case kInkTypeNotGhost:
+		return;
+	case kInkTypeReverse:
+		ms->foreColor = 0;
+		ms->backColor = 0;
+		break;
+	default:
+		break;
+	}
+
+	Common::Rect fillAreaRect((int)srcRect.width(), (int)srcRect.height());
+	fillAreaRect.moveTo(srcRect.left, srcRect.top);
+	Graphics::MacPlotData plotFill(dst, nullptr, &g_director->getPatterns(), ms->pattern, srcRect.left, srcRect.top, 1, ms->backColor);
+
+	Common::Rect strokeRect(MAX((int)srcRect.width() - ms->lineSize, 0), MAX((int)srcRect.height() - ms->lineSize, 0));
+	strokeRect.moveTo(srcRect.left, srcRect.top);
+	Graphics::MacPlotData plotStroke(dst, nullptr, &g_director->getPatterns(), 1, strokeRect.left, strokeRect.top, ms->lineSize, ms->backColor);
+
+	switch (ms->spriteType) {
+	case kRectangleSprite:
+		ms->pd = &plotFill;
+		Graphics::drawFilledRect(fillAreaRect, ms->foreColor, g_director->getInkDrawPixel(), this);
+		// fall through
+	case kOutlinedRectangleSprite:
+		// if we have lineSize <= 0, means we are not drawing anything. so we may return directly.
+		if (ms->lineSize <= 0)
+			break;
+		ms->pd = &plotStroke;
+		Graphics::drawRect(strokeRect, ms->foreColor, g_director->getInkDrawPixel(), this);
+		break;
+	case kRoundedRectangleSprite:
+		ms->pd = &plotFill;
+		Graphics::drawRoundRect(fillAreaRect, 12, ms->foreColor, true, g_director->getInkDrawPixel(), this);
+		// fall through
+	case kOutlinedRoundedRectangleSprite:
+		if (ms->lineSize <= 0)
+			break;
+		ms->pd = &plotStroke;
+		Graphics::drawRoundRect(strokeRect, 12, ms->foreColor, false, g_director->getInkDrawPixel(), this);
+		break;
+	case kOvalSprite:
+		ms->pd = &plotFill;
+		Graphics::drawEllipse(fillAreaRect.left, fillAreaRect.top, fillAreaRect.right, fillAreaRect.bottom, ms->foreColor, true, g_director->getInkDrawPixel(), this);
+		// fall through
+	case kOutlinedOvalSprite:
+		if (ms->lineSize <= 0)
+			break;
+		ms->pd = &plotStroke;
+		Graphics::drawEllipse(strokeRect.left, strokeRect.top, strokeRect.right, strokeRect.bottom, ms->foreColor, false, g_director->getInkDrawPixel(), this);
+		break;
+	case kLineTopBottomSprite:
+		ms->pd = &plotStroke;
+		Graphics::drawLine(strokeRect.left, strokeRect.top, strokeRect.right, strokeRect.bottom, ms->foreColor, g_director->getInkDrawPixel(), this);
+		break;
+	case kLineBottomTopSprite:
+		ms->pd = &plotStroke;
+		Graphics::drawLine(strokeRect.left, strokeRect.bottom, strokeRect.right, strokeRect.top, ms->foreColor, g_director->getInkDrawPixel(), this);
+		break;
+	default:
+		warning("DirectorPlotData::inkBlitShape: Expected shape type but got type %d", ms->spriteType);
+	}
+}
+
+void DirectorPlotData::inkBlitSurface(Common::Rect &srcRect, const Graphics::Surface *mask) {
+	if (!srf)
+		return;
+
+	// TODO: Determine why colourization causes problems in Warlock
+	if (sprite == kTextSprite)
+		applyColor = false;
+
+	srcPoint.y = abs(srcRect.top - destRect.top);
+	for (int i = 0; i < destRect.height(); i++, srcPoint.y++) {
+		if (_wm->_pixelformat.bytesPerPixel == 1) {
+			srcPoint.x = abs(srcRect.left - destRect.left);
+			const byte *msk = mask ? (const byte *)mask->getBasePtr(srcPoint.x, srcPoint.y) : nullptr;
+
+			for (int j = 0; j < destRect.width(); j++, srcPoint.x++) {
+				if (!mask || (msk && !(*msk++))) {
+					(g_director->getInkDrawPixel())(destRect.left + j, destRect.top + i,
+											preprocessColor(*((byte *)srf->getBasePtr(srcPoint.x, srcPoint.y))), this);
+				}
+			}
+		} else {
+			srcPoint.x = abs(srcRect.left - destRect.left);
+			const uint32 *msk = mask ? (const uint32 *)mask->getBasePtr(srcPoint.x, srcPoint.y) : nullptr;
+
+			for (int j = 0; j < destRect.width(); j++, srcPoint.x++) {
+				if (!mask || (msk && !(*msk++))) {
+					(g_director->getInkDrawPixel())(destRect.left + j, destRect.top + i,
+											preprocessColor(*((uint32 *)srf->getBasePtr(srcPoint.x, srcPoint.y))), this);
+				}
+			}
+		}
+	}
+}
+
+void DirectorPlotData::inkBlitStretchSurface(Common::Rect &srcRect, const Graphics::Surface *mask) {
+	if (!srf)
+		return;
+
+	// TODO: Determine why colourization causes problems in Warlock
+	if (sprite == kTextSprite)
+		applyColor = false;
+
+	int scaleX = SCALE_THRESHOLD * srcRect.width() / destRect.width();
+	int scaleY = SCALE_THRESHOLD * srcRect.height() / destRect.height();
+
+	srcPoint.y = abs(srcRect.top - destRect.top);
+
+	for (int i = 0, scaleYCtr = 0; i < destRect.height(); i++, scaleYCtr += scaleY, srcPoint.y++) {
+		if (_wm->_pixelformat.bytesPerPixel == 1) {
+			srcPoint.x = abs(srcRect.left - destRect.left);
+			const byte *msk = mask ? (const byte *)mask->getBasePtr(srcPoint.x, srcPoint.y) : nullptr;
+
+			for (int xCtr = 0, scaleXCtr = 0; xCtr < destRect.width(); xCtr++, scaleXCtr += scaleX, srcPoint.x++) {
+				if (!mask || !(*msk++)) {
+				(g_director->getInkDrawPixel())(destRect.left + xCtr, destRect.top + i,
+										preprocessColor(*((byte *)srf->getBasePtr(scaleXCtr / SCALE_THRESHOLD, scaleYCtr / SCALE_THRESHOLD))), this);
+				}
+			}
+		} else {
+			srcPoint.x = abs(srcRect.left - destRect.left);
+			const uint32 *msk = mask ? (const uint32 *)mask->getBasePtr(srcPoint.x, srcPoint.y) : nullptr;
+
+			for (int xCtr = 0, scaleXCtr = 0; xCtr < destRect.width(); xCtr++, scaleXCtr += scaleX, srcPoint.x++) {
+				if (!mask || !(*msk++)) {
+				(g_director->getInkDrawPixel())(destRect.left + xCtr, destRect.top + i,
+										preprocessColor(*((int *)srf->getBasePtr(scaleXCtr / SCALE_THRESHOLD, scaleYCtr / SCALE_THRESHOLD))), this);
+				}
+			}
+		}
 	}
 }
 

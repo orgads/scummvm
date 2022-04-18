@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -323,7 +322,7 @@ ScriptDynamicSprite *DynamicSprite_CreateFromScreenShot(int width, int height) {
 	update_polled_stuff_if_runtime();
 
 	// replace the bitmap in the sprite set
-	add_dynamic_sprite(gotSlot, ReplaceBitmapWithSupportedFormat(newPic));
+	add_dynamic_sprite(gotSlot, newPic);
 	ScriptDynamicSprite *new_spr = new ScriptDynamicSprite(gotSlot);
 	return new_spr;
 }
@@ -386,14 +385,15 @@ ScriptDynamicSprite *DynamicSprite_Create(int width, int height, int alphaChanne
 	if (gotSlot <= 0)
 		return nullptr;
 
-	Bitmap *newPic = BitmapHelper::CreateTransparentBitmap(width, height, _GP(game).GetColorDepth());
+	Bitmap *newPic = CreateCompatBitmap(width, height);
 	if (newPic == nullptr)
 		return nullptr;
 
+	newPic->ClearTransparent();
 	if ((alphaChannel) && (_GP(game).GetColorDepth() < 32))
 		alphaChannel = false;
 
-	add_dynamic_sprite(gotSlot, ReplaceBitmapWithSupportedFormat(newPic), alphaChannel != 0);
+	add_dynamic_sprite(gotSlot, newPic, alphaChannel != 0);
 	ScriptDynamicSprite *new_spr = new ScriptDynamicSprite(gotSlot);
 	return new_spr;
 }
@@ -614,31 +614,6 @@ void RegisterDynamicSpriteAPI() {
 	ccAddExternalStaticFunction("DynamicSprite::CreateFromFile", Sc_DynamicSprite_CreateFromFile);
 	ccAddExternalStaticFunction("DynamicSprite::CreateFromSaveGame", Sc_DynamicSprite_CreateFromSaveGame);
 	ccAddExternalStaticFunction("DynamicSprite::CreateFromScreenShot", Sc_DynamicSprite_CreateFromScreenShot);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("DynamicSprite::ChangeCanvasSize^4", (void *)DynamicSprite_ChangeCanvasSize);
-	ccAddExternalFunctionForPlugin("DynamicSprite::CopyTransparencyMask^1", (void *)DynamicSprite_CopyTransparencyMask);
-	ccAddExternalFunctionForPlugin("DynamicSprite::Crop^4", (void *)DynamicSprite_Crop);
-	ccAddExternalFunctionForPlugin("DynamicSprite::Delete", (void *)DynamicSprite_Delete);
-	ccAddExternalFunctionForPlugin("DynamicSprite::Flip^1", (void *)DynamicSprite_Flip);
-	ccAddExternalFunctionForPlugin("DynamicSprite::GetDrawingSurface^0", (void *)DynamicSprite_GetDrawingSurface);
-	ccAddExternalFunctionForPlugin("DynamicSprite::Resize^2", (void *)DynamicSprite_Resize);
-	ccAddExternalFunctionForPlugin("DynamicSprite::Rotate^3", (void *)DynamicSprite_Rotate);
-	ccAddExternalFunctionForPlugin("DynamicSprite::SaveToFile^1", (void *)DynamicSprite_SaveToFile);
-	ccAddExternalFunctionForPlugin("DynamicSprite::Tint^5", (void *)DynamicSprite_Tint);
-	ccAddExternalFunctionForPlugin("DynamicSprite::get_ColorDepth", (void *)DynamicSprite_GetColorDepth);
-	ccAddExternalFunctionForPlugin("DynamicSprite::get_Graphic", (void *)DynamicSprite_GetGraphic);
-	ccAddExternalFunctionForPlugin("DynamicSprite::get_Height", (void *)DynamicSprite_GetHeight);
-	ccAddExternalFunctionForPlugin("DynamicSprite::get_Width", (void *)DynamicSprite_GetWidth);
-	ccAddExternalFunctionForPlugin("DynamicSprite::Create^3", (void *)DynamicSprite_Create);
-	ccAddExternalFunctionForPlugin("DynamicSprite::CreateFromBackground", (void *)DynamicSprite_CreateFromBackground);
-	ccAddExternalFunctionForPlugin("DynamicSprite::CreateFromDrawingSurface^5", (void *)DynamicSprite_CreateFromDrawingSurface);
-	ccAddExternalFunctionForPlugin("DynamicSprite::CreateFromExistingSprite^1", (void *)DynamicSprite_CreateFromExistingSprite_Old);
-	ccAddExternalFunctionForPlugin("DynamicSprite::CreateFromExistingSprite^2", (void *)DynamicSprite_CreateFromExistingSprite);
-	ccAddExternalFunctionForPlugin("DynamicSprite::CreateFromFile", (void *)DynamicSprite_CreateFromFile);
-	ccAddExternalFunctionForPlugin("DynamicSprite::CreateFromSaveGame", (void *)DynamicSprite_CreateFromSaveGame);
-	ccAddExternalFunctionForPlugin("DynamicSprite::CreateFromScreenShot", (void *)DynamicSprite_CreateFromScreenShot);
 }
 
 } // namespace AGS3

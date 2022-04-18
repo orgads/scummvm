@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -355,7 +354,7 @@ const char *emiPS2_voiceMon[] = {
 	"b4a938b9c116e9370e992c8edfb00c35", // english
 };
 
-// EMI demo
+// EMI demo (CD demo does not include i9n.lab)
 
 const char *emid_i9n[] = {
 	"d913504ec3a2fe52ee02a20a154a2b17", // english patched
@@ -454,7 +453,6 @@ void MD5Check::init() {
 		}
 	} else {
 		if (g_grim->getGameFlags() & ADGF_DEMO) {
-			MD5SUM("i9n.lab", emid_i9n)
 			MD5SUM("lip.lab", emid_lip)
 			MD5SUM("MagDemo.lab", emid_MagDemo)
 			MD5SUM("tile.lab", emid_tile)

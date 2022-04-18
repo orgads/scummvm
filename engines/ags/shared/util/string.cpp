@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -419,13 +418,26 @@ void String::Compact() {
 }
 
 void String::Append(const String &str) {
-	size_t length = str._len;
 	if (str._len > 0) {
-		ReserveAndShift(false, length);
-		memcpy(_cstr + _len, str._cstr, length);
-		_len += length;
+		ReserveAndShift(false, str._len);
+		memcpy(_cstr + _len, str._cstr, str._len);
+		_len += str._len;
 		_cstr[_len] = 0;
 	}
+}
+
+void String::Append(const char *cstr, size_t len) {
+	if (len == 0)
+		return;
+	// Test for null-terminator in the range
+	const char *ptr = cstr;
+	for (; *ptr && (static_cast<size_t>(ptr - cstr) < len); ++ptr);
+	if (static_cast<size_t>(ptr - cstr) < len)
+		len = ptr - cstr;
+	ReserveAndShift(false, len);
+	memcpy(_cstr + _len, cstr, len);
+	_len += len;
+	_cstr[_len] = 0;
 }
 
 void String::AppendChar(char c) {
@@ -434,6 +446,25 @@ void String::AppendChar(char c) {
 		_cstr[_len++] = c;
 		_cstr[_len] = 0;
 	}
+}
+
+void String::AppendFmt(const char *fcstr, ...) {
+	va_list argptr;
+	va_start(argptr, fcstr);
+	AppendFmtv(fcstr, argptr);
+	va_end(argptr);
+}
+
+void String::AppendFmtv(const char *fcstr, va_list argptr) {
+	fcstr = fcstr ? fcstr : "";
+	va_list argptr_cpy;
+	va_copy(argptr_cpy, argptr);
+	size_t length = vsnprintf(nullptr, 0u, fcstr, argptr);
+	ReserveAndShift(false, length);
+	vsprintf(_cstr + _len, fcstr, argptr_cpy);
+	va_end(argptr_cpy);
+	_len += length;
+	_cstr[_len] = 0;
 }
 
 void String::ClipLeft(size_t count) {
@@ -466,7 +497,7 @@ void String::ClipMid(size_t from, size_t count) {
 }
 
 void String::ClipRight(size_t count) {
-	if (count > 0) {
+	if (_len > 0 && count > 0) {
 		count = Math::Min(count, _len);
 		BecomeUnique();
 		_len -= count;
@@ -679,6 +710,30 @@ void String::Reverse() {
 		fw < bw; ++fw, --bw) {
 		SWAP(*fw, *bw);
 	}
+}
+
+void String::ReverseUTF8() {
+	if (_len <= 1)
+		return; // nothing to reverse if 1 char or less
+	// TODO: may this be optimized to not alloc new buffer? or dont care
+	char *newstr = new char[_len + 1];
+	for (char *fw = _cstr, *fw2 = _cstr + 1,
+		*bw = _cstr + _len - 1, *bw2 = _cstr + _len;
+		fw <= bw; // FIXME: <= catches odd middle char, optimize?
+		fw = fw2++, bw2 = bw--) {
+		// find end of next character forwards
+		for (; (fw2 < bw) && ((*fw2 & 0xC0) == 0x80); ++fw2);
+		// find beginning of the prev character backwards
+		for (; (bw > fw) && ((*bw & 0xC0) == 0x80); --bw);
+		// put these in opposite sides on the new buffer
+		char *fw_place = newstr + (_cstr + _len - bw2);
+		char *bw_place = newstr + _len - (fw2 - _cstr);
+		memcpy(fw_place, bw, bw2 - bw);
+		if (fw != bw) // FIXME, optimize?
+			memcpy(bw_place, fw, fw2 - fw);
+	}
+	newstr[_len] = 0;
+	SetString(newstr);
 }
 
 void String::SetAt(size_t index, char c) {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -55,7 +54,7 @@ using AGS::Shared::String;
 // give the script access to a variable or function in your program
 extern bool ccAddExternalStaticFunction(const String &name, ScriptAPIFunction *pfn);
 // temporary workaround for plugins
-extern bool ccAddExternalPluginFunction(const String &name, void *pfn);
+extern bool ccAddExternalPluginFunction(const String &name, Plugins::ScriptContainer *sc);
 extern bool ccAddExternalStaticObject(const String &name, void *ptr, ICCStaticObject *manager);
 extern bool ccAddExternalStaticArray(const String &name, void *ptr, StaticArray *array_mgr);
 extern bool ccAddExternalDynamicObject(const String &name, void *ptr, ICCDynamicObject *manager);
@@ -71,8 +70,8 @@ extern void *ccGetSymbolAddress(const String &name);
 
 // registering functions, compatible with old unsafe call style;
 // this is to be used solely by plugins until plugin inteface is redone
-extern bool ccAddExternalFunctionForPlugin(const String &name, void *pfn);
-extern void *ccGetSymbolAddressForPlugin(const String &name);
+extern bool ccAddExternalFunctionForPlugin(const String &name, Plugins::ScriptContainer *instance);
+extern Plugins::PluginMethod ccGetSymbolAddressForPlugin(const String &name);
 
 // DEBUG HOOK
 typedef void (*new_line_hook_type)(ccInstance *, int);
@@ -83,7 +82,8 @@ extern void ccSetScriptAliveTimer(int);
 // reset the current while loop counter
 extern void ccNotifyScriptStillAlive();
 // for calling exported plugin functions old-style
-extern int call_function(intptr_t addr, const RuntimeScriptValue *obj, int numparm, const RuntimeScriptValue *parms);
+extern int call_function(const Plugins::PluginMethod &method,
+	const RuntimeScriptValue *obj, int numparm, const RuntimeScriptValue *parms);
 extern void nullfree(void *data); // in script/script_runtime
 
 } // namespace AGS3

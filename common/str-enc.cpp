@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -320,8 +319,7 @@ void String::encodeWindows932(const U32String &src) {
 		loadCJKTables();
 
 	if (!reverseTable && windows932ConversionTable) {
-		uint16 *rt = new uint16[0x10000];
-		memset(rt, 0, sizeof(rt[0]) * 0x10000);
+		uint16 *rt = new uint16[0x10000]();
 		for (uint highidx = 0; highidx < 47; highidx++) {
 			uint8 high = 0;
 			if (highidx < 4)
@@ -390,8 +388,7 @@ void String::encodeWindows949(const U32String &src) {
 		loadCJKTables();
 
 	if (!reverseTable && windows949ConversionTable) {
-		uint16 *rt = new uint16[0x10000];
-		memset(rt, 0, sizeof(rt[0]) * 0x10000);
+		uint16 *rt = new uint16[0x10000]();
 
 		for (uint lowidx = 0; lowidx < 0xb2; lowidx++) {
 			uint8 low = 0;
@@ -480,8 +477,7 @@ void String::encodeWindows950(const U32String &src, bool transliterate) {
 		loadCJKTables();
 
 	if (!reverseTable && windows950ConversionTable) {
-		uint16 *rt = new uint16[0x10000];
-		memset(rt, 0, sizeof(rt[0]) * 0x10000);
+		uint16 *rt = new uint16[0x10000]();
 
 		for (uint lowidx = 0; lowidx < 157; lowidx++) {
 			uint8 low = 0;
@@ -715,6 +711,8 @@ getConversionTable(CodePage page) {
 		return kWindows1257ConversionTable;
 	case kMacCentralEurope:
 		return kMacCentralEuropeConversionTable;
+	case kMacRoman:
+		return kMacRomanConversionTable;
 	case kISO8859_1:
 		return kLatin1ConversionTable;
 	case kISO8859_2:
@@ -723,6 +721,8 @@ getConversionTable(CodePage page) {
 		return kISO5ConversionTable;
 	case kDos850:
 		return kDos850ConversionTable;
+	case kDos862:
+		return kDos862ConversionTable;
 	case kDos866:
 		return kDos866ConversionTable;
 	case kASCII:
@@ -777,7 +777,7 @@ getReverseConversionTable(CodePage page) {
 }
 
 void U32String::decodeOneByte(const char *src, uint32 len, CodePage page) {
-		const uint16 *conversionTable = getConversionTable(page);
+	const uint16 *conversionTable = getConversionTable(page);
 
 	if (conversionTable == nullptr) {
 		conversionTable = kASCIIConversionTable;

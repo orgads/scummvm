@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,14 +27,22 @@ namespace Asylum {
 //////////////////////////////////////////////////////////////////////////
 // Global
 //////////////////////////////////////////////////////////////////////////
-enum GameFlag : uint32 {
+enum GameFlag {
 	kGameFlag0                    = 0,
 
 	kGameFlag4                    = 4,
 	kGameFlag12                   = 12,
 	kGameFlag52                   = 52,
+	kGameFlag86                   = 86,
+	kGameFlag87                   = 87,
+	kGameFlag88                   = 88,
+	kGameFlagBrokenPipeSpraying   = 96,
+	kGameFlagSmFtnOverflows       = 97,
+	kGameFlagFountainFilling      = 98,
+	kGameFlagSewerExplodes        = 99,
 	kGameFlag114                  = 114,
 	kGameFlag115                  = 115,
+	kGameFlag128                  = 128,
 	kGameFlag169                  = 169,
 	kGameFlagScriptProcessing     = 183,
 	kGameFlag186                  = 186,
@@ -81,6 +88,8 @@ enum GameFlag : uint32 {
 	kGameFlag281                  = 281,
 	kGameFlag282                  = 282,
 	kGameFlag283                  = 283,
+	kGameFlag284                  = 284,
+	kGameFlag289                  = 289,
 	kGameFlag319                  = 319,
 	kGameFlag320                  = 320,
 	kGameFlag321                  = 321,
@@ -227,6 +236,7 @@ enum GameFlag : uint32 {
 	kGameFlag880                  = 880,
 	kGameFlag881                  = 881,
 	kGameFlag897                  = 897,
+	kGameFlag899                  = 899,
 	kGameFlagFinishGame           = 901,
 	kGameFlag925                  = 925,
 	kGameFlag937                  = 937,
@@ -254,7 +264,20 @@ enum GameFlag : uint32 {
 	kGameFlag1122                 = 1122,
 	kGameFlag1131                 = 1131,
 	kGameFlag1137                 = 1137,
-	kGameFlag1144                 = 1144
+	kGameFlag1144                 = 1144,
+	kGameFlag3189                 = 3189,
+	kGameFlag3351                 = 3351,
+	kGameFlag3386                 = 3386,
+	kGameFlag3387                 = 3387,
+	kGameFlag3388                 = 3388,
+	kGameFlag3389                 = 3389,
+	kGameFlag3754                 = 3754,
+	kGameFlag3755                 = 3755,
+	kGameFlag3810                 = 3810,
+	kGameFlag3823                 = 3823,
+	kGameFlag3842                 = 3842,
+	kGameFlag3843                 = 3843,
+	kGameFlag3931                 = 3931
 };
 
 enum ChapterIndex {
@@ -410,7 +433,7 @@ enum OpcodeType {
 	kOpcodePlaySpeechScene2,
 	kOpcodeMoveScenePositionFromActor,
 	kOpcodePaletteFade,
-	kOpcodeStartPaletteFadeThread,
+	kOpcodeQueuePaletteFade,
 	kOpcodePlaySoundUpdateObject,               // 70
 	kOpcodeActorFaceTarget,
 	kOpcodeHidMatteBars,
@@ -512,42 +535,62 @@ enum DirectionFrom {
 // Object
 //////////////////////////////////////////////////////////////////////////
 enum ObjectId {
-	kObjectInvalid                 = -1,
-	kObjectNone                    = 0,
-	kObjectHeadBanger              = 101,
-	kObjectAngelFlares             = 112,
-	kObjectTicaTac01               = 391,
-	kObjectGuyFalls                = 434,
-	kObjectGuyWobbles              = 405,
-	kObjectRocker                  = 441,
-	kObjectOpeningGate             = 485,
-	kObjectTableRecordRoom         = 659,
-	kObject703                     = 703,
-	kObjectTree8                   = 726,
-	kObjectSlab                    = 743,
-	kObjectPreacherBobAssistant    = 802,
-	kObjectPreacherBob             = 803,
-	kObjectNPC024Church            = 816,
-	kObjectNPC024Fountain          = 825,
-	kObjectNPC027Sit               = 838,
-	kObjectNPC028Sit               = 839,
-	kObjectNPC029Sit               = 840,
-	kObjectNPC027Dancing           = 844,
-	kObjectNPC028Dancing           = 845,
-	kObjectNPC026OutOfWay          = 861,
-	kObjectNPC026Talking           = 862,
-	kObjectOrangeRecord            = 920,
-	kObjectJessieStatusQuo         = 984,
-	kObjectMarty02                 = 991,
-	kObjectEileenOnBench           = 993,
-	kObject994                     = 994,
+	kObjectInvalid                 =   -1,
+	kObjectNone                    =    0,
+	kObjectHeadBanger              =  101,
+	kObjectAngelFlares             =  112,
+	kObjectTicaTac01               =  391,
+	kObjectGuyWobbles              =  405,
+	kObjectGuyFalls                =  434,
+	kObjectRocker                  =  441,
+	kObjectOpeningGate             =  485,
+	kObjectTableRecordRoom         =  659,
+	kObject703                     =  703,
+	kObjectTree8                   =  726,
+	kObjectSlab                    =  743,
+	kObjectDrMorgan                =  801,
+	kObjectPreacherBobAssistant    =  802,
+	kObjectPreacherBob             =  803,
+	kObjectNPC024Church            =  816,
+	kObjectNpc024TalkChurch        =  817,
+	kObjectNpc024DanceAway         =  820,
+	kObjectNpc024TalkFount         =  824,
+	kObjectNPC024Fountain          =  825,
+	kObjectNPC027Sit               =  838,
+	kObjectNPC028Sit               =  839,
+	kObjectNPC029Sit               =  840,
+	kObjectNPC027Dancing           =  844,
+	kObjectNPC028Dancing           =  845,
+	kObjectNpc029Dancing           =  846,
+	kObjectNPC026OutOfWay          =  861,
+	kObjectNPC026Talking           =  862,
+	kObjectNpc025Talking           =  863,
+	kObjectNpc000Talking           =  873,
+	kObjectOrangeRecord            =  920,
+	kObjectNpc029Talk              =  922,
+	kObjectNpc027Talk              =  925,
+	kObjectNpc028Talk              =  927,
+	kObjectJessieStatusQuo         =  984,
+	kObjectMarty02                 =  991,
+	kObjectEileenOnBench           =  993,
+	kObject994                     =  994,
 	kObjectFishingBoy              = 1001,
 	kObjectDennisStatusQuo         = 1011,
+	kObjectDennisTalk              = 1012,
 	kObjectSailorBoy               = 1013,
 	kObjectEleenOnGround           = 1019,
 	kObjectSailorStatusQuo         = 1021,
 	kObjectNPC026TalkStatusQuo     = 1038,
+	kObjectDennisTalkHide          = 1051,
+	kObjectDennisFoundSt           = 1052,
+	kObjectBillyTalks              = 1061,
+	kObjectJessieTalks             = 1072,
+	kObjectSuckerTalks             = 1082,
 	kObjectSuckerSittingStatusQuo  = 1084,
+	kObjectBillyStatusUp           = 1090,
+	kObjectJessieStatusWhileUp     = 1091,
+	kObjectTalkToBallBoy           = 1105,
+	kObjectIleanStatusFrame        = 1125,
 	kObjectBubbles                 = 1185,
 	kObjectGlow                    = 1186,
 	kObjectDome                    = 1187,
@@ -555,28 +598,42 @@ enum ObjectId {
 	kObjectRing                    = 1189,
 	kObjectBallMovesUpright        = 1190,
 	kObjectGearsLightUp            = 1191,
+	kObjectMarisStatusQuo          = 1199,
 	kObjectMariaPointsLeft         = 1200,
 	kObjectMariaPointsRight        = 1201,
 	kObjectNPC032Sleeping          = 1250,
 	kObjectNPC032StatusQuoOutside  = 1254,
+	kObjectNpc032TalkOutside       = 1255,
 	kObjectNPC032StatusQuoBigTop   = 1256,
+	kObjectRingmasterTalkTent      = 1257,
 	kObjectGlobe                   = 1261,
 	kObjectDrawers3                = 1276,
 	kObjectChalice                 = 1286,
 	kObjectFreezerHallInterior     = 1337,
 	kObjectNPC033StartEnc          = 1338,
+	kObjectNpc033Talking           = 1339,
+	kObjectNpc033SqNoBook          = 1341,
 	kObjectNPC033GetBook           = 1343,
 	kObjectNPC033Reading           = 1344,
+	kObjectBodyTalks               = 1371,
+	kObjectBodyStat                = 1373,
 	kObjectOldMan3                 = 1377,
+	kObjectTattooingStrongMan      = 1390,
 	kObjectTattooManStatusQuo      = 1391,   // NPC 34
+	kObjectTattooGuy034Talk        = 1392,
 	kObjectStrongmanStatusQuo      = 1402,   // NPC 35
+	kObjectStrongman035Talk        = 1403,
 	kObjectStrongmanStatusQuo2     = 1405,   // NPC 35
 	kObjectInfernoStatusQuo        = 1408,   // NPC 36
+	kObjectInfernoTalk036          = 1409,
 	kObjectJugglerWithPin          = 1423,   // NPC 37
 	kObjectJuggler                 = 1424,   // NPC 37
+	kObjectClown038Talk            = 1427,
 	kObjectClownStatusQuo          = 1428,   // NPC 38
 	kObjectTrixieStatusQuo         = 1432,   // NPC 39
+	kObjectTrixie039Talk           = 1433,
 	kObjectSimonStatusQuo          = 1434,   // NPC 40
+	kObjectSSimon040Talk           = 1435,
 	kObjectBigTopBarrel            = 1436,
 	kObjectFunTixStatusQuo         = 1437,   // NPC 44
 	kObjectStandBehindJuggler      = 1438,
@@ -588,11 +645,17 @@ enum ObjectId {
 	kObjectRingTossStatusQuo       = 1451,   // NPC 47
 	kObjectKnockDownStatusQuo      = 1455,   // NPC 47
 	kObjectPigShootStatusQuo       = 1456,   // NPC 47
+	kObjectPretzool048Talk         = 1460,
 	kObjectPretZoolStatusQuo       = 1461,   // NPC 48
 	kObjectTimberStatusQuo         = 1462,   // NPC 49
+	kObjectTimber049Talk           = 1463,
 	kObjectTwinsStatusQuo          = 1465,   // NPC 50
+	kObjectTwins050Talk            = 1466,
+	kObjectSean051Talk             = 1467,
 	kObjectSeanStatusQuo           = 1468,   // NPC 51
+	kObjectMom052Talk              = 1469,
 	kObjectMomAndPopStatusQuo      = 1470,   // NPCs 52-53
+	kObjectPop053Talk              = 1471,
 	kObjectCrow1FlysAway           = 1485,
 	kObjectCrow1Pecks              = 1486,
 	kObjectCrow2AmbientPecks       = 1495,
@@ -618,12 +681,22 @@ enum ObjectId {
 	kObjectDennisStatus2           = 1580,
 	kObjectPreAlphaNut             = 1582,
 	kObjectPreAlphaNut2            = 1584,
+	kObjectMotherTalking           = 1587,
 	kObjectDeadMomFromOutside      = 1589,
 	kObjectHeadOnTable             = 1595,
+	kObjectNpc049Sq2               = 1658,
+	kObjectTreeTalks               = 1671,
 	kObjectCave                    = 1763,
 	kObjectWitchDoctor             = 1778,
+	kObjectWitchTalks              = 1779,
+	kObjectStoneMaison             = 1780,
+	kObjectStoneMaisonTalk         = 1781,
 	kObjectStoneWifeStatuQuo       = 1782,
+	kObjectStoneWifeTalks          = 1783,
 	kObjectFishermanWidowStatusQuo = 1786,
+	kObjectFishermansWTalks        = 1787,
+	kObjectOracleTalks             = 1853,
+	kObjectOracleTalkStatus        = 1854,
 	kObjectABarrier                = 1899,
 	kObjectMonsterUp               = 1956,
 	kObjectMonsterStatus           = 1957,
@@ -633,6 +706,7 @@ enum ObjectId {
 	kObjectPuke2                   = 1961,
 	kObjectPuke3                   = 1962,
 	kObjectMonsterHurt             = 1997,
+	kObjectBlinks                  = 2064,
 	kObjectWheel1                  = 2113,
 	kObjectWheel2                  = 2114,
 	kObjectWheel3                  = 2115,
@@ -655,15 +729,27 @@ enum ObjectId {
 	kObjectHook5Down               = 2157,
 	kObjectHook6Down               = 2158,
 	kObject2230                    = 2230,
+	kObjectMotherTalkingSq         = 2280,
 	kObjectGravinStatusQuoCyber    = 2324,
+	kObjectGravinTalkCyber         = 2325,
+	kObjectGravinSqGravins         = 2327,
+	kObjectGravinTalkGravins       = 2328,
+	kObjectGravinSqDoor            = 2329,
+	kObjectGravinTalkDoor          = 2330,
+	kObjectGravinSqGromnas         = 2332,
+	kObjectGravinTalkGromnas       = 2333,
 	kObjectGravinWorkMachine       = 2337,
 	kObjectNPC062GritzaStatusQuo   = 2399,
+	kObjectNpc062GritzaTalk        = 2400,
 	kObjectNPC063GrundleStatusQuo  = 2410,
+	kObjectNpc063GrundleTalk       = 2411,
 	kObjectNPC064GrellaStatusQuo   = 2418,
+	kObjectNpc064GrellaTalk        = 2420,
 	kObjectSparkPuzzleLeft         = 2427,
 	kObjectSparkPuzzleMiddle       = 2429,
 	kObjectLavaBridge              = 2445,
 	kObjectSparkPuzzleRight        = 2451,
+	kObjectNpc065Talk              = 2467,
 	kObjectNPC065StatusQuo         = 2469,
 	kObjectFloorTrap1              = 2473,
 	kObjectFloorTrap2              = 2474,
@@ -688,8 +774,10 @@ enum ObjectId {
 	kObjectBodySlides6             = 2519,
 	kObjectEmberPopsOut            = 2526,
 	kObjectBugCarriesEmber         = 2527,
+	kObjectLittleGirlTalk          = 2540,
 	kObjectGirlStatusQuo           = 2541,
 	kObjectWitchWifeStirring       = 2543,
+	kObjectWitchWifeTalking        = 2546,
 	kObjectFurnaceHole             = 2554,
 	kObjectInsidePipeCyberPod      = 2555,
 	kObjectTopOfFurnace            = 2566,
@@ -708,7 +796,9 @@ enum ObjectId {
 	kObjectGong4                   = 2593,
 	kObjectGong5                   = 2594,
 	kObjectGong6                   = 2596,
+	kObjectDeadShamanStill         = 2604,
 	kObjectGhost2b                 = 2634,
+	kObjectJumpDown                = 2648,
 	kObjectRitualLoop              = 2674,
 	kObjectLine                    = 2859,
 	kObjectZapPattern1             = 2876,
@@ -717,12 +807,19 @@ enum ObjectId {
 	kObjectBlanklPixelForWarrior   = 2884,
 	kObjectPixelForHutWarrior      = 2885,
 	kObjectPixelForWaterfallGhost  = 2886,
+	kObjectPixelForQueztza         = 2891,
 	kObjectZapPattern4             = 2892,
 	kObjectZapPattern5             = 2893,
 	kObjectZapPattern6             = 2894,
 	kObjectZapPattern7             = 2895,
 	kObjectZapPattern8             = 2896,
 	kObjectZapPattern9             = 2897,
+	kObjectObituary                = 2990,
+	kObjectCarolsDiary             = 2992,
+	kObjectTrixieSq2               = 3002,
+	kObjectSimonSq2                = 3003,
+	kObjectEileenTalkingWithShove  = 3011,
+	kObjectStqEileenTalkWithShov   = 3016,
 	kObjectLitLimbScanner          = 3061,
 	kObjectOfficeWallNew           = 3062,
 	kObjectCyberTable              = 3065,

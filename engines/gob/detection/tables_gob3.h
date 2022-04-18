@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -508,7 +507,7 @@
 	{
 		"gob3",
 		"Non-interactive Demo",
-		AD_ENTRY1("intro.stk", "b9b898fccebe02b69c086052d5024a55"),
+		AD_ENTRY1s("intro.stk", "b9b898fccebe02b69c086052d5024a55", 600143),
 		UNK_LANG,
 		kPlatformDOS,
 		ADGF_DEMO,
@@ -522,7 +521,7 @@
 	{
 		"gob3",
 		"Interactive Demo",
-		AD_ENTRY1("intro.stk", "7aebd94e49c2c5c518c9e7b74f25de9d"),
+		AD_ENTRY1s("intro.stk", "7aebd94e49c2c5c518c9e7b74f25de9d", 270737),
 		FR_FRA,
 		kPlatformDOS,
 		ADGF_DEMO,
@@ -536,7 +535,7 @@
 	{
 		"gob3",
 		"Interactive Demo 2",
-		AD_ENTRY1("intro.stk", "e5dcbc9f6658ebb1e8fe26bc4da0806d"),
+		AD_ENTRY1s("intro.stk", "e5dcbc9f6658ebb1e8fe26bc4da0806d", 590631),
 		FR_FRA,
 		kPlatformDOS,
 		ADGF_DEMO,

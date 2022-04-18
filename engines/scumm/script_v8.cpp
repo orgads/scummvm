@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -27,7 +26,7 @@
 #include "scumm/akos.h"
 #include "scumm/charset.h"
 #include "scumm/file.h"
-#include "scumm/imuse_digi/dimuse.h"
+#include "scumm/imuse_digi/dimuse_engine.h"
 #include "scumm/object.h"
 #include "scumm/resource.h"
 #include "scumm/scumm_v8.h"
@@ -978,10 +977,7 @@ void ScummEngine_v8::o8_verbOps() {
 		break;
 	case 0x9A:		// SO_VERB_AT Set verb (X,Y) placement
 		vs->curRect.top = pop();
-		if (_language == Common::HE_ISR)
-			vs->curRect.right = _screenWidth - 1 - pop();
-		else
-			vs->curRect.left = vs->origLeft = pop();
+		vs->origLeft = pop();
 		break;
 	case 0x9B:		// SO_VERB_ON Turn verb on
 		vs->curmode = 1;
@@ -1337,7 +1333,7 @@ void ScummEngine_v8::o8_getStringWidth() {
 	// Skip to the next instruction
 	_scriptPointer += resStrLen(_scriptPointer) + 1;
 
-	translateText(msg, transBuf);
+	convertMessageToString(msg, transBuf, 512);
 	msg = transBuf;
 
 	// Temporary set the specified charset id

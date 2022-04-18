@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -26,30 +25,21 @@ namespace AGS3 {
 namespace Plugins {
 namespace AGSFire {
 
-IAGSEngine *AGSFire::_engine;
-
-AGSFire::AGSFire() : PluginBase() {
-	_engine = nullptr;
-
-	DLL_METHOD(AGS_GetPluginName);
-	DLL_METHOD(AGS_EngineStartup);
-}
-
 const char *AGSFire::AGS_GetPluginName() {
 	return "Fire Plugin stub (ags_fire.dll)";
 }
 
 void AGSFire::AGS_EngineStartup(IAGSEngine *engine) {
-	_engine = engine;
+	PluginBase::AGS_EngineStartup(engine);
 
-	SCRIPT_METHOD(FireAddObject);
-	SCRIPT_METHOD(FirePreHeat);
-	SCRIPT_METHOD(FireDisableSeeding);
-	SCRIPT_METHOD(FireEnableSeeding);
-	SCRIPT_METHOD(FireSetStrength);
-	SCRIPT_METHOD(FireRemoveObject);
-	SCRIPT_METHOD(FireUpdate);
-	SCRIPT_METHOD(FireStop);
+	SCRIPT_METHOD(FireAddObject, AGSFire::FireAddObject);
+	SCRIPT_METHOD(FirePreHeat, AGSFire::FirePreHeat);
+	SCRIPT_METHOD(FireDisableSeeding, AGSFire::FireDisableSeeding);
+	SCRIPT_METHOD(FireEnableSeeding, AGSFire::FireEnableSeeding);
+	SCRIPT_METHOD(FireSetStrength, AGSFire::FireSetStrength);
+	SCRIPT_METHOD(FireRemoveObject, AGSFire::FireRemoveObject);
+	SCRIPT_METHOD(FireUpdate, AGSFire::FireUpdate);
+	SCRIPT_METHOD(FireStop, AGSFire::FireStop);
 }
 
 void AGSFire::FireAddObject(ScriptMethodParams &params) {

@@ -7,10 +7,10 @@
  * Additional copyright for this file:
  * Copyright (C) 1995 Presto Studios, Inc.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,8 +18,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -144,6 +143,7 @@ bool SoundManager::setAmbientSound(const Common::String &fileName, bool fade, by
 			_soundData[kAmbientIndexBase + newAmbientTrack]->_timedEffectDelta = finalVolumeLevel / 16;
 			_soundData[kAmbientIndexBase + newAmbientTrack]->_timedEffectStart = g_system->getMillis();
 			_soundData[kAmbientIndexBase + newAmbientTrack]->_timedEffectRemaining = 2000;
+			_soundData[kAmbientIndexBase + newAmbientTrack]->_soundType = Audio::Mixer::kMusicSoundType;
 
 			// Start the new ambient
 			retVal = _soundData[kAmbientIndexBase + newAmbientTrack]->start();
@@ -155,6 +155,7 @@ bool SoundManager::setAmbientSound(const Common::String &fileName, bool fade, by
 				// Set some parameters
 				_soundData[kAmbientIndexBase + newAmbientTrack]->_volume = finalVolumeLevel;
 				_soundData[kAmbientIndexBase + newAmbientTrack]->_loop = true;
+				_soundData[kAmbientIndexBase + newAmbientTrack]->_soundType = Audio::Mixer::kMusicSoundType;
 
 				// Stop the current ambient
 				delete _soundData[kAmbientIndexBase + _lastAmbient];
@@ -217,7 +218,7 @@ bool SoundManager::adjustAmbientSoundVolume(byte newVolumeLevel, bool fade, byte
 }
 
 bool SoundManager::isAmbientSoundPlaying() {
-	return _soundData[kAmbientIndexBase + _lastAmbient]->_handle != 0;
+	return _soundData[kAmbientIndexBase + _lastAmbient]->_handle != nullptr;
 }
 
 bool SoundManager::setSecondaryAmbientSound(const Common::String &fileName, bool fade, byte finalVolumeLevel) {
@@ -248,6 +249,7 @@ bool SoundManager::setSecondaryAmbientSound(const Common::String &fileName, bool
 		_soundData[kAmbientIndexBase + newAmbientTrack]->_timedEffectDelta = finalVolumeLevel / 16;
 		_soundData[kAmbientIndexBase + newAmbientTrack]->_timedEffectStart = g_system->getMillis();
 		_soundData[kAmbientIndexBase + newAmbientTrack]->_timedEffectRemaining = 2000;
+		_soundData[kAmbientIndexBase + newAmbientTrack]->_soundType = Audio::Mixer::kMusicSoundType;
 
 		// Start the new ambient
 		return _soundData[kAmbientIndexBase + newAmbientTrack]->start();
@@ -260,6 +262,7 @@ bool SoundManager::setSecondaryAmbientSound(const Common::String &fileName, bool
 	// Set some parameters
 	_soundData[kAmbientIndexBase + newAmbientTrack]->_volume = finalVolumeLevel;
 	_soundData[kAmbientIndexBase + newAmbientTrack]->_loop = true;
+	_soundData[kAmbientIndexBase + newAmbientTrack]->_soundType = Audio::Mixer::kMusicSoundType;
 
 	// Start the new ambient
 	return _soundData[kAmbientIndexBase + newAmbientTrack]->start();
@@ -342,12 +345,14 @@ bool SoundManager::playSynchronousAIComment(const Common::String &fileName) {
 	if (!_soundData[kAIVoiceIndex]->load(fileName))
 		return false;
 
+	_soundData[kAIVoiceIndex]->_soundType = Audio::Mixer::kSpeechSoundType;
+
 	// Play the file
 	bool retVal = _soundData[kAIVoiceIndex]->start();
 
 	while (retVal && !_vm->shouldQuit() && _soundData[kAIVoiceIndex]->isPlaying()) {
 		timerCallback();
-		_vm->yield();
+		_vm->yield(nullptr, kAIVoiceIndex);
 	}
 
 	// Now that is has been played, kill it here and now
@@ -369,6 +374,7 @@ bool SoundManager::playAsynchronousAIComment(const Common::String &fileName) {
 	// Set some parameters
 	_soundData[kAIVoiceIndex]->_flags = SOUND_FLAG_DESTROY_AFTER_COMPLETION;
 	_soundData[kAIVoiceIndex]->_volume = 127;
+	_soundData[kAIVoiceIndex]->_soundType = Audio::Mixer::kSpeechSoundType;
 
 	// Play the file
 	return _soundData[kAIVoiceIndex]->start();
@@ -379,6 +385,12 @@ bool SoundManager::isAsynchronousAICommentPlaying() {
 		return false;
 
 	return _soundData[kAIVoiceIndex]->isPlaying();
+}
+
+void SoundManager::stopAsynchronousAIComment() {
+	if (isAsynchronousAICommentPlaying()) {
+		_soundData[kAIVoiceIndex]->stop();
+	}
 }
 
 int SoundManager::playSoundEffect(const Common::String &fileName, int volume, bool loop, bool oneShot) {
@@ -410,6 +422,7 @@ int SoundManager::playSoundEffect(const Common::String &fileName, int volume, bo
 	_soundData[kEffectsIndexBase + effectChannel]->_loop = loop;
 	if (oneShot)
 		_soundData[kEffectsIndexBase + effectChannel]->_flags = SOUND_FLAG_DESTROY_AFTER_COMPLETION;
+	_soundData[kEffectsIndexBase + effectChannel]->_soundType = Audio::Mixer::kSFXSoundType;
 
 	// Play the file
 	_soundData[kEffectsIndexBase + effectChannel]->start();
@@ -434,7 +447,7 @@ bool SoundManager::playSynchronousSoundEffect(const Common::String &fileName, in
 	// the sound finishes playing
 	do {
 		timerCallback();
-		_vm->yield();
+		_vm->yield(nullptr, kEffectsIndexBase + soundChannel);
 	} while (!_vm->shouldQuit() && isSoundEffectPlaying(soundChannel));
 
 	// One last callback check
@@ -530,6 +543,7 @@ bool SoundManager::playInterfaceSound(const Common::String &fileName) {
 		return false;
 
 	_soundData[kInterfaceIndex]->_flags = SOUND_FLAG_DESTROY_AFTER_COMPLETION;
+	_soundData[kInterfaceIndex]->_soundType = Audio::Mixer::kSFXSoundType;
 
 	// Play the file
 	return _soundData[kInterfaceIndex]->start();
@@ -572,6 +586,7 @@ bool SoundManager::startFootsteps(int footstepsID) {
 		// Load the footsteps sample data and modify the internal flags
 		_soundData[kFootstepsIndex]->load(_vm->getFilePath(IDS_FOOTSTEPS_FILENAME_BASE + footstepsID));
 		_soundData[kFootstepsIndex]->_loop = true;
+		_soundData[kFootstepsIndex]->_soundType = Audio::Mixer::kSFXSoundType;
 	}
 
 	// Play the footsteps
@@ -610,6 +625,10 @@ bool SoundManager::stop() {
 
 	_paused = true;
 	return true;
+}
+
+void SoundManager::stopSound(int soundId) {
+	_soundData[soundId]->stop();
 }
 
 bool SoundManager::restart() {
@@ -694,6 +713,7 @@ SoundManager::Sound::Sound() {
 	_timedEffectRemaining = 0;
 
 	_wasPlaying = false;
+	_soundType = Audio::Mixer::kPlainSoundType;
 }
 
 SoundManager::Sound::~Sound() {
@@ -712,7 +732,7 @@ bool SoundManager::Sound::load(const Common::String &fileName) {
 		return false;
 
 	_soundData = Audio::makeWAVStream(stream, DisposeAfterUse::YES);
-	return _soundData != 0;
+	return _soundData != nullptr;
 }
 
 bool SoundManager::Sound::start() {
@@ -733,7 +753,7 @@ bool SoundManager::Sound::start() {
 		disposeAfterUse = DisposeAfterUse::YES;
 	}
 
-	g_system->getMixer()->playStream(Audio::Mixer::kPlainSoundType, _handle, audioStream,
+	g_system->getMixer()->playStream(_soundType, _handle, audioStream,
 			-1, clipVolume(_volume << 1), 0, disposeAfterUse);
 
 	return true;

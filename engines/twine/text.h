@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,32 +32,6 @@ namespace TwinE {
 class TextEntry;
 
 #define TEXT_MAX_FADE_IN_CHR 32
-
-#define COLOR_BLACK 0
-#define COLOR_BRIGHT_BLUE 4
-#define COLOR_9 9
-#define COLOR_14 14
-// color 1 = yellow
-// color 2 - 15 = white
-// color 16 - 19 = brown
-// color 20 - 24 = orange to yellow
-// color 25 orange
-// color 26 - 30 = bright gray or white
-#define COlOR_31 31 // green dark
-#define COlOR_47 47 // green bright
-#define COLOR_48 48 // brown dark
-#define COLOR_63 63 // brown bright
-#define COLOR_64 64 // blue dark
-#define COLOR_68 68 // blue
-#define COLOR_73 73 // blue
-#define COLOR_75 75
-#define COLOR_79 79 // blue bright
-#define COLOR_80 80
-#define COLOR_91 91
-#define COLOR_BRIGHT_BLUE2 69
-#define COLOR_WHITE 15
-#define COLOR_GOLD 155
-#define COLOR_158 158
 
 enum class ProgressiveTextState {
 	End = 0,				/**< Text has reached its end and we are waiting for user input */
@@ -172,16 +145,16 @@ public:
 	// TODO: refactor all this variables and related functions
 	bool _hasValidTextHandle = false;
 	// renders a triangle if the next side of the text can get activated
-	bool renderTextTriangle = false;
-	bool drawTextBoxBackground = false;
-	bool hasHiddenVox = false; // printTextVar5
-	int32 voxHiddenIndex = 0;
+	bool _renderTextTriangle = false;
+	bool _drawTextBoxBackground = false;
+	bool _hasHiddenVox = false; // printTextVar5
+	int32 _voxHiddenIndex = 0;
 	// ---
 
-	const TextEntry *currDialTextEntry = nullptr; // ordered entry
-	Common::String currentVoxBankFile;
+	const TextEntry *_currDialTextEntry = nullptr; // ordered entry
+	Common::String _currentVoxBankFile;
 
-	bool showDialogueBubble = true;
+	bool _showDialogueBubble = true;
 
 	/**
 	 * Initialize dialogue

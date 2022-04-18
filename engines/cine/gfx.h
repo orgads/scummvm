@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -154,13 +153,13 @@ protected:
 	void drawMaskedSprite(const ObjectStruct &obj, const byte *mask);
 	virtual void drawSprite(const ObjectStruct &obj);
 
-	void drawMessage(const char *str, int x, int y, int width, int color);
+	int drawMessage(const char *str, int x, int y, int width, int color, bool draw = true);
 	void drawPlainBox(int x, int y, int width, int height, byte color);
 	byte transparentDialogBoxStartColor();
 	void drawTransparentBox(int x, int y, int width, int height);
 	void drawBorder(int x, int y, int width, int height, byte color);
 	void drawDoubleBorder(int x, int y, int width, int height, byte color);
-	virtual int drawChar(char character, int x, int y);
+	virtual int drawChar(char character, int x, int y, bool draw = true);
 	virtual int undrawChar(char character, int x, int y);
 	void drawLine(int x, int y, int width, int height, byte color);
 	void remaskSprite(byte *mask, Common::List<overlay>::iterator it);
@@ -260,7 +259,7 @@ protected:
 	const Cine::Palette& getFadeInSourcePalette() override;
 	void drawSprite(const ObjectStruct &obj) override;
 	void drawSprite(overlay *overlayPtr, const byte *spritePtr, int16 width, int16 height, byte *page, int16 x, int16 y, byte transparentColor, byte bpp);
-	int drawChar(char character, int x, int y) override;
+	int drawChar(char character, int x, int y, bool draw = true) override;
 	void drawBackground() override;
 	void renderOverlay(const Common::List<overlay>::iterator &it) override;
 

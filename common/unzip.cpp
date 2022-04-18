@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -1429,10 +1428,10 @@ public:
 
 	~ZipArchive();
 
-	virtual bool hasFile(const String &name) const;
-	virtual int listMembers(ArchiveMemberList &list) const;
-	virtual const ArchiveMemberPtr getMember(const String &name) const;
-	virtual SeekableReadStream *createReadStreamForMember(const String &name) const;
+	bool hasFile(const Path &path) const override;
+	int listMembers(ArchiveMemberList &list) const override;
+	const ArchiveMemberPtr getMember(const Path &path) const override;
+	SeekableReadStream *createReadStreamForMember(const Path &path) const override;
 };
 
 /*
@@ -1461,7 +1460,8 @@ ZipArchive::~ZipArchive() {
 	unzClose(_zipFile);
 }
 
-bool ZipArchive::hasFile(const String &name) const {
+bool ZipArchive::hasFile(const Path &path) const {
+	String name = path.toString();
 	return (unzLocateFile(_zipFile, name.c_str(), 2) == UNZ_OK);
 }
 
@@ -1478,14 +1478,16 @@ int ZipArchive::listMembers(ArchiveMemberList &list) const {
 	return members;
 }
 
-const ArchiveMemberPtr ZipArchive::getMember(const String &name) const {
+const ArchiveMemberPtr ZipArchive::getMember(const Path &path) const {
+	String name = path.toString();
 	if (!hasFile(name))
 		return ArchiveMemberPtr();
 
 	return ArchiveMemberPtr(new GenericArchiveMember(name, this));
 }
 
-SeekableReadStream *ZipArchive::createReadStreamForMember(const String &name) const {
+SeekableReadStream *ZipArchive::createReadStreamForMember(const Path &path) const {
+	String name = path.toString();
 	if (unzLocateFile(_zipFile, name.c_str(), 2) != UNZ_OK)
 		return nullptr;
 

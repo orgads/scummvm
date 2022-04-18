@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -27,10 +26,9 @@
 #include "common/noncopyable.h"
 #include "common/safe-bool.h"
 #include "common/types.h"
-#ifdef USE_CXX11
+
 /* For nullptr_t */
 #include <cstddef>
-#endif
 
 namespace Common {
 
@@ -89,10 +87,8 @@ public:
 	BasePtr() : _refCount(nullptr), _deletion(nullptr), _pointer(nullptr) {
 	}
 
-#ifdef USE_CXX11
 	explicit BasePtr(std::nullptr_t) : _refCount(nullptr), _deletion(nullptr), _pointer(nullptr) {
 	}
-#endif
 
 	template<class T2>
 	explicit BasePtr(T2 *p) : _refCount(new RefValue(1)), _deletion(new BasePtrDeletionImpl<T2>(p)), _pointer(p) {
@@ -286,10 +282,8 @@ public:
 	SharedPtr() : BasePtr<T>() {
 	}
 
-#ifdef USE_CXX11
 	SharedPtr(std::nullptr_t) : BasePtr<T>() {
 	}
-#endif
 
 	template<class T2>
 	explicit SharedPtr(T2 *p) : BasePtr<T>(p) {
@@ -352,10 +346,8 @@ public:
 	WeakPtr() : BasePtr<T>() {
 	}
 
-#ifdef USE_CXX11
 	WeakPtr(std::nullptr_t) : BasePtr<T>() {
 	}
-#endif
 
 	template<class T2>
 	explicit WeakPtr(T2 *p) : BasePtr<T>(p) {
@@ -476,11 +468,24 @@ public:
 	}
 
 	/**
+	 * Clears the pointer without destroying the old object.
+	 */
+	void disownPtr() {
+		_pointer = nullptr;
+		_dispose = DisposeAfterUse::NO;
+	}
+
+	/**
 	 * Returns the plain pointer value.
 	 *
 	 * @return the pointer the DisposablePtr manages
 	 */
 	PointerType get() const { return _pointer; }
+
+	/**
+	 * Returns the pointer's dispose flag.
+	 */
+	DisposeAfterUse::Flag getDispose() const { return _dispose; }
 
 private:
 	PointerType           _pointer;

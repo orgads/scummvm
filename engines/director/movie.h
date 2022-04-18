@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -68,22 +67,7 @@ struct InfoEntry {
 		return *this;
 	}
 
-	Common::String readString(bool pascal = true) {
-		Common::String res;
-
-		if (len == 0)
-			return res;
-
-		int start = pascal ? 1 : 0;
-
-		for (uint i = start; i < len; i++)
-			if (data[i] == '\r')
-				res += '\n';
-			else if (data[i] >= 0x20)
-				res += data[i];
-
-		return res;
-	}
+	Common::String readString(bool pascal = true);
 };
 
 struct InfoEntries {
@@ -117,15 +101,14 @@ public:
 	void clearSharedCast();
 	void loadSharedCastsFrom(Common::String filename);
 
-	CastMember *getCastMember(int castId);
-	CastMember *getCastMemberByName(const Common::String &name);
-	CastMember *getCastMemberByScriptId(int scriptId);
-	CastMemberInfo *getCastMemberInfo(int castId);
-	const Stxt *getStxt(int castId);
+	CastMember *getCastMember(CastMemberID memberID);
+	CastMember *getCastMemberByName(const Common::String &name, int castLib);
+	CastMemberInfo *getCastMemberInfo(CastMemberID memberID);
+	const Stxt *getStxt(CastMemberID memberID);
 
 	LingoArchive *getMainLingoArch();
 	LingoArchive *getSharedLingoArch();
-	ScriptContext *getScriptContext(ScriptType type, uint16 id);
+	ScriptContext *getScriptContext(ScriptType type, CastMemberID id);
 	Symbol getHandler(const Common::String &name);
 
 	// events.cpp
@@ -133,26 +116,28 @@ public:
 
 	// lingo/lingo-events.cpp
 	void setPrimaryEventHandler(LEvent event, const Common::String &code);
-	int getEventCount();
 	void processEvent(LEvent event, int targetId = 0);
-	void registerEvent(LEvent event, int targetId = 0);
+	void queueUserEvent(LEvent event, int targetId = 0);
 
 private:
 	void loadFileInfo(Common::SeekableReadStreamEndian &stream);
 
-	void queueSpriteEvent(LEvent event, int eventId, int spriteId);
-	void queueFrameEvent(LEvent event, int eventId);
-	void queueMovieEvent(LEvent event, int eventId);
+	void queueEvent(Common::Queue<LingoEvent> &queue, LEvent event, int targetId = 0);
+	void queueSpriteEvent(Common::Queue<LingoEvent> &queue, LEvent event, int eventId, int spriteId);
+	void queueFrameEvent(Common::Queue<LingoEvent> &queue, LEvent event, int eventId);
+	void queueMovieEvent(Common::Queue<LingoEvent> &queue, LEvent event, int eventId);
 
 public:
 	Archive *_movieArchive;
 	uint16 _version;
+	Common::Platform _platform;
 	Common::Rect _movieRect;
 	uint16 _currentClickOnSpriteId;
 	uint16 _currentEditableTextChannel;
 	uint32 _lastEventTime;
 	uint32 _lastRollTime;
 	uint32 _lastClickTime;
+	uint32 _lastClickTime2;
 	Common::Point _lastClickPos;
 	uint32 _lastKeyTime;
 	uint32 _lastTimerReset;
@@ -163,7 +148,7 @@ public:
 	bool _videoPlayback;
 
 	int _nextEventId;
-	Common::Queue<LingoEvent> _eventQueue;
+	Common::Queue<LingoEvent> _userEventQueue;
 
 	unsigned char _key;
 	int _keyCode;
@@ -173,6 +158,15 @@ public:
 	int _selEnd;
 
 	int _checkBoxType;
+	int _checkBoxAccess;
+
+	uint16 _currentHiliteChannelId;
+
+	uint _lastTimeOut;
+	uint _timeOutLength;
+	bool _timeOutKeyDown;
+	bool _timeOutMouse;
+	bool _timeOutPlay;
 
 private:
 	Window *_window;
@@ -189,8 +183,7 @@ private:
 	Common::String _script;
 	Common::String _directory;
 
-	uint16 _currentHiliteChannelId;
-	uint16 _currentHandlingChannelId;
+	bool _mouseDownWasInButton;
 	Channel *_currentDraggedChannel;
 	Common::Point _draggingSpritePos;
 };

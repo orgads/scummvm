@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -54,9 +53,7 @@ namespace AGS3 {
 using namespace AGS::Shared;
 using namespace AGS::Engine;
 
-extern void ags_domouse(int str);
-
-// The _GP(mouse). functions are static so the script doesn't pass
+// The mouse functions are static so the script doesn't pass
 // in an object parameter
 void Mouse_SetVisible(int isOn) {
 	if (isOn)
@@ -187,13 +184,15 @@ void ChangeCursorHotspot(int curs, int x, int y) {
 		set_mouse_cursor(_G(cur_cursor));
 }
 
-void Mouse_ChangeModeView(int curs, int newview) {
+void Mouse_ChangeModeViewEx(int curs, int newview, int delay) {
 	if ((curs < 0) || (curs >= _GP(game).numcursors))
 		quit("!Mouse.ChangeModeView: invalid mouse cursor");
 
 	newview--;
 
 	_GP(game).mcurs[curs].view = newview;
+	if (delay != SCR_NO_VALUE)
+		_GP(game).mcurs[curs].animdelay = delay;
 
 	if (newview >= 0) {
 		precache_view(newview);
@@ -201,6 +200,10 @@ void Mouse_ChangeModeView(int curs, int newview) {
 
 	if (curs == _G(cur_cursor))
 		_G(mouse_delay) = 0;  // force update
+}
+
+void Mouse_ChangeModeView(int curs, int newview) {
+	Mouse_ChangeModeViewEx(curs, newview, SCR_NO_VALUE);
 }
 
 void SetNextCursor() {
@@ -440,8 +443,12 @@ RuntimeScriptValue Sc_ChangeCursorHotspot(const RuntimeScriptValue *params, int3
 }
 
 // void (int curs, int newview)
-RuntimeScriptValue Sc_Mouse_ChangeModeView(const RuntimeScriptValue *params, int32_t param_count) {
+RuntimeScriptValue Sc_Mouse_ChangeModeView_2(const RuntimeScriptValue *params, int32_t param_count) {
 	API_SCALL_VOID_PINT2(Mouse_ChangeModeView);
+}
+
+RuntimeScriptValue Sc_Mouse_ChangeModeView(const RuntimeScriptValue *params, int32_t param_count) {
+	API_SCALL_VOID_PINT3(Mouse_ChangeModeViewEx);
 }
 
 // void (int modd)
@@ -555,7 +562,8 @@ RuntimeScriptValue Sc_Mouse_SetSpeed(const RuntimeScriptValue *params, int32_t p
 void RegisterMouseAPI() {
 	ccAddExternalStaticFunction("Mouse::ChangeModeGraphic^2", Sc_ChangeCursorGraphic);
 	ccAddExternalStaticFunction("Mouse::ChangeModeHotspot^3", Sc_ChangeCursorHotspot);
-	ccAddExternalStaticFunction("Mouse::ChangeModeView^2", Sc_Mouse_ChangeModeView);
+	ccAddExternalStaticFunction("Mouse::ChangeModeView^2", Sc_Mouse_ChangeModeView_2);
+	ccAddExternalStaticFunction("Mouse::ChangeModeView^3", Sc_Mouse_ChangeModeView);
 	ccAddExternalStaticFunction("Mouse::Click^1", Sc_Mouse_Click);
 	ccAddExternalStaticFunction("Mouse::DisableMode^1", Sc_disable_cursor_mode);
 	ccAddExternalStaticFunction("Mouse::EnableMode^1", Sc_enable_cursor_mode);
@@ -578,29 +586,6 @@ void RegisterMouseAPI() {
 	ccAddExternalStaticFunction("Mouse::set_Speed", Sc_Mouse_SetSpeed);
 	ccAddExternalStaticFunction("Mouse::get_Visible", Sc_Mouse_GetVisible);
 	ccAddExternalStaticFunction("Mouse::set_Visible", Sc_Mouse_SetVisible);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("Mouse::ChangeModeGraphic^2", (void *)ChangeCursorGraphic);
-	ccAddExternalFunctionForPlugin("Mouse::ChangeModeHotspot^3", (void *)ChangeCursorHotspot);
-	ccAddExternalFunctionForPlugin("Mouse::ChangeModeView^2", (void *)Mouse_ChangeModeView);
-	ccAddExternalFunctionForPlugin("Mouse::DisableMode^1", (void *)disable_cursor_mode);
-	ccAddExternalFunctionForPlugin("Mouse::EnableMode^1", (void *)enable_cursor_mode);
-	ccAddExternalFunctionForPlugin("Mouse::GetModeGraphic^1", (void *)Mouse_GetModeGraphic);
-	ccAddExternalFunctionForPlugin("Mouse::IsButtonDown^1", (void *)IsButtonDown);
-	ccAddExternalFunctionForPlugin("Mouse::IsModeEnabled^1", (void *)IsModeEnabled);
-	ccAddExternalFunctionForPlugin("Mouse::SaveCursorUntilItLeaves^0", (void *)SaveCursorForLocationChange);
-	ccAddExternalFunctionForPlugin("Mouse::SelectNextMode^0", (void *)SetNextCursor);
-	ccAddExternalFunctionForPlugin("Mouse::SelectPreviousMode^0", (void *)SetPreviousCursor);
-	ccAddExternalFunctionForPlugin("Mouse::SetBounds^4", (void *)SetMouseBounds);
-	ccAddExternalFunctionForPlugin("Mouse::SetPosition^2", (void *)SetMousePosition);
-	ccAddExternalFunctionForPlugin("Mouse::Update^0", (void *)RefreshMouse);
-	ccAddExternalFunctionForPlugin("Mouse::UseDefaultGraphic^0", (void *)set_default_cursor);
-	ccAddExternalFunctionForPlugin("Mouse::UseModeGraphic^1", (void *)set_mouse_cursor);
-	ccAddExternalFunctionForPlugin("Mouse::get_Mode", (void *)GetCursorMode);
-	ccAddExternalFunctionForPlugin("Mouse::set_Mode", (void *)set_cursor_mode);
-	ccAddExternalFunctionForPlugin("Mouse::get_Visible", (void *)Mouse_GetVisible);
-	ccAddExternalFunctionForPlugin("Mouse::set_Visible", (void *)Mouse_SetVisible);
 }
 
 } // namespace AGS3

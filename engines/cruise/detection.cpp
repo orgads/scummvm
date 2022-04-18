@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,7 +27,7 @@
 
 static const PlainGameDescriptor cruiseGames[] = {
 	{"cruise", "Cruise for a Corpse"},
-	{0, 0}
+	{nullptr, nullptr}
 };
 
 static const DebugChannelDef debugFlagList[] = {
@@ -109,7 +108,7 @@ static const CRUISEGameDescription gameDescriptions[] = {
 	{
 		{
 			"cruise",
-			0,
+			nullptr,
 			AD_ENTRY1("D1", "70f42a21cc257b01d58667853335f4f1"),
 			Common::DE_DEU,
 			Common::kPlatformAmiga,
@@ -120,7 +119,7 @@ static const CRUISEGameDescription gameDescriptions[] = {
 	{ // Amiga English US GOLD edition.
 		{
 			"cruise",
-			0,
+			nullptr,
 			AD_ENTRY1("D1", "de084e9d2c6e4b2cc14803bf849eda3e"),
 			Common::EN_ANY,
 			Common::kPlatformAmiga,
@@ -131,9 +130,20 @@ static const CRUISEGameDescription gameDescriptions[] = {
 	{ // Amiga Italian US GOLD edition.
 		{
 			"cruise",
-			0,
+			nullptr,
 			AD_ENTRY1("D1", "a0011075413b7335e003e8e3c9cf51b9"),
 			Common::IT_ITA,
+			Common::kPlatformAmiga,
+			ADGF_NO_FLAGS,
+			GUIO0()
+		},
+	},
+	{ // Amiga Spanish edition.
+		{
+			"cruise",
+			nullptr,
+			AD_ENTRY1s("D1", "b600d0892a2605b9ead63e1c86a8a0a3", 700576),
+			Common::ES_ESP,
 			Common::kPlatformAmiga,
 			ADGF_NO_FLAGS,
 			GUIO0()
@@ -142,9 +152,20 @@ static const CRUISEGameDescription gameDescriptions[] = {
 	{ // AtariST English KixxXL edition.
 		{
 			"cruise",
-			0,
+			nullptr,
 			AD_ENTRY1("D1", "be78614d5fa34bdb68bb03a2a6130280"),
 			Common::EN_ANY,
+			Common::kPlatformAtariST,
+			ADGF_NO_FLAGS,
+			GUIO0()
+		},
+	},
+	{ // AtariST French edition. Bugreport #12824
+		{
+			"cruise",
+			nullptr,
+			AD_ENTRY1s("D1", "485ff850b7035316621f632e33f56468", 537311),
+			Common::FR_FRA,
 			Common::kPlatformAtariST,
 			ADGF_NO_FLAGS,
 			GUIO0()

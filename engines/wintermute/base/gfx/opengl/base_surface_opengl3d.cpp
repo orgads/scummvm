@@ -1,30 +1,32 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
+ * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "common/algorithm.h"
+
 #include "graphics/transform_tools.h"
+
+#include "engines/wintermute/base/base_engine.h"
 #include "engines/wintermute/base/gfx/base_image.h"
 
-#if defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS) || defined(USE_GLES2)
+#if defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS)
 
 #include "engines/wintermute/base/gfx/opengl/base_surface_opengl3d.h"
 #include "engines/wintermute/base/gfx/opengl/base_render_opengl3d.h"
@@ -172,13 +174,25 @@ bool BaseSurfaceOpenGL3D::create(const Common::String &filename, bool defaultCK,
 		delete _imageData;
 	}
 
-	_imageData = img.getSurface()->convertTo(OpenGL::TextureGL::getRGBAPixelFormat(), img.getPalette());
+#ifdef SCUMM_BIG_ENDIAN
+	_imageData = img.getSurface()->convertTo(Graphics::PixelFormat(4, 8, 8, 8, 8, 24, 16, 8, 0), img.getPalette());
+#else
+	_imageData = img.getSurface()->convertTo(Graphics::PixelFormat(4, 8, 8, 8, 8, 0, 8, 16, 24), img.getPalette());
+#endif
 
-	if (_filename.hasSuffix(".bmp") && img.getSurface()->format.bytesPerPixel == 4) {
-		// 32 bpp BMPs have nothing useful in their alpha-channel -> color-key
+	if (BaseEngine::instance().getTargetExecutable() < WME_LITE) {
+		// WME 1.x always use colorkey, even for images with transparency
+		needsColorKey = true;
+		replaceAlpha = false;
+	} else if (BaseEngine::instance().isFoxTail()) {
+		// FoxTail does not use colorkey
+		needsColorKey = false;
+	} else if (_filename.hasSuffix(".bmp")) {
+		// generic WME Lite ignores alpha channel for BMPs
 		needsColorKey = true;
 		replaceAlpha = false;
 	} else if (img.getSurface()->format.aBits() == 0) {
+		// generic WME Lite does not use colorkey for non-BMPs with transparency
 		needsColorKey = true;
 	}
 
@@ -281,9 +295,9 @@ bool BaseSurfaceOpenGL3D::isTransparentAtLite(int x, int y) {
 		return false;
 	}
 
-	//TODO: Check for endianness issues
-	uint8 alpha = reinterpret_cast<uint8 *>(_imageData->getPixels())[y * _width * 4 + x * 4 + 3];
-	return alpha == 0;
+	uint8 a, r, g, b;
+	_imageData->format.colorToARGB(_imageData->getPixel(x, y), a, r, g, b);
+	return a == 0;
 }
 
 void BaseSurfaceOpenGL3D::setTexture() {
@@ -294,4 +308,4 @@ void BaseSurfaceOpenGL3D::setTexture() {
 
 } // End of namespace Wintermute
 
-#endif // defined(USE_OPENGL_GAME) && !defined(USE_GLES2)
+#endif // defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS)

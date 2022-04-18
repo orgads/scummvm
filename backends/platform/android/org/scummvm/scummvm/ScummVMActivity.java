@@ -12,6 +12,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Rect;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -62,6 +64,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TreeSet;
 
+import static android.content.res.Configuration.HARDKEYBOARDHIDDEN_NO;
 import static android.content.res.Configuration.KEYBOARD_QWERTY;
 
 public class ScummVMActivity extends Activity implements OnKeyboardVisibilityListener {
@@ -115,8 +118,10 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 	FrameLayout _videoLayout = null;
 
 	private EditableSurfaceView _main_surface = null;
+	private ImageView _toggleGamepadBtnIcon = null;
 	private ImageView _toggleKeyboardBtnIcon = null;
 	private ImageView _openMenuBtnIcon = null;
+	private ImageView _revokeSafPermissionsBtnIcon = null;
 
 	public View _screenKeyboard = null;
 	static boolean keyboardWithoutTextInputShown = false;
@@ -135,13 +140,18 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 	@Override
 	public void onConfigurationChanged(@NonNull Configuration newConfig) {
 		super.onConfigurationChanged(newConfig);
-		if (isHWKeyboardConnected()) {
+
+		final boolean hwKeyboard = isHWKeyboardConnected();
+		_toggleKeyboardBtnIcon.setVisibility(hwKeyboard ? View.GONE : View.VISIBLE);
+		if (hwKeyboard) {
 			hideScreenKeyboard();
 		}
 	}
 
 	private boolean isHWKeyboardConnected() {
-		return getResources().getConfiguration().keyboard == KEYBOARD_QWERTY;
+		final Configuration config = getResources().getConfiguration();
+		return config.keyboard == KEYBOARD_QWERTY
+			&& config.hardKeyboardHidden == HARDKEYBOARDHIDDEN_NO;
 	}
 
 	public boolean isKeyboardOverlayShown() {
@@ -417,19 +427,19 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 
 								// TODO - "Swipe" behavior does not seem to work currently. Should we support it?
 								public void swipeLeft() {
-									//Log.d(ScummVM.LOG_TAG, "SHOW KEYBOARD - 001 - swipeLeft");
+//									Log.d(ScummVM.LOG_TAG, "SHOW KEYBOARD - 001 - swipeLeft");
 								}
 
 								public void swipeRight() {
-									//Log.d(ScummVM.LOG_TAG, "SHOW KEYBOARD - 001 - swipeRight" );
+//									Log.d(ScummVM.LOG_TAG, "SHOW KEYBOARD - 001 - swipeRight" );
 								}
 
 								public void swipeDown() {
-									//Log.d(ScummVM.LOG_TAG, "SHOW KEYBOARD - 001 - swipeDown" );
+//									Log.d(ScummVM.LOG_TAG, "SHOW KEYBOARD - 001 - swipeDown" );
 								}
 
 								public void swipeUp() {
-									//Log.d(ScummVM.LOG_TAG, "SHOW KEYBOARD - 001 - swipeUp ");
+//									Log.d(ScummVM.LOG_TAG, "SHOW KEYBOARD - 001 - swipeUp ");
 								}
 								public void onKey(int key, int[] keysAround) {
 //									Log.d(ScummVM.LOG_TAG, "SHOW KEYBOARD - 001 - onKey key: " + key );
@@ -560,6 +570,19 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 	// ---------------------------------------------------------------------------------------------------------------------------
 	//
 
+	public final View.OnClickListener gamepadBtnOnClickListener = new View.OnClickListener() {
+		@Override
+		public void onClick(View v) {
+			runOnUiThread(new Runnable() {
+				public void run() {
+					boolean touch3DMode = !_events.getTouch3DMode();
+					_events.setTouch3DMode(touch3DMode);
+					_toggleGamepadBtnIcon.setImageResource(touch3DMode ? R.drawable.ic_action_mouse : R.drawable.ic_action_gamepad);
+				}
+			});
+		}
+	};
+
 	public final View.OnClickListener keyboardBtnOnClickListener = new View.OnClickListener() {
 		@Override
 		public void onClick(View v) {
@@ -570,7 +593,6 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 			});
 		}
 	};
-
 
 	public final View.OnClickListener menuBtnOnClickListener = new View.OnClickListener() {
 		@Override
@@ -583,6 +605,17 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 		}
 	};
 
+	public final View.OnClickListener revokeSafPermissionsBtnOnClickListener = new View.OnClickListener() {
+		@Override
+		public void onClick(View v) {
+			runOnUiThread(new Runnable() {
+				public void run() {
+					clearStorageAccessFrameworkTreeUri();
+					_scummvm.displayMessageOnOSD(getString(R.string.saf_revoke_done));
+				}
+			});
+		}
+	};
 
 	private class MyScummVM extends ScummVM {
 
@@ -689,6 +722,50 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 		}
 
 		@Override
+		protected Bitmap getBitmapResource(int resource) {
+			int id;
+			switch(resource) {
+				case 0: // TOUCH_ARROWS_BITMAP
+					id = R.drawable.touch_arrows;
+					break;
+				default:
+					return null;
+			}
+
+			BitmapFactory.Options opts = new BitmapFactory.Options();
+			opts.inScaled = false;
+
+			return BitmapFactory.decodeResource(getResources(), id, opts);
+		}
+
+		@Override
+		protected void setTouch3DMode(final boolean touch3DMode) {
+			if (_events.getTouch3DMode() == touch3DMode) {
+				return;
+			}
+			runOnUiThread(new Runnable() {
+				public void run() {
+					_events.setTouch3DMode(touch3DMode);
+					_toggleGamepadBtnIcon.setImageResource(touch3DMode ? R.drawable.ic_action_mouse : R.drawable.ic_action_gamepad);
+				}
+			});
+		}
+
+		@Override
+		protected boolean getTouch3DMode() {
+			return _events.getTouch3DMode();
+		}
+
+		@Override
+		protected void showSAFRevokePermsControl(final boolean enable) {
+			runOnUiThread(new Runnable() {
+				public void run() {
+					showSAFRevokePermissionsBtnIcon(enable);
+				}
+			});
+		}
+
+		@Override
 		protected String[] getSysArchives() {
 			Log.d(ScummVM.LOG_TAG, "Adding to Search Archive: " + _actualScummVMDataDir.getPath());
 			if (_externalPathAvailableForReadAccess) {
@@ -789,6 +866,36 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 //				Log.d(ScummVM.LOG_TAG, "(post SAF access) We can read from folder:" + dirPath);
 //
 //			}
+
+			return retRes[0];
+		}
+
+
+		// This is a simplified version of createDirectoryWithSAF
+		// TODO Maybe we could merge isDirectoryWritableWithSAF() with createDirectoryWithSAF() using an extra argument parameter
+		@Override
+		protected boolean isDirectoryWritableWithSAF(String dirPath) {
+			final boolean[] retRes = {false};
+
+			Log.d(ScummVM.LOG_TAG, "Check if folder writable: " + dirPath);
+			File folderToCheck = new File (dirPath);
+			if (folderToCheck.canWrite()) {
+				Log.d(ScummVM.LOG_TAG, "This path has write permission!" + dirPath);
+			} else {
+				Log.d(ScummVM.LOG_TAG, "Trying to get write access with SAF");
+				if (getStorageAccessFrameworkTreeUri() == null) {
+					requestStorageAccessFramework(dirPath);
+				} else {
+					Log.d(ScummVM.LOG_TAG, "Already requested Storage Access (Storage Access Framework) in the past (share prefs saved)!");
+				}
+			}
+
+			if (canWriteFile(folderToCheck, true)) {
+				Log.d(ScummVM.LOG_TAG, "(post SAF request) Writing is possible for this directory node");
+				retRes[0] = true;
+			} else {
+				Log.d(ScummVM.LOG_TAG, "(post SAF request) Error - writing is still not possible for this directory node");
+			}
 
 			return retRes[0];
 		}
@@ -902,6 +1009,11 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 		_videoLayout.addView(buttonLayout, buttonLayoutParams);
 		_videoLayout.bringChildToFront(buttonLayout);
 
+		_toggleGamepadBtnIcon = new ImageView(this);
+		_toggleGamepadBtnIcon.setImageResource(R.drawable.ic_action_gamepad);
+		buttonLayout.addView(_toggleGamepadBtnIcon, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT));
+		buttonLayout.bringChildToFront(_toggleGamepadBtnIcon);
+
 		_toggleKeyboardBtnIcon = new ImageView(this);
 		_toggleKeyboardBtnIcon.setImageResource(R.drawable.ic_action_keyboard);
 		buttonLayout.addView(_toggleKeyboardBtnIcon, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT));
@@ -911,6 +1023,11 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 		_openMenuBtnIcon.setImageResource(R.drawable.ic_action_menu);
 		buttonLayout.addView(_openMenuBtnIcon, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT));
 		buttonLayout.bringChildToFront(_openMenuBtnIcon);
+
+		_revokeSafPermissionsBtnIcon = new ImageView(this);
+		_revokeSafPermissionsBtnIcon.setImageResource(R.drawable.ic_lock_icon);
+		buttonLayout.addView(_revokeSafPermissionsBtnIcon, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT));
+		buttonLayout.bringChildToFront(_revokeSafPermissionsBtnIcon);
 
 		_main_surface.setFocusable(true);
 		_main_surface.setFocusableInTouchMode(true);
@@ -943,7 +1060,14 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 		//                            so app's internal space (which would be deleted on uninstall) was set as WORLD_READABLE which is no longer supported in newer versions of Android API
 		//                            In newer APIs we can set that path as Context.MODE_PRIVATE which is the default - but this makes the files inaccessible to other apps
 
-		_scummvm = new MyScummVM(_main_surface.getHolder(), new MyScummVMDestroyedCallback() {
+		SurfaceHolder main_surface_holder = _main_surface.getHolder();
+
+		// By default Android selects RGB_565 for backward compatibility, use the best one by querying the display
+		// It's deprecated on API level >= 17 and will always return RGBA_8888
+		// but on older versions it could return RGB_565 which could be more efficient for the GPU
+		main_surface_holder.setFormat(getDisplayPixelFormat());
+
+		_scummvm = new MyScummVM(main_surface_holder, new MyScummVMDestroyedCallback() {
 		                                                        @Override
 		                                                        public void handle(int exitResult) {
 		                                                        	Log.d(ScummVM.LOG_TAG, "Via callback: ScummVM native terminated with code: " + exitResult);
@@ -999,8 +1123,10 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 
 			// On screen button listener
 			//findViewById(R.id.show_keyboard).setOnClickListener(keyboardBtnOnClickListener);
+			_toggleGamepadBtnIcon.setOnClickListener(gamepadBtnOnClickListener);
 			_toggleKeyboardBtnIcon.setOnClickListener(keyboardBtnOnClickListener);
 			_openMenuBtnIcon.setOnClickListener(menuBtnOnClickListener);
+			_revokeSafPermissionsBtnIcon.setOnClickListener(revokeSafPermissionsBtnOnClickListener);
 
 			// Keyboard visibility listener - mainly to hide system UI if keyboard is shown and we return from Suspend to the Activity
 			setKeyboardVisibilityListener(this);
@@ -1102,6 +1228,7 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 			hideScreenKeyboard();
 		}
 		showToggleKeyboardBtnIcon(false);
+		showSAFRevokePermissionsBtnIcon(false);
 	}
 
 
@@ -1253,7 +1380,7 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 	private void showToggleKeyboardBtnIcon(boolean show) {
 		//ImageView keyboardBtn = findViewById(R.id.show_keyboard);
 		if (_toggleKeyboardBtnIcon != null ) {
-			if (show) {
+			if (show && !isHWKeyboardConnected()) {
 				_toggleKeyboardBtnIcon.setVisibility(View.VISIBLE);
 			} else {
 				_toggleKeyboardBtnIcon.setVisibility(View.GONE);
@@ -1261,10 +1388,23 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 		}
 
 		if (_openMenuBtnIcon != null ) {
+			_openMenuBtnIcon.setVisibility(show ? View.VISIBLE : View.GONE);
+		}
+
+		if (_toggleGamepadBtnIcon != null ) {
+			_toggleGamepadBtnIcon.setVisibility(show ? View.VISIBLE : View.GONE);
+		}
+	}
+
+	// Show or hide the semi-transparent overlay button
+	// for revoking SAF permissions
+	// This is independent of the toggle keyboard icon and menu icon (which appear together currently in showToggleKeyboardBtnIcon())
+	private void showSAFRevokePermissionsBtnIcon(boolean show) {
+		if (_revokeSafPermissionsBtnIcon != null ) {
 			if (show) {
-				_openMenuBtnIcon.setVisibility(View.VISIBLE);
+				_revokeSafPermissionsBtnIcon.setVisibility(View.VISIBLE);
 			} else {
-				_openMenuBtnIcon.setVisibility(View.GONE);
+				_revokeSafPermissionsBtnIcon.setVisibility(View.GONE);
 			}
 		}
 	}
@@ -1304,6 +1444,13 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 	public void onVisibilityChanged(boolean visible) {
 //		Toast.makeText(HomeActivity.this, visible ? "Keyboard is active" : "Keyboard is Inactive", Toast.LENGTH_SHORT).show();
 		hideSystemUI();
+	}
+
+	@SuppressWarnings("deprecation")
+	private int getDisplayPixelFormat() {
+		// Since API level 17 this always returns PixelFormat.RGBA_8888
+		// so if we target more recent API levels, we could remove this function
+		return getWindowManager().getDefaultDisplay().getPixelFormat();
 	}
 
 	// Auxiliary function to overwrite a file (used for overwriting the scummvm.ini file with an existing other one)
@@ -2158,6 +2305,7 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 		_scummvm.displayMessageOnOSD(getString(R.string.saf_request_prompt) + dirPathSample);
 
 		if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+			// Directory picker
 			Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
 			intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
 			                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
@@ -2185,6 +2333,26 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 			}
 		}
 		return null;
+	}
+
+	// A method to revoke SAF granted stored permissions
+	// TODO We need a button or setting to trigger this on user's demand
+	public void clearStorageAccessFrameworkTreeUri() {
+		if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.KITKAT) {
+			return;
+		}
+
+		Uri treeUri;
+		if ((treeUri = getStorageAccessFrameworkTreeUri()) == null) {
+			return;
+		}
+
+		// revoke SAF permission AND clear the pertinent SharedPreferences key
+		getContentResolver().releasePersistableUriPermission(treeUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+		SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+		SharedPreferences.Editor editor = sharedPref.edit();
+		editor.remove(getString(R.string.preference_saf_tree_key));
+		editor.apply();
 	}
 
 	public File getStorageRootFolder(final File file) {
@@ -2298,14 +2466,20 @@ public class ScummVMActivity extends Activity implements OnKeyboardVisibilityLis
 		} catch (Exception ignored) {
 			originalDirectory = true;
 		}
+
 		Uri treeUri;
 		if ((treeUri = getStorageAccessFrameworkTreeUri()) == null) {
 			return null;
 		}
+
 		DocumentFile dof = DocumentFile.fromTreeUri(getApplicationContext(), treeUri);
 		if (originalDirectory) {
 			return dof;
 		}
+
+		// Important note: We cannot assume that anything sent here is a relative path on top of the *ONLY* SAF "root" path
+		//                 since the the user could select another SD Card (from multiple inserted or replaces the current one and inserts another)
+		// TODO Can we translate our path string "/storage/XXXX-XXXXX/folder/doc.ext' a content URI? or a document URI?
 		String[] parts = relPath.split("\\/");
 		for (int i = 0; i < parts.length; i++) {
 			DocumentFile nextDof = dof.findFile(parts[i]);

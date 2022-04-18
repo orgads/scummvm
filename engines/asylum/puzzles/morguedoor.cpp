@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -102,9 +101,7 @@ bool PuzzleMorgueDoor::init(const AsylumEvent &evt)  {
 	return mouseLeftDown(evt);
 }
 
-bool PuzzleMorgueDoor::update(const AsylumEvent &)  {
-	updateCursor();
-
+void PuzzleMorgueDoor::updateScreen()  {
 	// Draw elements
 	getScreen()->clearGraphicsInQueue();
 	getScreen()->fillRect(0, 0, 640, 480, 252);
@@ -128,12 +125,7 @@ bool PuzzleMorgueDoor::update(const AsylumEvent &)  {
 	getScreen()->addGraphicToQueue(getWorld()->graphicResourceIds[31], (uint32)_frameIndexes[kTopGear], Common::Point(276, 67), kDrawFlagNone, 0, 1);
 	getScreen()->addGraphicToQueue(getWorld()->graphicResourceIds[32], (uint32)_frameIndexes[kBottomGear], Common::Point(278, 378), kDrawFlagNone, 0, 1);
 
-	getScreen()->drawGraphicsInQueue();
-	getScreen()->copyBackBufferToScreen();
-
 	updateState();
-
-	return true;
 }
 
 bool PuzzleMorgueDoor::mouseLeftDown(const AsylumEvent &evt) {
@@ -366,7 +358,7 @@ void PuzzleMorgueDoor::updateState() {
 					++_data_45A9D8;
 
 				if (_data_45A9D8 == 3 && _flag6)
-					--_frameIndexes[kTopLever];
+					_frameIndexes[kTopLever] = _frameCounts[kTopLever] - 1;
 			} else {
 				if (_frameIndexes[kBottomLever] < 15)
 					_frameIndexes[kBottomLever] += 5;
@@ -375,7 +367,7 @@ void PuzzleMorgueDoor::updateState() {
 					++_data_45A9DC;
 
 				if (_data_45A9DC == 3 && _flag7)
-					--_frameIndexes[kBottomLever];
+					_frameIndexes[kBottomLever] = _frameCounts[kBottomLever] - 1;
 			}
 		}
 	}
@@ -400,7 +392,7 @@ void PuzzleMorgueDoor::updateState() {
 				if (_data_45A9D8 < 3)
 					getSound()->playSound(getWorld()->soundResourceIds[7], false, Config.sfxVolume, getWorld()->reverseStereo ? 2000 : -2000);
 
-				getSound()->playSound(getWorld()->soundResourceIds[7], false, Config.sfxVolume - 100, getWorld()->reverseStereo ? -3000 : 3000);
+				getSound()->playSound(getWorld()->soundResourceIds[5], false, Config.sfxVolume - 100, getWorld()->reverseStereo ? -3000 : 3000);
 				_flag5 = true;
 			}
 		}
@@ -413,10 +405,10 @@ void PuzzleMorgueDoor::updateState() {
 				_data_4572A8 = false;
 
 				if (_frameIndexes[kRightGear] == 14) {
-					if (_data_45A9DC < 3)
+					if (_data_45A9D8 < 3)
 						getSound()->playSound(getWorld()->soundResourceIds[7], false, Config.sfxVolume, getWorld()->reverseStereo ? 2000 : -2000);
 
-					getSound()->playSound(getWorld()->soundResourceIds[7], false, Config.sfxVolume - 100, getWorld()->reverseStereo ? -3000 : 3000);
+					getSound()->playSound(getWorld()->soundResourceIds[5], false, Config.sfxVolume - 100, getWorld()->reverseStereo ? -3000 : 3000);
 					_flag5 = true;
 				}
 			}
@@ -488,8 +480,8 @@ void PuzzleMorgueDoor::updateState() {
 
 		if ((!_flag6 && _frameIndexes[kTopLever] >= 15)
 		 || (!_flag7 && _frameIndexes[kBottomLever] >= 15)) {
-			 _frameIndexes[kCenterValve] = 0;
-			 getSound()->stop(getWorld()->soundResourceIds[0]);
+			_frameIndexes[kCenterValve] = 0;
+			getSound()->stop(getWorld()->soundResourceIds[0]);
 		} else {
 			--_frameIndexes[kCenterValve];
 
@@ -568,7 +560,7 @@ updateIndices:
 			_frameIndexes[kTopSmallLever] = 0;
 
 			if (_data_45A9D8 > 0) {
-				getSound()->playSound(getWorld()->graphicResourceIds[8], false, Config.sfxVolume - 10);
+				getSound()->playSound(getWorld()->soundResourceIds[8], false, Config.sfxVolume - 10);
 				_moveTopGear = true;
 			}
 
@@ -584,7 +576,7 @@ updateIndices:
 			_frameIndexes[kBottomSmallLever] = 0;
 
 			if (_data_45A9DC > 0) {
-				getSound()->playSound(getWorld()->graphicResourceIds[8], false, Config.sfxVolume - 10);
+				getSound()->playSound(getWorld()->soundResourceIds[8], false, Config.sfxVolume - 10);
 				_moveBottomGear = true;
 			}
 		}

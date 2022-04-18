@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -68,31 +67,31 @@ enum feather2TextIds {
 
 // TODO: Finish floppy offsets
 extern const RoomTextOffsets feather2TextOffsets[] = {
-	{ TX_SPEAKER_KIRK,  965, 0 },
-	{ TX_SPEAKER_MCCOY, 988, 0 },
-	{ TX_SPEAKER_SPOCK, 998, 0 },
-	{ TX_SPEAKER_QUETZECOATL, 976, 0 },
-	{ TX_SPEAKER_STRAGEY, 1008, 0 },
-	{ TX_FEA2_001, 465, 0 },
-	{ TX_FEA2_002, 1827, 0 },
-	{ TX_FEA2_003, 1713, 0 },
-	{ TX_FEA2_004, 1894, 0 },
-	{ TX_FEA2_005, 1390, 0 },
-	{ TX_FEA2_006, 1624, 0 },
-	{ TX_FEA2_007, 1747, 0 },
-	{ TX_FEA2_008, 2003, 0 },
-	{ TX_FEA2_009, 2112, 0 },
-	{ TX_FEA2_010, 1253, 0 },
-	{ TX_FEA2N000, 1209, 0 },
-	{ TX_FEA2N001, 1461, 0 },
-	{ TX_FEA2N002, 2172, 0 },
-	{ TX_FEA2N003, 2479, 0 },
-	{ TX_FEA2N004, 2365, 0 },
-	{ TX_FEA2N005, 2252, 0 },
-	{ TX_FEA2N006, 1021, 0 },
-	{ TX_FEA2N007, 1091, 0 },
-	{ TX_FEA2N008, 1521, 0 },
-	{          -1, 0,    0 }
+	{ TX_SPEAKER_KIRK,  965, 0, 0, 0 },
+	{ TX_SPEAKER_MCCOY, 988, 0, 0, 0 },
+	{ TX_SPEAKER_SPOCK, 998, 0, 0, 0 },
+	{ TX_SPEAKER_QUETZECOATL, 976, 0, 0, 0 },
+	{ TX_SPEAKER_STRAGEY, 1008, 0, 0, 0 },
+	{ TX_FEA2_001, 465, 0, 0, 0 },
+	{ TX_FEA2_002, 1827, 0, 0, 0 },
+	{ TX_FEA2_003, 1713, 0, 0, 0 },
+	{ TX_FEA2_004, 1894, 0, 0, 0 },
+	{ TX_FEA2_005, 1390, 0, 0, 0 },
+	{ TX_FEA2_006, 1624, 0, 0, 0 },
+	{ TX_FEA2_007, 1747, 0, 0, 0 },
+	{ TX_FEA2_008, 2003, 0, 0, 0 },
+	{ TX_FEA2_009, 2112, 0, 0, 0 },
+	{ TX_FEA2_010, 1253, 0, 0, 0 },
+	{ TX_FEA2N000, 1209, 0, 0, 0 },
+	{ TX_FEA2N001, 1461, 0, 0, 0 },
+	{ TX_FEA2N002, 2172, 0, 0, 0 },
+	{ TX_FEA2N003, 2479, 0, 0, 0 },
+	{ TX_FEA2N004, 2365, 0, 0, 0 },
+	{ TX_FEA2N005, 2252, 0, 0, 0 },
+	{ TX_FEA2N006, 1021, 0, 0, 0 },
+	{ TX_FEA2N007, 1091, 0, 0, 0 },
+	{ TX_FEA2N008, 1521, 0, 0, 0 },
+	{          -1, 0,    0, 0, 0 }
 };
 
 extern const RoomText feather2Texts[] = {

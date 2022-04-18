@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,15 +15,13 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef TWINE_MENU_H
 #define TWINE_MENU_H
 
-#include "twine/scene/actor.h"
 #include "twine/twine.h"
 #include "twine/text.h"
 
@@ -34,6 +32,7 @@ namespace TwinE {
 #define PLASMA_HEIGHT 50
 #define kQuitEngine 9998
 
+class BodyData;
 class SpriteData;
 
 class MenuSettings {
@@ -137,14 +136,30 @@ class Menu {
 private:
 	TwinEEngine *_engine;
 	/** Hero behaviour menu entity */
-	BodyData *behaviourEntity = nullptr;
+	BodyData *_behaviourEntity = nullptr;
 	/** Behaviour menu anim state */
-	uint behaviourAnimState[4]; // winTab
+	uint _behaviourAnimState[4]; // winTab
 	/** Behaviour menu anim data pointer */
-	AnimTimerDataStruct behaviourAnimData[4];
+	AnimTimerDataStruct _behaviourAnimData[4];
 
-	int32 inventorySelectedColor = COLOR_BLACK;
-	int32 inventorySelectedItem = 0; // currentSelectedObjectInInventory
+	int32 _inventorySelectedColor = COLOR_BLACK;
+	int32 _inventorySelectedItem = 0; // currentSelectedObjectInInventory
+
+	/** Plasma Effect pointer to file content: RESS.HQR:51 */
+	uint8 *_plasmaEffectPtr = nullptr;
+
+	MenuSettings _giveUpMenuWithSaveState;
+	MenuSettings _volumeMenuState;
+	MenuSettings _saveManageMenuState;
+	MenuSettings _giveUpMenuState;
+	MenuSettings _mainMenuState;
+	MenuSettings _advOptionsMenuState;
+	MenuSettings _optionsMenuState;
+
+	// objectRotation
+	int16 _itemAngle[NUM_INVENTORY_ITEMS];
+	/** Behaviour menu move pointer */
+	ActorMoveStruct _moveMenu;
 
 	/**
 	 * Draws main menu button
@@ -169,33 +184,17 @@ private:
 	void drawInfoMenu(int16 left, int16 top, int16 width);
 	Common::Rect calcBehaviourRect(int32 left, int32 top, HeroBehaviourType behaviour) const;
 	bool isBehaviourHovered(int32 left, int32 top, HeroBehaviourType behaviour) const;
-	void drawBehaviour(int32 left, int32 top, HeroBehaviourType behaviour, int32 angle, bool cantDrawBox, Common::Rect &dirtyRect);
+	void drawBehaviour(int32 left, int32 top, HeroBehaviourType behaviour, int32 angle, bool cantDrawBox);
 	void drawInventoryItems(int32 left, int32 top);
-	void prepareAndDrawBehaviour(int32 left, int32 top, int32 angle, HeroBehaviourType behaviour, Common::Rect &dirtyRect);
+	void prepareAndDrawBehaviour(int32 left, int32 top, int32 angle, HeroBehaviourType behaviour);
 	void drawBehaviourMenu(int32 left, int32 top, int32 angle);
-	void drawItem(int32 left, int32 top, int32 item, Common::Rect &dirtyRect);
-
-	MenuSettings giveUpMenuWithSaveState;
-	MenuSettings volumeMenuState;
-	MenuSettings saveManageMenuState;
-	MenuSettings giveUpMenuState;
-	MenuSettings mainMenuState;
-	MenuSettings advOptionsMenuState;
-	MenuSettings optionsMenuState;
+	void drawItem(int32 left, int32 top, int32 item);
 
 	void drawSpriteAndString(int32 left, int32 top, const SpriteData &spriteData, const Common::String &str, int32 color = COLOR_GOLD);
 
 public:
 	Menu(TwinEEngine *engine);
 	~Menu();
-
-	int16 itemAngle[NUM_INVENTORY_ITEMS]; // objectRotation
-
-	/** Behaviour menu move pointer */
-	ActorMoveStruct moveMenu;
-
-	/** Plasma Effect pointer to file content: RESS.HQR:51 */
-	uint8 *plasmaEffectPtr = nullptr;
 
 	/**
 	 * Process the plasma effect
@@ -210,14 +209,14 @@ public:
 	void drawKeys(int32 left, int32 top);
 
 	/**
-	 * Draw the entire button box
+	 * Draw the rect lines without filling the area
 	 * @param left start width to draw the button
 	 * @param top start height to draw the button
 	 * @param right end width to draw the button
 	 * @param bottom end height to draw the button
 	 */
-	void drawBox(int32 left, int32 top, int32 right, int32 bottom, int32 colorLeftTop = COLOR_79, int32 colorRightBottom = COLOR_73);
-	void drawBox(const Common::Rect &rect, int32 colorLeftTop = COLOR_79, int32 colorRightBottom = COLOR_73);
+	void drawRectBorders(int32 left, int32 top, int32 right, int32 bottom, int32 colorLeftTop = COLOR_79, int32 colorRightBottom = COLOR_73);
+	void drawRectBorders(const Common::Rect &rect, int32 colorLeftTop = COLOR_79, int32 colorRightBottom = COLOR_73);
 	/**
 	 * Where the main menu options are processed
 	 * @param menuSettings menu settings array with the information to build the menu options

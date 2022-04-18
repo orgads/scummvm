@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,6 +37,7 @@
 #include "glk/alan2/detection.h"
 #include "glk/alan3/detection.h"
 #include "glk/archetype/detection.h"
+#include "glk/comprehend/detection.h"
 #include "glk/glulx/detection.h"
 #include "glk/hugo/detection.h"
 #include "glk/jacl/detection.h"
@@ -48,7 +48,6 @@
 #include "glk/zcode/detection.h"
 
 #ifndef RELEASE_BUILD
-#include "glk/comprehend/detection.h"
 #include "glk/tads/detection.h"
 #endif
 
@@ -132,6 +131,7 @@ PlainGameList GlkMetaEngineDetection::getSupportedGames() const {
 	Glk::Alan2::Alan2MetaEngine::getSupportedGames(list);
 	Glk::Alan3::Alan3MetaEngine::getSupportedGames(list);
 	Glk::Archetype::ArchetypeMetaEngine::getSupportedGames(list);
+	Glk::Comprehend::ComprehendMetaEngine::getSupportedGames(list);
 	Glk::Glulx::GlulxMetaEngine::getSupportedGames(list);
 	Glk::Hugo::HugoMetaEngine::getSupportedGames(list);
 	Glk::JACL::JACLMetaEngine::getSupportedGames(list);
@@ -141,7 +141,6 @@ PlainGameList GlkMetaEngineDetection::getSupportedGames() const {
 	Glk::Scott::ScottMetaEngine::getSupportedGames(list);
 	Glk::ZCode::ZCodeMetaEngine::getSupportedGames(list);
 #ifndef RELEASE_BUILD
-	Glk::Comprehend::ComprehendMetaEngine::getSupportedGames(list);
 	Glk::TADS::TADSMetaEngine::getSupportedGames(list);
 #endif
 
@@ -163,6 +162,7 @@ PlainGameDescriptor GlkMetaEngineDetection::findGame(const char *gameId) const {
 	FIND_GAME(AGT);
 	FIND_GAME(Alan3);
 	FIND_GAME(Archetype);
+	FIND_GAME(Comprehend);
 	FIND_GAME(Glulx);
 	FIND_GAME(Hugo);
 	FIND_GAME(JACL);
@@ -172,7 +172,6 @@ PlainGameDescriptor GlkMetaEngineDetection::findGame(const char *gameId) const {
 	FIND_GAME(Scott);
 	FIND_GAME(ZCode);
 #ifndef RELEASE_BUILD
-	FIND_GAME(Comprehend);
 	FIND_GAME(TADS);
 #endif
 
@@ -181,7 +180,7 @@ PlainGameDescriptor GlkMetaEngineDetection::findGame(const char *gameId) const {
 
 #undef FIND_GAME
 
-DetectedGames GlkMetaEngineDetection::detectGames(const Common::FSList &fslist) const {
+DetectedGames GlkMetaEngineDetection::detectGames(const Common::FSList &fslist) {
 #ifndef RELEASE_BUILD
 	// This is as good a place as any to detect multiple sub-engines using the same Ids
 	detectClashes();
@@ -194,6 +193,7 @@ DetectedGames GlkMetaEngineDetection::detectGames(const Common::FSList &fslist) 
 	Glk::Alan2::Alan2MetaEngine::detectGames(fslist, detectedGames);
 	Glk::Alan3::Alan3MetaEngine::detectGames(fslist, detectedGames);
 	Glk::Archetype::ArchetypeMetaEngine::detectGames(fslist, detectedGames);
+	Glk::Comprehend::ComprehendMetaEngine::detectGames(fslist, detectedGames);
 	Glk::Glulx::GlulxMetaEngine::detectGames(fslist, detectedGames);
 	Glk::Hugo::HugoMetaEngine::detectGames(fslist, detectedGames);
 	Glk::JACL::JACLMetaEngine::detectGames(fslist, detectedGames);
@@ -203,7 +203,6 @@ DetectedGames GlkMetaEngineDetection::detectGames(const Common::FSList &fslist) 
 	Glk::Scott::ScottMetaEngine::detectGames(fslist, detectedGames);
 	Glk::ZCode::ZCodeMetaEngine::detectGames(fslist, detectedGames);
 #ifndef RELEASE_BUILD
-	Glk::Comprehend::ComprehendMetaEngine::detectGames(fslist, detectedGames);
 	Glk::TADS::TADSMetaEngine::detectGames(fslist, detectedGames);
 #endif
 
@@ -218,6 +217,7 @@ void GlkMetaEngineDetection::detectClashes() const {
 	Glk::Alan2::Alan2MetaEngine::detectClashes(map);
 	Glk::Alan3::Alan3MetaEngine::detectClashes(map);
 	Glk::Archetype::ArchetypeMetaEngine::detectClashes(map);
+	Glk::Comprehend::ComprehendMetaEngine::detectClashes(map);
 	Glk::Glulx::GlulxMetaEngine::detectClashes(map);
 	Glk::Hugo::HugoMetaEngine::detectClashes(map);
 	Glk::JACL::JACLMetaEngine::detectClashes(map);
@@ -227,7 +227,6 @@ void GlkMetaEngineDetection::detectClashes() const {
 	Glk::Scott::ScottMetaEngine::detectClashes(map);
 	Glk::ZCode::ZCodeMetaEngine::detectClashes(map);
 #ifndef RELEASE_BUILD
-	Glk::Comprehend::ComprehendMetaEngine::detectClashes(map);
 	Glk::TADS::TADSMetaEngine::detectClashes(map);
 #endif
 }

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -125,7 +124,7 @@ const PlainGameDescriptor TADS2_GAME_LIST[] = {
 	{ "lightiania", "Lightiania" },
 	{ "losingyourgrip", "Losing Your Grip, a Journey in Five Fits" },
 	{ "lost", "Lost" },
-	{ "lostnytads", "Lost in New York" },
+	{ "lostnytads", "Lost New York" },
 	{ "lovesparade", "Everybody Loves a Parade" },
 	{ "maidenmoonlight", "Maiden of the Moonlight" },
 	{ "meanstreetstads", "Mean Streets" },
@@ -644,9 +643,9 @@ const GlkDetectionEntry TADS_GAMES[] = {
 	DT_ENTRY1("youmatched", "WebUI", "055efcc37f945071ea2486a207703951", 2050047),
 
 	// TADS 3 - Czech
-	DT_ENTRYL0("exoter", Common::CZ_CZE, "02b93382a19cd69f3cb67a12073f4795", 1487144),
-	DT_ENTRYL0("exoter", Common::CZ_CZE, "865db2452b38f96035841f04e314c2c6", 1489600),
-	DT_ENTRYL0("exoter", Common::CZ_CZE, "956f93c8c8b5270d75501039ef825429", 1074752),
+	DT_ENTRYL0("exoter", Common::CS_CZE, "02b93382a19cd69f3cb67a12073f4795", 1487144),
+	DT_ENTRYL0("exoter", Common::CS_CZE, "865db2452b38f96035841f04e314c2c6", 1489600),
+	DT_ENTRYL0("exoter", Common::CS_CZE, "956f93c8c8b5270d75501039ef825429", 1074752),
 
 	// TADS 3 - German
 	DT_ENTRYL0("pionierin", Common::DE_DEU, "9f899c9826204184c09f7088acfa8cce", 1293016),

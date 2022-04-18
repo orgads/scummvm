@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -26,6 +25,7 @@
 #include "graphics/font.h"
 
 #include "director/archive.h"
+#include "director/sprite.h"
 #include "director/stxt.h"
 
 #include "director/lingo/lingo-object.h"
@@ -58,6 +58,7 @@ class AudioDecoder;
 struct CastMemberInfo;
 class Channel;
 struct Resource;
+class Sprite;
 class Stxt;
 
 class CastMember : public Object<CastMember> {
@@ -72,7 +73,8 @@ public:
 	virtual bool isEditable() { return false; }
 	virtual void setEditable(bool editable) {}
 	virtual bool isModified() { return _modified; }
-	virtual Graphics::MacWidget *createWidget(Common::Rect &bbox, Channel *channel) { return nullptr; }
+	virtual void setModified(bool modified) { _modified = modified; }
+	virtual Graphics::MacWidget *createWidget(Common::Rect &bbox, Channel *channel, SpriteType spriteType) { return nullptr; }
 	virtual void updateWidget(Graphics::MacWidget *widget, Channel *channel) {}
 	virtual void updateFromWidget(Graphics::MacWidget *widget) {}
 	virtual Common::Rect getInitialRect() { return _initialRect; }
@@ -88,13 +90,16 @@ public:
 	Datum getField(int field) override;
 	bool setField(int field, const Datum &value) override;
 
+	// release the control to widget, this happens when we are changing sprites. Because we are having the new cast member and the old one shall leave
+	void releaseWidget() { _widget = nullptr; }
+
 	CastType _type;
 	Common::Rect _initialRect;
 	Common::Rect _boundingRect;
 	Common::Array<Resource> _children;
 
-	bool _modified;
 	bool _hilite;
+	bool _erase;
 	int _purgePriority;
 	uint32 _size;
 	uint8 _flags1;
@@ -102,16 +107,20 @@ public:
 protected:
 	Cast *_cast;
 	uint16 _castId;
+	// a link to the widget we created, we may use it later
+	Graphics::MacWidget *_widget;
+	bool _modified;
 };
 
 class BitmapCastMember : public CastMember {
 public:
 	BitmapCastMember(Cast *cast, uint16 castId, Common::SeekableReadStreamEndian &stream, uint32 castTag, uint16 version, uint8 flags1 = 0);
 	~BitmapCastMember();
-	virtual Graphics::MacWidget *createWidget(Common::Rect &bbox, Channel *channel) override;
+	Graphics::MacWidget *createWidget(Common::Rect &bbox, Channel *channel, SpriteType spriteType) override;
 
-	void createMatte();
-	Graphics::Surface *getMatte();
+	void createMatte(Common::Rect &bbox);
+	Graphics::Surface *getMatte(Common::Rect &bbox);
+	void copyStretchImg(Graphics::Surface *surface, const Common::Rect &bbox);
 
 	bool hasField(int field) override;
 	Datum getField(int field) override;
@@ -138,14 +147,15 @@ public:
 	DigitalVideoCastMember(Cast *cast, uint16 castId, Common::SeekableReadStreamEndian &stream, uint16 version);
 	~DigitalVideoCastMember();
 
-	virtual bool isModified() override;
-	virtual Graphics::MacWidget *createWidget(Common::Rect &bbox, Channel *channel) override;
+	bool isModified() override;
+	Graphics::MacWidget *createWidget(Common::Rect &bbox, Channel *channel, SpriteType spriteType) override;
 
 	bool loadVideo(Common::String path);
 	void startVideo(Channel *channel);
 	void stopVideo(Channel *channel);
 
 	uint getMovieCurrentTime();
+	uint getDuration();
 	uint getMovieTotalTime();
 	void seekMovie(int stamp);
 	void setStopTime(int stamp);
@@ -181,6 +191,32 @@ public:
 	Channel *_channel;
 };
 
+
+struct FilmLoopFrame {
+	Common::HashMap<int, Sprite> sprites;
+};
+
+class FilmLoopCastMember : public CastMember {
+public:
+	FilmLoopCastMember(Cast *cast, uint16 castId, Common::SeekableReadStreamEndian &stream, uint16 version);
+	~FilmLoopCastMember();
+
+	bool isModified() override;
+	//Graphics::MacWidget *createWidget(Common::Rect &bbox, Channel *channel, SpriteType spriteType) override;
+
+	Common::Array<Channel> *getSubChannels(Common::Rect &bbox, Channel *channel);
+
+	void loadFilmLoopData(Common::SeekableReadStreamEndian &stream);
+
+	bool _enableSound;
+	bool _looping;
+	bool _crop;
+	bool _center;
+
+	Common::Array<FilmLoopFrame> _frames;
+	Common::Array<Channel> _subchannels;
+};
+
 class SoundCastMember : public CastMember {
 public:
 	SoundCastMember(Cast *cast, uint16 castId, Common::SeekableReadStreamEndian &stream, uint16 version);
@@ -193,8 +229,8 @@ public:
 class ShapeCastMember : public CastMember {
 public:
 	ShapeCastMember(Cast *cast, uint16 castId, Common::SeekableReadStreamEndian &stream, uint16 version);
-	virtual uint32 getForeColor() override { return _fgCol; }
-	virtual uint32 getBackColor() override { return _bgCol; }
+	uint32 getForeColor() override { return _fgCol; }
+	uint32 getBackColor() override { return _bgCol; }
 
 	ShapeType _shapeType;
 	uint16 _pattern;
@@ -211,22 +247,31 @@ private:
 class TextCastMember : public CastMember {
 public:
 	TextCastMember(Cast *cast, uint16 castId, Common::SeekableReadStreamEndian &stream, uint16 version, uint8 flags1 = 0, bool asButton = false);
-	virtual void setColors(uint32 *fgcolor, uint32 *bgcolor) override;
+	void setColors(uint32 *fgcolor, uint32 *bgcolor) override;
 
-	void setText(const char *text);
-	virtual Graphics::MacWidget *createWidget(Common::Rect &bbox, Channel *channel) override;
+	void setText(const Common::U32String &text);
+	Graphics::MacWidget *createWidget(Common::Rect &bbox, Channel *channel, SpriteType spriteType) override;
 
-	virtual bool isEditable() override;
-	virtual void setEditable(bool editable) override;
-	virtual void updateFromWidget(Graphics::MacWidget *widget) override;
+	bool isEditable() override { return _editable; }
+	void setEditable(bool editable) override { _editable = editable; }
+	void updateFromWidget(Graphics::MacWidget *widget) override;
 	Graphics::TextAlign getAlignment();
 
-	virtual uint32 getBackColor() override { return _bgcolor; }
-	virtual uint32 getForeColor() override { return _fgcolor; }
+	uint32 getBackColor() override { return _bgcolor; }
+	uint32 getForeColor() override { return _fgcolor; }
 
 	bool hasField(int field) override;
 	Datum getField(int field) override;
 	bool setField(int field, const Datum &value) override;
+
+	bool hasChunkField(int field);
+	Datum getChunkField(int field, int start, int end);
+	bool setChunkField(int field, int start, int end, const Datum &value);
+
+	int getTextHeight();
+
+	int getTextSize();
+	void setTextSize(int textSize);
 
 	SizeType _borderSize;
 	SizeType _gutterSize;
@@ -246,20 +291,18 @@ public:
 	uint16 _fgpalinfo1, _fgpalinfo2, _fgpalinfo3;
 	ButtonType _buttonType;
 	bool _editable;
+	int _lineSpacing;
 
-	Common::String _ftext;
-	Common::String _ptext;
+	Common::U32String _ftext;
+	Common::U32String _ptext;
 	void importStxt(const Stxt *stxt);
 	void importRTE(byte *text);
 
-	Common::String getText();
+	Common::U32String getText();
 
 private:
-	Common::Rect getTextOnlyDimensions(const Common::Rect &targetDims);
-
 	uint32 _bgcolor;
 	uint32 _fgcolor;
-	Graphics::MacWidget *_widget;
 };
 
 class ScriptCastMember : public CastMember {
@@ -302,9 +345,10 @@ struct CastMemberInfo {
 };
 
 struct Label {
+	Common::String comment;
 	Common::String name;
 	uint16 number;
-	Label(Common::String name1, uint16 number1) { name = name1; number = number1; }
+	Label(Common::String name1, uint16 number1, Common::String comment1) { name = name1; number = number1; comment = comment1;}
 };
 
 class PaletteCastMember : public CastMember {

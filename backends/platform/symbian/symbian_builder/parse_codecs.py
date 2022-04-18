@@ -5,10 +5,10 @@
 # are too numerous to list here. Please refer to the COPYRIGHT
 # file distributed with this source distribution.
 
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,13 +16,11 @@
 # GNU General Public License for more details.
 
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import with_statement
 import os
 from common_names import *
-from prj_generator import SafeWriteFile
 
 excluded = ("renderer.cpp", "sjis.cpp", "coktel_decoder.cpp")
 
@@ -103,15 +101,15 @@ def processModule_mk(dir, mmp_file):
             src += ["SOURCE   %s.cpp" %tmp[:-2]]
    SafeWriteFile(mmp_file, src, 'a')
 
-def parse_codecs(platform = "S60v3"):
+def parse_codecs(platform):
    uids = get_UIDs(build)
    codecs_mmp = os.path.join(mmps, mmp_name)
    SafeWriteFile(codecs_mmp, mmp_template %platform)
    for i in range(len(uids)):
       idx = i+1
       SafeWriteFile(codecs_mmp, "#define SCUMMVM_PT_%d\n" %idx, 'a')
-   SafeWriteFile(codecs_mmp, "\n#include \"../mmp/macros.mmh\"\n", 'a')
+   SafeWriteFile(codecs_mmp, "\n#include \"../%s/macros.mmh\"\n" %platform, 'a')
    [processModule_mk(i, codecs_mmp) for i in src_dirs]
 
 if __name__ == "__main__":
-   parse_codecs()
+   parse_codecs(platform = "S60v3")

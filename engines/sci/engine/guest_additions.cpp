@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -149,6 +148,70 @@ bool GuestAdditions::shouldSyncAudioToScummVM() const {
 	}
 
 	return false;
+}
+
+static Common::String getUserObject(SciGameId gameId) {
+	switch (gameId) {
+	case GID_TORIN:
+	case GID_LSL7:
+		return "oUser";
+	case GID_PHANTASMAGORIA2:
+		return "p2User";
+	case GID_LSL3:
+	case GID_SQ3:
+		// German Amiga versions
+		if (getSciVersion() == SCI_VERSION_1_MIDDLE)
+			return "PUser";
+		// fallthrough
+	default:
+		return "User";
+	}
+}
+
+bool GuestAdditions::userHasControl() {
+	const SciGameId gameId = g_sci->getGameId();
+	reg_t user = _segMan->findObjectByName(getUserObject(gameId));
+	if (user.isNull()) {
+		// If the user object can't be found by name then try the object in
+		// global 80, as that's the usual location.
+		// Several Mac games like QFG1VGA don't contain object names, and some
+		// third party localizations like SQ1VGA Russian altered object names.
+		user = _state->variables[VAR_GLOBAL][kGlobalVarUser];
+	}
+	const Object *userObject = _segMan->getObject(user);
+	if (userObject == nullptr) {
+		warning("User object not found");
+		return false;
+	}
+
+	// Selectors input/canInput and controls should be available at all times, except
+	// in games that don't have selector vocab 997 (e.g. some game demos and LB2 floppy)
+	const bool hasInputSelector    = userObject->locateVarSelector(_segMan, SELECTOR(input)) >= 0;
+	const bool hasCanInputSelector = userObject->locateVarSelector(_segMan, SELECTOR(canInput)) >= 0;
+	const bool hasControlsSelector = userObject->locateVarSelector(_segMan, SELECTOR(controls)) >= 0;
+
+	if (hasInputSelector || hasCanInputSelector) {
+		const Selector inputSelector = hasInputSelector ? SELECTOR(input) : SELECTOR(canInput);
+		const int16 input = readSelectorValue(_segMan, user, inputSelector);
+
+		if (hasControlsSelector) {
+			const int16 controls = readSelectorValue(_segMan, user, SELECTOR(controls));
+			if (gameId != GID_GK2) {
+				return input && controls;
+			} else {
+				// The GK2 scripts only check the input selector in their HandsOff code in script 0
+				return input;
+			}
+		} else if (gameId == GID_PHANTASMAGORIA2) {
+			// Phantasmagoria 2's canInput function is totally different and checks bit 1 of the state
+			// variable instead
+			return readSelectorValue(_segMan, user, SELECTOR(state)) & 1;
+		} else {
+			return false;
+		}
+	} else {
+		return false;
+	}
 }
 
 #pragma mark -
@@ -289,15 +352,6 @@ bool GuestAdditions::kGetEventHook() const {
 
 bool GuestAdditions::kWaitHook() const {
 	if (_state->_delayedRestoreGameId == -1) {
-		return false;
-	}
-
-	// kWait cannot be used in Phant2 for delayed restore because it is
-	// called during the fade-in of music in the intro room, before graphics
-	// are fully initialized, which causes "Click to continue" text to be
-	// brokenly drawn over the game and then crashes the engine on the next
-	// room transition
-	if (g_sci->getGameId() == GID_PHANTASMAGORIA2) {
 		return false;
 	}
 
@@ -634,7 +688,7 @@ reg_t GuestAdditions::promptSaveRestoreRama(EngineState *s, int argc, reg_t *arg
 					// actually save into the new save
 					resetCatalogFile = true;
 				}
-			} else if (strncmp(saveGameName.c_str(), saves[saveIndex].name, kMaxSaveNameLength) != 0) {
+			} else if (strcmp(saveGameName.c_str(), saves[saveIndex].name) != 0) {
 				// The game doesn't let the save game name change for the same
 				// slot, but ScummVM's GUI does, so force the new name into the
 				// save file metadata if it has changed so it actually makes it
@@ -776,14 +830,14 @@ bool GuestAdditions::restoreFromLauncher() const {
 			// a handsOff sequence breaks the prompt and crashes the next room.
 			// We enable input by calling p2User:canInput(1).
 			reg_t canInputParams[] = { TRUE_REG };
-			invokeSelector(_state->variables[VAR_GLOBAL][kGlobalVarPhant2User], SELECTOR(canInput), 1, canInputParams);
+			invokeSelector(_state->variables[VAR_GLOBAL][kGlobalVarUser], SELECTOR(canInput), 1, canInputParams);
 
-			writeSelectorValue(_segMan, g_sci->getGameObject(), SELECTOR(num), _state->_delayedRestoreGameId - kSaveIdShift);
+			writeSelectorValue(_segMan, g_sci->getGameObject(), SELECTOR(num), shiftScummVMToSciSaveId(_state->_delayedRestoreGameId));
 			invokeSelector(g_sci->getGameObject(), SELECTOR(reallyRestore));
 		} else if (g_sci->getGameId() == GID_SHIVERS) {
 			// Shivers accepts the save game number as a parameter to
 			// `SHIVERS::restore`
-			reg_t args[] = { make_reg(0, _state->_delayedRestoreGameId - kSaveIdShift) };
+			reg_t args[] = { make_reg(0, shiftScummVMToSciSaveId(_state->_delayedRestoreGameId)) };
 			invokeSelector(g_sci->getGameObject(), SELECTOR(restore), 1, args);
 		} else {
 			int saveId = _state->_delayedRestoreGameId;

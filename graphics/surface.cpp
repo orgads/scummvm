@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -63,7 +62,8 @@ void Surface::drawThickLine(int x0, int y0, int x1, int y1, int penX, int penY, 
 		error("Surface::drawThickLine: bytesPerPixel must be 1, 2, or 4");
 }
 
-void Surface::create(uint16 width, uint16 height, const PixelFormat &f) {
+void Surface::create(int16 width, int16 height, const PixelFormat &f) {
+	assert(width >= 0 && height >= 0);
 	free();
 
 	w = width;
@@ -84,7 +84,7 @@ void Surface::free() {
 	format = PixelFormat();
 }
 
-void Surface::init(uint16 width, uint16 height, uint16 newPitch, void *newPixels, const PixelFormat &f) {
+void Surface::init(int16 width, int16 height, int16 newPitch, void *newPixels, const PixelFormat &f) {
 	w = width;
 	h = height;
 	pitch = newPitch;
@@ -369,8 +369,7 @@ void Surface::flipVertical(const Common::Rect &r) {
 	delete[] temp;
 }
 
-Graphics::Surface *Surface::scale(uint16 newWidth, uint16 newHeight, bool filtering) const {
-
+Graphics::Surface *Surface::scale(int16 newWidth, int16 newHeight, bool filtering) const {
 	Graphics::Surface *target = new Graphics::Surface();
 
 	target->create(newWidth, newHeight, format);
@@ -589,8 +588,8 @@ void Surface::debugPrint(int debuglevel, int width, int height, int x, int y, in
 				const byte *srcRow = (const byte *)getBasePtr(xx, yy + ys);
 
 				for (int xs = 0; xs < scale && xx + xs < w; xs++) {
-					byte r, g, b, a;
-					uint32 color;
+					byte r = 0, g = 0, b = 0, a = 0;
+					uint32 color = 0;
 
 					switch (format.bytesPerPixel) {
 					case 1: {

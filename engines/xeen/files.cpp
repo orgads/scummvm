@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -121,7 +120,8 @@ void BaseCCArchive::saveIndex(Common::WriteStream &stream) {
 	delete[] rawIndex;
 }
 
-bool BaseCCArchive::hasFile(const Common::String &name) const {
+bool BaseCCArchive::hasFile(const Common::Path &path) const {
+	Common::String name = path.toString();
 	CCEntry ccEntry;
 	return getHeaderEntry(name, ccEntry);
 }
@@ -143,7 +143,8 @@ bool BaseCCArchive::getHeaderEntry(uint16 id, CCEntry &ccEntry) const {
 	return false;
 }
 
-const Common::ArchiveMemberPtr BaseCCArchive::getMember(const Common::String &name) const {
+const Common::ArchiveMemberPtr BaseCCArchive::getMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	if (!hasFile(name))
 		return Common::ArchiveMemberPtr();
 
@@ -193,7 +194,8 @@ bool CCArchive::getHeaderEntry(const Common::String &resourceName, CCEntry &ccEn
 	return BaseCCArchive::getHeaderEntry(resName, ccEntry);
 }
 
-Common::SeekableReadStream *CCArchive::createReadStreamForMember(const Common::String &name) const {
+Common::SeekableReadStream *CCArchive::createReadStreamForMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	CCEntry ccEntry;
 
 	if (getHeaderEntry(name, ccEntry)) {
@@ -272,7 +274,7 @@ bool FileManager::setup() {
 
 	// Verify the version of the CC is correct
 	CCArchive *dataCc = new CCArchive("xeen.ccs", "data", true);
-	if (!f.open("VERSION", *dataCc) || f.readUint32LE() != 4) {
+	if (!f.open("VERSION", *dataCc) || f.readUint32LE() != 5) {
 		GUIErrorMessage("xeen.ccs is out of date");
 		return false;
 	}
@@ -321,21 +323,21 @@ File::File(const Common::String &filename, int ccMode) {
 	File::open(filename, ccMode);
 }
 
-bool File::open(const Common::String &filename) {
+bool File::open(const Common::Path &filename) {
 	if (!_currentSave || !Common::File::open(filename, *_currentSave)) {
 		if (!Common::File::open(filename, *_currentArchive)) {
 			// Could not find in current archive, so try intro.cc or in folder
 			if (!Common::File::open(filename))
-				error("Could not open file - %s", filename.c_str());
+				error("Could not open file - %s", filename.toString().c_str());
 		}
 	}
 
 	return true;
 }
 
-bool File::open(const Common::String &filename, Common::Archive &archive) {
+bool File::open(const Common::Path &filename, Common::Archive &archive) {
 	if (!Common::File::open(filename, archive))
-		error("Could not open file - %s", filename.c_str());
+		error("Could not open file - %s", filename.toString().c_str());
 	return true;
 }
 
@@ -465,7 +467,8 @@ SaveArchive::~SaveArchive() {
 	delete[] _data;
 }
 
-Common::SeekableReadStream *SaveArchive::createReadStreamForMember(const Common::String &name) const {
+Common::SeekableReadStream *SaveArchive::createReadStreamForMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 
 	// If the given resource has already been perviously "written" to the
 	// save manager, then return that new resource
@@ -638,7 +641,7 @@ uint32 OutFile::write(const void *dataPtr, uint32 dataSize) {
 	return _backingStream.write(dataPtr, dataSize);
 }
 
-int32 OutFile::pos() const {
+int64 OutFile::pos() const {
 	return _backingStream.pos();
 }
 

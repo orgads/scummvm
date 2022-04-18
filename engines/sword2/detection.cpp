@@ -7,10 +7,10 @@
  * Additional copyright for this file:
  * Copyright (C) 1994-1998 Revolution Software Ltd.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,8 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "common/translation.h"
@@ -52,7 +51,7 @@ public:
 	PlainGameList getSupportedGames() const override;
 	const ExtraGuiOptions getExtraGuiOptions(const Common::String &target) const override;
 	PlainGameDescriptor findGame(const char *gameid) const override;
-	DetectedGames detectGames(const Common::FSList &fslist) const override;
+	DetectedGames detectGames(const Common::FSList &fslist) override;
 };
 
 PlainGameList Sword2MetaEngineDetection::getSupportedGames() const {
@@ -81,7 +80,7 @@ PlainGameDescriptor Sword2MetaEngineDetection::findGame(const char *gameid) cons
 	return PlainGameDescriptor::of(g->gameid, g->description);
 }
 
-DetectedGames Sword2MetaEngineDetection::detectGames(const Common::FSList &fslist) const {
+DetectedGames Sword2MetaEngineDetection::detectGames(const Common::FSList &fslist) {
 	// The required game data files can be located in the game directory, or in
 	// a subdirectory called "clusters". In the latter case, we don't want to
 	// detect the game in that subdirectory, as this will detect the game twice

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,7 +37,7 @@
 #include "director/util.h"
 
 #include "director/lingo/lingo.h"
-#include "director/lingo/lingo-gr.h"
+#include "director/lingo/lingo-builtins.h"
 
 
 namespace Director {
@@ -76,7 +75,7 @@ struct MCIToken {
 
 	{ kMCITokenNone, kMCITokenWait,   "wait", 0 },
 
-	{ kMCITokenNone, kMCITokenNone,   0, 0 }
+	{ kMCITokenNone, kMCITokenNone,   nullptr, 0 }
 };
 
 void Lingo::func_mci(const Common::String &name) {
@@ -167,10 +166,10 @@ void Lingo::func_mci(const Common::String &name) {
 				return;
 			}
 
-			uint32 from = strtol(params[1].c_str(), 0, 10);
-			uint32 to = strtol(params[2].c_str(), 0, 10);
+			uint32 from = strtol(params[1].c_str(), nullptr, 10);
+			uint32 to = strtol(params[2].c_str(), nullptr, 10);
 
-			_vm->getSoundManager()->playMCI(*_audioAliases[params[0]], from, to);
+			_vm->getCurrentWindow()->getSoundManager()->playMCI(*_audioAliases[params[0]], from, to);
 		}
 		break;
 	default:
@@ -188,44 +187,54 @@ void Lingo::func_goto(Datum &frame, Datum &movie) {
 	if (!_vm->getCurrentMovie())
 		return;
 
+	if (movie.type == VOID && frame.type == VOID)
+		return;
+
+	Window *stage = _vm->getCurrentWindow();
+	Score *score = _vm->getCurrentMovie()->getScore();
+
+	_vm->_skipFrameAdvance = true;
+
+	// If there isn't already frozen Lingo (e.g. from a previous func_goto we haven't yet unfrozen),
+	// freeze this script context. We'll return to it after entering the next frame.
+	if (!g_lingo->hasFrozenContext()) {
+		g_lingo->_freezeContext = true;
+	}
+
 	if (movie.type != VOID) {
 		Common::String movieFilenameRaw = movie.asString();
-		Window *stage = _vm->getCurrentWindow();
 
 		if (!stage->setNextMovie(movieFilenameRaw))
 			return;
 
-		stage->getCurrentMovie()->getScore()->_playState = kPlayStopped;
+		if (g_lingo->_updateMovieEnabled) {
+			// Save the movie when branching to another movie.
+			LB::b_saveMovie(0);
+		}
+
+		score->_playState = kPlayStopped;
 
 		stage->_nextMovie.frameS.clear();
 		stage->_nextMovie.frameI = -1;
 
-		if (frame.type == VOID)
-			return;
-
 		if (frame.type == STRING) {
 			stage->_nextMovie.frameS = *frame.u.s;
-			return;
+		} else if (frame.type != VOID) {
+			stage->_nextMovie.frameI = frame.asInt();
 		}
 
-		stage->_nextMovie.frameI = frame.asInt();
+		// Set cursor to watch.
+		score->_defaultCursor.readFromResource(4);
+		score->renderCursor(stage->getMousePos());
 
 		return;
 	}
-
-	if (frame.type == VOID)
-		return;
-
-	_vm->_skipFrameAdvance = true;
 
 	if (frame.type == STRING) {
-		if (_vm->getCurrentMovie())
-			_vm->getCurrentMovie()->getScore()->setStartToLabel(*frame.u.s);
-		return;
+		score->setStartToLabel(*frame.u.s);
+	} else {
+		score->setCurrentFrame(frame.asInt());
 	}
-
-	if (_vm->getCurrentMovie())
-		_vm->getCurrentMovie()->getScore()->setCurrentFrame(frame.asInt());
 }
 
 void Lingo::func_gotoloop() {
@@ -295,29 +304,33 @@ void Lingo::func_play(Datum &frame, Datum &movie) {
 		return;
 	}
 
+	if (movie.type != VOID) {
+		ref.movie = _vm->getCurrentMovie()->_movieArchive->getPathName();
+	}
 	ref.frameI = _vm->getCurrentMovie()->getScore()->getCurrentFrame();
+
+	// if we are issuing play command from script channel script. then play done should return to next frame
+	if (g_lingo->_currentChannelId == 0)
+		ref.frameI++;
 
 	stage->_movieStack.push_back(ref);
 
 	func_goto(frame, movie);
 }
 
-void Lingo::func_cursor(int cursorId, int maskId) {
-	Cursor cursor;
-
-	if (maskId == -1) {
-		cursor.readFromResource(cursorId);
+void Lingo::func_cursor(Datum cursorDatum) {
+	Score *score = _vm->getCurrentMovie()->getScore();
+	if (cursorDatum.type == ARRAY){
+		score->_defaultCursor.readFromCast(cursorDatum);
 	} else {
-		cursor.readFromCast(cursorId, maskId);
+		score->_defaultCursor.readFromResource(cursorDatum);
 	}
-
-	// TODO: Figure out why there are artifacts here
-	_vm->_wm->replaceCursor(cursor._cursorType, ((Graphics::Cursor *)&cursor));
+	score->_cursorDirty = true;
 }
 
 void Lingo::func_beep(int repeats) {
 	for (int r = 1; r <= repeats; r++) {
-		_vm->getSoundManager()->systemBeep();
+		_vm->getCurrentWindow()->getSoundManager()->systemBeep();
 		if (r < repeats)
 			g_system->delayMillis(400);
 	}

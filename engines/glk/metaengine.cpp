@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -35,8 +34,12 @@
 #include "glk/alan3/alan3.h"
 #include "glk/archetype/archetype.h"
 #include "glk/archetype/detection.h"
+#include "glk/comprehend/comprehend.h"
+#include "glk/comprehend/detection.h"
 #include "glk/zcode/detection.h"
 #include "glk/zcode/zcode.h"
+#include "glk/glulx/detection.h"
+#include "glk/glulx/glulx.h"
 #include "glk/hugo/detection.h"
 #include "glk/hugo/hugo.h"
 #include "glk/jacl/detection.h"
@@ -51,10 +54,6 @@
 #include "glk/scott/scott.h"
 
 #ifndef RELEASE_BUILD
-#include "glk/comprehend/comprehend.h"
-#include "glk/comprehend/detection.h"
-#include "glk/glulx/detection.h"
-#include "glk/glulx/glulx.h"
 #include "glk/tads/detection.h"
 #include "glk/tads/tads2/tads2.h"
 #include "glk/tads/tads3/tads3.h"
@@ -81,7 +80,7 @@ public:
 	}
 
 	bool hasFeature(MetaEngineFeature f) const override;
-	Common::Error createInstance(OSystem *syst, Engine **engine) const override;
+	Common::Error createInstance(OSystem *syst, Engine **engine) override;
 
 	SaveStateList listSaves(const char *target) const override;
 	int getMaximumSaveSlot() const override;
@@ -144,7 +143,7 @@ Common::String GlkMetaEngine::findFileByGameId(const Common::String &gameId) con
 	folder.getChildren(fslist, Common::FSNode::kListFilesOnly);
 
 	// Get the matching MetaEngine for this Engine.
-	const MetaEngineDetection &metaEngine = g_engine->getMetaEngineDetection();
+	MetaEngineDetection &metaEngine = g_engine->getMetaEngineDetection();
 
 	// Iterate over the files
 	for (Common::FSList::iterator i = fslist.begin(); i != fslist.end(); ++i) {
@@ -162,7 +161,7 @@ Common::String GlkMetaEngine::findFileByGameId(const Common::String &gameId) con
 	return Common::String();
 }
 
-Common::Error GlkMetaEngine::createInstance(OSystem *syst, Engine **engine) const {
+Common::Error GlkMetaEngine::createInstance(OSystem *syst, Engine **engine) {
 #ifndef RELEASE_BUILD
 	Glk::GameDescriptor td = Glk::GameDescriptor::empty();
 #endif
@@ -204,6 +203,8 @@ Common::Error GlkMetaEngine::createInstance(OSystem *syst, Engine **engine) cons
 	else if ((create<Glk::Alan2::Alan2MetaEngine, Glk::Alan2::Alan2>(syst, gameDesc, *engine))) {}
 	else if ((create<Glk::Alan3::Alan3MetaEngine, Glk::Alan3::Alan3>(syst, gameDesc, *engine))) {}
 	else if ((create<Glk::Archetype::ArchetypeMetaEngine, Glk::Archetype::Archetype>(syst, gameDesc, *engine))) {}
+	else if ((create<Glk::Comprehend::ComprehendMetaEngine, Glk::Comprehend::Comprehend>(syst, gameDesc, *engine))) {}
+	else if ((create<Glk::Glulx::GlulxMetaEngine, Glk::Glulx::Glulx>(syst, gameDesc, *engine))) {}
 	else if ((create<Glk::Hugo::HugoMetaEngine, Glk::Hugo::Hugo>(syst, gameDesc, *engine))) {}
 	else if ((create<Glk::JACL::JACLMetaEngine, Glk::JACL::JACL>(syst, gameDesc, *engine))) {}
 	else if ((create<Glk::Level9::Level9MetaEngine, Glk::Level9::Level9>(syst, gameDesc, *engine))) {}
@@ -212,8 +213,6 @@ Common::Error GlkMetaEngine::createInstance(OSystem *syst, Engine **engine) cons
 	else if ((create<Glk::Scott::ScottMetaEngine, Glk::Scott::Scott>(syst, gameDesc, *engine))) {}
 	else if ((create<Glk::ZCode::ZCodeMetaEngine, Glk::ZCode::ZCode>(syst, gameDesc, *engine))) {}
 #ifndef RELEASE_BUILD
-	else if ((create<Glk::Comprehend::ComprehendMetaEngine, Glk::Comprehend::Comprehend>(syst, gameDesc, *engine))) {}
-	else if ((create<Glk::Glulx::GlulxMetaEngine, Glk::Glulx::Glulx>(syst, gameDesc, *engine))) {}
 	else if ((td = Glk::TADS::TADSMetaEngine::findGame(gameDesc._gameId.c_str()))._description) {
 		if (!isGameAllowed(td._supportLevel))
 			return Common::kUserCanceled;
@@ -249,7 +248,7 @@ SaveStateList GlkMetaEngine::listSaves(const char *target) const {
 			if (in) {
 				Common::String saveName;
 				if (Glk::QuetzalReader::getSavegameDescription(in, saveName))
-					saveList.push_back(SaveStateDescriptor(slot, saveName));
+					saveList.push_back(SaveStateDescriptor(this, slot, saveName));
 
 				delete in;
 			}

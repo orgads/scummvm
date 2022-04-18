@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -363,9 +362,9 @@ void res_man::Advance_time_stamp() {
 }
 
 res_man::res_man() {
-	memory_base = NULL;
+	memory_base = nullptr;
 	max_mem_blocks = 0;
-	mem_list = NULL;
+	mem_list = nullptr;
 }
 
 res_man::res_man(uint32 memory_tot) {
@@ -704,7 +703,7 @@ uint8 *res_man::Internal_open(RMParams *params, int32 *ret_len) {
 		}
 		// otherwise we're doing an async so it's alright to return 9
 		else
-			return 0x00000000;
+			return nullptr;
 	}
 
 	// Pass the 8-byte aligned length back to calling function
@@ -712,7 +711,7 @@ uint8 *res_man::Internal_open(RMParams *params, int32 *ret_len) {
 		*ret_len = params->len;
 
 	if (mem_list[params->search].protect)
-		return 0x00000000;
+		return nullptr;
 
 	return ptr;
 }
@@ -734,7 +733,7 @@ uint8 *res_man::LoadFile(int32 &cluster_search, RMParams *params) {
 	// if we are preloading the cluster
 	if (params->not_ready_yet) {
 		// printf("LoadFile cluster not ready yet");
-		return NULL;
+		return nullptr;
 	}
 
 	// align to 8 byte boundary in length so that next resource will adjoin legally
@@ -843,7 +842,7 @@ uint32 res_man::FindMemBlock(uint32 adj_len, RMParams *params) {
 			} while (search != -1);
 
 			if (!total_age)
-				Fatal_error("failed to build an age table - not really posible");
+				Fatal_error("failed to build an age table - not really possible");
 
 			//			now sort the ages
 			for (j = 0; j < total_age; j++)

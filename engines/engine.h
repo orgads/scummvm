@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -203,7 +202,7 @@ private:
 	/**
 	 * Autosave interval.
 	 */
-	const int _autosaveInterval;
+	int _autosaveInterval;
 
 	/**
 	 * The last time an autosave was done.
@@ -217,6 +216,11 @@ private:
 	 * the menu loop, to avoid bugs like #4420).
 	 */
 	int _saveSlotToLoad;
+
+	/**
+	 * Used for preventing recursion during autosave.
+	 */
+	bool _autoSaving;
 
 	/**
 	 * Optional debugger for the engine.
@@ -526,6 +530,13 @@ private:
 	 */
 	friend class PauseToken;
 
+	/**
+	 * Warns before overwriting autosave.
+	 *
+	 * @return true if it is safe to save, false to avoid saving.
+	 */
+	bool warnBeforeOverwritingAutosave();
+
 public:
 
 	/**
@@ -587,9 +598,19 @@ public:
 	inline Common::SaveFileManager *getSaveFileManager() { return _saveFileMan; }
 
 public:
-	/** On some systems, check whether the game appears to be run from CD. */
-	void checkCD();
-
+	/**
+	 * Check if extracted CD Audio files are found.
+	 */
+	bool existExtractedCDAudioFiles(uint track = 1);
+	/**
+	 * On some systems, check whether the game appears to be run
+	 * from the same CD drive, which also should play CD audio.
+	 */
+	bool isDataAndCDAudioReadFromSameCD();
+	/**
+	 *Display a warning for no extracted CD Audio files found.
+	 */
+	void warnMissingExtractedCDAudio();
 
 	/**
 	 * Check whether it is time to autosave, and if so, do it.
@@ -609,27 +630,13 @@ public:
 	}
 
 	/**
-	 * Return the slot that should be used for autosaves.
+	 * Return the slot that should be used for autosaves, or -1 for engines that
+	 * don't support autosave.
 	 *
 	 * @note	This should match the meta engine getAutosaveSlot() method.
 	 */
 	virtual int getAutosaveSlot() const {
 		return 0;
-	}
-
-	/**
-	 * Check whether it is time to autosave based on the
-	 * provided @p lastSaveTime.
-	 *
-	 * This function is now deprecated as autosaves are handled directly by
-	 * the Engine class and derived classes do not need to worry about it other than
-	 * to implement canSaveAutosaveCurrently() and getAutosaveSlot()
-	 * if the default implementations are not sufficient.
-	 */
-	bool shouldPerformAutoSave(int lastSaveTime) {
-		// TODO: Remove deprecated method once all engines are refactored
-		// to no longer do autosaves directly themselves
-		return false;
 	}
 };
 

@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,13 +15,11 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "engines/stark/ui/dialogbox.h"
-
 #include "engines/stark/gfx/driver.h"
 #include "engines/stark/gfx/surfacerenderer.h"
 #include "engines/stark/gfx/texture.h"
@@ -33,9 +31,10 @@
 #include "common/memstream.h"
 #include "common/stream.h"
 #include "common/winexe_pe.h"
-#include "graphics/surface.h"
-#include "image/bmp.h"
 
+#include "graphics/surface.h"
+
+#include "image/bmp.h"
 
 namespace Stark {
 
@@ -44,13 +43,12 @@ static const uint dialogHorizontalMargin = 10;
 static const uint dialogVerticalMargin   = 20;
 static const uint buttonHorizontalMargin = 25;
 static const uint buttonVerticalMargin   = 5;
-static const Color textColor = Color(0xFF, 0xFF, 0xFF);
 
-DialogBox::DialogBox(Gfx::Driver *gfx, Cursor *cursor) :
+DialogBox::DialogBox(StarkEngine *vm, Gfx::Driver *gfx, Cursor *cursor) :
 		Window(gfx, cursor),
 		_foregroundTexture(nullptr),
 		_confirmCallback(nullptr) {
-
+	_vm = vm;
 	_surfaceRenderer = gfx->createSurfaceRenderer();
 
 	Graphics::Surface *background = loadBackground();
@@ -62,23 +60,23 @@ DialogBox::DialogBox(Gfx::Driver *gfx, Cursor *cursor) :
 		uint32 blue = background->format.RGBToColor(26, 28, 57);
 		background->fillRect(Common::Rect(256, 256), blue);
 	}
-	_backgroundTexture = gfx->createTexture(background);
+	_backgroundTexture = gfx->createBitmap(background);
 	_backgroundTexture->setSamplingFilter(Gfx::Texture::kLinear);
 
 	background->free();
 	delete background;
 
 	_messageVisual = new VisualText(gfx);
-	_messageVisual->setColor(textColor);
+	_messageVisual->setColor(_textColor);
 	_messageVisual->setTargetWidth(dialogMaxWidth - 2 * dialogHorizontalMargin);
 	_messageVisual->setAlign(Graphics::kTextAlignCenter);
 
 	_confirmLabelVisual = new VisualText(gfx);
-	_confirmLabelVisual->setColor(textColor);
+	_confirmLabelVisual->setColor(_textColor);
 	_confirmLabelVisual->setTargetWidth(96);
 
 	_cancelLabelVisual = new VisualText(gfx);
-	_cancelLabelVisual->setColor(textColor);
+	_cancelLabelVisual->setColor(_textColor);
 	_cancelLabelVisual->setTargetWidth(96);
 }
 
@@ -168,7 +166,7 @@ void DialogBox::recomputeLayout() {
 	drawBevel(&foreground, _confirmButtonRect);
 	drawBevel(&foreground, _cancelButtonRect);
 
-	_foregroundTexture = _gfx->createTexture(&foreground);
+	_foregroundTexture = _gfx->createBitmap(&foreground);
 	_foregroundTexture->setSamplingFilter(Gfx::Texture::kLinear);
 
 	foreground.free();
@@ -217,15 +215,28 @@ void DialogBox::onKeyPress(const Common::KeyState &keyState) {
 }
 
 Graphics::Surface *DialogBox::loadBackground() {
-	Common::PEResources executable;
-	if (!executable.loadFromEXE("game.exe") && !executable.loadFromEXE("game.dll")) {
+	Common::PEResources *executable = new Common::PEResources();
+	if (!executable->loadFromEXE("game.exe") && !executable->loadFromEXE("game.dll")) {
 		warning("Unable to load 'game.exe' to read the modal dialog background image");
+		delete executable;
 		return nullptr;
 	}
 
-	Common::SeekableReadStream *stream = executable.getResource(Common::kWinBitmap, 147);
+	// As of Aug 2021:
+	// Steam version of The Longest Journey is 1.0.0.161 "Enno's two-CD Version"
+	// GOG version of The Longest Journey is 1.0.0.142 "RC1" (Special Build: "Paper Sun")
+	// Steam's game.exe does not contain a valid resource for the background bitmap id 147
+	// so we skip trying to retrieve it.
+	if (_vm->getGameFlags() & GF_MISSING_EXE_RESOURCES) {
+		warning("Steam version does not contain the modal dialog background bitmap in 'game.exe'. Using fallback color for dialog background...");
+		delete executable;
+		return nullptr;
+	}
+
+	Common::SeekableReadStream *stream = executable->getResource(Common::kWinBitmap, 147);
 	if (!stream) {
 		warning("Unable to find the modal dialog background bitmap in 'game.exe'");
+		delete executable;
 		return nullptr;
 	}
 
@@ -240,6 +251,7 @@ Graphics::Surface *DialogBox::loadBackground() {
 
 	stream->read(bitmapWithHeader + 14, stream->size());
 	delete stream;
+	delete executable;
 
 	Common::MemoryReadStream bitmapWithHeaderReadStream(bitmapWithHeader, bitmapWithHeaderLen);
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -69,13 +68,7 @@ SaveStateList AGSMetaEngine::listSaves(const char *target) const {
 				if (slotNum > maxSlot)
 					continue;
 
-				SaveStateDescriptor desc;
-				desc.setSaveSlot(slotNum);
-				desc.setDescription(rich_media_header.getSaveName());
-
-				if (slotNum == getAutosaveSlot())
-					desc.setWriteProtectedFlag(true);
-
+				SaveStateDescriptor desc(this, slotNum, rich_media_header.getSaveName());
 				saveList.push_back(desc);
 			}
 		}
@@ -117,12 +110,7 @@ SaveStateDescriptor AGSMetaEngine::querySaveMetaInfos(const char *target, int sl
 		rich_media_header.ReadFromFile(&saveFile);
 
 		if (rich_media_header.dwMagicNumber == RM_MAGICNUMBER) {
-			SaveStateDescriptor desc;
-			desc.setSaveSlot(slot);
-			if (slot == getAutosaveSlot()) {
-				desc.setAutosave(true);
-				desc.setWriteProtectedFlag(true);
-			}
+			SaveStateDescriptor desc(this, slot, rich_media_header.getSaveName());
 
 			// Thumbnail handling
 			if (rich_media_header.dwThumbnailOffsetLowerDword != 0 &&
@@ -139,8 +127,19 @@ SaveStateDescriptor AGSMetaEngine::querySaveMetaInfos(const char *target, int sl
 				Image::BitmapDecoder decoder;
 				if (decoder.loadStream(thumbStream)) {
 					const Graphics::Surface *src = decoder.getSurface();
-					Graphics::Surface *dest = new Graphics::Surface();
-					dest->copyFrom(*src);
+					Graphics::Surface *dest;
+
+					if (src->w == 160 && src->h == 100) {
+						dest = new Graphics::Surface();
+						dest->copyFrom(*src);
+					} else {
+						Graphics::ManagedSurface temp(160, 100, src->format);
+						temp.blitFrom(*src, Common::Rect(0, 0, src->w, src->h),
+							Common::Rect(0, 0, 160, 100));
+
+						dest = new Graphics::Surface();
+						dest->copyFrom(temp);
+					}
 
 					desc.setThumbnail(dest);
 				}
@@ -151,6 +150,10 @@ SaveStateDescriptor AGSMetaEngine::querySaveMetaInfos(const char *target, int sl
 	}
 
 	return SaveStateDescriptor();
+}
+
+void AGSMetaEngine::removeSaveState(const char *target, int slot) const {
+	g_system->getSavefileManager()->removeSavefile(getSavegameFile(slot, target));
 }
 
 const Common::AchievementDescriptionList* AGSMetaEngine::getAchievementDescriptionList() const {

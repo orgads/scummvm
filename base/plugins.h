@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -90,7 +89,7 @@ extern int pluginTypeVersions[PLUGIN_TYPE_MAX];
 	PluginObject *g_##ID##_getObject() { \
 		return new PLUGINCLASS(); \
 	} \
-	void dummyFuncToAllowTrailingSemicolon()
+	void dummyFuncToAllowTrailingSemicolon_##ID##_()
 
 #ifdef DYNAMIC_MODULES
 
@@ -114,7 +113,7 @@ extern int pluginTypeVersions[PLUGIN_TYPE_MAX];
 			return new PLUGINCLASS(); \
 		} \
 	} \
-	void dummyFuncToAllowTrailingSemicolon()
+	void dummyFuncToAllowTrailingSemicolon_##ID##_()
 
 #endif // DYNAMIC_MODULES
 
@@ -305,6 +304,8 @@ protected:
 
 	bool tryLoadPlugin(Plugin *plugin);
 	void addToPluginsInMemList(Plugin *plugin);
+	const Plugin *findEnginePlugin(const Common::String &engineId);
+	const Plugin *findLoadedPlugin(const Common::String &engineId);
 
 	static PluginManager *_instance;
 	PluginManager();
@@ -323,11 +324,11 @@ public:
 	 * It uses the Engine plugin's getName method, which is an identifier,
 	 * and then tries to matches it with each plugin present in memory.
 	 *
-	 * @param A plugin of type ENGINE.
+	 * @param plugin A plugin of type ENGINE.
 	 *
 	 * @return A plugin of type METAENGINE.
 	 */
-	Plugin *getMetaEngineFromEngine(const Plugin *plugin);
+	const Plugin *getMetaEngineFromEngine(const Plugin *plugin);
 
 	/**
 	 * A method which takes in a plugin of type METAENGINE,
@@ -339,7 +340,7 @@ public:
 	 *
 	 * @return A plugin of type ENGINE.
 	 */
-	Plugin *getEngineFromMetaEngine(const Plugin *plugin);
+	const Plugin *getEngineFromMetaEngine(const Plugin *plugin);
 
 	// Functions used by the uncached PluginManager
 	virtual void init()	{}
@@ -377,18 +378,18 @@ protected:
 	bool loadPluginByFileName(const Common::String &filename);
 
 public:
-	virtual void init() override;
-	virtual void loadFirstPlugin() override;
-	virtual bool loadNextPlugin() override;
-	virtual bool loadPluginFromEngineId(const Common::String &engineId) override;
-	virtual void updateConfigWithFileName(const Common::String &engineId) override;
+	void init() override;
+	void loadFirstPlugin() override;
+	bool loadNextPlugin() override;
+	bool loadPluginFromEngineId(const Common::String &engineId) override;
+	void updateConfigWithFileName(const Common::String &engineId) override;
 #ifndef DETECTION_STATIC
-	virtual void loadDetectionPlugin() override;
-	virtual void unloadDetectionPlugin() override;
+	void loadDetectionPlugin() override;
+	void unloadDetectionPlugin() override;
 #endif
 
-	virtual void loadAllPlugins() override {} 	// we don't allow these
-	virtual void loadAllPluginsOfType(PluginType type) override {}
+	void loadAllPlugins() override {} 	// we don't allow these
+	void loadAllPluginsOfType(PluginType type) override {}
 };
 
 #endif

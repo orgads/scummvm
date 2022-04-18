@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -50,6 +49,10 @@ struct ADGameDescription;
 
 namespace Common {
 class SeekableReadStream;
+}
+
+namespace Graphics {
+class Font;
 }
 
 namespace Video {
@@ -89,11 +92,14 @@ public:
 
 	void loadChapter(byte chapter);
 
-	virtual Common::Error run() override;
+	Common::Error run() override;
 
 	bool hasFeature(EngineFeature f) const override;
 
+	void applyGameSettings() override;
+
 	Common::SeekableReadStream *openFile(const Common::String &name, bool addCurrentPath);
+	Common::SeekableReadStream *openIniFile(const Common::String &name);
 
 	void playVideo(Common::SeekableReadStream *stream);
 	QSystem *getQSystem() const;
@@ -106,11 +112,18 @@ public:
 	Common::RandomSource &getRnd();
 	const Common::String &getSpeechPath();
 
-	virtual Common::Error loadGameState(int slot) override;
+	Graphics::Font *getTextFont() const { return _textFont.get(); }
+	Graphics::Font *getDescriptionFont() const { return _descriptionFont.get(); }
+
+	void pushMouseMoveEvent();
+
+	Common::Error loadGameState(int slot) override;
 	bool canLoadGameStateCurrently() override;
 
 	Common::Error saveGameState(int slot, const Common::String &desc, bool isAutosave) override;
 	bool canSaveGameStateCurrently() override;
+
+	int getAutosaveSlot() const override { return - 1;}
 
 	const ADGameDescription *const _desc;
 	Common::ScopedPtr<Common::MemoryReadStream> _thumbnail;
@@ -130,6 +143,8 @@ private:
 	Common::ScopedPtr<VideoSystem> _vsys;
 	Common::ScopedPtr<BigDialogue> _dialogMan;
 	Common::ScopedPtr<Video::VideoDecoder> _videoDec;
+	Common::ScopedPtr<Graphics::Font> _textFont;
+	Common::ScopedPtr<Graphics::Font> _descriptionFont;
 
 	Common::RandomSource _rnd;
 

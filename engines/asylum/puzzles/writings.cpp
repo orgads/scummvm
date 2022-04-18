@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -72,28 +71,36 @@ bool PuzzleWritings::init(const AsylumEvent &)  {
 	getScreen()->draw(getWorld()->graphicResourceIds[5], 0, Common::Point(0, 0), kDrawFlagNone, true);
 
 	// Draw all lines of text
-	getText()->loadFont(getWorld()->graphicResourceIds[42]);
-	getText()->draw(0, 99, kTextNormal, Common::Point( 70,  45), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1825)));
-	getText()->draw(0, 99, kTextNormal, Common::Point(130,  75), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1826)));
-	getText()->draw(0, 99, kTextNormal, Common::Point( 70, 105), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1827)));
-	getText()->draw(0, 99, kTextNormal, Common::Point(130, 135), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1828)));
-	getText()->draw(0, 99, kTextNormal, Common::Point( 70, 165), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1829)));
-	getText()->draw(0, 99, kTextNormal, Common::Point(130, 195), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1830)));
-	getText()->draw(0, 99, kTextNormal, Common::Point( 70, 225), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1831)));
-	getText()->draw(0, 99, kTextNormal, Common::Point(130, 255), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1832)));
-	getText()->draw(0, 99, kTextNormal, Common::Point( 70, 285), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1833)));
-	getText()->draw(0, 99, kTextNormal, Common::Point(130, 315), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1834)));
-	getText()->draw(0, 99, kTextCenter, Common::Point( 20, 375), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1835)));
-	getText()->draw(0, 99, kTextCenter, Common::Point( 20, 405), 16, 590, getText()->get(MAKE_RESOURCE(kResourcePackText, 1836)));
+	int textId;
+	switch (_vm->getLanguage()) {
+	default:
+	case Common::EN_ANY:
+		textId = 1825;
+		break;
 
-	_textSurface.copyFrom(*getScreen()->getSurface());
+	case Common::DE_DEU:
+		textId = 1748;
+		break;
+
+	case Common::FR_FRA:
+		textId = 1729;
+		break;
+	}
+
+	getText()->loadFont(getWorld()->graphicResourceIds[42]);
+	for (int i = 0; i < 10; i++, textId++)
+		getText()->draw(0, 99, kTextNormal, Common::Point(70 + 60 * (i & 1), 45 + 30 * i), 16, 590,
+						getText()->get(MAKE_RESOURCE(kResourcePackText, textId)));
+
+	getText()->drawCentered(Common::Point(10, 375), 590, getText()->get(MAKE_RESOURCE(kResourcePackText, textId++)));
+	getText()->drawCentered(Common::Point(10, 405), 590, getText()->get(MAKE_RESOURCE(kResourcePackText, textId)));
+
+	_textSurface.copyFrom(getScreen()->getSurface());
 
 	return false;
 }
 
 bool PuzzleWritings::update(const AsylumEvent &)  {
-	int16 x1, y1, x2, y2;
-
 	// Adjust palette
 	if (rnd(10) < 7) {
 		getScreen()->setPalette(getWorld()->graphicResourceIds[6]);
@@ -114,26 +121,28 @@ bool PuzzleWritings::update(const AsylumEvent &)  {
 			--_frameIndex;
 	}
 
-	mousePos.x -= 50;
-	mousePos.y -= 50;
-	x1 = mousePos.x + 20;
-	y1 = mousePos.y + 20;
-	x2 = mousePos.x + 95;
-	y2 = mousePos.y + 90;
-	if (y1 < 0)
-		y1 = 0;
-	if (y2 > 480)
-		y2 = 480;
-
 	// Draw background
 	getScreen()->clearGraphicsInQueue();
 	getScreen()->fillRect(0, 0, 640, 480, 253);
 	getScreen()->draw(getWorld()->graphicResourceIds[4], 0, Common::Point(0, 0), kDrawFlagNone, true);
 
 	if (_hasGlassMagnifier) {
-		getScreen()->copyToBackBuffer(
-				((byte *)_textSurface.getPixels()) + y1 * _textSurface.pitch + x1 * _textSurface.format.bytesPerPixel,
-				_textSurface.pitch, x1, y1, (uint16)(x2 - x1), (uint16)(y2 - y1));
+		mousePos -= Common::Point(50, 50);
+		Common::Rect eyeBall = Common::Rect(0, 0, 640, 480).findIntersectingRect(Common::Rect(mousePos.x +  20, mousePos.y +  20,
+																							  mousePos.x + 100, mousePos.y + 100));
+		Graphics::Surface subArea, *subArea1;
+		subArea  = _textSurface.getSubArea(eyeBall);
+		subArea1 = subArea.scale(3 * eyeBall.width() / 4, 3 * eyeBall.height() / 4);
+		eyeBall.left += 9;
+		eyeBall.top  += 9;
+
+		int16 dw, dh;
+		dw = MAX(0, eyeBall.left + subArea1->w - 640);
+		dh = MAX(0, eyeBall.top  + subArea1->h - 480);
+		getScreen()->copyToBackBuffer((byte *)subArea1->getPixels(), subArea1->pitch, eyeBall.left, eyeBall.top, subArea1->w - dw, subArea1->h - dh);
+
+		subArea1->free();
+		delete subArea1;
 
 		getScreen()->addGraphicToQueueMasked(getWorld()->graphicResourceIds[9], 0, mousePos, getWorld()->graphicResourceIds[8], mousePos, kDrawFlagNone, 2);
 		getScreen()->addGraphicToQueue(getWorld()->graphicResourceIds[7], (uint32)_frameIndex, mousePos, kDrawFlagNone, 0, 1);

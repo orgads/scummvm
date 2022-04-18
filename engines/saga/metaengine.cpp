@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -94,8 +93,7 @@ bool SagaMetaEngine::hasFeature(MetaEngineFeature f) const {
 		(f == kSavesSupportMetaInfo) ||
 		(f == kSavesSupportThumbnail) ||
 		(f == kSavesSupportCreationDate) ||
-		(f == kSavesSupportPlayTime) ||
-		(f == kSimpleSavesNames);
+		(f == kSavesSupportPlayTime);
 }
 
 bool Saga::SagaEngine::hasFeature(EngineFeature f) const {
@@ -112,12 +110,6 @@ Common::Error SagaMetaEngine::createInstance(OSystem *syst, Engine **engine, con
 	case Saga::GID_IHNM:
 #ifndef ENABLE_IHNM
 		return Common::Error(Common::kUnsupportedGameidError, _s("I Have No Mouth support not compiled in"));
-#endif
-		break;
-	case Saga::GID_DINO:
-	case Saga::GID_FTA2:
-#ifndef ENABLE_SAGA2
-		return Common::Error(Common::kUnsupportedGameidError, _s("SAGA2 support not compiled in"));
 #endif
 		break;
 	default:
@@ -149,7 +141,7 @@ SaveStateList SagaMetaEngine::listSaves(const char *target) const {
 				for (int i = 0; i < 3; i++)
 					in->readUint32BE();
 				in->read(saveDesc, SAVE_TITLE_SIZE);
-				saveList.push_back(SaveStateDescriptor(slotNum, saveDesc));
+				saveList.push_back(SaveStateDescriptor(this, slotNum, saveDesc));
 				delete in;
 			}
 		}
@@ -183,7 +175,7 @@ SaveStateDescriptor SagaMetaEngine::querySaveMetaInfos(const char *target, int s
 		char name[SAVE_TITLE_SIZE];
 		in->read(name, sizeof(name));
 
-		SaveStateDescriptor desc(slot, name);
+		SaveStateDescriptor desc(this, slot, name);
 
 		// Some older saves were not written in an endian safe fashion.
 		// We try to detect this here by checking for extremely high version values.
@@ -265,12 +257,6 @@ const GameDisplayInfo &SagaEngine::getDisplayInfo() {
 #ifdef ENABLE_IHNM
 		case GID_IHNM:
 			return IHNM_DisplayInfo;
-#endif
-#ifdef ENABLE_SAGA2
-		case GID_DINO:
-			return FTA2_DisplayInfo;	// TODO
-		case GID_FTA2:
-			return FTA2_DisplayInfo;
 #endif
 		default:
 			error("getDisplayInfo: Unknown game ID");

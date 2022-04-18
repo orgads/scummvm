@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -37,7 +36,7 @@
 #include "graphics/pixelformat.h"
 
 
-#define SCUMMVM_THEME_VERSION_STR "SCUMMVM_STX0.8.46"
+#define SCUMMVM_THEME_VERSION_STR "SCUMMVM_STX0.9.3"
 
 class OSystem;
 
@@ -69,7 +68,9 @@ enum DrawData {
 	kDDDefaultBackground,
 	kDDTextSelectionBackground,
 	kDDTextSelectionFocusBackground,
-
+	kDDThumbnailBackground,
+	kDDGridItemIdle,
+	kDDGridItemHover,
 	kDDWidgetBackgroundDefault,
 	kDDWidgetBackgroundSmall,
 	kDDWidgetBackgroundEditText,
@@ -221,7 +222,10 @@ public:
 		kWidgetBackgroundBorder,        ///< Same as kWidgetBackgroundPlain just with a border
 		kWidgetBackgroundBorderSmall,   ///< Same as kWidgetBackgroundPlain just with a small border
 		kWidgetBackgroundEditText,      ///< Background used for edit text fields
-		kWidgetBackgroundSlider         ///< Background used for sliders
+		kWidgetBackgroundSlider,        ///< Background used for sliders
+		kThumbnailBackground,			///< Background used for thumbnails
+		kGridItemBackground,			///< Default Background used for grid items
+		kGridItemHighlight				///< Highlight Background used for grid items
 	};
 
 	/// Dialog background type
@@ -299,6 +303,7 @@ public:
 	static const char *const kImageLogo;      ///< ScummVM logo used in the launcher
 	static const char *const kImageLogoSmall; ///< ScummVM logo used in the GMM
 	static const char *const kImageSearch;    ///< Search tool image used in the launcher
+	static const char *const kImageGroup;     ///< Select Group image used in the launcher
 	static const char *const kImageEraser;     ///< Clear input image used in the launcher
 	static const char *const kImageDelButton; ///< Delete characters in the predictive dialog
 	static const char *const kImageList;      ///< List image used in save/load chooser selection
@@ -437,6 +442,7 @@ public:
 	 * @return The previous clipping rect
 	 */
 	Common::Rect swapClipRect(const Common::Rect &newRect);
+	const Common::Rect getClipRect();
 
 	/**
 	 * Set the clipping rect to allow rendering on the whole surface.
@@ -458,10 +464,10 @@ public:
 
 	void drawSlider(const Common::Rect &r, int width, WidgetStateInfo state = kStateEnabled, bool rtl = false);
 
-	void drawCheckbox(const Common::Rect &r, const Common::U32String &str, bool checked,
+	void drawCheckbox(const Common::Rect &r, int spacing, const Common::U32String &str, bool checked,
 	                  WidgetStateInfo state = kStateEnabled, bool rtl = false);
 
-	void drawRadiobutton(const Common::Rect &r, const Common::U32String &str, bool checked,
+	void drawRadiobutton(const Common::Rect &r, int spacing, const Common::U32String &str, bool checked,
 	                     WidgetStateInfo state = kStateEnabled, bool rtl = false);
 
 	void drawTab(const Common::Rect &r, int tabHeight, const Common::Array<int> &tabWidths,
@@ -485,6 +491,8 @@ public:
 	              const Common::Rect &drawableTextArea = Common::Rect(0, 0, 0, 0));
 
 	void drawChar(const Common::Rect &r, byte ch, const Graphics::Font *font, FontColor color = kFontColorNormal);
+
+	void drawFoldIndicator(const Common::Rect &r, bool expanded);
 
 	//@}
 
@@ -672,10 +680,10 @@ protected:
 	*/
 	void unloadExtraFont();
 
-	const Graphics::Font *loadScalableFont(const Common::String &filename, const Common::String &charset, const int pointsize, Common::String &name);
+	const Graphics::Font *loadScalableFont(const Common::String &filename, const int pointsize, Common::String &name);
 	const Graphics::Font *loadFont(const Common::String &filename, Common::String &name);
 	Common::String genCacheFilename(const Common::String &filename) const;
-	const Graphics::Font *loadFont(const Common::String &filename, const Common::String &scalableFilename, const Common::String &charset, const int pointsize, const bool makeLocalizedFont);
+	const Graphics::Font *loadFont(const Common::String &filename, const Common::String &scalableFilename, const int pointsize, const bool makeLocalizedFont);
 
 	/**
 	 * Dirty Screen handling function.

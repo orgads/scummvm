@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -50,13 +49,12 @@ OSystem_DS::OSystem_DS()
 	_paletteDirty(false), _cursorDirty(false),
 	_pfCLUT8(Graphics::PixelFormat::createFormatCLUT8()),
 	_pfABGR1555(Graphics::PixelFormat(2, 5, 5, 5, 1, 0, 5, 10, 15)),
-	_callbackTimer(10), _currentTimeMillis(0)
+	_callbackTimer(10), _currentTimeMillis(0), _subScreenActive(true)
 {
 	_instance = this;
 
 	nitroFSInit(NULL);
 	_fsFactory = new DevoptabFilesystemFactory();
-	_mutexManager = new NullMutexManager();
 }
 
 OSystem_DS::~OSystem_DS() {
@@ -71,8 +69,6 @@ void timerTickHandler() {
 }
 
 void OSystem_DS::initBackend() {
-	initGraphics();
-
 	defaultExceptionHandler();
 
 	ConfMan.setInt("autosave_period", 0);
@@ -87,6 +83,8 @@ void OSystem_DS::initBackend() {
 
 	_mixerManager = new MaxModMixerManager(11025, 32768);
 	_mixerManager->init();
+
+	initGraphics();
 
 	BaseBackend::initBackend();
 }
@@ -117,7 +115,7 @@ void OSystem_DS::doTimerCallback(int interval) {
 	}
 }
 
-void OSystem_DS::getTimeAndDate(TimeDate &td) const {
+void OSystem_DS::getTimeAndDate(TimeDate &td, bool skipRecord) const {
 	time_t curTime = time(0);
 	struct tm t = *localtime(&curTime);
 	td.tm_sec = t.tm_sec;
@@ -127,6 +125,10 @@ void OSystem_DS::getTimeAndDate(TimeDate &td) const {
 	td.tm_mon = t.tm_mon;
 	td.tm_year = t.tm_year;
 	td.tm_wday = t.tm_wday;
+}
+
+Common::MutexInternal *OSystem_DS::createMutex() {
+	return new NullMutexInternal();
 }
 
 void OSystem_DS::quit() {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -50,16 +49,18 @@ public:
 		uint32 soundResourceSize;
 		SoundResource soundResources[3];
 		uint32 charMapSize;
-		CharMap charMap[10];
+		CharMap charMap[11];
 		bool checkForSpace;
+		uint32 space1Pos, space2Pos;
 		char solvedText[28];
 	};
 
-	PuzzleBoard(AsylumEngine *engine, const PuzzleData &data);
+	PuzzleBoard(AsylumEngine *engine, const PuzzleData *data);
 
 	void reset();
 
 protected:
+	PuzzleData _data;
 	bool _solved;
 	Common::String _text;
 	bool _charUsed[20];
@@ -78,14 +79,11 @@ protected:
 	void checkSlots();
 
 private:
-	PuzzleData _data;
-
 	//////////////////////////////////////////////////////////////////////////
 	// Event Handling
 	//////////////////////////////////////////////////////////////////////////
 	bool init(const AsylumEvent &evt);
 	bool activate(const AsylumEvent &evt) { return updateScreen(), true; }
-	bool update(const AsylumEvent &evt);
 	virtual bool mouseRightDown(const AsylumEvent &evt);
 
 	//////////////////////////////////////////////////////////////////////////

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -47,10 +46,10 @@ namespace Scumm {
 
 SoundHE::SoundHE(ScummEngine *parent, Audio::Mixer *mixer)
 	:
-	Sound(parent, mixer),
+	Sound(parent, mixer, false),
 	_vm((ScummEngine_v60he *)parent),
 	_overrideFreq(0),
-	_heMusic(0),
+	_heMusic(nullptr),
 	_heMusicTracks(0) {
 
 	memset(_heChannel, 0, sizeof(_heChannel));
@@ -511,7 +510,7 @@ byte *findSoundTag(uint32 tag, byte *ptr) {
 	}
 
 	if (READ_BE_UINT32(ptr) != MKTAG('R','I','F','F'))
-		return NULL;
+		return nullptr;
 
 	endPtr = (ptr + 12);
 	size = READ_LE_UINT32(ptr + 4);
@@ -531,11 +530,11 @@ byte *findSoundTag(uint32 tag, byte *ptr) {
 		endPtr = endPtr + offset + 8;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 void SoundHE::playHESound(int soundID, int heOffset, int heChannel, int heFlags, int heFreq, int hePan, int heVol) {
-	Audio::RewindableAudioStream *stream = 0;
+	Audio::RewindableAudioStream *stream = nullptr;
 	byte *ptr, *spoolPtr;
 	int size = -1;
 	int priority, rate;
@@ -606,7 +605,7 @@ void SoundHE::playHESound(int soundID, int heOffset, int heChannel, int heFlags,
 		priority = (soundID > _vm->_numSounds) ? 255 : *(ptr + 18);
 
 		byte *sbngPtr = findSoundTag(MKTAG('S','B','N','G'), ptr);
-		if (sbngPtr != NULL) {
+		if (sbngPtr != nullptr) {
 			codeOffs = sbngPtr - ptr + 8;
 		}
 
@@ -762,7 +761,7 @@ void SoundHE::playHESound(int soundID, int heOffset, int heChannel, int heFlags,
 		_currentMusic = soundID;
 
 		stream = Audio::makeRawStream(sound, size, rate, 0);
-		_mixer->playStream(Audio::Mixer::kMusicSoundType, NULL, stream, soundID);
+		_mixer->playStream(Audio::Mixer::kMusicSoundType, nullptr, stream, soundID);
 	}
 	else if (READ_BE_UINT32(ptr) == MKTAG('M','I','D','I')) {
 		if (_vm->_imuse) {

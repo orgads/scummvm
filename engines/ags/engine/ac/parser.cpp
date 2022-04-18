@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -148,7 +147,7 @@ int FindMatchingMultiWordWord(char *thisword, const char **text) {
 int parse_sentence(const char *src_text, int *numwords, short *wordarray, short *compareto, int comparetonum) {
 	char thisword[150] = "\0";
 	int  i = 0, comparing = 0;
-	char in_optional = 0, do_word_now = 0;
+	int8 in_optional = 0, do_word_now = 0;
 	int  optional_start = 0;
 
 	numwords[0] = 0;
@@ -332,13 +331,6 @@ void RegisterParserAPI() {
 	ccAddExternalStaticFunction("Parser::ParseText^1", Sc_ParseText);
 	ccAddExternalStaticFunction("Parser::SaidUnknownWord^0", Sc_Parser_SaidUnknownWord);
 	ccAddExternalStaticFunction("Parser::Said^1", Sc_Said);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("Parser::FindWordID^1", (void *)Parser_FindWordID);
-	ccAddExternalFunctionForPlugin("Parser::ParseText^1", (void *)ParseText);
-	ccAddExternalFunctionForPlugin("Parser::SaidUnknownWord^0", (void *)Parser_SaidUnknownWord);
-	ccAddExternalFunctionForPlugin("Parser::Said^1", (void *)Said);
 }
 
 } // namespace AGS3

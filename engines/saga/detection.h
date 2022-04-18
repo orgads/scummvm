@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -58,9 +57,7 @@ struct GamePatchDescription {
 
 enum GameIds {
 	GID_ITE = 0,
-	GID_IHNM = 1,
-	GID_DINO = 2,
-	GID_FTA2 = 3
+	GID_IHNM = 1
 };
 
 enum GameFeatures {
@@ -86,10 +83,7 @@ enum GameFileTypes {
 	// IHNM specific
 	GAME_MUSICFILE_FM     = 1 << 8,    // IHNM
 	GAME_MUSICFILE_GM     = 1 << 9,    // IHNM, ITE Mac CD Guild
-	GAME_PATCHFILE        = 1 << 10,   // IHNM patch file (patch.re_/patch.res)
-	// SAGA 2 (Dinotopia, FTA2)
-	GAME_IMAGEFILE        = 1 << 11,   // Game images
-	GAME_OBJRESOURCEFILE  = 1 << 12    // Game object data
+	GAME_PATCHFILE        = 1 << 10    // IHNM patch file (patch.re_/patch.res)
 };
 
 struct SAGAGameDescription {

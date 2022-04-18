@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -55,7 +54,7 @@ public:
 	void set(Palette *sciPal, bool force, bool forceRealMerge = false, bool includeFirstColor = true);
 	bool insert(Palette *newPalette, Palette *destPalette, bool includeFirstColor = false);
 	bool merge(Palette *pFrom, bool force, bool forceRealMerge);
-	uint16 matchColor(byte r, byte g, byte b);
+	uint16 matchColor(byte r, byte g, byte b, bool force16BitColorMatch = false);
 	void getSys(Palette *pal);
 	uint16 getTotalColorCount() const { return _totalScreenColors; }
 
@@ -70,7 +69,7 @@ public:
 	void kernelSetFlag(uint16 fromColor, uint16 toColor, uint16 flag);
 	void kernelUnsetFlag(uint16 fromColor, uint16 toColor, uint16 flag);
 	void kernelSetIntensity(uint16 fromColor, uint16 toColor, uint16 intensity, bool setPalette);
-	int16 kernelFindColor(uint16 r, uint16 g, uint16 b);
+	int16 kernelFindColor(uint16 r, uint16 g, uint16 b, bool force16BitColorMatch = false);
 	bool kernelAnimate(byte fromColor, byte toColor, int speed);
 	void kernelAnimateSet();
 	reg_t kernelSave();

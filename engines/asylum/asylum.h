@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,20 +15,22 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef ASYLUM_ASYLUM_H
 #define ASYLUM_ASYLUM_H
 
+#include "common/file.h"
+#include "common/language.h"
 #include "common/random.h"
 #include "common/rect.h"
 #include "common/scummsys.h"
 #include "common/serializer.h"
 #include "common/system.h"
 
+#include "engines/advancedDetector.h"
 #include "engines/engine.h"
 
 #include "asylum/resources/data.h"
@@ -40,19 +42,10 @@
 /**
  * This is the namespace of the Asylum engine.
  *
- * Status of this engine:
- *  - Script interpreters for main game and encounters are implemented
- *  - Object handling, player reaction and special chapter logic is implemented
- *  - Scene parsing and drawing, movie playing, mouse cursor and menu handling are almost complete
- *  - Sound code is almost complete (music is still WIP)
- *  - Almost all puzzles are implemented
- *  - Walking is partialy implemented but the primitive pathfinding is missing
+ * Status of this engine: Complete
  *
- * Maintainers:
- *  alexbevi, alexandrefontoura, bluegr, littleboy, midstream, deledrius
- *
- * Supported games:
- *  - Sanitarium
+ * Games using this engine:
+ * - Sanitarium
  */
 
 struct ADGameDescription;
@@ -93,7 +86,7 @@ public:
 	/**
 	 * Start a new the game
 	 */
-	void startGame(ResourcePackId sceneId, StartGameType type);
+	bool startGame(ResourcePackId sceneId, StartGameType type);
 
 	/**
 	 * Restarts the game
@@ -110,7 +103,7 @@ public:
 	 *
 	 * @param sceneId ResourcePack for the scene
 	 */
-	void switchScene(ResourcePackId sceneId) { startGame(sceneId, kStartGameScene); }
+	void switchScene(ResourcePackId sceneId) { (void)startGame(sceneId, kStartGameScene); }
 
 	/**
 	 * Get the number of engine ticks
@@ -161,13 +154,18 @@ public:
 	void toggleGameFlag(GameFlag flag);
 	bool isGameFlagSet(GameFlag flag) const;
 	bool isGameFlagNotSet(GameFlag flag) const;
-	void resetFlags();
+	bool areGameFlagsSet(uint from, uint to) const;
+	void resetFlags() { memset(_gameFlags, 0, sizeof(_gameFlags)); }
 
 	// Misc
 	uint getRandom(uint max) { return max ? _rnd->getRandomNumber(max - 1) : 0; }
 	uint getRandomBit()      { return _rnd->getRandomBit(); }
 
 	bool rectContains(const int16 (*rectPtr)[4], const Common::Point &p) const;
+
+	// Steam achievements
+	void unlockAchievement(const Common::String &id);
+	void checkAchievements();
 
 	/**
 	 * Switch message handler.
@@ -190,6 +188,22 @@ public:
 
 	// Serializable
 	void saveLoadWithSerializer(Common::Serializer &s);
+
+	bool checkGameVersion(const char *version) { return !strcmp(_gameDescription->extra, version); }
+	bool isAltDemo() { return Common::File::exists("asylum.dat"); }
+	Common::Language getLanguage() { return _gameDescription->language; }
+	Common::String getTargetName() { return _targetName; }
+	Common::String getMoviesFileName() { return Common::String::format("%s.movies", _targetName.c_str()); }
+	bool isMenuVisible() { return _handler == (EventHandler *)_menu; }
+	EventHandler *getEventHandler() { return _handler; }
+
+	// Save/Load
+	int getAutosaveSlot() const { return getMetaEngine()->getAutosaveSlot(); }
+	bool canLoadGameStateCurrently();
+	Common::Error loadGameState(int slot);
+	bool canSaveGameStateCurrently();
+	bool canSaveAutosaveCurrently();
+	Common::Error saveGameState(int slot, const Common::String &desc, bool isAutosave = false);
 
 private:
 	const ADGameDescription *_gameDescription;

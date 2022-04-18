@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,11 +37,11 @@
 #include "ags/engine/ac/global_hotspot.h"
 #include "ags/engine/ac/global_object.h"
 #include "ags/engine/ac/global_room.h"
+#include "ags/engine/ac/global_video.h"
 #include "ags/engine/ac/inv_window.h"
 #include "ags/engine/ac/mouse.h"
 #include "ags/engine/ac/room.h"
 #include "ags/engine/ac/room_object.h"
-#include "ags/shared/gui/gui_main.h"
 #include "ags/shared/script/cc_error.h"
 #include "ags/shared/script/cc_options.h"
 #include "ags/engine/debugging/debugger.h"
@@ -97,7 +96,7 @@ void run_function_on_non_blocking_thread(NonBlockingScriptFunction *funcToRun) {
 
 	funcToRun->globalScriptHasFunction = DoRunScriptFuncCantBlock(_G(gameinstFork), funcToRun, funcToRun->globalScriptHasFunction);
 
-	if (room_changes_was != _GP(play).room_changes)
+	if (room_changes_was != _GP(play).room_changes || _G(abort_engine))
 		return;
 
 	funcToRun->roomHasFunction = DoRunScriptFuncCantBlock(_G(roominstFork), funcToRun, funcToRun->roomHasFunction);
@@ -115,7 +114,7 @@ void run_function_on_non_blocking_thread(NonBlockingScriptFunction *funcToRun) {
 
 // Returns 0 normally, or -1 to indicate that the NewInteraction has
 // become invalid and don't run another interaction on it
-// (eg. a room change occured)
+// (eg. a room change occurred)
 int run_interaction_event(Interaction *nint, int evnt, int chkAny, int isInv) {
 
 	if (evnt < 0 || (size_t)evnt >= nint->Events.size() ||
@@ -155,7 +154,7 @@ int run_interaction_event(Interaction *nint, int evnt, int chkAny, int isInv) {
 
 // Returns 0 normally, or -1 to indicate that the NewInteraction has
 // become invalid and don't run another interaction on it
-// (eg. a room change occured)
+// (eg. a room change occurred)
 int run_interaction_script(InteractionScripts *nint, int evnt, int chkAny, int isInv) {
 
 	if ((nint->ScriptFuncNames[evnt] == nullptr) || (nint->ScriptFuncNames[evnt][0u] == 0)) {
@@ -198,31 +197,52 @@ int run_interaction_script(InteractionScripts *nint, int evnt, int chkAny, int i
 }
 
 int create_global_script() {
+	constexpr int kscript_create_error = -3;
+
 	ccSetOption(SCOPT_AUTOIMPORT, 1);
+
+	std::vector<ccInstance *> instances_for_resolving;
 	for (int kk = 0; kk < _G(numScriptModules); kk++) {
 		_GP(moduleInst)[kk] = ccInstance::CreateFromScript(_GP(scriptModules)[kk]);
 		if (_GP(moduleInst)[kk] == nullptr)
-			return -3;
-		// create a forked instance for rep_exec_always
-		_GP(moduleInstFork)[kk] = _GP(moduleInst)[kk]->Fork();
-		if (_GP(moduleInstFork)[kk] == nullptr)
-			return -3;
-
-		_GP(moduleRepExecAddr)[kk] = _GP(moduleInst)[kk]->GetSymbolAddress(REP_EXEC_NAME);
+			return kscript_create_error;
+		instances_for_resolving.push_back(_GP(moduleInst)[kk]);
 	}
+
 	_G(gameinst) = ccInstance::CreateFromScript(_GP(gamescript));
 	if (_G(gameinst) == nullptr)
-		return -3;
-	// create a forked instance for rep_exec_always
-	_G(gameinstFork) = _G(gameinst)->Fork();
-	if (_G(gameinstFork) == nullptr)
-		return -3;
+		return kscript_create_error;
+	instances_for_resolving.push_back(_G(gameinst));
 
 	if (_GP(dialogScriptsScript) != nullptr) {
 		_G(dialogScriptsInst) = ccInstance::CreateFromScript(_GP(dialogScriptsScript));
 		if (_G(dialogScriptsInst) == nullptr)
-			return -3;
+			return kscript_create_error;
+		instances_for_resolving.push_back(_G(dialogScriptsInst));
 	}
+
+	// Resolve the script imports after all the scripts have been loaded 
+	for (size_t instance_idx = 0; instance_idx < instances_for_resolving.size(); instance_idx++) {
+		auto inst = instances_for_resolving[instance_idx];
+		if (!inst->ResolveScriptImports(inst->instanceof.get()))
+			return kscript_create_error;
+		if (!inst->ResolveImportFixups(inst->instanceof.get()))
+			return kscript_create_error;
+	}
+
+	// Create the forks for 'repeatedly_execute_always' after resolving
+	// because they copy their respective originals including the resolve information
+	for (int module_idx = 0; module_idx < _G(numScriptModules); module_idx++) {
+		_GP(moduleInstFork)[module_idx] = _GP(moduleInst)[module_idx]->Fork();
+		if (_GP(moduleInstFork)[module_idx] == nullptr)
+			return kscript_create_error;
+
+		_GP(moduleRepExecAddr)[module_idx] = _GP(moduleInst)[module_idx]->GetSymbolAddress(REP_EXEC_NAME);
+	}
+
+	_G(gameinstFork) = _G(gameinst)->Fork();
+	if (_G(gameinstFork) == nullptr)
+		return kscript_create_error;
 
 	ccSetOption(SCOPT_AUTOIMPORT, 0);
 	return 0;
@@ -281,8 +301,12 @@ bool DoRunScriptFuncCantBlock(ccInstance *sci, NonBlockingScriptFunction *funcTo
 
 	if (funcToRun->numParameters < 3) {
 		result = sci->CallScriptFunction((const char *)funcToRun->functionName, funcToRun->numParameters, funcToRun->params);
-	} else
+	} else {
 		quit("DoRunScriptFuncCantBlock called with too many parameters");
+	}
+
+	if (_G(abort_engine))
+		return false;
 
 	if (result == -2) {
 		// the function doens't exist, so don't try and run it again
@@ -292,6 +316,7 @@ bool DoRunScriptFuncCantBlock(ccInstance *sci, NonBlockingScriptFunction *funcTo
 	} else {
 		funcToRun->atLeastOneImplementationExists = true;
 	}
+
 	// this might be nested, so don't disrupt blocked scripts
 	_G(ccErrorString) = "";
 	_G(ccError) = 0;
@@ -538,7 +563,7 @@ void post_script_cleanup() {
 			quitprintf("undefined post script action found: %d", copyof.postScriptActions[ii]);
 		}
 		// if the room changed in a conversation, for example, abort
-		if (old_room_number != _G(displayed_room)) {
+		if (old_room_number != _G(displayed_room) || _G(abort_engine)) {
 			return;
 		}
 	}
@@ -675,7 +700,7 @@ int run_interaction_commandlist(InteractionCommandList *nicl, int *timesrun, int
 			play_sound(IPARAM1);
 			break;
 		case 8:  // Play Flic
-			play_flc_file(IPARAM1, IPARAM2);
+			PlayFlic(IPARAM1, IPARAM2);
 			break;
 		case 9: { // Run Dialog
 			int roomWas = _GP(play).room_changes;

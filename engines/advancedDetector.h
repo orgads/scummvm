@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -52,7 +51,7 @@ struct ADGameFileDescription {
 	const char *fileName; ///< Name of the described file.
 	uint16 fileType;      ///< Optional. Not used during detection, only by engines.
 	const char *md5;      ///< MD5 of (the beginning of) the described file. Optional. Set to NULL to ignore.
-	int32 fileSize;       ///< Size of the described file. Set to -1 to ignore.
+	int64 fileSize;       ///< Size of the described file. Set to -1 to ignore.
 };
 
 /**
@@ -80,25 +79,33 @@ struct ADGameFileDescription {
 #define AD_ENTRY2s(f1, x1, s1, f2, x2, s2) {{f1, 0, x1, s1}, {f2, 0, x2, s2}, AD_LISTEND}
 
 /**
+ * A shortcut to produce a list of ADGameFileDescription records with only three
+ * records that contain just a filename with an MD5, plus a file size.
+ */
+#define AD_ENTRY3s(f1, x1, s1, f2, x2, s2, f3, x3, s3) {{f1, 0, x1, s1}, {f2, 0, x2, s2}, {f3, 0, x3, s3}, AD_LISTEND}
+
+/**
  * Flags used in the game description.
  */
 enum ADGameFlags {
 	ADGF_NO_FLAGS        =  0,        ///< No flags.
-	ADGF_REMASTERED      = (1 << 17), ///< Add "-remastered' to gameid.
-	ADGF_AUTOGENTARGET   = (1 << 18), ///< Automatically generate gameid from @ref ADGameDescription::extra.
-	ADGF_UNSTABLE        = (1 << 19), ///< Flag to designate not yet officially supported games that are not fit for public testing.
-	ADGF_TESTING         = (1 << 20), ///< Flag to designate not yet officially supported games that are fit for public testing.
-	ADGF_PIRATED         = (1 << 21), ///< Flag to designate well-known pirated versions with cracks.
-	ADGF_UNSUPPORTED     = (1 << 22), /*!< Flag to mark certain versions (like badly protected full games as demos) not to be run for various reasons.
+	ADGF_TAILMD5		 = (1 << 15), ///< Calculate the MD5 for this entry from the end of the file.
+	ADGF_REMASTERED      = (1 << 16), ///< Add "-remastered' to gameid.
+	ADGF_AUTOGENTARGET   = (1 << 17), ///< Automatically generate gameid from @ref ADGameDescription::extra.
+	ADGF_UNSTABLE        = (1 << 18), ///< Flag to designate not yet officially supported games that are not fit for public testing.
+	ADGF_TESTING         = (1 << 19), ///< Flag to designate not yet officially supported games that are fit for public testing.
+	ADGF_PIRATED         = (1 << 20), ///< Flag to designate well-known pirated versions with cracks.
+	ADGF_UNSUPPORTED     = (1 << 21), /*!< Flag to mark certain versions (like badly protected full games as demos) not to be run for various reasons.
 	                                       A custom message can be provided in the @ref ADGameDescription::extra field. */
-	ADGF_WARNING         = (1 << 23), /*!< Flag to mark certain versions to show confirmation warning before proceeding.
+	ADGF_WARNING         = (1 << 22), /*!< Flag to mark certain versions to show confirmation warning before proceeding.
 	                                       A custom message should be provided in the @ref ADGameDescription::extra field. */
-	ADGF_ADDENGLISH      = (1 << 24), ///< Always add English as a language option.
-	ADGF_MACRESFORK      = (1 << 25), ///< Calculate the MD5 for this entry from the resource fork.
-	ADGF_USEEXTRAASTITLE = (1 << 26), ///< Use @ref ADGameDescription::extra as the main game title, not gameid.
-	ADGF_DROPLANGUAGE    = (1 << 27), ///< Do not add language to gameid.
-	ADGF_DROPPLATFORM    = (1 << 28), ///< Do not add platform to gameid.
-	ADGF_CD              = (1 << 29), ///< Add "-cd" to gameid.
+	ADGF_ADDENGLISH      = (1 << 23), ///< Always add English as a language option.
+	ADGF_MACRESFORK      = (1 << 24), ///< Calculate the MD5 for this entry from the resource fork.
+	ADGF_USEEXTRAASTITLE = (1 << 25), ///< Use @ref ADGameDescription::extra as the main game title, not gameid.
+	ADGF_DROPLANGUAGE    = (1 << 26), ///< Do not add language to gameid.
+	ADGF_DROPPLATFORM    = (1 << 27), ///< Do not add platform to gameid.
+	ADGF_CD              = (1 << 28), ///< Add "-cd" to gameid.
+	ADGF_DVD             = (1 << 29), ///< Add "-dvd" to gameid.
 	ADGF_DEMO            = (1 << 30)  ///< Add "-demo" to gameid.
 };
 
@@ -219,7 +226,20 @@ enum ADFlags {
 	 * In addition, this is useful if two variants of a game sharing the same
 	 * gameid are contained in a single directory.
 	 */
-	kADFlagUseExtraAsHint = (1 << 0)
+	kADFlagUseExtraAsHint = (1 << 0),
+
+	/**
+	 * If set, filenames will be matched against the entire path, relative to
+	 * the root detection directory.
+	 *
+	 * For example: "foo/bar.000" for a file at "<root>/foo/bar.000").
+	 * Otherwise, filenames only match the base name (e.g. "bar.000" for the same file).
+	 *
+	 * @note @c _maxScanDepth must still be configured to allow
+	 * the detector to find files inside subdirectories. @c _directoryGlobs are
+	 * extracted from the entries.
+	 */
+	 kADFlagMatchFullPaths = (1 << 1)
 };
 
 
@@ -311,18 +331,6 @@ protected:
 	const char * const *_directoryGlobs;
 
 	/**
-	 * If true, filenames will be matched against the entire path, relative to
-	 * the root detection directory.
-	 *
-	 * For example: "foo/bar.000" for a file at "<root>/foo/bar.000").
-	 * Otherwise, filenames only match the base name (e.g. "bar.000" for the same file).
-	 *
-	 * @note @c _maxScanDepth and @c _directoryGlobs must still be configured to allow
-	 * the detector to find files inside subdirectories.
-	 */
-	bool _matchFullPaths;
-
-	/**
 	 * If ADGF_AUTOGENTARGET is used, then this specifies the max length
 	 * of the autogenerated name.
 	 * The default is 15.
@@ -350,7 +358,7 @@ public:
 	 * (possibly empty) list of games supported by the engine that were
 	 * found among the given files.
 	 */
-	DetectedGames detectGames(const Common::FSList &fslist) const override;
+	DetectedGames detectGames(const Common::FSList &fslist) override;
 
 	/**
 	 * A generic createInstance.
@@ -358,7 +366,7 @@ public:
 	 * For instantiating engine objects, this method is called first,
 	 * and then the subclass implemented createInstance is called from within.
 	 */
-	Common::Error createInstance(OSystem *syst, Engine **engine) const;
+	Common::Error createInstance(OSystem *syst, Engine **engine);
 
 	/**
 	 * Return a list of extra GUI options for the specified target.
@@ -374,7 +382,11 @@ public:
 	 *
 	 * @return A list of extra GUI options for an engine plugin and target.
 	 */
-	virtual const ExtraGuiOptions getExtraGuiOptions(const Common::String &target) const override;
+	const ExtraGuiOptions getExtraGuiOptions(const Common::String &target) const override;
+
+	static Common::StringArray getPathsFromEntry(const ADGameDescription *g);
+
+	uint getMD5Bytes() const { return _md5Bytes; }
 
 protected:
 	/**
@@ -392,6 +404,13 @@ protected:
 
 private:
 	void initSubSystems(const ADGameDescription *gameDesc) const;
+	void preprocessDescriptions();
+	bool isEntryGrayListed(const ADGameDescription *g) const;
+
+private:
+	Common::HashMap<Common::String, bool, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> _grayListMap;
+	Common::HashMap<Common::String, bool, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> _globsMap;
+	bool _hashMapsInited;
 
 protected:
 	/**
@@ -408,7 +427,7 @@ protected:
 	 *
 	 * @return A list of @ref ADGameDescription pointers corresponding to the matched games.
 	 */
-	virtual ADDetectedGames detectGame(const Common::FSNode &parent, const FileMap &allFiles, Common::Language language, Common::Platform platform, const Common::String &extra) const;
+	virtual ADDetectedGames detectGame(const Common::FSNode &parent, const FileMap &allFiles, Common::Language language, Common::Platform platform, const Common::String &extra);
 
 	/**
 	 * @return True if variant of a game with unknown files can be played with the engine and false otherwise.
@@ -461,7 +480,7 @@ public:
 	 * By the time this is called, it is assumed that there is only one
 	 * plugin engine loaded in memory.
 	 */
-	virtual Common::Error createInstance(OSystem *syst, Engine **engine) const override;
+	Common::Error createInstance(OSystem *syst, Engine **engine) override;
 
 	/**
 	 * A createInstance implementation for subclasses. To be called after the base
@@ -476,7 +495,7 @@ public:
 	 *
 	 * @see MetaEngine::getName().
 	 */
-	virtual const char *getName() const override = 0;
+	const char *getName() const override = 0;
 
 public:
 	/**
@@ -522,11 +541,11 @@ public:
 		return md5HashMap.getVal(fname);
 	}
 
-	void setSize(Common::String fname, int32 size) {
+	void setSize(Common::String fname, int64 size) {
 		sizeHashMap.setVal(fname, size);
 	}
 
-	int32 getSize(Common::String fname) {
+	int64 getSize(Common::String fname) {
 		return sizeHashMap.getVal(fname);
 	}
 
@@ -547,7 +566,7 @@ private:
 	friend class Common::Singleton<MD5CacheManager>;
 
 	typedef Common::HashMap<Common::String, Common::String, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> FileHashMap;
-	typedef Common::HashMap<Common::String, int32, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> SizeHashMap;
+	typedef Common::HashMap<Common::String, int64, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> SizeHashMap;
 	FileHashMap md5HashMap;
 	SizeHashMap sizeHashMap;
 };

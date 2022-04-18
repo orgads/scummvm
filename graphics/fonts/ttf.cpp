@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -140,27 +139,27 @@ void TTFLibrary::closeFont(FT_Face &face) {
 class TTFFont : public Font {
 public:
 	TTFFont();
-	virtual ~TTFFont();
+	~TTFFont() override;
 
 	bool load(Common::SeekableReadStream &stream, int size, TTFSizeMode sizeMode,
 	          uint dpi, TTFRenderMode renderMode, const uint32 *mapping, bool stemDarkening);
 	bool load(uint8 *ttfFile, uint32 sizeFile, int32 faceIndex, bool fakeBold, bool fakeItalic,
 	          int size, TTFSizeMode sizeMode, uint dpi, TTFRenderMode renderMode, const uint32 *mapping, bool stemDarkening);
 
-	virtual int getFontHeight() const;
+	int getFontHeight() const override;
+	Common::String getFontName() const override;
+	int getFontAscent() const override;
 
-	virtual int getFontAscent() const;
+	int getMaxCharWidth() const override;
 
-	virtual int getMaxCharWidth() const;
+	int getCharWidth(uint32 chr) const override;
 
-	virtual int getCharWidth(uint32 chr) const;
+	int getKerningOffset(uint32 left, uint32 right) const override;
 
-	virtual int getKerningOffset(uint32 left, uint32 right) const;
+	Common::Rect getBoundingBox(uint32 chr) const override;
 
-	virtual Common::Rect getBoundingBox(uint32 chr) const;
-
-	virtual void drawChar(Surface *dst, uint32 chr, int x, int y, uint32 color) const;
-	virtual void drawChar(ManagedSurface *dst, uint32 chr, int x, int y, uint32 color) const;
+	void drawChar(Surface *dst, uint32 chr, int x, int y, uint32 color) const override;
+	void drawChar(ManagedSurface *dst, uint32 chr, int x, int y, uint32 color) const override;
 
 private:
 	bool _initialized;
@@ -541,6 +540,10 @@ int TTFFont::getFontHeight() const {
 	return _height;
 }
 
+Common::String TTFFont::getFontName() const {
+	return _face->family_name;
+}
+
 int TTFFont::getFontAscent() const {
 	return _ascent;
 }
@@ -751,7 +754,7 @@ bool TTFFont::cacheGlyph(Glyph &glyph, uint32 chr) const {
 	glyph.slot = slot;
 
 	// We use the light target and render mode to improve the looks of the
-	// glyphs. It is most noticable in FreeSansBold.ttf, where otherwise the
+	// glyphs. It is most noticeable in FreeSansBold.ttf, where otherwise the
 	// 't' glyph looks like it is cut off on the right side.
 	if (FT_Load_Glyph(_face, slot, _loadFlags))
 		return false;
@@ -818,7 +821,6 @@ bool TTFFont::cacheGlyph(Glyph &glyph, uint32 chr) const {
 	}
 
 	uint8 *dst = (uint8 *)glyph.image.getPixels();
-	memset(dst, 0, glyph.image.h * glyph.image.pitch);
 
 	switch (bitmap->pixel_mode) {
 	case FT_PIXEL_MODE_MONO:

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -36,6 +35,16 @@ Bitmap *CreateBitmap(int width, int height, int color_depth) {
 		delete bitmap;
 		bitmap = nullptr;
 	}
+	return bitmap;
+}
+
+Bitmap *CreateClearBitmap(int width, int height, int clear_color, int color_depth) {
+	Bitmap *bitmap = new Bitmap();
+	if (!bitmap->Create(width, height, color_depth)) {
+		delete bitmap;
+		return nullptr;
+	}
+	bitmap->Clear(clear_color);
 	return bitmap;
 }
 
@@ -69,6 +78,15 @@ Bitmap *CreateBitmapCopy(Bitmap *src, int color_depth) {
 Bitmap *LoadFromFile(const char *filename) {
 	Bitmap *bitmap = new Bitmap();
 	if (!bitmap->LoadFromFile(filename)) {
+		delete bitmap;
+		bitmap = nullptr;
+	}
+	return bitmap;
+}
+
+Bitmap *LoadFromFile(PACKFILE *pf) {
+	Bitmap *bitmap = new Bitmap();
+	if (!bitmap->LoadFromFile(pf)) {
 		delete bitmap;
 		bitmap = nullptr;
 	}

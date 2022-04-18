@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -91,10 +90,10 @@ bool loadWAVFromStream(Common::SeekableReadStream &stream, int &size, int &rate,
 	// 8 bit data is unsigned, 16 bit data signed
 
 
-	if (wavType != 0)
+	if (wavType != nullptr)
 		*wavType = type;
 
-	if (blockAlign_ != 0)
+	if (blockAlign_ != nullptr)
 		*blockAlign_ = blockAlign;
 #if 0
 	debug("WAVE information:");
@@ -194,7 +193,7 @@ SeekableAudioStream *makeWAVStream(Common::SeekableReadStream *stream, DisposeAf
 	if (!loadWAVFromStream(*stream, size, rate, flags, &type, &blockAlign)) {
 		if (disposeAfterUse == DisposeAfterUse::YES)
 			delete stream;
-		return 0;
+		return nullptr;
 	}
 	int channels = (flags & Audio::FLAG_STEREO) ? 2 : 1;
 	int bytesPerSample = (flags & Audio::FLAG_24BITS) ? 3 : ((flags & Audio::FLAG_16BITS) ? 2 : 1);
@@ -228,7 +227,7 @@ SeekableAudioStream *makeWAVStream(Common::SeekableReadStream *stream, DisposeAf
 
 	// If the format is unsupported, we already returned earlier, but just in case
 	delete dataStream;
-	return 0;
+	return nullptr;
 }
 
 } // End of namespace Audio

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -39,7 +38,7 @@ DEFINE_RUNTIME_CLASSTYPE_CODE(CruAvatarMoverProcess)
 static const int REBEL_BASE_MAP = 40;
 
 CruAvatarMoverProcess::CruAvatarMoverProcess() : AvatarMoverProcess(),
-_avatarAngle(0), _SGA1Loaded(false), _nextFireTick(0) {
+_avatarAngle(-1), _SGA1Loaded(false), _nextFireTick(0), _lastNPCAlertTick(0) {
 }
 
 
@@ -67,7 +66,7 @@ void CruAvatarMoverProcess::run() {
 		if (_avatarAngle < 0) {
 			_avatarAngle = Direction_ToCentidegrees(avatar->getDir());
 		}
-		if (!hasMovementFlags(MOVE_FORWARD | MOVE_BACK | MOVE_JUMP | MOVE_STEP)) {
+		if (!hasMovementFlags(MOVE_FORWARD | MOVE_JUMP | MOVE_STEP)) {
 			// See comment on _avatarAngle in header about these constants
 			if (hasMovementFlags(MOVE_TURN_LEFT)) {
 				if (hasMovementFlags(MOVE_RUN))
@@ -91,9 +90,10 @@ void CruAvatarMoverProcess::run() {
 		_avatarAngle = -1;
 		// Check for a turn request while running or walking.  This only happens
 		// once per arrow keydown, so clear the flag.
-		if (avatar->isBusy() && _isAnimRunningWalking(avatar->getLastAnim())
+		if (_isAnimRunningWalking(avatar->getLastAnim())
 			&& hasMovementFlags(MOVE_FORWARD)
-			&& (hasMovementFlags(MOVE_TURN_LEFT) || hasMovementFlags(MOVE_TURN_RIGHT))) {
+			&& (hasMovementFlags(MOVE_TURN_LEFT) || hasMovementFlags(MOVE_TURN_RIGHT) ||
+				hasMovementFlags(MOVE_PENDING_TURN_LEFT) || hasMovementFlags(MOVE_PENDING_TURN_RIGHT))) {
 			Kernel *kernel = Kernel::get_instance();
 			// Stop the current animation and turn now.
 			kernel->killProcesses(avatar->getObjId(), ActorAnimProcess::ACTOR_ANIM_PROC_TYPE, true);
@@ -102,16 +102,29 @@ void CruAvatarMoverProcess::run() {
 			Animation::Sequence anim = hasMovementFlags(MOVE_RUN) ? Animation::run : Animation::walk;
 			DirectionMode dirmode = avatar->animDirMode(anim);
 			Direction dir = getTurnDirForTurnFlags(curdir, dirmode);
-			clearMovementFlag(MOVE_TURN_LEFT | MOVE_TURN_RIGHT);
+			clearMovementFlag(MOVE_TURN_LEFT | MOVE_TURN_RIGHT |
+							  MOVE_PENDING_TURN_LEFT | MOVE_PENDING_TURN_RIGHT);
 			step(anim, dir);
 			return;
 		}
 	}
 
+	// Pending turns shouldn't stick around.
+	clearMovementFlag(MOVE_PENDING_TURN_LEFT | MOVE_PENDING_TURN_RIGHT);
+
 	// Now do the regular process
 	AvatarMoverProcess::run();
 }
 
+void CruAvatarMoverProcess::clearMovementFlag(uint32 mask) {
+	// Set a pending turn if we haven't already cleared the turn
+	if ((mask & MOVE_TURN_LEFT) && hasMovementFlags(MOVE_TURN_LEFT))
+		setMovementFlag(MOVE_PENDING_TURN_LEFT);
+	else if ((mask & MOVE_TURN_RIGHT) && hasMovementFlags(MOVE_TURN_RIGHT))
+		setMovementFlag(MOVE_PENDING_TURN_RIGHT);
+
+	AvatarMoverProcess::clearMovementFlag(mask);
+}
 
 void CruAvatarMoverProcess::handleHangingMode() {
 	// No hanging in crusader, this shouldn't happen?
@@ -124,8 +137,63 @@ static bool _isAnimRunningJumping(Animation::Sequence anim) {
 }
 
 static bool _isAnimStartRunning(Animation::Sequence anim) {
-	return (anim == Animation::startRun || anim == Animation::startRunSmallWeapon ||
-			anim == Animation::startRunLargeWeapon);
+	return (anim == Animation::startRun || anim == Animation::startRunSmallWeapon /*||
+			// don't test this as it overlaps with kneel :(
+			anim == Animation::startRunLargeWeapon*/);
+}
+
+bool CruAvatarMoverProcess::checkOneShotMove(Direction direction) {
+	Actor *avatar = getControlledActor();
+	MainActor *mainactor = dynamic_cast<MainActor *>(avatar);
+
+	static const MovementFlags oneShotFlags[] = {
+		MOVE_ROLL_LEFT, MOVE_ROLL_RIGHT,
+		MOVE_STEP_LEFT, MOVE_STEP_RIGHT,
+		MOVE_STEP_FORWARD, MOVE_STEP_BACK,
+		MOVE_SHORT_JUMP, MOVE_TOGGLE_CROUCH
+	};
+
+	static const Animation::Sequence oneShotAnims[] = {
+		Animation::combatRollLeft, Animation::combatRollRight,
+		Animation::slideLeft, Animation::slideRight,
+		Animation::advance, Animation::retreat,
+		Animation::jumpForward, Animation::kneelStartCru
+	};
+
+	static const Animation::Sequence oneShotKneelingAnims[] = {
+		Animation::kneelCombatRollLeft, Animation::kneelCombatRollRight,
+		Animation::slideLeft, Animation::slideRight,
+		Animation::kneelingAdvance, Animation::kneelingRetreat,
+		Animation::jumpForward, Animation::kneelEndCru
+	};
+
+	for (int i = 0; i < ARRAYSIZE(oneShotFlags); i++) {
+		if (hasMovementFlags(oneShotFlags[i])) {
+			Animation::Sequence anim = (avatar->isKneeling() ?
+							oneShotKneelingAnims[i] : oneShotAnims[i]);
+
+			// All the animations should finish with gun drawn, *except*
+			// jump which should finish with gun stowed.  For other cases we should
+			// toggle.
+			bool incombat = avatar->isInCombat();
+			bool isjump = (anim == Animation::jumpForward);
+			if (mainactor && (incombat == isjump)) {
+				mainactor->toggleInCombat();
+			}
+
+			clearMovementFlag(oneShotFlags[i]);
+
+			if (anim == Animation::advance || anim == Animation::retreat ||
+				anim == Animation::kneelingAdvance || anim == Animation::kneelingRetreat) {
+				step(anim, direction);
+			} else {
+				avatar->doAnim(anim, direction);
+			}
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void CruAvatarMoverProcess::handleCombatMode() {
@@ -145,6 +213,9 @@ void CruAvatarMoverProcess::handleCombatMode() {
 	_idleTime = 0;
 
 	if (stasis)
+		return;
+
+	if (checkOneShotMove(direction))
 		return;
 
 	if (hasMovementFlags(MOVE_FORWARD)) {
@@ -310,13 +381,25 @@ void CruAvatarMoverProcess::handleNormalMode() {
 	if (!hasMovementFlags(MOVE_ANY_DIRECTION) && lastanim == Animation::run) {
 		// if we were running, slow to a walk before stopping
 		// (even in stasis)
-		waitFor(avatar->doAnim(Animation::stopRunningAndDrawSmallWeapon, direction));
+		Animation::Sequence nextanim;
+		if (rebelBase) {
+			nextanim = Animation::stand;
+		} else {
+			nextanim = Animation::stopRunningAndDrawSmallWeapon;
+			// Robots don't slow down from  running
+			if (!avatar->hasAnim(nextanim))
+				nextanim = Animation::stand;
+		}
+		waitFor(avatar->doAnim(nextanim, direction));
 		avatar->setInCombat(0);
 		return;
 	}
 
 	// can't do any new actions if in stasis
 	if (stasis)
+		return;
+
+	if (checkOneShotMove(direction))
 		return;
 
 	bool moving = (lastanim == Animation::step || lastanim == Animation::run || lastanim == Animation::walk);
@@ -330,7 +413,7 @@ void CruAvatarMoverProcess::handleNormalMode() {
 
 	Animation::Sequence nextanim = Animation::walk;
 
-	if (!rebelBase && hasMovementFlags(MOVE_RUN)) {
+	if (hasMovementFlags(MOVE_RUN)) {
 		if (lastanim == Animation::run
 			|| lastanim == Animation::startRun
 			|| lastanim == Animation::startRunSmallWeapon
@@ -486,7 +569,7 @@ void CruAvatarMoverProcess::step(Animation::Sequence action, Direction direction
 		return;
 
 	//debug(6, "Cru avatar step: picked action %d dir %d (test result %d)", action, direction, res);
-	waitFor(avatar->doAnim(action, direction));
+	avatar->doAnim(action, direction);
 }
 
 void CruAvatarMoverProcess::tryAttack() {
@@ -583,6 +666,9 @@ void CruAvatarMoverProcess::tryAttack() {
 				avatar->setMana(avatar->getMana() - wpninfo->_energyUse);
 			}
 
+			// Check if we should alert nearby NPCs
+			checkForAlertingNPCs();
+
 			if (wpninfo->_shotDelay) {
 				_nextFireTick = kernel->getTickNum() + wpninfo->_shotDelay;
 			} else {
@@ -592,10 +678,60 @@ void CruAvatarMoverProcess::tryAttack() {
 	}
 }
 
+void CruAvatarMoverProcess::checkForAlertingNPCs() {
+	uint32 nowtick = Kernel::get_instance()->getTickNum();
+	if (nowtick - _lastNPCAlertTick < 240)
+		return;
+
+	_lastNPCAlertTick = nowtick;
+	uint16 controllednpc = World::get_instance()->getControlledNPCNum();
+	for (int i = 2; i < 256; i++) {
+		if (i == controllednpc)
+			continue;
+
+		Actor *a = getActor(i);
+		if (!a || a->isDead() || !a->isOnScreen())
+			continue;
+
+		if (!a->isInCombat()) {
+			uint16 currentactivity = a->getCurrentActivityNo();
+			uint16 activity2 = a->getDefaultActivity(2);
+			if (currentactivity == activity2) {
+				// note: original game also seems to check surrendering flag here?
+				if (currentactivity == 8) {
+					// Was guarding, attack!
+					a->setActivity(5);
+				}
+			} else {
+				uint16 range = 0;
+				uint32 npcshape = a->getShape();
+				if (npcshape == 0x2f5 || npcshape == 0x2f6 || npcshape == 0x2f7 ||
+					(GAME_IS_REMORSE && (npcshape == 0x595 || npcshape == 0x597)) ||
+					(GAME_IS_REGRET && (npcshape == 0x344 || npcshape == 0x384))) {
+					Actor *c = getActor(controllednpc);
+					if (c)
+						range = a->getRangeIfVisible(*c);
+				} else {
+					range = 1;
+				}
+				if (range) {
+					a->setActivity(a->getDefaultActivity(2));
+				}
+			}
+		} else {
+			// Was guarding, attack!
+			a->setActivity(5);
+		}
+	}
+}
+
 void CruAvatarMoverProcess::saveData(Common::WriteStream *ws) {
 	AvatarMoverProcess::saveData(ws);
 	ws->writeSint32LE(_avatarAngle);
 	ws->writeByte(_SGA1Loaded ? 1 : 0);
+
+	// We don't bother saving _lastNPCAlertTick or _nextFireTick, they both
+	// will get reset to 0 which will behave almost identically in practice.
 }
 
 bool CruAvatarMoverProcess::loadData(Common::ReadStream *rs, uint32 version) {

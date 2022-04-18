@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -40,22 +39,22 @@
 
 namespace AGS3 {
 
-SOUNDCLIP *my_load_wave(const AssetPath &asset_name, int voll, bool loop) {
+SOUNDCLIP *my_load_wave(const AssetPath &asset_name, bool loop) {
 	Common::SeekableReadStream *data = _GP(AssetMgr)->OpenAssetStream(asset_name.Name, asset_name.Filter);
 	if (data) {
 		Audio::AudioStream *audioStream = Audio::makeWAVStream(data, DisposeAfterUse::YES);
-		return new SoundClipWave<MUS_WAVE>(audioStream, voll, loop);
+		return new SoundClipWave<MUS_WAVE>(audioStream, loop);
 	} else {
 		return nullptr;
 	}
 }
 
-SOUNDCLIP *my_load_static_mp3(const AssetPath &asset_name, int voll, bool loop) {
+SOUNDCLIP *my_load_static_mp3(const AssetPath &asset_name, bool loop) {
 #ifdef USE_MAD
 	Common::SeekableReadStream *data = _GP(AssetMgr)->OpenAssetStream(asset_name.Name, asset_name.Filter);
 	if (data) {
 		Audio::AudioStream *audioStream = Audio::makeMP3Stream(data, DisposeAfterUse::YES);
-		return new SoundClipWave<MUS_MP3>(audioStream, voll, false);
+		return new SoundClipWave<MUS_MP3>(audioStream, false);
 	} else {
 		return nullptr;
 	}
@@ -64,16 +63,16 @@ SOUNDCLIP *my_load_static_mp3(const AssetPath &asset_name, int voll, bool loop) 
 #endif
 }
 
-SOUNDCLIP *my_load_mp3(const AssetPath &asset_name, int voll) {
-	return my_load_static_mp3(asset_name, voll, false);
+SOUNDCLIP *my_load_mp3(const AssetPath &asset_name, bool loop) {
+	return my_load_static_mp3(asset_name, loop);
 }
 
-SOUNDCLIP *my_load_static_ogg(const AssetPath &asset_name, int voll, bool loop) {
+SOUNDCLIP *my_load_static_ogg(const AssetPath &asset_name, bool loop) {
 #ifdef USE_VORBIS
 	Common::SeekableReadStream *data = _GP(AssetMgr)->OpenAssetStream(asset_name.Name, asset_name.Filter);
 	if (data) {
 		Audio::AudioStream *audioStream = Audio::makeVorbisStream(data, DisposeAfterUse::YES);
-		return new SoundClipWave<MUS_OGG>(audioStream, voll, loop);
+		return new SoundClipWave<MUS_OGG>(audioStream, loop);
 	} else {
 		return nullptr;
 	}
@@ -82,8 +81,8 @@ SOUNDCLIP *my_load_static_ogg(const AssetPath &asset_name, int voll, bool loop) 
 #endif
 }
 
-SOUNDCLIP *my_load_ogg(const AssetPath &asset_name, int voll) {
-	return my_load_static_ogg(asset_name, voll, false);
+SOUNDCLIP *my_load_ogg(const AssetPath &asset_name, bool loop) {
+	return my_load_static_ogg(asset_name, loop);
 }
 
 SOUNDCLIP *my_load_midi(const AssetPath &asset_name, bool loop) {
@@ -126,7 +125,7 @@ SOUNDCLIP *my_load_mod(const AssetPath &asset_name, bool loop) {
 			return nullptr;
 		}
 
-		return new SoundClipWave<MUS_MOD>(audioStream, 255, loop);
+		return new SoundClipWave<MUS_MOD>(audioStream, loop);
 	} else {
 		return nullptr;
 	}

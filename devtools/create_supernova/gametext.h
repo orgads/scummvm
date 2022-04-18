@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * This is a utility for generating a data file for the supernova engine.
  * It contains strings extracted from the original executable as well
@@ -1244,7 +1243,7 @@ const char *gameText2[] = {
 	"Sie sind wohl nicht ganz \201ber|die aktuellen Preise informiert!",    //You are probably not completely|informed about the current prices!
 	"Ich bin's, Horst Hummel!",    //It's me, Horst Hummel!
 	"Sch\224nes Wetter heute!",    //Nice weather today!
-	"K\224nnen Sie mir sagen, von wem ich eine Eintrittskarte f\201r den Musikwettbewerb kriegen kann?",    //Can you tell me who can get me a ticket for the music contest?
+	"",    //unused
 	// 345
 	"Ok, hier haben Sie den Xa.",    //OK, here is the Xa.
 	"Ich biete Ihnen 500 Xa.",    //I offer you 500 Xa.
@@ -1397,7 +1396,7 @@ const char *gameText2[] = {
 	"\216h - k\224nnten Sie mir das Ganze nochmal erkl\204ren?",    //Uh - could you explain that to me again?
 	// 470
 	"Wie gro\341 ist mein Anteil?",    //How big is my share?
-	"Machen Sie es immer so, da\341 Sie Ihre Komplizen \201ber ein Graffitti anwerben?",    //Do you always use graffiti to recruit your accomplices?
+	"",    //unused
 	"Hmm, Moment mal, ich frage den Boss.",    //Hmm wait, I will ask the boss.
 	"Kurze Zeit sp\204ter ...",    //A short while later ...
 	"Ok, der Boss will dich sprechen.",    //OK, the boss wants to talk to you.
@@ -1582,7 +1581,11 @@ const char *gameText2[] = {
 	"Sieht gef\204hrlich aus!", //Looks dangerous
 	"Das Auge ist schon offen.", //This Eye is already opened
 	// 625
-	"Es gelingt dir, zu fliehen.", //You manage to escape
+	"Es gelingt dir, zu fliehen.", //You manage to escape,
+	"K\224nnen Sie mir sagen, von wem ich eine Eintrittskarte", //Can you tell me who can get me a ticket for
+	"f\201r den Musikwettbewerb kriegen kann?",    //the music contest?
+	"Machen Sie es immer so, da\341 Sie Ihre Komplizen \201ber", //Do you always use graffiti to recruit
+	"ein Graffitti anwerben?",    //your accomplices?
 	NULL
 };
 

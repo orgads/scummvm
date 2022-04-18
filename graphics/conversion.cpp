@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
  * The bottom part of this is file is adapted from SDL_rotozoom.c. The
@@ -136,6 +135,32 @@ inline void crossBlitLogic(byte *dst, const byte *src, const uint w, const uint 
 }
 
 template<typename DstColor, bool backward>
+inline void crossBlitLogic1BppSource(byte *dst, const byte *src, const uint w, const uint h,
+									 const uint srcDelta, const uint dstDelta, const uint32 *map) {
+	for (uint y = 0; y < h; ++y) {
+		for (uint x = 0; x < w; ++x) {
+			*(DstColor *)dst = map[*src];
+
+			if (backward) {
+				src -= 1;
+				dst -= sizeof(DstColor);
+			} else {
+				src += 1;
+				dst += sizeof(DstColor);
+			}
+		}
+
+		if (backward) {
+			src -= srcDelta;
+			dst -= dstDelta;
+		} else {
+			src += srcDelta;
+			dst += dstDelta;
+		}
+	}
+}
+
+template<typename DstColor, bool backward>
 inline void crossBlitLogic3BppSource(byte *dst, const byte *src, const uint w, const uint h,
 									 const PixelFormat &srcFmt, const PixelFormat &dstFmt,
 									 const uint srcDelta, const uint dstDelta) {
@@ -224,6 +249,45 @@ bool crossBlit(byte *dst, const byte *src,
 		} else {
 			crossBlitLogic<uint32, uint32, false>(dst, src, w, h, srcFmt, dstFmt, srcDelta, dstDelta);
 		}
+	} else {
+		return false;
+	}
+	return true;
+}
+
+// Function to blit a rect from one color format to another using a map
+bool crossBlitMap(byte *dst, const byte *src,
+			   const uint dstPitch, const uint srcPitch,
+			   const uint w, const uint h,
+			   const uint bytesPerPixel, const uint32 *map) {
+	// Error out if conversion is impossible
+	if ((bytesPerPixel == 3) || (!bytesPerPixel))
+		return false;
+
+	// Faster, but larger, to provide optimized handling for each case.
+	const uint srcDelta = (srcPitch - w);
+	const uint dstDelta = (dstPitch - w * bytesPerPixel);
+
+	if (bytesPerPixel == 1) {
+		crossBlitLogic1BppSource<uint8, false>(dst, src, w, h, srcDelta, dstDelta, map);
+	} else if (bytesPerPixel == 2) {
+		// We need to blit the surface from bottom right to top left here.
+		// This is neeeded, because when we convert to the same memory
+		// buffer copying the surface from top left to bottom right would
+		// overwrite the source, since we have more bits per destination
+		// color than per source color.
+		dst += h * dstPitch - dstDelta - bytesPerPixel;
+		src += h * srcPitch - srcDelta - 1;
+		crossBlitLogic1BppSource<uint16, true>(dst, src, w, h, srcDelta, dstDelta, map);
+	} else if (bytesPerPixel == 4) {
+		// We need to blit the surface from bottom right to top left here.
+		// This is neeeded, because when we convert to the same memory
+		// buffer copying the surface from top left to bottom right would
+		// overwrite the source, since we have more bits per destination
+		// color than per source color.
+		dst += h * dstPitch - dstDelta - bytesPerPixel;
+		src += h * srcPitch - srcDelta - 1;
+		crossBlitLogic1BppSource<uint32, true>(dst, src, w, h, srcDelta, dstDelta, map);
 	} else {
 		return false;
 	}
@@ -333,29 +397,29 @@ inline byte scaleBlitBilinearInterpolate(byte c01, byte c00, byte c11, byte c10,
 	return (((t2 - t1) * ey) >> 16) + t1;
 }
 
-template <typename Size>
+template <typename ColorMask, typename Size>
 Size scaleBlitBilinearInterpolate(Size c01, Size c00, Size c11, Size c10, int ex, int ey,
 								  const Graphics::PixelFormat &fmt) {
 	byte c01_a, c01_r, c01_g, c01_b;
-	fmt.colorToARGB(c01, c01_a, c01_r, c01_g, c01_b);
+	fmt.colorToARGBT<ColorMask>(c01, c01_a, c01_r, c01_g, c01_b);
 
 	byte c00_a, c00_r, c00_g, c00_b;
-	fmt.colorToARGB(c00, c00_a, c00_r, c00_g, c00_b);
+	fmt.colorToARGBT<ColorMask>(c00, c00_a, c00_r, c00_g, c00_b);
 
 	byte c11_a, c11_r, c11_g, c11_b;
-	fmt.colorToARGB(c11, c11_a, c11_r, c11_g, c11_b);
+	fmt.colorToARGBT<ColorMask>(c11, c11_a, c11_r, c11_g, c11_b);
 
 	byte c10_a, c10_r, c10_g, c10_b;
-	fmt.colorToARGB(c10, c10_a, c10_r, c10_g, c10_b);
+	fmt.colorToARGBT<ColorMask>(c10, c10_a, c10_r, c10_g, c10_b);
 
 	byte dp_a = scaleBlitBilinearInterpolate(c01_a, c00_a, c11_a, c10_a, ex, ey);
 	byte dp_r = scaleBlitBilinearInterpolate(c01_r, c00_r, c11_r, c10_r, ex, ey);
 	byte dp_g = scaleBlitBilinearInterpolate(c01_g, c00_g, c11_g, c10_g, ex, ey);
 	byte dp_b = scaleBlitBilinearInterpolate(c01_b, c00_b, c11_b, c10_b, ex, ey);
-	return fmt.ARGBToColor(dp_a, dp_r, dp_g, dp_b);
+	return fmt.ARGBToColorT<ColorMask>(dp_a, dp_r, dp_g, dp_b);
 }
 
-template <typename Size, bool flipx, bool flipy> // TODO: See mirroring comment in RenderTicket ctor
+template <typename ColorMask, typename Size, bool flipx, bool flipy> // TODO: See mirroring comment in RenderTicket ctor
 void scaleBlitBilinearLogic(byte *dst, const byte *src,
 							const uint dstPitch, const uint srcPitch,
 							const uint dstW, const uint dstH,
@@ -412,7 +476,7 @@ void scaleBlitBilinearLogic(byte *dst, const byte *src,
 			/*
 			* Draw and interpolate colors
 			*/
-			*dp = scaleBlitBilinearInterpolate(*(const Size *)c01, *(const Size *)c00, *(const Size *)c11, *(const Size *)c10, ex, ey, fmt);
+			*dp = scaleBlitBilinearInterpolate<ColorMask, Size>(*(const Size *)c01, *(const Size *)c00, *(const Size *)c11, *(const Size *)c10, ex, ey, fmt);
 			/*
 			* Advance source pointer x
 			*/
@@ -445,7 +509,7 @@ void scaleBlitBilinearLogic(byte *dst, const byte *src,
 	}
 }
 
-template<typename Size, bool filtering, bool flipx, bool flipy> // TODO: See mirroring comment in RenderTicket ctor
+template<typename ColorMask, typename Size, bool filtering, bool flipx, bool flipy> // TODO: See mirroring comment in RenderTicket ctor
 void rotoscaleBlitLogic(byte *dst, const byte *src,
 						const uint dstPitch, const uint srcPitch,
 						const uint dstW, const uint dstH,
@@ -520,7 +584,7 @@ void rotoscaleBlitLogic(byte *dst, const byte *src,
 					*/
 					int ex = (sdx & 0xffff);
 					int ey = (sdy & 0xffff);
-					*pc = scaleBlitBilinearInterpolate(c01, c00, c11, c10, ex, ey, fmt);
+					*pc = scaleBlitBilinearInterpolate<ColorMask, Size>(c01, c00, c11, c10, ex, ey, fmt);
 				}
 			} else {
 				if ((dx >= 0) && (dy >= 0) && (dx < (int)srcW) && (dy < (int)srcH)) {
@@ -589,10 +653,19 @@ bool scaleBlitBilinear(byte *dst, const byte *src,
 		}
 	}
 
-	if (fmt.bytesPerPixel == 4) {
-		scaleBlitBilinearLogic<uint32, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, sax, say);
+	if (fmt == createPixelFormat<8888>()) {
+		scaleBlitBilinearLogic<ColorMasks<8888>, uint32, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, sax, say);
+	} else if (fmt == createPixelFormat<888>()) {
+		scaleBlitBilinearLogic<ColorMasks<888>,  uint32, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, sax, say);
+	} else if (fmt == createPixelFormat<565>()) {
+		scaleBlitBilinearLogic<ColorMasks<565>,  uint16, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, sax, say);
+	} else if (fmt == createPixelFormat<555>()) {
+		scaleBlitBilinearLogic<ColorMasks<555>,  uint16, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, sax, say);
+
+	} else if (fmt.bytesPerPixel == 4) {
+		scaleBlitBilinearLogic<ColorMasks<0>,    uint32, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, sax, say);
 	} else if (fmt.bytesPerPixel == 2) {
-		scaleBlitBilinearLogic<uint16, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, sax, say);
+		scaleBlitBilinearLogic<ColorMasks<0>,    uint16, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, sax, say);
 	} else {
 		delete[] sax;
 		delete[] say;
@@ -614,11 +687,11 @@ bool rotoscaleBlit(byte *dst, const byte *src,
 				   const TransformStruct &transform,
 				   const Common::Point &newHotspot) {
 	if (fmt.bytesPerPixel == 4) {
-		rotoscaleBlitLogic<uint32, false, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
+		rotoscaleBlitLogic<ColorMasks<0>, uint32, false, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
 	} else if (fmt.bytesPerPixel == 2) {
-		rotoscaleBlitLogic<uint16, false, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
+		rotoscaleBlitLogic<ColorMasks<0>, uint16, false, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
 	} else if (fmt.bytesPerPixel == 1) {
-		rotoscaleBlitLogic<uint8, false, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
+		rotoscaleBlitLogic<ColorMasks<0>, uint8, false, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
 	} else {
 		return false;
 	}
@@ -633,10 +706,19 @@ bool rotoscaleBlitBilinear(byte *dst, const byte *src,
 						   const Graphics::PixelFormat &fmt,
 						   const TransformStruct &transform,
 						   const Common::Point &newHotspot) {
-	if (fmt.bytesPerPixel == 4) {
-		rotoscaleBlitLogic<uint32, true, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
+	if (fmt == createPixelFormat<8888>()) {
+		rotoscaleBlitLogic<ColorMasks<8888>, uint32, true, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
+	} else if (fmt == createPixelFormat<888>()) {
+		rotoscaleBlitLogic<ColorMasks<888>,  uint32, true, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
+	} else if (fmt == createPixelFormat<565>()) {
+		rotoscaleBlitLogic<ColorMasks<565>,  uint16, true, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
+	} else if (fmt == createPixelFormat<555>()) {
+		rotoscaleBlitLogic<ColorMasks<555>,  uint16, true, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
+
+	} else if (fmt.bytesPerPixel == 4) {
+		rotoscaleBlitLogic<ColorMasks<0>,    uint32, true, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
 	} else if (fmt.bytesPerPixel == 2) {
-		rotoscaleBlitLogic<uint16, true, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
+		rotoscaleBlitLogic<ColorMasks<0>,    uint16, true, false, false>(dst, src, dstPitch, srcPitch, dstW, dstH, srcW, srcH, fmt, transform, newHotspot);
 	} else {
 		return false;
 	}

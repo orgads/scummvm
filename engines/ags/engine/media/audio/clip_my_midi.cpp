@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,7 +32,7 @@ MYMIDI::MYMIDI(Common::SeekableReadStream *data, bool repeat) :
 	_repeat = repeat;
 }
 
-void MYMIDI::destroy() {
+MYMIDI::~MYMIDI() {
 	::AGS::g_music->stop();
 	delete _data;
 	_data = nullptr;
@@ -95,12 +94,12 @@ int MYMIDI::play_from(int position) {
 	}
 }
 
-bool MYMIDI::is_playing() const {
+bool MYMIDI::is_playing() {
 	return ::AGS::g_music->isPlaying();
 }
 
-void MYMIDI::set_volume(int volume) {
-	_mixer->setVolumeForSoundType(Audio::Mixer::kMusicSoundType, volume);
+bool MYMIDI::is_paused() {
+	return false;
 }
 
 void MYMIDI::set_panning(int newPanning) {
@@ -113,7 +112,7 @@ void MYMIDI::set_speed(int new_speed) {
 }
 
 void MYMIDI::adjust_volume() {
-	// TODO: See if this method is needed
+	_mixer->setVolumeForSoundType(Audio::Mixer::kMusicSoundType, _vol255);
 }
 
 } // namespace AGS3

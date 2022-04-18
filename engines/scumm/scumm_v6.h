@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -85,20 +84,6 @@ protected:
 	int _blastObjectQueuePos;
 	BlastObject _blastObjectQueue[200];
 
-	struct BlastText : TextObject {
-		Common::Rect rect;
-		bool center;
-
-		void clear() {
-			this->TextObject::clear();
-			rect = Common::Rect();
-			center = false;
-		}
-	};
-
-	int _blastTextQueuePos;
-	BlastText _blastTextQueue[50];
-
 	// Akos Class
 	struct {
 		int16 cmd;
@@ -159,9 +144,8 @@ protected:
 	void useBompCursor(const byte *im, int w, int h);
 	void grabCursor(int x, int y, int w, int h);
 
-	void enqueueText(const byte *text, int x, int y, byte color, byte charset, bool center);
-	void drawBlastTexts();
-	void removeBlastTexts();
+	virtual void drawBlastTexts() {}
+	virtual void removeBlastTexts() {}
 
 	void enqueueObject(int objectNumber, int objectX, int objectY, int objectWidth,
 	                   int objectHeight, int scaleX, int scaleY, int image, int mode);

@@ -5,6 +5,7 @@ ScummVM Team
      Pawel Kolodziejski
      Eugene Sandulenko
      Einar Johan T. Somaaen
+     Lothar Serra Mari
 
   PR Office
   ---------
@@ -22,25 +23,6 @@ ScummVM Team
 
   Engine Teams
   ------------
-    SCUMM:
-       Torbjorn Andersson
-       James Brown                    - (retired)
-       Jonathan Gray                  - (retired)
-       Vincent Hamm                   - (retired)
-       Max Horn                       - (retired)
-       Travis Howell
-       Pawel Kolodziejski             - Codecs, iMUSE, Smush, etc.
-       Gregory Montoir                - (retired)
-       Eugene Sandulenko              - FT INSANE, MM NES, MM C64, game
-                                        detection, Herc/CGA
-       Ludvig Strigeus                - (retired)
-
-    HE:
-       Jonathan Gray                  - (retired)
-       Travis Howell
-       Gregory Montoir                - (retired)
-       Eugene Sandulenko
-
     Access:
        Arnaud Boutonne
        Paul Gilbert
@@ -159,14 +141,21 @@ ScummVM Team
        Paul Gilbert
        Vincent Hamm                   - (retired)
 
+    Cryo:
+       Arnaud Boutonne
+       Filippos Karapetis
+       Retro-Junk;
+       Eugene Sandulenko
+
     Cryomni3D:
        Philippe Valembois
 
     Director:
        Eugene Sandulenko
+       Crane Yang                     - GSoC Student
        Dmitry Iskrich
-       Dylan Servilla
-       Nathanael Gentry
+       Deborah Servilla               - GSoC Student
+       Nathanael Gentry               - GSoC Student
        Roland van Laar
        Scott Percival
        Steven Hoefel
@@ -197,10 +186,7 @@ ScummVM Team
        Vladimir Menshakov
        Willem Jan Palenstijn
 
-    Fullpipe:
-       Eugene Sandulenko
-
-    ScummGlk:
+    Glk:
        Paul Gilbert
        Tor Andersson                  - GarGlk library
        Stefan Jokisch                 - Frotz interpreter
@@ -224,6 +210,7 @@ ScummVM Team
     Grim:
        James Brown                    - Grim (retired)
        Giulio Camuffo                 - Grim (retired)
+       Daniel Schepler                - Initial engine contributor
        Dries Harnie                   - EMI
        Pawel Kolodziejski             - Grim
        Christian Krause               - EMI (retired)
@@ -233,10 +220,11 @@ ScummVM Team
 
     Groovie:
        Henry Bush
+       Ray Carro
        Scott Thomas
        Jordi Vilalta Prat
 
-    Hades' Challenge:
+    Hades Challenge:
        Vladimir Serbinenko/Google
 
     HDB:
@@ -251,6 +239,9 @@ ScummVM Team
        Arnaud Boutonne
        Oystein Eftevaag
        Eugene Sandulenko
+
+    Hypno:
+       Gustavo Grieco
 
     ICB:
        Pawel Kolodziejski
@@ -322,9 +313,16 @@ ScummVM Team
     Myst 3:
        Bastien Bouclet
 
+    Nancy:
+       Kaloyan Chehlarski
+       Walter van Niftrik
+
     Neverhood:
        Benjamin Haisch
        Filippos Karapetis
+
+    NGI:
+       Eugene Sandulenko
 
     Parallaction:
        peres
@@ -364,6 +362,10 @@ ScummVM Team
        Andrew Kurushin
        Eugene Sandulenko
 
+    SAGA2:
+       Yuri Guimaraes                 - GSoC Student
+       Eugene Sandulenko
+
     SCI:
        Chris Benshoof
        Greg Frieger
@@ -377,6 +379,26 @@ ScummVM Team
        Lars Skovlund
        Colin Snover
 
+    SCUMM:
+       Torbjorn Andersson
+       Andrea Boscarino               - Digital iMUSE, various fixes
+       James Brown                    - (retired)
+       Jonathan Gray                  - (retired)
+       Vincent Hamm                   - (retired)
+       Max Horn                       - (retired)
+       Travis Howell
+       Pawel Kolodziejski             - Codecs, iMUSE, Smush, etc.
+       Gregory Montoir                - (retired)
+       Eugene Sandulenko              - FT INSANE, MM NES, MM C64, game
+                                        detection, Herc/CGA
+       Ludvig Strigeus                - (retired)
+
+    SCUMM HE:
+       Jonathan Gray                  - (retired)
+       Travis Howell
+       Gregory Montoir                - (retired)
+       Eugene Sandulenko
+
     Sherlock:
        Paul Gilbert
        Martin Kiewitz
@@ -386,10 +408,19 @@ ScummVM Team
        Oliver Kiehl                   - (retired)
        Joost Peters
 
+    SLUDGE:
+       Eugene Sandulenko
+       Simei Yin                      - GSoC Student
+
     Stark:
        Bastien Bouclet
        Einar Johan T. Somaaen
        Liu Zhaosong
+
+    Star Trek:
+       Matthew Hoops                  - (retired)
+       Filippos Karapetis
+       Matthew Stewart                - GSoC Student
 
     Supernova:
        Joseph-Eugene Winzer
@@ -508,6 +539,7 @@ ScummVM Team
 
     Xeen:
        Paul Gilbert
+       Benoit Pierre
        David Goldsmith                - (analysis)
        Matt Taylor                    - (analysis)
 
@@ -552,6 +584,7 @@ ScummVM Team
 
     Nintendo DS:
        Bertrand Augereau              - HQ software scaler
+       Cameron Cawley
        Neil Millstone
 
     Nintendo Switch:
@@ -578,7 +611,7 @@ ScummVM Team
        Cpasjuste
        rsn8887
 
-    SDL (Win/Linux/OS X/etc.):
+    SDL (Win/Linux/macOS/etc.):
        Max Horn                       - (retired)
        Eugene Sandulenko              - Asm routines, GFX layers
 
@@ -628,9 +661,11 @@ ScummVM Team
        Chris Page                     - Return to launcher, savestate
                                         improvements, leak fixes, ... (GSoC
                                         2008 task) (retired)
+       Coen Rampen                    - Sound improvements
        Robin Watts                    - ARM assembly routines for nice
                                         speedups on several ports;
                                         improvements to the sound mixer
+       Trembyle                       - Archivist
 
   Website (code)
   --------------
@@ -647,7 +682,6 @@ ScummVM Team
      Eugene Sandulenko              - Forum, IRC channel, Screen Shots and
                                       Mailing list maintainer
      John Willis
-     Matan Bareket                  - Site maintainer
 
   Website (content)
   -----------------
@@ -673,6 +707,7 @@ ScummVM Team
      Jeremy Newman                  - Former webmaster
      Lionel Ulmer                   - Port: X11
      Won Star                       - Former GP32 porter
+     Matan Bareket                  - Website, Infrastructure, UI/UX
 
 Other contributions
 *******************
@@ -730,10 +765,12 @@ Other contributions
 
     Win32:
        Travis Howell
+       Lothar Serra Mari
 
     Win64:
        Chris Gray                     - (retired)
        Johannes Schickel              - (retired)
+       Lothar Serra Mari
 
   GUI Translations
   ----------------
@@ -837,6 +874,11 @@ Other contributions
     Mortevielle:
        Hugo Labrande                  - Improve English translation
        Thierry Crozat                 - Improve English translation
+
+    Prince:
+       ShinjiGR                       - English translation
+       Eugene Sandulenko              - English translation
+       Anna Baldur                    - English translation
 
     Supernova:
        Joseph-Eugene Winzer           - English translation

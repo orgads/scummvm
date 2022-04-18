@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Process scheduler.
  */
@@ -75,7 +74,16 @@ static void RestoredProcessProcess(CORO_PARAM, const void *param) {
 	CORO_BEGIN_CODE(_ctx);
 
 	// get the stuff copied to process when it was created
+	// FIXME: Code without typedef emits -Wcast-qual GCC warning.
+	//        However, adding const casts break compilation with -fpermissive.
+	//        Reverted to local typedef for now until this can be avoided.
+#if 0
+	_ctx->pic = *(INT_CONTEXT **)param;
+	//_ctx->pic = *(const INT_CONTEXT **)param;
+#else
+	typedef INT_CONTEXT *PINT_CONTEXT;
 	_ctx->pic = *(const PINT_CONTEXT *)param;
+#endif
 
 	_ctx->pic = RestoreInterpretContext(_ctx->pic);
 	AttachInterpret(_ctx->pic, CoroScheduler.getCurrentProcess());
@@ -89,7 +97,16 @@ static void RestoredProcessProcess(CORO_PARAM, const void *param) {
  * Process Tinsel Process
  */
 static void ProcessTinselProcess(CORO_PARAM, const void *param) {
+	// FIXME: Code without typedef emits -Wcast-qual GCC warning.
+	//        However, adding const casts break compilation with -fpermissive.
+	//        Reverted to local typedef for now until this can be avoided.
+#if 0
+	//INT_CONTEXT **pPic = (INT_CONTEXT **)param;
+	const INT_CONTEXT **pPic = (const INT_CONTEXT **)param;
+#else
+	typedef INT_CONTEXT *PINT_CONTEXT;
 	const PINT_CONTEXT *pPic = (const PINT_CONTEXT *)param;
+#endif
 
 	CORO_BEGIN_CONTEXT;
 	CORO_END_CONTEXT(_ctx);
@@ -138,7 +155,7 @@ void SceneProcessEvent(CORO_PARAM, uint32 procID, TINSEL_EVENT event, bool bWait
 	CORO_BEGIN_CONTEXT;
 		PROCESS_STRUC *pStruc;
 		Common::PPROCESS pProc;
-		PINT_CONTEXT pic;
+		INT_CONTEXT * pic;
 	CORO_END_CONTEXT(_ctx);
 
 	CORO_BEGIN_CODE(_ctx);
@@ -236,7 +253,7 @@ void KillGlobalProcesses() {
  */
 bool GlobalProcessEvent(CORO_PARAM, uint32 procID, TINSEL_EVENT event, bool bWait, int myEscape) {
 	CORO_BEGIN_CONTEXT;
-		PINT_CONTEXT	pic;
+		INT_CONTEXT *pic;
 		Common::PPROCESS	pProc;
 	CORO_END_CONTEXT(_ctx);
 

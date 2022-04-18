@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,6 +27,8 @@
 
 #include "common/events.h"
 #include "common/file.h"
+
+#include "engines/util.h"
 
 #include "audio/mixer.h"
 #include "graphics/palette.h"
@@ -130,7 +131,7 @@ Common::String CryOmni3DEngine::prepareFileName(const Common::String &baseName,
 
 void CryOmni3DEngine::playHNM(const Common::String &filename, Audio::Mixer::SoundType soundType,
 							  HNMCallback beforeDraw, HNMCallback afterDraw) {
-	const char *const extensions[] = { "hns", "hnm", nullptr };
+	const char *const extensions[] = { "hns", "hnm", "ubb", nullptr };
 	Common::String fname(prepareFileName(filename, extensions));
 
 	byte *currentPalette = new byte[256 * 3];
@@ -209,7 +210,7 @@ Image::ImageDecoder *CryOmni3DEngine::loadHLZ(const Common::String &filename) {
 	if (!imageDecoder->loadStream(file)) {
 		warning("Failed to open hlz file %s", fname.c_str());
 		delete imageDecoder;
-		imageDecoder = 0;
+		imageDecoder = nullptr;
 		return nullptr;
 	}
 
@@ -488,4 +489,19 @@ void CryOmni3DEngine::fillSurface(byte color) {
 	g_system->fillScreen(color);
 	g_system->updateScreen();
 }
+
+Common::Error CryOmni3DEngine_HNMPlayer::run() {
+	CryOmni3DEngine::run();
+
+	initGraphics(640, 480);
+
+	syncSoundSettings();
+
+	for (int i = 0; _gameDescription->desc.filesDescriptions[i].fileName; i++) {
+		playHNM(_gameDescription->desc.filesDescriptions[i].fileName, Audio::Mixer::kMusicSoundType);
+	}
+
+	return Common::kNoError;
+}
+
 } // End of namespace CryOmni3D

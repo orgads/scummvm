@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -94,11 +93,11 @@ SaveStateList CGEMetaEngine::listSaves(const char *target) const {
 				if (!strncmp(buffer, CGE::savegameStr, kSavegameStrSize + 1)) {
 					// Valid savegame
 					if (CGE::CGEEngine::readSavegameHeader(file, header)) {
-						saveList.push_back(SaveStateDescriptor(slotNum, header.saveName));
+						saveList.push_back(SaveStateDescriptor(this, slotNum, header.saveName));
 					}
 				} else {
 					// Must be an original format savegame
-					saveList.push_back(SaveStateDescriptor(slotNum, "Unknown"));
+					saveList.push_back(SaveStateDescriptor(this, slotNum, "Unknown"));
 				}
 
 				delete file;
@@ -128,11 +127,11 @@ SaveStateDescriptor CGEMetaEngine::querySaveMetaInfos(const char *target, int sl
 
 		if (!hasHeader) {
 			// Original savegame perhaps?
-			SaveStateDescriptor desc(slot, "Unknown");
+			SaveStateDescriptor desc(this, slot, "Unknown");
 			return desc;
 		} else {
 			// Create the return descriptor
-			SaveStateDescriptor desc(slot, header.saveName);
+			SaveStateDescriptor desc(this, slot, header.saveName);
 			desc.setThumbnail(header.thumbnail);
 			desc.setSaveDate(header.saveYear, header.saveMonth, header.saveDay);
 			desc.setSaveTime(header.saveHour, header.saveMinutes);
@@ -140,11 +139,6 @@ SaveStateDescriptor CGEMetaEngine::querySaveMetaInfos(const char *target, int sl
 			if (header.playTime) {
 				desc.setPlayTime(header.playTime * 1000);
 			}
-
-			// Slot 0 is used for the 'automatic save on exit' save in Soltys, thus
-			// we prevent it from being deleted or overwritten by accident.
-			desc.setDeletableFlag(slot != 0);
-			desc.setWriteProtectedFlag(slot == 0);
 
 			return desc;
 		}

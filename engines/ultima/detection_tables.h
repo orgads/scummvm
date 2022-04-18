@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,7 +23,7 @@ namespace Ultima {
 
 #define GAMEOPTION_ORIGINAL_SAVELOAD GUIO_GAMEOPTIONS1
 
-#define GUI_OPTIONS_ULTIMA8	GUIO2(GUIO_NOMIDI, GAMEOPTION_ORIGINAL_SAVELOAD)
+#define GUI_OPTIONS_ULTIMA8	GUIO1(GAMEOPTION_ORIGINAL_SAVELOAD)
 
 static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 #ifndef RELEASE_BUILD
@@ -347,6 +346,21 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 		0
 	},
 
+	// French version (provided by habib256 bug #13003)
+	{
+		{
+			"ultima8",
+			"",
+			AD_ENTRY1s("fusecode.flx", "6f7643af10bffa11debea4533ba47061", 1300957),
+			Common::FR_FRA,
+			Common::kPlatformDOS,
+			ADGF_NO_FLAGS,
+			GUI_OPTIONS_ULTIMA8
+		},
+		GAME_ULTIMA8,
+		0
+	},
+
 	{
 		{
 			"ultima8",
@@ -375,8 +389,8 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 		0
 	},
 
-	// Crusader games use basically the same engine as ultima8, but still
-	// need a lot of work.  All are unstable, some simply crash on startup.
+	// Crusader games use basically the same engine as ultima8, but
+	// are less complete.
 
 	// GOG Crusader - No Remorse (V1.21)
 	{
@@ -386,7 +400,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			AD_ENTRY1s("eusecode.flx", "0a0f64507adc4f280129c735ee9cad42", 556613),
 			Common::EN_ANY,
 			Common::kPlatformDOS,
-			ADGF_UNSTABLE,
+			ADGF_USECODE_DEFAULT,
 			GUIO1(GUIO_NOMIDI)
 		},
 		GAME_CRUSADER_REM,
@@ -408,6 +422,36 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 		0
 	},
 
+	// Crusader - No Remorse (V1.01), unpatched data on the GOG CD image
+	{
+		{
+			"remorse",
+			"",
+			AD_ENTRY1s("eusecode.flx", "8c74327e30088ce93f08a15a7f85b3ce", 418556),
+			Common::EN_ANY,
+			Common::kPlatformDOS,
+			ADGF_UNSTABLE | ADGF_USECODE_ORIG,
+			GUIO1(GUIO_NOMIDI)
+		},
+		GAME_CRUSADER_REM,
+		0
+	},
+
+	// Crusader - No Remorse (French) provided by BeWorld2018
+	{
+		{
+			"remorse",
+			"",
+			AD_ENTRY1s("eusecode.flx", "efbd33d6a5e8f14e9c57f963c3fbe939", 423051),
+			Common::FR_FRA,
+			Common::kPlatformDOS,
+			ADGF_UNSTABLE | ADGF_USECODE_FR,
+			GUIO1(GUIO_NOMIDI)
+		},
+		GAME_CRUSADER_REM,
+		0
+	},
+
 	// Crusader - No Remorse (Spanish) provided by Wesker
 	{
 		{
@@ -416,7 +460,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			AD_ENTRY1s("eusecode.flx", "36a16d70c97d0379f1133cc743c31313", 558493),
 			Common::ES_ESP,
 			Common::kPlatformDOS,
-			ADGF_UNSTABLE,
+			ADGF_USECODE_ES,
 			GUIO1(GUIO_NOMIDI)
 		},
 		GAME_CRUSADER_REM,
@@ -431,7 +475,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			AD_ENTRY1s("eusecode.flx", "a8b5c421c5d74be8c69fcd4fecadd1dd", 559015),
 			Common::ES_ESP,
 			Common::kPlatformDOS,
-			ADGF_UNSTABLE,
+			ADGF_USECODE_DEFAULT,
 			GUIO1(GUIO_NOMIDI)
 		},
 		GAME_CRUSADER_REM,
@@ -446,7 +490,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			AD_ENTRY1s("jusecode.flx", "088105959be4f2de1cb9e796e71c5f2d", 554522),
 			Common::JA_JPN,
 			Common::kPlatformWindows,
-			ADGF_UNSTABLE,
+			ADGF_UNSTABLE | ADGF_USECODE_JA,
 			GUIO1(GUIO_NOMIDI)
 		},
 		GAME_CRUSADER_REM,
@@ -461,7 +505,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			AD_ENTRY1s("eusecode.flx", "41cdca35b62f4b2a7bb4c3b1ec782423", 556613),
 			Common::EN_ANY,
 			Common::kPlatformDOS,
-			ADGF_UNSTABLE | ADGF_DEMO,
+			ADGF_DEMO,
 			GUIO1(GUIO_NOMIDI)
 		},
 		GAME_CRUSADER_REM,
@@ -476,7 +520,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			AD_ENTRY1s("eusecode.flx", "1bb360156b7240a1f05eb9bda01c54db", 481652),
 			Common::EN_ANY,
 			Common::kPlatformDOS,
-			ADGF_UNSTABLE,
+			ADGF_UNSTABLE | ADGF_USECODE_DEFAULT,
 			GUIO1(GUIO_NOMIDI)
 		},
 		GAME_CRUSADER_REG,
@@ -491,7 +535,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			AD_ENTRY1s("eusecode.flx", "1824d9725de45a8b49f058c12c6cf5c3", 484445),
 			Common::DE_DEU,
 			Common::kPlatformDOS,
-			ADGF_UNSTABLE,
+			ADGF_UNSTABLE | ADGF_USECODE_DE,
 			GUIO1(GUIO_NOMIDI)
 		},
 		GAME_CRUSADER_REG,
@@ -521,7 +565,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 			AD_ENTRY1s("eusecode.flx", "f5906654047ed1dab75760da6426ecfa", 478125),
 			Common::ES_ESP,
 			Common::kPlatformDOS,
-			ADGF_UNSTABLE,
+			ADGF_UNSTABLE | ADGF_USECODE_ES,
 			GUIO1(GUIO_NOMIDI)
 		},
 		GAME_CRUSADER_REG,
@@ -559,7 +603,7 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 	},
 
 
-	// GOG The Savage Empire
+	// The Savage Empire v1.6
 	{
 		{
 			"thesavageempire",
@@ -574,12 +618,42 @@ static const UltimaGameDescription GAME_DESCRIPTIONS[] = {
 		0
 	},
 
-	// GOG The Savage Empire
+	// The Savage Empire v1.6
 	{
 		{
 			"thesavageempire_enh",
 			0,
 			AD_ENTRY1s("talk.lzc", "bef60fbc3cc478b2a2e8f0883652b2f3", 160784),
+			Common::EN_ANY,
+			Common::kPlatformDOS,
+			ADGF_UNSTABLE,
+			GUIO0()
+		},
+		GAME_SAVAGE_EMPIRE,
+		GF_VGA_ENHANCED
+	},
+
+	// The Savage Empire v2.1
+	{
+		{
+			"thesavageempire",
+			0,
+			AD_ENTRY1s("talk.lzc", "1bbb5a425e1d7e2e3aa9b887e511ffc6", 160931),
+			Common::EN_ANY,
+			Common::kPlatformDOS,
+			ADGF_UNSTABLE,
+			GUIO0()
+		},
+		GAME_SAVAGE_EMPIRE,
+		0
+	},
+
+	// The Savage Empire v2.1
+	{
+		{
+			"thesavageempire_enh",
+			0,
+			AD_ENTRY1s("talk.lzc", "1bbb5a425e1d7e2e3aa9b887e511ffc6", 160931),
 			Common::EN_ANY,
 			Common::kPlatformDOS,
 			ADGF_UNSTABLE,

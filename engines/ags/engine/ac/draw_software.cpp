@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -120,6 +119,10 @@ void DirtyRects::Reset() {
 void dispose_invalid_regions(bool /* room_only */) {
 	_GP(RoomCamRects).clear();
 	_GP(RoomCamPositions).clear();
+}
+
+void set_invalidrects_globaloffs(int x, int y) {
+	_GP(GlobalOffs) = Point(x, y);
 }
 
 void init_invalid_regions(int view_index, const Size &surf_size, const Rect &viewport) {
@@ -273,6 +276,7 @@ void invalidate_rect_ds(DirtyRects &rects, int x1, int y1, int x2, int y2, bool 
 		y1 = rects.Screen2DirtySurf.Y.ScalePt(y1);
 		y2 = rects.Screen2DirtySurf.Y.ScalePt(y2);
 	} else {
+		// Transform only from camera pos to room background
 		x1 -= rects.Room2Screen.X.GetSrcOffset();
 		y1 -= rects.Room2Screen.Y.GetSrcOffset();
 		x2 -= rects.Room2Screen.X.GetSrcOffset();
@@ -283,8 +287,20 @@ void invalidate_rect_ds(DirtyRects &rects, int x1, int y1, int x2, int y2, bool 
 }
 
 void invalidate_rect_ds(int x1, int y1, int x2, int y2, bool in_room) {
+	if (!in_room) { // convert from game viewport to global screen coords
+		x1 += _GP(GlobalOffs).X;
+		x2 += _GP(GlobalOffs).X;
+		y1 += _GP(GlobalOffs).Y;
+		y2 += _GP(GlobalOffs).Y;
+	}
+
 	for (auto &rects : _GP(RoomCamRects))
 		invalidate_rect_ds(rects, x1, y1, x2, y2, in_room);
+}
+
+void invalidate_rect_global(int x1, int y1, int x2, int y2) {
+	for (auto &rects : _GP(RoomCamRects))
+		invalidate_rect_ds(rects, x1, y1, x2, y2, false);
 }
 
 // Note that this function is denied to perform any kind of scaling or other transformation

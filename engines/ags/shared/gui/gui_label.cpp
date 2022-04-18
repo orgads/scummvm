@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -50,23 +49,24 @@ GUILabelMacro GUILabel::GetTextMacros() const {
 }
 
 void GUILabel::Draw(Shared::Bitmap *ds) {
-	check_font(&Font);
-
 	// TODO: need to find a way to cache text prior to drawing;
 	// but that will require to update all gui controls when translation is changed in game
 	PrepareTextToDraw();
-	if (SplitLinesForDrawing(Lines) == 0)
+	if (SplitLinesForDrawing(_GP(Lines)) == 0)
 		return;
 
 	color_t text_color = ds->GetCompatibleColor(TextColor);
-	const int linespacing = getfontlinespacing(Font) + 1;
+	const int linespacing = // Older engine labels used (font height + 1) as linespacing for some reason
+		((_G(loaded_game_file_version) < kGameVersion_360) && (get_font_flags(Font) & FFLG_DEFLINESPACING)) ?
+		(get_font_height(Font) + 1) :
+		get_font_linespacing(Font);
 	// < 2.72 labels did not limit vertical size of text
 	const bool limit_by_label_frame = _G(loaded_game_file_version) >= kGameVersion_272;
 	int at_y = Y;
 	for (size_t i = 0;
-	        i < Lines.Count() && (!limit_by_label_frame || at_y <= Y + Height);
+	        i < _GP(Lines).Count() && (!limit_by_label_frame || at_y <= Y + Height);
 	        ++i, at_y += linespacing) {
-		GUI::DrawTextAlignedHor(ds, Lines[i].GetCStr(), Font, text_color, X, X + Width - 1, at_y,
+		GUI::DrawTextAlignedHor(ds, _GP(Lines)[i].GetCStr(), Font, text_color, X, X + Width - 1, at_y,
 		                        (FrameAlignment)TextAlignment);
 	}
 }

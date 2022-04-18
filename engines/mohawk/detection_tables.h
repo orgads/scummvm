@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,42 +32,6 @@ namespace Mohawk {
 #define GUI_OPTIONS_RIVEN_DEMO             GUIO6(GUIO_NOASPECT, GUIO_NOSUBTITLES, GUIO_NOSPEECH, GUIO_NOMIDI, GUIO_NOLAUNCHLOAD, GAMEOPTION_DEMO)
 
 static const MohawkGameDescription gameDescriptions[] = {
-	// Myst
-	// English Windows 3.11
-	// From clone2727
-	{
-		{
-			"myst",
-			"",
-			AD_ENTRY1("myst.dat", "ae3258c9c90128d274aa6a790b3ad181"),
-			Common::EN_ANY,
-			Common::kPlatformWindows,
-			ADGF_NO_FLAGS,
-			GUI_OPTIONS_MYST
-		},
-		GType_MYST,
-		0,
-		0,
-	},
-
-	// Myst
-	// English Windows 3.11, v1.0.1
-	// From lotharsm
-	{
-		{
-			"myst",
-			"",
-			AD_ENTRY1("myst.dat", "4beb3366ed3f3b9bfb6e81a14a43bdcc"),
-			Common::EN_ANY,
-			Common::kPlatformWindows,
-			ADGF_NO_FLAGS,
-			GUI_OPTIONS_MYST
-		},
-		GType_MYST,
-		0,
-		0,
-	},
-
 	// Myst
 	// English Windows 3.11, v1.0
 	// From vonLeheCreative, #9645
@@ -87,14 +50,68 @@ static const MohawkGameDescription gameDescriptions[] = {
 		0,
 	},
 
+	// Myst
+	// English Windows 3.11, v1.0.1
+	// From lotharsm
+	{
+		{
+			"myst",
+			"",
+			AD_ENTRY1s("myst.dat", "4beb3366ed3f3b9bfb6e81a14a43bdcc", 66143659),
+			Common::EN_ANY,
+			Common::kPlatformWindows,
+			ADGF_NO_FLAGS,
+			GUI_OPTIONS_MYST
+		},
+		GType_MYST,
+		0,
+		0,
+	},
+
+	// Myst
+	// English MPC/Windows 3.11, v1.1
+	// From clone2727
+	{
+		{
+			"myst",
+			"",
+			AD_ENTRY1s("myst.dat", "ae3258c9c90128d274aa6a790b3ad181", 66236882),
+			Common::EN_ANY,
+			Common::kPlatformWindows,
+			ADGF_NO_FLAGS,
+			GUI_OPTIONS_MYST
+		},
+		GType_MYST,
+		0,
+		0,
+	},
+
 	// Myst Demo
-	// English Windows 3.11
+	// English Windows 3.11, v1.0
+	// From PC Format (UK) July, 1994
+	{
+		{
+			"myst",
+			"Demo",
+			AD_ENTRY1s("DEMO.DAT", "8ff8ae264f759ea4a79cc915757f17c4", 488921),
+			Common::EN_ANY,
+			Common::kPlatformWindows,
+			ADGF_DEMO | ADGF_NO_FLAGS,
+			GUI_OPTIONS_MYST_DEMO
+		},
+		GType_MYST,
+		GF_DEMO,
+		0,
+	},
+
+	// Myst Demo
+	// English Windows 3.11, v1.0.1
 	// From CD-ROM Today July, 1994
 	{
 		{
 			"myst",
 			"Demo",
-			AD_ENTRY1("DEMO.DAT", "c39303dd53fb5c4e7f3c23231c606cd0"),
+			AD_ENTRY1s("DEMO.DAT", "c39303dd53fb5c4e7f3c23231c606cd0", 488415),
 			Common::EN_ANY,
 			Common::kPlatformWindows,
 			ADGF_DEMO | ADGF_NO_FLAGS,
@@ -124,13 +141,13 @@ static const MohawkGameDescription gameDescriptions[] = {
 	},
 
 	// Myst
-	// German Windows 3.11
+	// German Windows 3.11, v1.0.3GE
 	// From LordHoto
 	{
 		{
 			"myst",
 			"",
-			AD_ENTRY1("myst.dat", "e0937cca1ab125e48e30dc3cd5046ddf"),
+			AD_ENTRY1s("myst.dat", "e0937cca1ab125e48e30dc3cd5046ddf", 65610606),
 			Common::DE_DEU,
 			Common::kPlatformWindows,
 			ADGF_NO_FLAGS,
@@ -160,13 +177,13 @@ static const MohawkGameDescription gameDescriptions[] = {
 	},
 
 	// Myst
-	// Italian Windows ?
+	// Italian Windows 3.11, v1.1 IT
 	// From goodoldgeorg in bug #6895
 	{
 		{
 			"myst",
 			"",
-			AD_ENTRY1("myst.dat", "a5795ce1751fc42525e4f9a1859181d5"),
+			AD_ENTRY1s("myst.dat", "a5795ce1751fc42525e4f9a1859181d5", 66795223),
 			Common::IT_ITA,
 			Common::kPlatformWindows,
 			ADGF_NO_FLAGS,
@@ -237,7 +254,7 @@ static const MohawkGameDescription gameDescriptions[] = {
 		{
 			"makingofmyst",
 			"",
-			AD_ENTRY1("making.dat", "f6387e8f0f7b8a3e42c95294315d6a0e"),
+			AD_ENTRY1s("making.dat", "f6387e8f0f7b8a3e42c95294315d6a0e", 8377),
 			Common::EN_ANY,
 			Common::kPlatformWindows,
 			ADGF_NO_FLAGS,
@@ -249,14 +266,14 @@ static const MohawkGameDescription gameDescriptions[] = {
 	},
 
 	// Making of Myst
-	// Japanese Windows 3.11
+	// Japanese Windows 3.11, Italian Windows 3.11
 	// From clone2727
 	{
 		{
 			"makingofmyst",
 			"",
-			AD_ENTRY1("making.dat", "03ff62607e64419ab2b6ebf7b7bcdf63"),
-			Common::JA_JPN,
+			AD_ENTRY1s("making.dat", "03ff62607e64419ab2b6ebf7b7bcdf63", 4602),
+			Common::EN_ANY,
 			Common::kPlatformWindows,
 			ADGF_NO_FLAGS,
 			GUI_OPTIONS_MYST_MAKING_OF
@@ -273,7 +290,7 @@ static const MohawkGameDescription gameDescriptions[] = {
 		{
 			"myst",
 			"Masterpiece Edition",
-			AD_ENTRY1("myst.dat", "c4cae9f143b5947262e6cb2397e1617e"),
+			AD_ENTRY1s("myst.dat", "c4cae9f143b5947262e6cb2397e1617e", 74070233),
 			Common::EN_ANY,
 			Common::kPlatformWindows,
 			ADGF_NO_FLAGS,
@@ -658,13 +675,13 @@ static const MohawkGameDescription gameDescriptions[] = {
 	},
 
 	// Riven: The Sequel to Myst
-	// Version ? (Demo, From "Prince of Persia Collector's Edition")
+	// Version 1.03 (Demo, From "Prince of Persia Collector's Edition")
 	// From Clone2727
 	{
 		{
 			"riven",
 			"Demo",
-			AD_ENTRY1("a_Data.MHK", "bae6b03bd8d6eb350d35fd13f0e3139f"),
+			AD_ENTRY1s("a_Data.MHK", "bae6b03bd8d6eb350d35fd13f0e3139f", 86703958),
 			Common::EN_ANY,
 			Common::kPlatformWindows,
 			(ADGF_DEMO | ADGF_DROPPLATFORM),
@@ -817,6 +834,23 @@ static const MohawkGameDescription gameDescriptions[] = {
 			Common::EN_ANY,
 			Common::kPlatformWindows,
 			ADGF_NO_FLAGS,
+			GUIO1(GUIO_NOASPECT)
+		},
+		GType_LIVINGBOOKSV1,
+		0,
+		"HARRY.EXE"
+	},
+
+	// English / Spanish demo
+	// from einstein95, bug #12849
+	{
+		{
+			"harryhh",
+			"Demo English/Spanish",
+			AD_ENTRY1s("HARRY.512", "a0c97d80ab8957f61be1a41fdd74386e", 709),
+			Common::UNK_LANG,
+			Common::kPlatformWindows,
+			ADGF_DEMO,
 			GUIO1(GUIO_NOASPECT)
 		},
 		GType_LIVINGBOOKSV1,
@@ -1028,6 +1062,21 @@ static const MohawkGameDescription gameDescriptions[] = {
 		{
 			"seussabc",
 			"Demo",
+			AD_ENTRY1("ABC.LB", "aef2c88f4dcc2c3a47ed8093f6e27bc9"),
+			Common::EN_ANY,
+			Common::kPlatformWindows,
+			ADGF_DEMO,
+			GUIO1(GUIO_NOASPECT)
+		},
+		GType_LIVINGBOOKSV2,
+		GF_DEMO,
+		0
+	},
+
+	{
+		{
+			"seussabc",
+			"Demo",
 			AD_ENTRY1("BookOutline", "17d72660680ae32cd7c560d0cf04d2ef"),
 			Common::EN_ANY,
 			Common::kPlatformMacintosh,
@@ -1211,6 +1260,22 @@ static const MohawkGameDescription gameDescriptions[] = {
 		GType_LIVINGBOOKSV2,
 		0,
 		0,
+	},
+
+	// Macintosh version. Bugreport #12828
+	{
+		{
+			"tortoise",
+			"",
+			AD_ENTRY1s("BookOutline", "f4c162ca66197eedc3b676372bca3929", 2038),
+			Common::EN_ANY,
+			Common::kPlatformMacintosh,
+			ADGF_NO_FLAGS,
+			GUIO1(GUIO_NOASPECT)
+		},
+		GType_LIVINGBOOKSV2,
+		0,
+		0
 	},
 
 	// From the Mac CD "La Tartaruga e la Lepre" (The Turtle and the Hare) [Italian, English]
@@ -1430,6 +1495,22 @@ static const MohawkGameDescription gameDescriptions[] = {
 		"Living Books Player"
 	},
 
+	// English/Spanish demo. From einstein95, bugreport #12829
+	{
+		{
+			"arthur",
+			"Demo English/Spanish",
+			AD_ENTRY1s("Bookoutline", "3e6335865b4041be934d2e0c8ee75af2", 645),
+			Common::UNK_LANG,
+			Common::kPlatformMacintosh,
+			ADGF_DEMO,
+			GUIO1(GUIO_NOASPECT)
+		},
+		GType_LIVINGBOOKSV1,
+		GF_DEMO | GF_LB_10,
+		"Arthur's Teacher Trouble"
+	},
+
 	// Just Grandma and Me 2.0
 	// From pacifist
 	{
@@ -1556,6 +1637,23 @@ static const MohawkGameDescription gameDescriptions[] = {
 			Common::EN_GRB,
 			Common::kPlatformWindows,
 			ADGF_NO_FLAGS,
+			GUIO1(GUIO_NOASPECT)
+		},
+		GType_LIVINGBOOKSV2,
+		0,
+		0,
+	},
+
+	// From einstein95 in bug#12830
+	// English/Japanese/Spanish demo
+	{
+		{
+			"grandma",
+			"Demo v1.12 English/Japanese/Spanish",
+			AD_ENTRY1s("BookOutline", "577c2c6be1b76c38d83446e303664708", 804),
+			Common::UNK_LANG,
+			Common::kPlatformMacintosh,
+			ADGF_DEMO,
 			GUIO1(GUIO_NOASPECT)
 		},
 		GType_LIVINGBOOKSV2,
@@ -2293,7 +2391,7 @@ static const MohawkGameDescription gameDescriptions[] = {
 		{
 			"lilmonster",
 			"",
-			AD_ENTRY1s("lmasf.lb", "fcb665df1713d0411a41515efb20bebc", 4136),
+			AD_ENTRY1s("lmasb.lb", "fcb665df1713d0411a41515efb20bebc", 4136),
 			Common::EN_ANY,
 			Common::kPlatformWindows,
 			ADGF_NO_FLAGS,

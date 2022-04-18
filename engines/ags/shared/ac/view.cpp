@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -64,8 +63,7 @@ void ViewFrame::WriteToFile(Stream *out) {
 
 ViewLoopNew::ViewLoopNew()
 	: numFrames(0)
-	, flags(0)
-	, frames(nullptr) {
+	, flags(0) {
 }
 
 bool ViewLoopNew::RunNextLoop() {
@@ -75,15 +73,13 @@ bool ViewLoopNew::RunNextLoop() {
 void ViewLoopNew::Initialize(int frameCount) {
 	numFrames = frameCount;
 	flags = 0;
-	frames = (ViewFrame *)calloc(numFrames + 1, sizeof(ViewFrame));
+	// an extra frame is allocated to prevent crashes with empty loops
+	frames.resize(numFrames > 0 ? numFrames : 1);
 }
 
 void ViewLoopNew::Dispose() {
-	if (frames != nullptr) {
-		free(frames);
-		frames = nullptr;
-		numFrames = 0;
-	}
+	frames.clear();
+	numFrames = 0;
 }
 
 void ViewLoopNew::WriteToFile_v321(Stream *out) {
@@ -104,10 +100,6 @@ void ViewLoopNew::ReadFromFile_v321(Stream *in) {
 	Initialize(in->ReadInt16());
 	flags = in->ReadInt32();
 	ReadFrames_Aligned(in);
-
-	// an extra frame is allocated in memory to prevent
-	// crashes with empty loops -- set its picture to teh BLUE CUP!!
-	frames[numFrames].pic = 0;
 }
 
 void ViewLoopNew::ReadFrames_Aligned(Stream *in) {
@@ -119,22 +111,17 @@ void ViewLoopNew::ReadFrames_Aligned(Stream *in) {
 }
 
 ViewStruct::ViewStruct()
-	: numLoops(0)
-	, loops(nullptr) {
+	: numLoops(0) {
 }
 
 void ViewStruct::Initialize(int loopCount) {
 	numLoops = loopCount;
-	if (numLoops > 0) {
-		loops = (ViewLoopNew *)calloc(numLoops, sizeof(ViewLoopNew));
-	}
+	loops.resize(numLoops);
 }
 
 void ViewStruct::Dispose() {
-	if (numLoops > 0) {
-		free(loops);
-		numLoops = 0;
-	}
+	loops.clear();
+	numLoops = 0;
 }
 
 void ViewStruct::WriteToFile(Stream *out) {
@@ -171,7 +158,7 @@ void ViewStruct272::ReadFromFile(Stream *in) {
 	}
 }
 
-void Convert272ViewsToNew(const std::vector<ViewStruct272> &oldv, ViewStruct *newv) {
+void Convert272ViewsToNew(const std::vector<ViewStruct272> &oldv, std::vector<ViewStruct> &newv) {
 	for (size_t a = 0; a < oldv.size(); a++) {
 		newv[a].Initialize(oldv[a].numloops);
 

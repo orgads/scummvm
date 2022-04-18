@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -45,7 +44,7 @@ GfxMenu::GfxMenu(EventManager *event, SegManager *segMan, GfxPorts *ports, GfxPa
 
 	_menuSaveHandle = NULL_REG;
 	_barSaveHandle = NULL_REG;
-	_oldPort = NULL;
+	_oldPort = nullptr;
 	_mouseOldState = false;
 
 	reset();
@@ -281,7 +280,7 @@ GuiMenuItemEntry *GfxMenu::findItem(uint16 menuId, uint16 itemId) {
 
 		listIterator++;
 	}
-	return NULL;
+	return nullptr;
 }
 
 void GfxMenu::kernelSetAttribute(uint16 menuId, uint16 itemId, uint16 attributeId, reg_t value) {
@@ -388,7 +387,7 @@ void GfxMenu::calculateMenuWidth() {
 	menuIterator = _list.begin();
 	while (menuIterator != menuEnd) {
 		menuEntry = *menuIterator;
-		menuEntry->textSplit = g_sci->strSplit(menuEntry->text.c_str(), NULL);
+		menuEntry->textSplit = g_sci->strSplit(menuEntry->text.c_str(), nullptr);
 		_text16->StringWidth(menuEntry->textSplit.c_str(), 0, menuEntry->textWidth, dummyHeight);
 
 		menuIterator++;
@@ -408,7 +407,7 @@ void GfxMenu::calculateMenuAndItemWidth() {
 	while (itemIterator != itemEnd) {
 		itemEntry = *itemIterator;
 		// Split the text now for multilingual SCI01 games
-		itemEntry->textSplit = g_sci->strSplit(itemEntry->text.c_str(), NULL);
+		itemEntry->textSplit = g_sci->strSplit(itemEntry->text.c_str(), nullptr);
 		_text16->StringWidth(itemEntry->textSplit.c_str(), 0, itemEntry->textWidth, dummyHeight);
 		_text16->StringWidth(itemEntry->textRightAligned.c_str(), 0, itemEntry->textRightAlignedWidth, dummyHeight);
 
@@ -421,7 +420,7 @@ reg_t GfxMenu::kernelSelect(reg_t eventObject, bool pauseSound) {
 	int16 keyPress, keyModifier;
 	GuiMenuItemList::iterator itemIterator = _itemList.begin();
 	GuiMenuItemList::iterator itemEnd = _itemList.end();
-	GuiMenuItemEntry *itemEntry = NULL;
+	GuiMenuItemEntry *itemEntry = nullptr;
 	bool forceClaimed = false;
 
 	switch (eventType) {
@@ -473,7 +472,7 @@ reg_t GfxMenu::kernelSelect(reg_t eventObject, bool pauseSound) {
 				itemIterator++;
 			}
 			if (itemIterator == itemEnd)
-				itemEntry = NULL;
+				itemEntry = nullptr;
 		}
 		break;
 
@@ -495,7 +494,7 @@ reg_t GfxMenu::kernelSelect(reg_t eventObject, bool pauseSound) {
 			itemIterator++;
 		}
 		if (itemIterator == itemEnd)
-			itemEntry = NULL;
+			itemEntry = nullptr;
 		break;
 
 	case kSciEventMousePress: {
@@ -530,7 +529,7 @@ reg_t GfxMenu::kernelSelect(reg_t eventObject, bool pauseSound) {
 	}
 	if (_oldPort) {
 		_ports->setPort(_oldPort);
-		_oldPort = NULL;
+		_oldPort = nullptr;
 	}
 
 	if ((itemEntry) || (forceClaimed))
@@ -544,8 +543,8 @@ GuiMenuItemEntry *GfxMenu::interactiveGetItem(uint16 menuId, uint16 itemId, bool
 	GuiMenuItemList::iterator itemIterator = _itemList.begin();
 	GuiMenuItemList::iterator itemEnd = _itemList.end();
 	GuiMenuItemEntry *itemEntry;
-	GuiMenuItemEntry *firstItemEntry = NULL;
-	GuiMenuItemEntry *lastItemEntry = NULL;
+	GuiMenuItemEntry *firstItemEntry = nullptr;
+	GuiMenuItemEntry *lastItemEntry = nullptr;
 
 	// Fixup menuId if needed
 	if (menuId > _list.size())
@@ -843,7 +842,7 @@ GuiMenuItemEntry *GfxMenu::interactiveWithKeyboard() {
 				switch (curEvent.character) {
 				case kSciKeyEsc:
 					_curMenuId = curItemEntry->menuId; _curItemId = curItemEntry->id;
-					return NULL;
+					return nullptr;
 				case kSciKeyEnter:
 					if (curItemEntry->enabled)  {
 						_curMenuId = curItemEntry->menuId; _curItemId = curItemEntry->id;
@@ -935,7 +934,7 @@ GuiMenuItemEntry *GfxMenu::interactiveWithKeyboard() {
 			break;
 
 		case kSciEventQuit:
-			return NULL;
+			return nullptr;
 
 		default:
 			break;
@@ -952,7 +951,7 @@ GuiMenuItemEntry *GfxMenu::interactiveWithMouse() {
 	uint16 newMenuId = 0, newItemId = 0;
 	uint16 curMenuId = 0, curItemId = 0;
 	bool firstMenuChange = true;
-	GuiMenuItemEntry *curItemEntry = NULL;
+	GuiMenuItemEntry *curItemEntry = nullptr;
 
 	_oldPort = _ports->setPort(_ports->_menuPort);
 	calculateMenuAndItemWidth();
@@ -970,9 +969,9 @@ GuiMenuItemEntry *GfxMenu::interactiveWithMouse() {
 		switch (curEvent.type) {
 		case kSciEventMouseRelease:
 			if ((curMenuId == 0) || (curItemId == 0))
-				return NULL;
+				return nullptr;
 			if ((!curItemEntry->enabled) || (curItemEntry->separatorLine))
-				return NULL;
+				return nullptr;
 			return curItemEntry;
 
 		case kSciEventNone:
@@ -1013,7 +1012,7 @@ GuiMenuItemEntry *GfxMenu::interactiveWithMouse() {
 		}
 
 	}
-	return NULL;
+	return nullptr;
 }
 
 void GfxMenu::kernelDrawStatus(const char *text, int16 colorPen, int16 colorBack) {

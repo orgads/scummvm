@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,6 +30,7 @@
 #include "common/sinetables.h"
 #include "common/stream.h"
 #include "common/keyboard.h"
+#include "common/events.h"
 
 #include "engines/engine.h"
 
@@ -111,6 +111,7 @@ public:
 	static const int kArchiveCount = 12; // +2 to original value (10) to accommodate for SUBTITLES.MIX and one extra resource file, to allow for capability of loading all VQAx.MIX and the MODE.MIX file (debug purposes)
 	static const int kActorCount =  100;
 	static const int kActorVoiceOver = kActorCount - 1;
+	static const int kMaxCustomConcurrentRepeatableEvents = 20;
 
 	// Incremental number to keep track of significant revisions of the ScummVM bladerunner engine
 	// that could potentially introduce incompatibilities with old save files or require special actions to restore compatibility
@@ -120,6 +121,10 @@ public:
 	// 1: alpha testing (from May 15, 2019 to July 17, 2019)
 	// 2: all time code uses uint32 (since July 17 2019),
 	static const int kBladeRunnerScummVMVersion = 2;
+
+	static const char *kGameplayKeymapId;
+	static const char *kKiaKeymapId;
+	static const char *kCommonKeymapId;
 
 	bool _gameIsRunning;
 	bool _windowIsActive;
@@ -266,6 +271,58 @@ public:
 	uint32 _keyRepeatTimeLast;
 	uint32 _keyRepeatTimeDelay;
 
+	uint32 _customEventRepeatTimeLast;
+	uint32 _customEventRepeatTimeDelay;
+	typedef Common::Array<Common::Event> ActiveCustomEventsArray;
+
+	// We do allow keys mapped to the same event,
+	// so eg. a key (Enter) could cause 2 or more events to fire,
+	// However, we should probably restrict the active events
+	// (that can be repeated while holding the mapped keys down)
+	// to a maximum of kMaxCustomConcurrentRepeatableEvents
+	ActiveCustomEventsArray _activeCustomEvents[kMaxCustomConcurrentRepeatableEvents];
+
+	// NOTE We still need keyboard functionality for naming saved games and also for the KIA Easter eggs.
+	//      In KIA keyboard events should be accounted where possible - however some keymaps are still needed
+	//      which is why we have the three separate common, gameplay-only and kia-only keymaps.
+	//      If a valid keyboard key character eg. ("A") for text input (or Easter egg input)
+	//      is also mapped to a common or KIA only custom event, then the custom event will be effected and not the key input.
+	// NOTE We don't use a custom action for left click -- we just use the standard left click action event (kStandardActionLeftClick)
+	// NOTE Dialogue Skip does not work for dialogue replayed when clicking on KIA clues (this is the original's behavior too)
+	// NOTE Toggle KIA options does not work when McCoy is walking towards a character when the player clicks on McCoy
+	//      (this is the original's behavior too).
+	//      "Esc" (by default) or the mapped key to this action still works though.
+	// NOTE A drawback of using customized keymapper for the game is that we can no longer replicate the original's behavior
+	//      whereby holding down <SPACEBAR> would cause McCoy to keep switching quickly between combat mode and normal mode.
+	//      This is because the original, when holding down right mouse button, would just toggle McCoy's mode once.
+	//      We keep the behavior for "right mouse button".
+	//      The continuous fast toggle behavior when holding down <SPACEBAR> feels more like a bug anyway.
+	// NOTE In the original, the KP_PERIOD key with NUMLOCK on, would work as a normal '.' character
+	//      in the KIA Save Game screen. With NUMLOCK off, it would work as a delete request for the selected entry.
+	//      However, NUMLOCK is currently not working as a modifier key for keymaps,
+	//      so maybe we can implement the original behavior more accurately,
+	//      when that is fixed in the keymapper or hardware-input code.
+	//      For now, KP_PERIOD will work (by default) as a delete request.
+	enum BladeRunnerEngineMappableAction {
+//		kMpActionLeftClick,        // default <left click> (select, walk-to, run-to, look-at, talk-to, use, shoot (combat mode), KIA (click on McCoy))
+		kMpActionToggleCombat,     // default <right click> or <Spacebar>
+		kMpActionCutsceneSkip,     // default <Return> or <KP_Enter> or <Esc> or <Spacebar>
+		kMpActionDialogueSkip,     // default <Return> or <KP_Enter>
+		kMpActionToggleKiaOptions, // default <Esc> opens/closes KIA, in Options tab
+		kMpActionOpenKiaDatabase,  // default <Tab> - only opens KIA (if closed), in one of the database tabs (the last active one, or else the first)
+		kMpActionOpenKIATabHelp,               // default <F1>
+		kMpActionOpenKIATabSaveGame,           // default <F2>
+		kMpActionOpenKIATabLoadGame,           // default <F3>
+		kMpActionOpenKIATabCrimeSceneDatabase, // default <F4>
+		kMpActionOpenKIATabSuspectDatabase,    // default <F5>
+		kMpActionOpenKIATabClueDatabase,       // default <F6>
+		kMpActionOpenKIATabQuitGame,           // default <F10>
+		kMpActionScrollUp,                     // ScummVM addition (scroll list up)
+		kMpActionScrollDown,                   // ScummVM addition (scroll list down)
+		kMpConfirmDlg,                         // default <Return> or <KP_Enter>
+		kMpDeleteSelectedSvdGame               // default <Delete> or <KP_Period>
+	};
+
 private:
 	MIXArchive _archives[kArchiveCount];
 
@@ -278,6 +335,20 @@ public:
 	Common::Error loadGameState(int slot) override;
 	bool canSaveGameStateCurrently() override;
 	Common::Error saveGameState(int slot, const Common::String &desc, bool isAutosave = false) override;
+	/**
+	* NOTE: Disable support for external autosave (ScummVM's feature).
+	*       Main reason is that it's not easy to properly label this autosave,
+	*       since currently it would translate "Autosave" to the ScummVM GUI language
+	*       which ends up showing as "?????? ??????" on non-latin languages (eg. Greek),
+	*       and in addition is inconsistent with the game's own GUI language.
+	*       Secondary reason is that the game already has an autosaving mechanism,
+	*       albeit only at the start of a new Act.
+	*       And final reason would be to prevent an autosave at an unforeseen moment,
+	*       if we've failed to account for all cases that the game should not save by itself;
+	*       currently those are listed in BladeRunnerEngine::canSaveGameStateCurrently().
+	*/
+	int getAutosaveSlot() const override { return -1; }
+
 	void pauseEngineIntern(bool pause) override;
 
 	Common::Error run() override;
@@ -310,6 +381,15 @@ public:
 	void handleMouseClickActor(int actorId, bool mainButton, bool buttonDown, Vector3 &scenePosition, int x, int y);
 	void handleMouseClick3DObject(int objectId, bool buttonDown, bool isClickable, bool isTarget);
 	void handleMouseClickEmpty(int x, int y, Vector3 &scenePosition, bool buttonDown);
+
+	bool isAllowedRepeatedKey(const Common::KeyState &currKeyState);
+
+	void handleCustomEventStart(Common::Event &event);
+	void handleCustomEventStop(Common::Event &event);
+	bool isAllowedRepeatedCustomEvent(const Common::Event &currEvent);
+
+	bool shouldDropRogueCustomEvent(const Common::Event &evt);
+	void cleanupPendingRepeatingEvents(const Common::String &keymapperId);
 
 	void gameWaitForActive();
 	void loopActorSpeaking();
@@ -375,6 +455,22 @@ static inline void drawPixel(Graphics::Surface &surface, void* dst, uint32 value
 		break;
 	case 4:
 		*(uint32*)dst = (uint32)value;
+		break;
+	default:
+		break;
+	}
+}
+
+static inline void getPixel(Graphics::Surface &surface, void* dst, uint32 &value) {
+	switch (surface.format.bytesPerPixel) {
+	case 1:
+		 value = (uint8)(*(uint8*)dst);
+		break;
+	case 2:
+		 value = (uint16)(*(uint16*)dst);
+		break;
+	case 4:
+		value = (uint32)(*(uint32*)dst);
 		break;
 	default:
 		break;

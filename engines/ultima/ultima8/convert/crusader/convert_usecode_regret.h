@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -53,7 +52,7 @@ const char* const ConvertUsecodeRegret::_intrinsics[] = {
 	"World::I_gameDifficulty()",
 	"Item::getQLo(void)",
 	"Item::destroy(void)",
-	"Actor::I_getField0x81()", // same as field 0x63 in No Remorse
+	"Actor::I_getUnkByte()", // same as field 0x63 in No Remorse
 	"Item::getX(void)",
 	"Item::getY(void)",
 	// 0010
@@ -153,7 +152,7 @@ const char* const ConvertUsecodeRegret::_intrinsics[] = {
 	"Kernel::getNumProcesses(uint16,ProcessType)",
 	"Item::getCY(void)",
 	"U8Engine::I_isCfgAnimationOff()",
-	"Intrinsic006B()",
+	"ResetKeyboardState()",
 	"MusicProcess::I_pauseMusic()",
 	"MovieGump::I_playMovieCutsceneRegret()",
 	"MusicProcess::I_unpauseMusic()",
@@ -162,7 +161,7 @@ const char* const ConvertUsecodeRegret::_intrinsics[] = {
 	"Ultima8Engine::I_setCruStasis()",
 	"Ultima8Engine::I_clrCruStasis()",
 	"PaletteFaderProcess::I_jumpToColor()",
-	"PaletteFaderProcess::I_fadeFromBlack()",
+	"PaletteFaderProcess::I_fadeToGamePal()",
 	"Actor::isDead(void)",
 	"Item::getNpcNum(void)",
 	"IntrinsicReturn0",
@@ -181,9 +180,9 @@ const char* const ConvertUsecodeRegret::_intrinsics[] = {
 	"PaletteFaderProcess::I_jumpToAllBlack()",
 	"I_setUnkFlagA4()",
 	"I_clearUnkFlagA4()",
-	"Intrinsic0085()",
+	"MainActor::I_switchMap(int16)",
 	"teleportToEgg(sint16,int,uint8)",
-	"PaletteFaderProcess::I_fadeFromBlack()",
+	"PaletteFaderProcess::I_fadeToGamePal()",
 	"Actor::I_clrImmortal()",
 	"Actor::I_setActivity()",
 	"Item::getQuality(void)",
@@ -232,8 +231,8 @@ const char* const ConvertUsecodeRegret::_intrinsics[] = {
 	"Item::hurl(sint16,sint16,sint16,sint16)",
 	"Item::andStatus(void)",
 	"Item::getDirToCoords(uint16,uint16)",
-	"Intrinsic00B5()",
-	"Intrinsic00B6()",
+	"MainActor::I_removeItem(uint16)",
+	"I_updateInventoryUI()",
 	"Item::getNpcNum(void)",
 	"Item::getCY(void)",
 	"Item::isOn(uint16)",
@@ -385,7 +384,7 @@ const char* const ConvertUsecodeRegret::_intrinsics[] = {
 	"PaletteFaderProcess::I_fadeToGivenColor()",
 	"Actor::isDead(void)",
 	"Actor::I_setDead()",
-	"I_maybeShowCredits()",
+	"Game::I_playCredits()",
 	"PaletteFaderProcess::I_jumpToAllGrey()",
 	"Item::I_getFamilyOfType()",
 	"Item::getNpcNum(void)",

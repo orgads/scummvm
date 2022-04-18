@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -55,14 +54,31 @@
  * I don't know VC enough to be sure). And of course it must be robust enough
  * to properly work in exports (i.e. release tar balls etc.).
  */
-const char *gScummVMVersion = SCUMMVM_VERSION SCUMMVM_REVISION;
+const char gScummVMVersion[] = SCUMMVM_VERSION SCUMMVM_REVISION;
 #if defined(__amigaos4__) || defined(__MORPHOS__)
 static const char *version_cookie __attribute__((used)) = "$VER: ScummVM " SCUMMVM_VERSION SCUMMVM_REVISION " (" AMIGA_DATE ")";
 #endif
-const char *gScummVMBuildDate = __DATE__ " " __TIME__;
-const char *gScummVMVersionDate = SCUMMVM_VERSION SCUMMVM_REVISION " (" __DATE__ " " __TIME__ ")";
-const char *gScummVMFullVersion = "ScummVM " SCUMMVM_VERSION SCUMMVM_REVISION " (" __DATE__ " " __TIME__ ")";
-const char *gScummVMFeatures = ""
+const char gScummVMBuildDate[] = __DATE__ " " __TIME__;
+const char gScummVMVersionDate[] = SCUMMVM_VERSION SCUMMVM_REVISION " (" __DATE__ " " __TIME__ ")";
+const char gScummVMCompiler[] = ""
+#define STR_HELPER(x)	#x
+#define STR(x)		STR_HELPER(x)
+#if defined(_MSC_VER)
+	"MSVC " STR(_MSC_FULL_VER)
+#elif defined(__INTEL_COMPILER)
+	"ICC " STR(__INTEL_COMPILER) "." STR(__INTEL_COMPILER_UPDATE)
+#elif defined(__clang__)
+	"Clang " STR(__clang_major__) "." STR(__clang_minor__) "." STR(__clang_patchlevel__)
+#elif defined(__GNUC__)
+	"GCC " STR(__GNUC__) "." STR(__GNUC_MINOR__) "." STR(__GNUC_PATCHLEVEL__)
+#else
+	"unknown compiler"
+#endif
+#undef STR
+#undef STR_HELPER
+	;
+const char gScummVMFullVersion[] = "ScummVM " SCUMMVM_VERSION SCUMMVM_REVISION " (" __DATE__ " " __TIME__ ")";
+const char gScummVMFeatures[] = ""
 #ifdef TAINTED_BUILD
 	// TAINTED means the build contains engines/subengines not enabled by default
 	"TAINTED "
@@ -167,6 +183,10 @@ const char *gScummVMFeatures = ""
 	"taskbar "
 #endif
 
+#ifdef USE_TTS
+	"TTS "
+#endif
+
 #ifdef USE_CLOUD
 	"cloud ("
 #ifdef USE_LIBCURL
@@ -196,10 +216,16 @@ const char *gScummVMFeatures = ""
 	"(with shaders) "
 #endif
 #endif
-#ifdef USE_GLES2
-	"OpenGL ES 2 "
+#ifdef USE_GLES_MODE
+#if USE_GLES_MODE == 0
+	"OpenGL desktop only "
+#elif USE_GLES_MODE == 1
+	"OpenGL ES 1 only "
+#elif USE_GLES_MODE == 2
+	"OpenGL ES 2 only "
 #endif
-#ifdef USE_GLEW
-	"GLEW "
+#endif
+#ifdef USE_RETROWAVE
+	"RetroWave "
 #endif
 	;

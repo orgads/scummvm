@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,11 +23,12 @@
 #define TWINE_SCENE_ANIMATIONS_H
 
 #include "common/scummsys.h"
-#include "twine/scene/actor.h"
-#include "twine/scene/scene.h"
+#include "twine/parser/anim.h"
 
 namespace TwinE {
 
+struct AnimTimerDataStruct;
+class BodyData;
 class TwinEEngine;
 
 class Animations {
@@ -48,24 +48,24 @@ private:
 	void copyKeyFrameToState(const KeyFrame *keyframe, BodyData &bodyData, int32 numBones) const;
 	void copyStateToKeyFrame(KeyFrame *keyframe, const BodyData &bodyData) const;
 
-	int animKeyframeBufIdx = 0;
-	KeyFrame animKeyframeBuf[32];
+	int _animKeyframeBufIdx = 0;
+	KeyFrame _animKeyframeBuf[32];
 
 	/** Rotation by anim and not by engine */
-	int16 processRotationByAnim = 0; // processActorVar5
+	int16 _processRotationByAnim = 0; // processActorVar5
 	/** Last rotation angle */
-	int16 processLastRotationAngle = ANGLE_0; // processActorVar6
+	int16 _processLastRotationAngle = ANGLE_0; // processActorVar6
 
 	/** Current step coordinates */
-	IVec3 currentStep;
+	IVec3 _currentStep;
 
 public:
 	Animations(TwinEEngine *engine);
 
 	/** Current process actor index */
-	int16 currentlyProcessedActorIdx = 0;
+	int16 _currentlyProcessedActorIdx = 0;
 	/** Current actor anim extra pointer */
-	AnimationTypes currentActorAnimExtraPtr = AnimationTypes::kAnimNone;
+	AnimationTypes _currentActorAnimExtraPtr = AnimationTypes::kAnimNone;
 
 	/**
 	 * Set animation keyframe

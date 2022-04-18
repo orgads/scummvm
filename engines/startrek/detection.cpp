@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -56,7 +55,7 @@ static const StarTrekGameDescription gameDescriptions[] = {
 			AD_ENTRY1s("data.001", "57040928a0f374281aa86ba4e7db8444", 7793814),
 			Common::EN_ANY,
 			Common::kPlatformDOS,
-			ADGF_UNSTABLE,
+			ADGF_CD | ADGF_UNSTABLE,
 			GUIO0()
 		},
 		GType_ST25,
@@ -70,7 +69,7 @@ static const StarTrekGameDescription gameDescriptions[] = {
 			AD_ENTRY1s("data.001", "57040928a0f374281aa86ba4e7db8444", 7793808),
 			Common::EN_ANY,
 			Common::kPlatformDOS,
-			ADGF_UNSTABLE,
+			ADGF_CD | ADGF_UNSTABLE,
 			GUIO0()
 		},
 		GType_ST25,
@@ -84,7 +83,7 @@ static const StarTrekGameDescription gameDescriptions[] = {
 			AD_ENTRY1s("data.001", "57040928a0f374281aa86ba4e7db8444", 7815278),
 			Common::FR_FRA,
 			Common::kPlatformDOS,
-			ADGF_UNSTABLE,
+			ADGF_CD | ADGF_UNSTABLE,
 			GUIO0()
 		},
 		GType_ST25,
@@ -98,7 +97,7 @@ static const StarTrekGameDescription gameDescriptions[] = {
 			AD_ENTRY1s("data.001", "57040928a0f374281aa86ba4e7db8444", 7805836),
 			Common::DE_DEU,
 			Common::kPlatformDOS,
-			ADGF_UNSTABLE,
+			ADGF_CD | ADGF_UNSTABLE,
 			GUIO0()
 		},
 		GType_ST25,
@@ -165,7 +164,7 @@ static const StarTrekGameDescription gameDescriptions[] = {
 		{
 			"st25",
 			"Floppy",
-			AD_ENTRY1s("Star Trek Data", "d95eb00532b7082d53862c906c7ac3dc", 39032),
+			AD_ENTRY1s("Star Trek Data", "d95eb00532b7082d53862c906c7ac3dc", 38776),
 			Common::EN_ANY,
 			Common::kPlatformMacintosh,
 			ADGF_MACRESFORK | ADGF_UNSTABLE,
@@ -183,6 +182,34 @@ static const StarTrekGameDescription gameDescriptions[] = {
 			Common::EN_ANY,
 			Common::kPlatformDOS,
 			ADGF_DEMO | ADGF_UNSTABLE,
+			GUIO0()
+		},
+		GType_ST25,
+		GF_DEMO,
+	},
+
+	{ // ST25 MAC CD demo (EN)
+		{
+			"st25",
+			"CD Demo",
+			AD_ENTRY1s("Star Trek Data", "871fa51c7680c0a43df9622128f1569f", 42617),
+			Common::EN_ANY,
+			Common::kPlatformMacintosh,
+			ADGF_MACRESFORK | ADGF_DEMO | ADGF_CD | ADGF_UNSTABLE,
+			GUIO0()
+		},
+		GType_ST25,
+		GF_DEMO,
+	},
+
+	{ // ST25 MAC demo (EN, 1993)
+		{
+			"st25",
+			"Demo",
+			AD_ENTRY1s("Star Trek Data", "88f88b81d389a3217fc7efd6ee631c42", 4021),
+			Common::EN_ANY,
+			Common::kPlatformMacintosh,
+			ADGF_MACRESFORK | ADGF_DEMO | ADGF_UNSTABLE,
 			GUIO0()
 		},
 		GType_ST25,
@@ -257,20 +284,6 @@ static const StarTrekGameDescription gameDescriptions[] = {
 			Common::EN_ANY,
 			Common::kPlatformDOS,
 			ADGF_DEMO | ADGF_UNSTABLE,
-			GUIO0()
-		},
-		GType_ST25,
-		GF_DEMO,
-	},
-
-	{ // ST25 MAC demo ? (EN)
-		{
-			"st25",
-			"Demo",
-			AD_ENTRY1("Star Trek Data", "88f88b81d389a3217fc7efd6ee631c42"),
-			Common::EN_ANY,
-			Common::kPlatformMacintosh,
-			ADGF_MACRESFORK | ADGF_DEMO | ADGF_UNSTABLE,
 			GUIO0()
 		},
 		GType_ST25,

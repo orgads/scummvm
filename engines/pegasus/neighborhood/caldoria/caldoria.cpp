@@ -7,10 +7,10 @@
  * Additional copyright for this file:
  * Copyright (C) 1995-1997 Presto Studios, Inc.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,8 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -193,8 +192,8 @@ Caldoria::Caldoria(InputHandler* nextHandler, PegasusEngine *owner)
 	setIsItemTaken(kKeyCard);
 	setIsItemTaken(kOrangeJuiceGlassEmpty);
 	GameState.setTakenItemID(kOrangeJuiceGlassFull, GameState.isTakenItemID(kOrangeJuiceGlassEmpty));
-	_zoomOutSpot = 0;
-	_gunSprite = 0;
+	_zoomOutSpot = nullptr;
+	_gunSprite = nullptr;
 }
 
 Caldoria::~Caldoria() {
@@ -249,7 +248,7 @@ void Caldoria::start() {
 
 		_vm->_gfx->doFadeOutSync(kOneSecond * kFifteenTicksPerSecond, kFifteenTicksPerSecond);
 
-		Video::VideoDecoder *pullbackMovie = 0;
+		Video::VideoDecoder *pullbackMovie = nullptr;
 		uint16 pullbackX, pullbackY;
 
 #ifdef USE_THEORADEC
@@ -259,7 +258,7 @@ void Caldoria::start() {
 
 			if (!pullbackMovie->loadFile("Images/Caldoria/Pullback.ogg")) {
 				delete pullbackMovie;
-			pullbackMovie = 0;
+			pullbackMovie = nullptr;
 			}
 		}
 #endif
@@ -274,7 +273,7 @@ void Caldoria::start() {
 		pullbackMovie->setVolume(MIN<uint>(_vm->getSoundFXLevel(), 0xFF));
 
 		// Draw the first frame so we can fade to it
-		const Graphics::Surface *frame = 0;
+		const Graphics::Surface *frame = nullptr;
 
 		if (_vm->isDVD()) {
 			uint16 newHeight = (uint16)((640.0f / (float)pullbackMovie->getWidth()) * (float)pullbackMovie->getHeight());
@@ -332,12 +331,12 @@ void Caldoria::start() {
 
 		if (!skipped) {
 			if (_vm->isDVD()) {
-				Video::VideoDecoder* wakeModeMovie = 0;
+				Video::VideoDecoder* wakeModeMovie = nullptr;
 #ifdef USE_THEORADEC
 				wakeModeMovie = new Video::TheoraDecoder();
 				if (!wakeModeMovie->loadFile(wakeModeMoviePath + ".ogg")) {
 					delete wakeModeMovie;
-					wakeModeMovie = 0;
+					wakeModeMovie = nullptr;
 				}
 #endif
 				if (!wakeModeMovie) {
@@ -1056,7 +1055,7 @@ void Caldoria::doAIRecalibration() {
 	Input input;
 	InputDevice.getInput(input, kPullbackInterruptFilter);
 	if (_vm->isDVD() && JMPPPInput::isEasterEggModifierInput(input)) {
-		Video::VideoDecoder *video = 0;
+		Video::VideoDecoder *video = nullptr;
 
 		_vm->_cursor->hide();
 
@@ -1064,7 +1063,7 @@ void Caldoria::doAIRecalibration() {
 		video = new Video::TheoraDecoder();
 		if (!video->loadFile("Images/Caldoria/A00EA.ogg")) {
 			delete video;
-			video = 0;
+			video = nullptr;
 		}
 #endif
 
@@ -1633,7 +1632,7 @@ void Caldoria::receiveNotification(Notification *notification, const Notificatio
 		case kCa53EastZoomToSinclair:
 			if (GameState.getCaldoriaSinclairShot()) {
 				delete _gunSprite;
-				_gunSprite = 0;
+				_gunSprite = nullptr;
 				startExtraSequence(kCa53EastShootSinclair, kExtraCompletedFlag, false);
 			} else {
 				playDeathExtra(kCa53EastDeath2, kDeathSinclairShotDelegate);
@@ -2078,7 +2077,7 @@ GameInteraction *Caldoria::makeInteraction(const InteractionID interactionID) {
 		break;
 	}
 
-	return 0;
+	return nullptr;
 }
 
 void Caldoria::newInteraction(const InteractionID interactionID) {
@@ -2601,7 +2600,7 @@ Common::String Caldoria::getSoundSpotsName() {
 }
 
 void Caldoria::doArthurJoyride() {
-	Video::VideoDecoder *video = 0;
+	Video::VideoDecoder *video = nullptr;
 	BiochipItem *item;
 
 	setNextHandler(_vm);
@@ -2614,7 +2613,7 @@ void Caldoria::doArthurJoyride() {
 	video = new Video::TheoraDecoder();
 	if (!video->loadFile("Images/Caldoria/A12RD.ogg")) {
 		delete video;
-		video = 0;
+		video = nullptr;
 	}
 #endif
 

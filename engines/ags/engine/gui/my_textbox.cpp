@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -52,7 +51,7 @@ void MyTextBox::draw(Bitmap *ds) {
 	wouttextxy(ds, x + 2, y + 1, _G(cbuttfont), text_color, text);
 
 	char tbu[2] = "_";
-	wouttextxy(ds, x + 2 + wgettextwidth(text, _G(cbuttfont)), y + 1, _G(cbuttfont), text_color, tbu);
+	wouttextxy(ds, x + 2 + get_text_width(text, _G(cbuttfont)), y + 1, _G(cbuttfont), text_color, tbu);
 }
 
 int MyTextBox::pressedon(int mousex, int mousey) {
@@ -73,7 +72,7 @@ int MyTextBox::processmessage(int mcode, int wParam, NumberPtr lParam) {
 			drawandmouse();
 		} else if (strlen(text) >= TEXTBOX_MAXLEN - 1)
 			;
-		else if (wgettextwidth(text, _G(cbuttfont)) >= wid - 5)
+		else if (get_text_width(text, _G(cbuttfont)) >= wid - 5)
 			;
 		else if (wParam > 127)
 			;  // font only has 128 chars

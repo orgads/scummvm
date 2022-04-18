@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Plays the background film of a scene.
  */
@@ -80,7 +79,7 @@ void BGmainProcess(CORO_PARAM, const void *param) {
 			int i;
 			for (i = 0; i < _vm->_bg->_bgReels; i++) {
 				// Get the MULTI_INIT structure
-				pmi = (PMULTI_INIT)_vm->_handle->LockMem(FROM_32(pFilm->reels[i].mobj));
+				pmi = (MULTI_INIT *)_vm->_handle->LockMem(FROM_32(pFilm->reels[i].mobj));
 
 				// Initialize and insert the object, and initialize its script.
 				_vm->_bg->_pBG[i] = MultiInitObject(pmi);
@@ -165,18 +164,20 @@ void Background::StartupBackground(CORO_PARAM, SCNHANDLE hFilm) {
 	CORO_BEGIN_CONTEXT;
 	CORO_END_CONTEXT(_ctx);
 
-	CORO_BEGIN_CODE(_ctx);
-
-	const FILM *pfilm;
-	IMAGE *pim;
-
-	_hBackground = hFilm;		// Save handle in case of Save_Scene()
-
-	pim = _vm->_cursor->GetImageFromFilm(hFilm, 0, NULL, NULL, &pfilm);
+	const FILM *pfilm = (const FILM *)_vm->_handle->LockMem(hFilm);
+	const FREEL *pfr = &pfilm->reels[0];
 
 	if (!TinselV3) {
-		SetBackPal(FROM_32(pim->hImgPal));
+		const MULTI_INIT *pmi = (const MULTI_INIT *)_vm->_handle->LockMem(FROM_32(pfr->mobj));
+		const FRAME *pFrame = (const FRAME *)_vm->_handle->LockMem(FROM_32(pmi->hMulFrame));
+		const IMAGE *pim = _vm->_handle->GetImage(READ_32(pFrame));
+		SetBackPal(pim->hImgPal);
+		delete pim;
 	}
+
+	CORO_BEGIN_CODE(_ctx);
+
+	_hBackground = hFilm; // Save handle in case of Save_Scene()
 
 	// Extract the film speed
 	_BGspeed = ONE_SECOND / FROM_32(pfilm->frate);

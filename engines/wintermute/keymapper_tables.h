@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -171,7 +170,8 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("JOY_RIGHT"); // extra joy
 		gameKeyMap->addAction(act);
 
-		act = new Action("GEOM", _("Show scene geometry"));
+		// I18N: Debug feature to draw lines of scene geometry: walls, walking areas, etc
+		act = new Action("DBGSCN", _("Show scene geometry"));
 		act->setKeyEvent(KEYCODE_F1);
 		act->addDefaultInputMapping("F1"); // original keyboard
 		act->addDefaultInputMapping("MOUSE_MIDDLE"); // extra mouse
@@ -355,7 +355,9 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("JOY_Y"); // extra joy
 		gameKeyMap->addAction(act);
 
-		act = new Action("ALTUSE", _("Alt use item"));
+		// I18N: Some items are scripted to have alternative "Use" action, when MiddleClick is used
+		// It may result in actor saying different text or item being decomposed to it's parts 
+		act = new Action("ALTUSE", _("Alternative action"));
 		act->setMiddleClickEvent();
 		act->addDefaultInputMapping("MOUSE_MIDDLE"); // original mouse
 		act->addDefaultInputMapping("BACKSPACE"); // extra keyboard
@@ -679,7 +681,8 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("JOY_DOWN"); // extra joy
 		gameKeyMap->addAction(act);
 
-		act = new Action("GEOM", _("Show scene geometry"));
+		// I18N: Debug feature to draw lines of scene geometry: walls, walking areas, etc
+		act = new Action("DBGSCN", _("Show scene geometry"));
 		act->setKeyEvent(KeyState(KEYCODE_F2, 0, KBD_CTRL));
 		act->addDefaultInputMapping("C+F2"); // original keyboard
 		gameKeyMap->addAction(act);
@@ -699,6 +702,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("C+F6"); // original keyboard
 		gameKeyMap->addAction(act);
 
+		// I18N: Displays a debug interface with a CLI for various features
 		act = new Action("DBGCLI", _("Show debug parser"));
 		act->setKeyEvent(KeyState(KEYCODE_F7, 0, KBD_CTRL));
 		act->addDefaultInputMapping("C+F7"); // original keyboard
@@ -706,16 +710,19 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		//TODO: extra joy control, e.g. "JOY_R+JOY_B"
 		gameKeyMap->addAction(act);
 
+		// I18N: Displays a debug text message
 		act = new Action("DBGTXT", _("Debug print"));
 		act->setKeyEvent(KeyState(KEYCODE_F8, 0, KBD_CTRL));
 		act->addDefaultInputMapping("C+F8"); // original keyboard
 		gameKeyMap->addAction(act);
 
+		// I18N: Exits the game
 		act = new Action("EXIT", _("Exit"));
 		act->setKeyEvent(KeyState(KEYCODE_F9, 0, KBD_CTRL));
 		act->addDefaultInputMapping("C+F9"); // original keyboard
 		gameKeyMap->addAction(act);
 
+		// I18N: Displays a debug interface that changes light settings
 		act = new Action("LIGHT", _("Light helper window"));
 		act->setKeyEvent(KeyState(KEYCODE_F11, 0, KBD_CTRL));
 		act->addDefaultInputMapping("C+F11"); // original keyboard
@@ -761,6 +768,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("S+RIGHT"); // original keyboard
 		gameKeyMap->addAction(act);
 	} else if (gameId == "apeiron") {
+		// I18N: Displays a blueprint with robot parts
 		act = new Action("BLUE", _("Show blueprint"));
 		act->setKeyEvent(KeyState(KEYCODE_SPACE, ASCII_SPACE));
 		act->addDefaultInputMapping("SPACE"); // original keyboard
@@ -841,6 +849,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		//TODO: extra joy control, e.g. "JOY_R+JOY_B"
 		gameKeyMap->addAction(act);
 
+		// I18N: Displays a debug text message
 		act = new Action("DBGTXT", _("Debug print"));
 		act->setKeyEvent(KEYCODE_F2);
 		act->addDefaultInputMapping("F2"); // original keyboard
@@ -965,6 +974,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 
 		Common::String extra = ConfMan.get("extra", target);
 		if (extra.hasPrefix("1.2.230.") || extra.hasPrefix("1.2.304.") || extra.hasPrefix("1.2.362.")) {
+			// I18N: ultra_super_mega_fast_walk is the name of the variable used at game script for this speed
 			act = new Action("SPDMAX", _("Walking speed: Ultra Super Mega Fast"));
 			act->setKeyEvent(KeyState(KEYCODE_s, 's', KBD_CTRL|KBD_ALT|KBD_SHIFT));
 			act->addDefaultInputMapping("C+A+S+s"); // original keyboard
@@ -1079,7 +1089,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("F8"); // original keyboard
 		gameKeyMap->addAction(act);
 
-		act = new Action("SKIPMG", _("Skip minigame"));
+		act = new Action(kStandardActionSkip, _("Skip"));
 		act->setKeyEvent(KeyState(KEYCODE_BACKSPACE, ASCII_BACKSPACE));
 		act->addDefaultInputMapping("BACKSPACE"); // original keyboard
 		//TODO: extra joy control, e.g. "JOY_R+JOY_B"
@@ -1373,7 +1383,8 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("JOY_DOWN"); // extra joy
 		gameKeyMap->addAction(act);
 
-		act = new Action("SHIFT", _("Shift"));
+		// I18N: At one of the puzzles game asks to press Up key / Shift key / Down key
+		act = new Action("SHIFT", _("Shift key"));
 		act->setKeyEvent(KEYCODE_RSHIFT);
 		act->addDefaultInputMapping("LSHIFT"); // original keyboard control
 		act->addDefaultInputMapping("RSHIFT"); // original keyboard control
@@ -1473,7 +1484,9 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("t"); // original keyboard
 		gameKeyMap->addAction(act);
 
-		act = new Action("VICH", _("Use Chapayev"));
+		// I18N: Chapayev is the name of game character, Vasily Chapayev
+		// This action makes Chapayev interact with item instead of Petka
+		act = new Action("ALTUSE", _("Chapayev's action"));
 		act->setKeyEvent(KeyState(KEYCODE_c, 'c'));
 		act->addDefaultInputMapping("6"); // original keyboard
 		act->addDefaultInputMapping("c"); // original keyboard
@@ -1487,6 +1500,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 			//TODO: extra joy control, e.g. "JOY_R+JOY_A"
 			gameKeyMap->addAction(act);
 
+			// I18N: Displays a debug text message
 			act = new Action("DBGTXT", _("Debug print"));
 			act->setKeyEvent(KEYCODE_BACKSPACE);
 			act->addDefaultInputMapping("BACKSPACE"); // original keyboard
@@ -1514,7 +1528,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("JOY_Y"); // extra joy
 		gameKeyMap->addAction(act);
 
-		act = new Action("PAUSE", _("Pause"));
+		act = new Action(kStandardActionPause, _("Pause"));
 		act->setKeyEvent(KeyState(KEYCODE_SPACE, ASCII_SPACE));
 		act->addDefaultInputMapping("SPACE"); // original keyboard
 		act->addDefaultInputMapping("p"); // original keyboard
@@ -1550,14 +1564,16 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("S+p"); // original keyboard
 		gameKeyMap->addAction(act);
 	} else if (gameId == "polechudes") {
-		act = new Action("SLOW", _("Spin slower"));
+		// I18N: This game is called "Pole Chudes" and it features a wheel similar to "Wheel of Fortune" TV show
+		act = new Action("SLOWER", _("Spin wheel slower"));
 		act->setKeyEvent(KEYCODE_F1);
 		act->addDefaultInputMapping("F1"); // original keyboard
 		act->addDefaultInputMapping("MOUSE_WHEEL_UP"); // extra mouse
 		act->addDefaultInputMapping("JOY_UP"); // extra joy
 		gameKeyMap->addAction(act);
 
-		act = new Action("FAST", _("Spin faster"));
+		// I18N: This game is called "Pole Chudes" and it features a wheel similar to "Wheel of Fortune" TV show
+		act = new Action("FASTER", _("Spin wheel faster"));
 		act->setKeyEvent(KEYCODE_F2);
 		act->addDefaultInputMapping("F2"); // original keyboard
 		act->addDefaultInputMapping("MOUSE_WHEEL_DOWN"); // extra mouse
@@ -1736,6 +1752,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("3"); // original keyboard
 		gameKeyMap->addAction(act);
 
+		// I18N: Displays a debug text message
 		act = new Action("DBGTXT", _("Debug print"));
 		act->setKeyEvent(KEYCODE_F6);
 		act->addDefaultInputMapping("F6"); // original keyboard
@@ -1757,7 +1774,8 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("F1"); // original keyboard
 		gameKeyMap->addAction(act);
 
-		act = new Action("GEOM", _("Show scene geometry"));
+		// I18N: Debug feature to draw lines of scene geometry: walls, walking areas, etc
+		act = new Action("DBGSCN", _("Show scene geometry"));
 		act->setKeyEvent(KEYCODE_F2);
 		act->addDefaultInputMapping("F2"); // original keyboard
 		act->addDefaultInputMapping("MOUSE_MIDDLE"); // extra mouse
@@ -1779,12 +1797,14 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("F5"); // original keyboard
 		gameKeyMap->addAction(act);
 
+		// I18N: Displays a debug text message
 		act = new Action("DBGTXT", _("Debug print"));
 		act->setKeyEvent(KEYCODE_F6);
 		act->addDefaultInputMapping("F6"); // original keyboard
 		gameKeyMap->addAction(act);
 
-		act = new Action("BEZIER", _("Bezier window"));
+		// I18N: Displays a debug interface with Bezier curves
+		act = new Action("DBGBEZ", _("Bezier window"));
 		act->setKeyEvent(KEYCODE_F7);
 		act->addDefaultInputMapping("F7"); // original keyboard
 		gameKeyMap->addAction(act);
@@ -1800,7 +1820,8 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("F3"); // original keyboard
 		gameKeyMap->addAction(act);
 	} else if (gameId == "twc") {
-		act = new Action("ACT", _("Droid action"));
+		// I18N: Use droid to perform an action
+		act = new Action("ALTUSE", _("Droid's action"));
 		act->setKeyEvent(KeyState(KEYCODE_SPACE, ASCII_SPACE));
 		act->addDefaultInputMapping("SPACE"); // original keyboard
 		act->addDefaultInputMapping("MOUSE_MIDDLE"); // extra mouse
@@ -1862,7 +1883,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("JOY_LEFT"); // extra joy
 		gameKeyMap->addAction(act);
 
-		act = new Action(kStandardActionOpenSettings, _("Music menu"));
+		act = new Action(kStandardActionOpenSettings, _("Settings"));
 		act->setKeyEvent(KeyState(KEYCODE_m, 'm'));
 		act->addDefaultInputMapping("m"); // original keyboard
 		act->addDefaultInputMapping("JOY_RIGHT"); // extra joy
@@ -1907,6 +1928,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		//TODO: extra joy control, e.g. "JOY_R+JOY_B"
 		gameKeyMap->addAction(act);
 	} else if (gameId == "wtetris") {
+		// I18N: It's a Tetris game clone, this action rotates current tetris item
 		act = new Action("ROTATE", _("Rotate"));
 		act->setKeyEvent(KEYCODE_UP);
 		act->addDefaultInputMapping("UP"); // original keyboard
@@ -1932,6 +1954,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("JOY_RIGHT"); // extra joy
 		gameKeyMap->addAction(act);
 
+		// I18N: It's a Tetris game clone, this action drops current tetris item
 		act = new Action("DROP", _("Drop"));
 		act->setKeyEvent(KEYCODE_DOWN);
 		act->addDefaultInputMapping("DOWN"); // original keyboard
@@ -1980,6 +2003,7 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("RIGHT"); // original keyboard
 		gameKeyMap->addAction(act);
 
+		// I18N: Displays a debug FPS counter
 		act = new Action("DBGFPS", _("Debug FPS"));
 		act->setKeyEvent(KEYCODE_F2);
 		act->addDefaultInputMapping("F2"); // original keyboard
@@ -2109,20 +2133,14 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		gameId == "carolreed15" ||
 		gameId == "carolreed16" ||
 		gameId == "corrosion" ||
-		gameId == "rebeccacarlson1"
+		gameId == "rebeccacarlson1" ||
+		gameId == "rhiannon"
 	) {
 		act = new Action(kStandardActionMoveUp, _("Walk forward"));
 		act->setCustomEngineActionEvent(kClickAtEntityNearestToCenter);
 		act->addDefaultInputMapping("UP"); // extra keyboard
 		act->addDefaultInputMapping("KP5"); // extra keyboard
 		act->addDefaultInputMapping("JOY_UP"); // extra joy
-		extraKeyMap->addAction(act);
-
-		act = new Action(kStandardActionMoveDown, _("Walk backward"));
-		act->setCustomEngineActionEvent(kClickAtBottom);
-		act->addDefaultInputMapping("DOWN"); // extra keyboard
-		act->addDefaultInputMapping("KP2"); // extra keyboard
-		act->addDefaultInputMapping("JOY_DOWN"); // extra joy
 		extraKeyMap->addAction(act);
 
 		act = new Action(kStandardActionMoveLeft, _("Turn left"));
@@ -2138,6 +2156,15 @@ inline Common::KeymapArray getWintermuteKeymaps(const char *target, const Common
 		act->addDefaultInputMapping("KP6"); // extra keyboard
 		act->addDefaultInputMapping("JOY_RIGHT"); // extra joy
 		extraKeyMap->addAction(act);
+
+		if (gameId != "rhiannon") {
+			act = new Action(kStandardActionMoveDown, _("Walk backward"));
+			act->setCustomEngineActionEvent(kClickAtBottom);
+			act->addDefaultInputMapping("DOWN"); // extra keyboard
+			act->addDefaultInputMapping("KP2"); // extra keyboard
+			act->addDefaultInputMapping("JOY_DOWN"); // extra joy
+			extraKeyMap->addAction(act);
+		}
 	}
 	result.push_back(extraKeyMap);
 

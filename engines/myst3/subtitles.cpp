@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -59,8 +58,8 @@ private:
 
 FontSubtitles::FontSubtitles(Myst3Engine *vm) :
 	Subtitles(vm),
-	_font(0),
-	_surface(0),
+	_font(nullptr),
+	_surface(nullptr),
 	_scale(1.0),
 	_charset(nullptr) {
 }
@@ -239,7 +238,7 @@ void FontSubtitles::createTexture() {
 	}
 
 	if (!_texture) {
-		_texture = _vm->_gfx->createTexture(_surface);
+		_texture = _vm->_gfx->createTexture2D(_surface);
 	}
 }
 
@@ -376,7 +375,7 @@ void MovieSubtitles::drawToTexture(const Phrase *phrase) {
 	const Graphics::Surface *surface = _bink.decodeNextFrame();
 
 	if (!_texture) {
-		_texture = _vm->_gfx->createTexture(surface);
+		_texture = _vm->_gfx->createTexture2D(surface);
 	} else {
 		_texture->update(surface);
 	}
@@ -385,7 +384,7 @@ void MovieSubtitles::drawToTexture(const Phrase *phrase) {
 Subtitles::Subtitles(Myst3Engine *vm) :
 		Window(),
 		_vm(vm),
-		_texture(0),
+		_texture(nullptr),
 		_frame(-1) {
 	_scaled = !_vm->isWideScreenModEnabled();
 }
@@ -483,7 +482,7 @@ void Subtitles::drawOverlay() {
 
 	if (_vm->isWideScreenModEnabled()) {
 		// Draw a black background to cover the main game frame
-		_vm->_gfx->drawRect2D(Common::Rect(screen.width(), Renderer::kBottomBorderHeight), 0xFF000000);
+		_vm->_gfx->drawRect2D(Common::Rect(screen.width(), Renderer::kBottomBorderHeight), 0xFF, 0x00, 0x00, 0x00);
 
 		// Center the subtitles in the screen
 		bottomBorder.translate((screen.width() - Renderer::kOriginalWidth) / 2, 0);
@@ -507,7 +506,7 @@ Subtitles *Subtitles::create(Myst3Engine *vm, uint32 id) {
 
 	if (!s->loadSubtitles(id)) {
 		delete s;
-		return 0;
+		return nullptr;
 	}
 
 	s->loadResources();
@@ -517,7 +516,7 @@ Subtitles *Subtitles::create(Myst3Engine *vm, uint32 id) {
 
 void Subtitles::freeTexture() {
 	if (_texture) {
-		_vm->_gfx->freeTexture(_texture);
+		delete _texture;
 		_texture = nullptr;
 	}
 }

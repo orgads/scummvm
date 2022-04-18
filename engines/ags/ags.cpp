@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -35,7 +34,6 @@
 #include "engines/util.h"
 
 #include "ags/shared/core/platform.h"
-#define AGS_PLATFORM_DEFINES_PSP_VARS (AGS_PLATFORM_OS_IOS || AGS_PLATFORM_OS_ANDROID)
 
 #include "ags/lib/std/set.h"
 #include "ags/shared/ac/common.h"
@@ -51,7 +49,6 @@
 #include "ags/engine/game/savegame.h"
 #include "ags/engine/main/config.h"
 #include "ags/engine/main/engine.h"
-#include "ags/engine/main/main_header.h"
 #include "ags/engine/main/main.h"
 #include "ags/engine/main/quit.h"
 #include "ags/engine/platform/base/ags_platform_driver.h"
@@ -65,14 +62,17 @@
 #include "ags/tests/test_all.h"
 #endif
 
+// Include translation.h last as some AGS classes have member such as _sc, which clash with
+// macro defined in translation.h.
+#include "common/translation.h"
+
 namespace AGS {
 
 AGSEngine *g_vm;
 
 AGSEngine::AGSEngine(OSystem *syst, const AGSGameDescription *gameDesc) : Engine(syst),
 	_gameDescription(gameDesc), _randomSource("AGS"), _events(nullptr), _music(nullptr),
-	_rawScreen(nullptr), _screen(nullptr), _gfxDriver(nullptr),
-	_globals(nullptr), _forceTextAA(false) {
+	_gfxDriver(nullptr), _globals(nullptr), _forceTextAA(false) {
 	g_vm = this;
 
 	_events = new EventsManager();
@@ -82,10 +82,14 @@ AGSEngine::AGSEngine(OSystem *syst, const AGSGameDescription *gameDesc) : Engine
 	Common::String forceAA;
 	if (ConfMan.getActiveDomain()->tryGetVal("force_text_aa", forceAA))
 		Common::parseBool(forceAA, _forceTextAA);
+
+	// WORKAROUND: Certain games need to force AA to render the text correctly
+	if (_gameDescription->desc.flags & GAMEFLAG_FORCE_AA)
+		_forceTextAA = true;
 }
 
 AGSEngine::~AGSEngine() {
-	if (_G(proper_exit) == 0) {
+	if (_globals && _G(proper_exit) == 0) {
 		_G(platform)->DisplayAlert("Error: the program has exited without requesting it.\n"
 		                           "Program pointer: %+03d  (write this number down), ACI version %s\n"
 		                           "If you see a list of numbers above, please write them down and contact\n"
@@ -93,8 +97,6 @@ AGSEngine::~AGSEngine() {
 		                           _G(our_eip), _G(EngineVersion).LongString.GetCStr());
 	}
 
-	delete _screen;
-	delete _rawScreen;
 	delete _events;
 	delete _music;
 	delete _globals;
@@ -117,6 +119,20 @@ Common::Error AGSEngine::run() {
 		// Scan the given folder and subfolders for unknown games
 		AGS3::GameScanner scanner;
 		scanner.scan(ConfMan.get("path"));
+		return Common::kNoError;
+	}
+
+	if (isUnsupportedPre25()) {
+		GUIErrorMessage(_("The selected game uses a pre-2.5 version of the AGS engine, which is not supported."));
+		return Common::kNoError;
+	}
+
+	if (is64BitGame()) {
+		// If the game file was opened and the engine started, but the
+		// size is -1, then it must be a game like Strangeland where
+		// the data file is > 2Gb
+		GUIErrorMessage(_("The selected game has a data file greater than 2Gb, "
+			"which isn't supported by your version of ScummVM yet."));
 		return Common::kNoError;
 	}
 
@@ -189,12 +205,19 @@ bool AGSEngine::getPixelFormat(int depth, Graphics::PixelFormat &format) const {
 		return true;
 	}
 
+	// Prefer format with the requested color depth
 	for (Common::List<Graphics::PixelFormat>::iterator it =
 			supportedFormatsList.begin(); it != supportedFormatsList.end(); ++it) {
 		if (it->bpp() == depth) {
 			format = *it;
 			return true;
 		}
+	}
+
+	// Allow using 16 bit <-> 32 bit conversions by using the preferred graphics mode
+	if (!supportedFormatsList.empty()) {
+		format = supportedFormatsList.front();
+		return true;
 	}
 
 	return false;
@@ -206,12 +229,23 @@ void AGSEngine::setGraphicsMode(size_t w, size_t h, int colorDepth) {
 	Graphics::PixelFormat format;
 	if (!getPixelFormat(colorDepth, format))
 		error("Unsupported color depth %d", colorDepth);
-	//Graphics::PixelFormat(4, 8, 8, 8, 8, 24, 16, 8, 0);
 
 	initGraphics(w, h, &format);
+}
 
-	_rawScreen = new Graphics::Screen();
-	_screen = new ::AGS3::BITMAP(_rawScreen);
+bool AGSEngine::isUnsupportedPre25() const {
+	return _gameDescription->desc.extra &&
+		!strcmp(_gameDescription->desc.extra, "Pre 2.5");
+}
+
+bool AGSEngine::is64BitGame() const {
+	Common::File f;
+	return f.open(_gameDescription->desc.filesDescriptions[0].fileName)
+		&& f.size() == -1;
+}
+
+Common::FSNode AGSEngine::getGameFolder() {
+	return Common::FSNode(ConfMan.get("path"));
 }
 
 bool AGSEngine::canLoadGameStateCurrently() {
@@ -236,6 +270,13 @@ Common::Error AGSEngine::saveGameState(int slot, const Common::String &desc, boo
 
 void AGSEngine::GUIError(const Common::String &msg) {
 	GUIErrorMessage(msg);
+}
+
+void AGSEngine::syncSoundSettings() {
+	// Digital audio
+	Engine::syncSoundSettings();
+	// MIDI
+	_music->syncVolume();
 }
 
 } // namespace AGS

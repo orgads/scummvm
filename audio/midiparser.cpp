@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,7 +32,7 @@
 
 MidiParser::MidiParser() :
 _hangingNotesCount(0),
-_driver(0),
+_driver(nullptr),
 _timerRate(0x4A0000),
 _ppqn(96),
 _tempo(500000),
@@ -53,7 +52,7 @@ _doParse(true),
 _pause(false) {
 	memset(_activeNotes, 0, sizeof(_activeNotes));
 	memset(_tracks, 0, sizeof(_tracks));
-	_nextEvent.start = NULL;
+	_nextEvent.start = nullptr;
 	_nextEvent.delta = 0;
 	_nextEvent.event = 0;
 	_nextEvent.length = 0;
@@ -136,7 +135,7 @@ void MidiParser::activeNote(byte channel, byte note, bool active) {
 }
 
 void MidiParser::hangingNote(byte channel, byte note, uint32 timeLeft, bool recycle) {
-	NoteTimer *best = 0;
+	NoteTimer *best = nullptr;
 	NoteTimer *ptr = _hangingNotes;
 	int i;
 
@@ -222,7 +221,7 @@ void MidiParser::onTimer() {
 		// Process the next info.
 		if (info.event < 0x80) {
 			warning("Bad command or running status %02X", info.event);
-			_position._playPos = 0;
+			_position._playPos = nullptr;
 			return;
 		}
 

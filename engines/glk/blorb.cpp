@@ -4,19 +4,18 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software{} you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation{} either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY{} without even the implied warranty of
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program{} if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -39,7 +38,8 @@ Blorb::Blorb(const Common::FSNode &fileNode, InterpreterType interpType) :
 		error("Could not parse blorb file");
 }
 
-bool Blorb::hasFile(const Common::String &name) const {
+bool Blorb::hasFile(const Common::Path &path) const {
+	Common::String name = path.toString();
 	for (uint idx = 0; idx < _chunks.size(); ++idx) {
 		if (_chunks[idx]._filename.equalsIgnoreCase(name))
 			return true;
@@ -56,14 +56,16 @@ int Blorb::listMembers(Common::ArchiveMemberList &list) const {
 	return (int)_chunks.size();
 }
 
-const Common::ArchiveMemberPtr Blorb::getMember(const Common::String &name) const {
+const Common::ArchiveMemberPtr Blorb::getMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	if (!hasFile(name))
 		return Common::ArchiveMemberPtr();
 
 	return Common::ArchiveMemberPtr(new Common::GenericArchiveMember(name, this));
 }
 
-Common::SeekableReadStream *Blorb::createReadStreamForMember(const Common::String &name) const {
+Common::SeekableReadStream *Blorb::createReadStreamForMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	for (uint idx = 0; idx < _chunks.size(); ++idx) {
 		const ChunkEntry &ce = _chunks[idx];
 

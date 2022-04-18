@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,12 +20,12 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
-#define FORBIDDEN_SYMBOL_EXCEPTION_rand
+#include "common/memstream.h"
+#include "common/random.h"
 
 #include "engines/icb/p4_generic.h"
 #include "engines/icb/set.h"
@@ -35,17 +35,17 @@
 #include "engines/icb/shake.h"
 #include "engines/icb/res_man.h"
 #include "engines/icb/mission.h"
-#include "engines/icb/jpeg.h"
 #include "engines/icb/common/px_capri_maths.h"
 #include "engines/icb/common/pc_props.h"
 #include "engines/icb/sound/direct_sound.h"
 #include "engines/icb/sound/fx_manager.h"
 #include "engines/icb/icb.h"
+#include "engines/icb/jpeg_decode.h"
 #include "engines/icb/direct_input.h"
 
 namespace ICB {
 
-#define RAND_16BIT (rand() + rand() + rand())
+#define RAND_16BIT (g_icb->getRandomSource()->getRandomNumber(32767) + g_icb->getRandomSource()->getRandomNumber(32767) + g_icb->getRandomSource()->getRandomNumber(32767))
 #define RAND_32BIT ((RAND_16BIT << 16) | (RAND_16BIT))
 #define RAND_BIT(bit) ((rands[(bit) >> 5]) & (1 << ((bit)&31)))
 
@@ -568,7 +568,7 @@ _set::_set() {
 	set_cluster[0] = '\0';
 	m_setOk = 0;
 	m_TotalPropSurfaces = 0;
-	m_props = 0;
+	m_props = nullptr;
 	memset(m_propSurfaces, 0x00, sizeof(int32) * MAX_PROP_STATES);
 	InitWeather(WEATHER_NONE, 0, 0, 0, 0, 0);
 }
@@ -640,7 +640,7 @@ void _set::Reset() {
 		surface_manager->Kill_surface(bg_buffer_id);
 
 		delete m_props;
-		m_props = 0;
+		m_props = nullptr;
 	}
 
 	m_setOk = 0;
@@ -703,8 +703,20 @@ void _set::Init_base_bitmap_buffers() {
 	uint8 *ptr = bgPtr + shadowTable[0];
 
 	// Decode the jpeg background
-	JpegDecoder decoder;
-	decoder.ReadImage(ptr, bg_buffer_id);
+	Graphics::Surface *jpegSurf = JpegDecode(ptr, 1024 * 1024);
+	assert(jpegSurf);
+	uint8 *surface_address = surface_manager->Lock_surface(bg_buffer_id);
+	int16 pitch = surface_manager->Get_pitch(bg_buffer_id);
+	uint32 height = surface_manager->Get_height(bg_buffer_id);
+	for (int32 i = 0; i < jpegSurf->h; i++) {
+		if (i >= (int32)height) {
+			break;
+		}
+		memcpy(surface_address + i * pitch, jpegSurf->getBasePtr(0, i), MIN(jpegSurf->pitch, pitch));
+	}
+	surface_manager->Unlock_surface(bg_buffer_id);
+	jpegSurf->free();
+	delete jpegSurf;
 
 	// find the start of the weather data
 	int32 *weatherPtr = (int32 *)(bgPtr + shadowTable[1]);

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -229,7 +228,7 @@ bool TonyEngine::loadTonyDat() {
 	case Common::RU_RUS:
 		expectedLangVariant = 2;
 		break;
-	case Common::CZ_CZE:
+	case Common::CS_CZE:
 		expectedLangVariant = 3;
 		break;
 	case Common::FR_FRA:
@@ -601,7 +600,7 @@ bool TonyEngine::openVoiceDatabase() {
 	}
 
 	// Read in the index
-	_vdbFP.seek(-8 - (numfiles * VOICE_HEADER_SIZE), SEEK_END);
+	_vdbFP.seek(-8 - (int64)(numfiles * VOICE_HEADER_SIZE), SEEK_END);
 
 	for (uint32 i = 0; i < numfiles; ++i) {
 		VoiceHeader vh;

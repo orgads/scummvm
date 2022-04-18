@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -49,7 +48,6 @@ bool GUITextBox::IsBorderShown() const {
 }
 
 void GUITextBox::Draw(Bitmap *ds) {
-	check_font(&Font);
 	color_t text_color = ds->GetCompatibleColor(TextColor);
 	color_t draw_color = ds->GetCompatibleColor(TextColor);
 	if (IsBorderShown()) {
@@ -61,27 +59,41 @@ void GUITextBox::Draw(Bitmap *ds) {
 	DrawTextBoxContents(ds, text_color);
 }
 
-void GUITextBox::OnKeyPress(int keycode) {
+// TODO: a shared utility function
+static void Backspace(String &text) {
+	if (get_uformat() == U_UTF8) {// Find where the last utf8 char begins
+		const char *ptr_end = text.GetCStr() + text.GetLength();
+		const char *ptr = ptr_end - 1;
+		for (; ptr > text.GetCStr() && ((*ptr & 0xC0) == 0x80); --ptr);
+		text.ClipRight(ptr_end - ptr);
+	} else {
+		text.ClipRight(1);
+	}
+}
+
+void GUITextBox::OnKeyPress(const KeyInput &ki) {
+	eAGSKeyCode keycode = ki.Key;
+
 	// other key, continue
 	if ((keycode >= 128) && (!font_supports_extended_characters(Font)))
 		return;
-
-	NotifyParentChanged();
-	// backspace, remove character
-	if (keycode == eAGSKeyCodeBackspace) {
-		Text.ClipRight(1);
-		return;
-	}
 	// return/enter
 	if (keycode == eAGSKeyCodeReturn) {
 		IsActivated = true;
 		return;
 	}
 
+	NotifyParentChanged();
+	// backspace, remove character
+	if (keycode == eAGSKeyCodeBackspace) {
+		Backspace(Text);
+		return;
+	}
+
 	Text.AppendChar(keycode);
 	// if the new string is too long, remove the new character
-	if (wgettextwidth(Text.GetCStr(), Font) > (Width - (6 + get_fixed_pixel_size(5))))
-		Text.ClipRight(1);
+	if (get_text_width(Text.GetCStr(), Font) > (Width - (6 + get_fixed_pixel_size(5))))
+		Backspace(Text);
 }
 
 void GUITextBox::SetShowBorder(bool on) {

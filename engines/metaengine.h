@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -156,7 +155,7 @@ public:
 	 * (possibly empty) list of games supported by the engine that were
 	 * found among the given files.
 	 */
-	virtual DetectedGames detectGames(const Common::FSList &fslist) const = 0;
+	virtual DetectedGames detectGames(const Common::FSList &fslist) = 0;
 
 	/**
 	 * Return a list of extra GUI options for the specified target.
@@ -193,7 +192,7 @@ public:
 	 *
 	 * @param target  Name of a config manager target.
 	 */
-	virtual void registerDefaultSettings(const Common::String &target) const;
+	void registerDefaultSettings(const Common::String &target) const;
 
 	/**
 	 * Return a GUI widget container for configuring the specified target options.
@@ -209,7 +208,7 @@ public:
 	 * @param name     The name that the returned widget must use.
 	 * @param target   Name of a config manager target.
 	 */
-	virtual GUI::OptionsContainerWidget *buildEngineOptionsWidgetStatic(GUI::GuiObject *boss, const Common::String &name, const Common::String &target) const;
+	GUI::OptionsContainerWidget *buildEngineOptionsWidgetStatic(GUI::GuiObject *boss, const Common::String &name, const Common::String &target) const;
 };
 
 /**
@@ -232,6 +231,15 @@ protected:
 	 * dialog so that it won't appear in the thumbnail.
 	 */
 	virtual void getSavegameThumbnail(Graphics::Surface &thumb);
+
+	/**
+	 * Finds the first empty save slot that can be used for this target
+	 * @param target Name of a config manager target.
+	 *
+	 * @return The first empty save slot, or -1 if all are occupied.
+	 */
+	int findEmptySaveSlot(const char *target);
+
 public:
 	virtual ~MetaEngine() {}
 
@@ -260,7 +268,7 @@ public:
 	 *
 	 * @return A Common::Error describing the error that occurred, or kNoError.
 	 */
-	virtual Common::Error createInstance(OSystem *syst, Engine **engine) const = 0;
+	virtual Common::Error createInstance(OSystem *syst, Engine **engine) = 0;
 
 	/**
 	 * Return a list of all save states associated with the given target.
@@ -296,7 +304,8 @@ public:
 	SaveStateList listSaves(const char *target, bool saveMode) const;
 
 	/**
-	 * Return the slot number that is used for autosaves.
+	 * Return the slot number that is used for autosaves, or -1 for engines that
+	 * don't support autosave.
 	 *
 	 * @note This should match the engine getAutosaveSlot() method.
 	 */
@@ -369,29 +378,28 @@ public:
 	virtual Common::Array<Common::Keymap *> initKeymaps(const char *target) const;
 
 	/**
-	 * Return the extra GUI options used by the target.
+	 * Register the default values for the settings that the engine uses into the
+	 * configuration manager.
+	 *
+	 * @param target  Name of a config manager target.
 	 */
-	virtual const ExtraGuiOptions getExtraGuiOptions(const Common::String &target) const {
-		return ExtraGuiOptions();
-	}
+	virtual void registerDefaultSettings(const Common::String &target) const {}
 
 	/**
 	 * Return a GUI widget container for configuring the specified target options.
 	 *
-	 * Engines can build custom option dialogs from here, but by default a simple widget
-	 * allowing to configure the extra GUI options is used.
+	 * Engines can build custom option dialogs from here.
 	 *
-	 * The engine that builds the Engines tab in the Edit Game dialog uses a MetaEngineDetection.
-	 * The engine that specifies a custom dialog when a game is running uses a MetaEngine.
-	 *
-	 * Engines are not supposed to have an Engine tab in the Edit Game dialog
-	 * can return nullptr.
+	 * Engines that don't have an Engine tab in the Edit Game dialog, or that use
+	 * ExtraGuiOptions in MetaEngineDetection can return nullptr.
 	 *
 	 * @param boss    The widget or dialog that the returned widget is a child of.
 	 * @param name    The name that the returned widget must use.
 	 * @param target  Name of a config manager target.
 	 */
-	virtual GUI::OptionsContainerWidget *buildEngineOptionsWidgetDynamic(GUI::GuiObject *boss, const Common::String &name, const Common::String &target) const;
+	virtual GUI::OptionsContainerWidget *buildEngineOptionsWidgetDynamic(GUI::GuiObject *boss, const Common::String &name, const Common::String &target) const {
+		return nullptr;
+	}
 
 	/**
 	 * MetaEngine feature flags.
@@ -476,6 +484,9 @@ public:
 		* of detecting saves and slot numbers, this should be
 		* unavailable. In that case Save/Load dialog for the engine's
 		* games is locked during cloud saves sync.
+		*
+		* NOTE: This flag is used by cloud code, but also in
+		* MetaEngine::getSavegameFile(), for common save names.
 		*/
 		kSimpleSavesNames,
 
@@ -525,6 +536,20 @@ public:
 	void appendExtendedSave(Common::OutSaveFile *saveFile, uint32 playtime, Common::String desc, bool isAutosave);
 
 	/**
+	 * Write the extended savegame header to the given WriteStream.
+	 */
+	void appendExtendedSaveToStream(Common::WriteStream *saveFile, uint32 playtime, Common::String desc, bool isAutosave, uint32 offset = 0);
+
+	/**
+	 * Copies an existing save file to the first empty slot which is not autosave
+	 * @param target Name of a config manager target.
+	 * @param slot   Slot number of the save state.
+	 *
+	 * @return true if an empty slot was found and the save state was copied. false otherwise.
+	 */
+	bool copySaveFileToFreeSlot(const char *target, int slot);
+
+	/**
 	 * Parse the extended savegame header to retrieve the SaveStateDescriptor information.
 	 */
 	static void parseSavegameHeader(ExtendedSavegameHeader *header, SaveStateDescriptor *desc);
@@ -537,7 +562,7 @@ public:
 	/**
 	 * Read the extended savegame header from the given savegame file.
 	 */
-	static WARN_UNUSED_RESULT bool readSavegameHeader(Common::InSaveFile *in, ExtendedSavegameHeader *header, bool skipThumbnail = true);
+	WARN_UNUSED_RESULT static bool readSavegameHeader(Common::InSaveFile *in, ExtendedSavegameHeader *header, bool skipThumbnail = true);
 };
 
 /**
@@ -550,7 +575,7 @@ public:
 	 *
 	 * Returns an empty list if none are found.
 	 */
-	DetectionResults detectGames(const Common::FSList &fslist) const;
+	DetectionResults detectGames(const Common::FSList &fslist);
 
 	/** Find a plugin by its engine ID. */
 	const Plugin *findPlugin(const Common::String &engineId) const;
@@ -589,9 +614,6 @@ public:
 private:
 	/** Find a game across all loaded plugins. */
 	QualifiedGameList findGameInLoadedPlugins(const Common::String &gameId) const;
-
-	/** Find a loaded plugin with the given engine ID. */
-	const Plugin *findLoadedPlugin(const Common::String &engineId) const;
 
 	/** Use heuristics to complete a target lacking an engine ID. */
 	void upgradeTargetForEngineId(const Common::String &target) const;

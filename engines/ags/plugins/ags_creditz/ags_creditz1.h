@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -30,35 +29,36 @@ namespace Plugins {
 namespace AGSCreditz {
 
 class AGSCreditz1 : public AGSCreditz {
+	SCRIPT_HASH_SUB(AGSCreditz1, AGSCreditz)
 private:
-static const char *AGS_GetPluginName();
-static void AGS_EngineStartup(IAGSEngine *engine);
-static int64 AGS_EngineOnEvent(int event, NumberPtr data);
-
-static void SetCredit(ScriptMethodParams &params);
-static void ScrollCredits(ScriptMethodParams &params);
-static void GetCredit(ScriptMethodParams &params);
-static void IsCreditScrollingFinished(ScriptMethodParams &params);
-static void SetCreditImage(ScriptMethodParams &params);
-static void PauseScroll(ScriptMethodParams &params);
-static void ScrollReset(ScriptMethodParams &params);
-static void SetEmptyLineHeight(ScriptMethodParams &params);
-static void GetEmptyLineHeight(ScriptMethodParams &params);
-static void SetStaticCredit(ScriptMethodParams &params);
-static void GetStaticCredit(ScriptMethodParams &params);
-static void StartEndStaticCredits(ScriptMethodParams &params);
-static void GetCurrentStaticCredit(ScriptMethodParams &params);
-static void SetDefaultStaticDelay(ScriptMethodParams &params);
-static void SetStaticPause(ScriptMethodParams &params);
-static void SetStaticCreditTitle(ScriptMethodParams &params);
-static void ShowStaticCredit(ScriptMethodParams &params);
-static void StaticReset(ScriptMethodParams &params);
-static void GetStaticCreditTitle(ScriptMethodParams &params);
-static void SetStaticCreditImage(ScriptMethodParams &params);
-static void IsStaticCreditsFinished(ScriptMethodParams &params);
+	void SetCredit(ScriptMethodParams &params);
+	void ScrollCredits(ScriptMethodParams &params);
+	void GetCredit(ScriptMethodParams &params);
+	void IsCreditScrollingFinished(ScriptMethodParams &params);
+	void SetCreditImage(ScriptMethodParams &params);
+	void PauseScroll(ScriptMethodParams &params);
+	void ScrollReset(ScriptMethodParams &params);
+	void SetEmptyLineHeight(ScriptMethodParams &params);
+	void GetEmptyLineHeight(ScriptMethodParams &params);
+	void SetStaticCredit(ScriptMethodParams &params);
+	void GetStaticCredit(ScriptMethodParams &params);
+	void StartEndStaticCredits(ScriptMethodParams &params);
+	void GetCurrentStaticCredit(ScriptMethodParams &params);
+	void SetDefaultStaticDelay(ScriptMethodParams &params);
+	void SetStaticPause(ScriptMethodParams &params);
+	void SetStaticCreditTitle(ScriptMethodParams &params);
+	void ShowStaticCredit(ScriptMethodParams &params);
+	void StaticReset(ScriptMethodParams &params);
+	void GetStaticCreditTitle(ScriptMethodParams &params);
+	void SetStaticCreditImage(ScriptMethodParams &params);
+	void IsStaticCreditsFinished(ScriptMethodParams &params);
 
 public:
-AGSCreditz1();
+	AGSCreditz1();
+
+	const char *AGS_GetPluginName() override;
+	void AGS_EngineStartup(IAGSEngine *engine) override;
+	int64 AGS_EngineOnEvent(int event, NumberPtr data) override;
 };
 
 } // namespace AGSCreditz

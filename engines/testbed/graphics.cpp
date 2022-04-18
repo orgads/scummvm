@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -379,11 +378,9 @@ void GFXtests::drawEllipse(int cx, int cy, int a, int b) {
 	// Take a buffer of screen size
 	int width = g_system->getWidth();
 	int height = Testsuite::getDisplayRegionCoordinates().y;
-	byte *buffer = new byte[height * width];
+	byte *buffer = new byte[height * width]();
 	double theta;
 	int x, y, x1, y1;
-
-	memset(buffer, 0, sizeof(byte) * width * height);
 	// Illuminate the center
 	buffer[cx * width + cy] = 1;
 
@@ -1398,7 +1395,11 @@ void GFXtests::showPixelFormat(const Graphics::PixelFormat &pf, uint aLoss) {
 
 	g_system->beginGFXTransaction();
 		g_system->initSize(320, 200, &pf);
-	g_system->endGFXTransaction();
+	OSystem::TransactionError gfxError = g_system->endGFXTransaction();
+	if (gfxError) {
+		Testsuite::logPrintf("WARNING! Pixel Format %s is unsupported\n", pf.toString().c_str());
+		return;
+	}
 	Testsuite::clearScreen(true);
 
 	Graphics::Surface *screen = g_system->lockScreen();

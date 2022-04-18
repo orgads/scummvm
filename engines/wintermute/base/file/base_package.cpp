@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -247,7 +246,8 @@ PackageSet::~PackageSet() {
 	_packages.clear();
 }
 
-bool PackageSet::hasFile(const Common::String &name) const {
+bool PackageSet::hasFile(const Common::Path &path) const {
+	Common::String name = path.toString();
 	Common::String upcName = name;
 	upcName.toUppercase();
 	Common::HashMap<Common::String, Common::ArchiveMemberPtr>::const_iterator it;
@@ -267,7 +267,8 @@ int PackageSet::listMembers(Common::ArchiveMemberList &list) const {
 	return count;
 }
 
-const Common::ArchiveMemberPtr PackageSet::getMember(const Common::String &name) const {
+const Common::ArchiveMemberPtr PackageSet::getMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	Common::String upcName = name;
 	upcName.toUppercase();
 	Common::HashMap<Common::String, Common::ArchiveMemberPtr>::const_iterator it;
@@ -275,7 +276,8 @@ const Common::ArchiveMemberPtr PackageSet::getMember(const Common::String &name)
 	return Common::ArchiveMemberPtr(it->_value);
 }
 
-Common::SeekableReadStream *PackageSet::createReadStreamForMember(const Common::String &name) const {
+Common::SeekableReadStream *PackageSet::createReadStreamForMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	Common::String upcName = name;
 	upcName.toUppercase();
 	Common::HashMap<Common::String, Common::ArchiveMemberPtr>::const_iterator it;

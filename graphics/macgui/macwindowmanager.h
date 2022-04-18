@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,6 +24,7 @@
 
 #include "common/hashmap.h"
 #include "common/list.h"
+#include "common/stack.h"
 #include "common/events.h"
 
 #include "graphics/font.h"
@@ -141,7 +141,7 @@ typedef void (* MacDrawPixPtr)(int, int, int, void *);
  */
 class MacWindowManager {
 public:
-	MacWindowManager(uint32 mode = 0, MacPatterns *patterns = nullptr);
+	MacWindowManager(uint32 mode = 0, MacPatterns *patterns = nullptr, Common::Language language = Common::UNK_LANG);
 	~MacWindowManager();
 
 	MacDrawPixPtr getDrawPixel();
@@ -160,6 +160,10 @@ public:
 	 * @param screen Surface on which the desktop will be drawn.
 	 */
 	void setScreen(int w, int h);
+
+	int getWidth();
+
+	int getHeight();
 
 	/**
 	 * Create a window with the given parameters.
@@ -223,6 +227,18 @@ public:
 	void setActiveWindow(int id);
 
 	/**
+	 * Return Top Window containing a point
+	 * @param x x coordinate of point
+	 * @param y y coordiante of point
+	 */ 
+	MacWindow *findWindowAtPoint(int16 x, int16 y);
+	/**
+	 * Return Top Window containing a point
+	 * @param point Point
+	 */ 
+	MacWindow *findWindowAtPoint(Common::Point point);
+
+	/**
 	 * Mark a window for removal.
 	 * Note that the window data will be destroyed.
 	 * @param target Window to be removed.
@@ -272,22 +288,25 @@ public:
 	 */
 	void setActiveWidget(MacWidget *widget);
 
+	MacPatterns  &getBuiltinPatterns() { return _builtinPatterns; }
+
 	MacWidget *getActiveWidget() { return _activeWidget; }
 
 	Common::Rect getScreenBounds() { return _screen ? _screen->getBounds() : _screenDims; }
 
 	void clearWidgetRefs(MacWidget *widget);
 
+private:
+	void replaceCursorType(MacCursorType type);
+
+public:
+	MacCursorType getCursorType() const;
+
 	void pushCursor(MacCursorType type, Cursor *cursor = nullptr);
 	void replaceCursor(MacCursorType type, Cursor *cursor = nullptr);
 
-	void pushArrowCursor();
-	void pushBeamCursor();
-	void pushCrossHairCursor();
-	void pushCrossBarCursor();
-	void pushWatchCursor();
-
 	void pushCustomCursor(const byte *data, int w, int h, int hx, int hy, int transcolor);
+	void replaceCustomCursor(const byte *data, int w, int h, int hx, int hy, int transcolor);
 	void pushCustomCursor(const Graphics::Cursor *cursor);
 	void popCursor();
 
@@ -300,7 +319,11 @@ public:
 
 	void passPalette(const byte *palette, uint size);
 	uint findBestColor(byte cr, byte cg, byte cb);
+	uint findBestColor(uint32 color);
 	void decomposeColor(uint32 color, byte &r, byte &g, byte &b);
+	void setDesktopColor(byte, byte, byte);
+
+	uint inverter(uint src);
 
 	const byte *getPalette() { return _palette; }
 	uint getPaletteSize() { return _paletteSize; }
@@ -324,9 +347,35 @@ public:
 	 */
 	Common::U32String getTextFromClipboard(const Common::U32String &format = Common::U32String(), int *size = nullptr);
 
+	/**
+	 * reset events for current widgets. i.e. we reset those variables which are used for handling events for macwidgets.
+	 * e.g. we clear the active widget, set mouse down false, clear the hoveredWidget
+	 * this function should be called when we are going to other level to handling events. thus wm may not handle events correctly.
+	 */
+	void clearHandlingWidgets();
+
+	void setMenuItemCheckMark(const Common::String &menuId, const Common::String &itemId, bool checkMark);
+	void setMenuItemCheckMark(int menuId, int itemId, bool checkMark);
+	void setMenuItemEnabled(const Common::String &menuId, const Common::String &itemId, bool enabled);
+	void setMenuItemEnabled(int menuId, int itemId, bool enabled);
+	void setMenuItemName(const Common::String &menuId, const Common::String &itemId, const Common::String &name);
+	void setMenuItemName(int menuId, int itemId, const Common::String &name);
+	void setMenuItemAction(const Common::String &menuId, const Common::String &itemId, int actionId);
+	void setMenuItemAction(int menuId, int itemId, int actionId);
+
+	bool getMenuItemCheckMark(const Common::String &menuId, const Common::String &itemId);
+	bool getMenuItemCheckMark(int menuId, int itemId);
+	bool getMenuItemEnabled(const Common::String &menuId, const Common::String &itemId);
+	bool getMenuItemEnabled(int menuId, int itemId);
+	Common::String getMenuItemName(const Common::String &menuId, const Common::String &itemId);
+	Common::String getMenuItemName(int menuId, int itemId);
+	int getMenuItemAction(const Common::String &menuId, const Common::String &itemId);
+	int getMenuItemAction(int menuId, int itemId);
+
 public:
 	MacFontManager *_fontMan;
 	uint32 _mode;
+	Common::Language _language;
 
 	Common::Point _lastClickPos;
 	Common::Point _lastMousePos;
@@ -338,6 +387,10 @@ public:
 	uint32 _colorBlack, _colorGray80, _colorGray88, _colorGrayEE, _colorWhite, _colorGreen, _colorGreen2;
 
 	MacWidget *_hoveredWidget;
+
+	// we use it to indicate whether we are clicking the hilite-able widget.
+	// In list style button mode, we will highlight the subsequent buttons only when we've clicked the hilite-able button initially
+	bool _hilitingWidget;
 
 private:
 	void loadDesktop();
@@ -375,6 +428,7 @@ private:
 	bool _inEditableArea;
 
 	MacPatterns _patterns;
+	MacPatterns _builtinPatterns;
 	byte *_palette;
 	uint _paletteSize;
 
@@ -386,7 +440,7 @@ private:
 	void (*_redrawEngineCallback)(void *engine);
 
 	MacCursorType _tempType;
-	MacCursorType _cursorType;
+	Common::Stack<MacCursorType> _cursorTypeStack;
 	Cursor *_cursor;
 
 	MacWidget *_activeWidget;
@@ -394,7 +448,8 @@ private:
 	PauseToken *_screenCopyPauseToken;
 
 	Common::Array<ZoomBox *> _zoomBoxes;
-	Common::HashMap<uint32, uint> _colorHash;
+	Common::HashMap<uint, uint> _colorHash;
+	Common::HashMap<uint, uint> _invertColorHash;
 
 	Common::Archive *_dataBundle;
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -175,16 +174,23 @@ public:
 	// Tells whether this instance is in the process of executing the byte-code
 	bool    IsBeingRun() const;
 
+	// For each import, find the instance that corresponds to it and save it
+	// in resolved_imports[]. Return whether the function is successful
+	bool    ResolveScriptImports(const ccScript *scri);
+
+	// Using resolved_imports[], resolve the IMPORT fixups
+	// Also change CALLEXT op-codes to CALLAS when they pertain to a script instance 
+	bool    ResolveImportFixups(const ccScript *scri);
+
 protected:
 	bool    _Create(PScript scri, ccInstance *joined);
 	// free the memory associated with the instance
 	void    Free();
 
-	bool    ResolveScriptImports(PScript scri);
-	bool    CreateGlobalVars(PScript scri);
+	bool    CreateGlobalVars(const ccScript *scri);
 	bool    AddGlobalVar(const ScriptVariable &glvar);
 	ScriptVariable *FindGlobalVar(int32_t var_addr);
-	bool    CreateRuntimeCodeFixups(PScript scri);
+	bool    CreateRuntimeCodeFixups(const ccScript *scri);
 	//bool    ReadOperation(ScriptOperation &op, int32_t at_pc);
 
 	// Runtime fixups

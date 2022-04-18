@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -86,6 +85,10 @@ const String &GUIButton::GetText() const {
 	return _text;
 }
 
+bool GUIButton::IsImageButton() const {
+	return Image != 0;
+}
+
 bool GUIButton::IsClippingImage() const {
 	return (Flags & kGUICtrl_Clip) != 0;
 }
@@ -93,22 +96,21 @@ bool GUIButton::IsClippingImage() const {
 void GUIButton::Draw(Bitmap *ds) {
 	bool draw_disabled = !IsGUIEnabled(this);
 
-	check_font(&Font);
 	// if it's "Unchanged when disabled" or "GUI Off", don't grey out
-	if (_G(gui_disabled_style) == GUIDIS_UNCHANGED ||
-	        _G(gui_disabled_style) == GUIDIS_GUIOFF) {
+	if ((GUI::Options.DisabledStyle == kGuiDis_Unchanged) ||
+		(GUI::Options.DisabledStyle == kGuiDis_Off)) {
 		draw_disabled = false;
 	}
 	// TODO: should only change properties in reaction to particular events
 	if (CurrentImage <= 0 || draw_disabled)
 		CurrentImage = Image;
 
-	if (draw_disabled && _G(gui_disabled_style) == GUIDIS_BLACKOUT)
+	if (draw_disabled && (GUI::Options.DisabledStyle == kGuiDis_Blackout))
 		// buttons off when disabled - no point carrying on
 		return;
 
 	// CHECKME: why testing both CurrentImage and Image?
-	if (CurrentImage > 0 && Image > 0)
+	if (CurrentImage > 0 && IsImageButton())
 		DrawImageButton(ds, draw_disabled);
 	// CHECKME: why don't draw frame if no Text? this will make button completely invisible!
 	else if (!_text.IsEmpty())
@@ -143,32 +145,48 @@ void GUIButton::SetText(const String &text) {
 	NotifyParentChanged();
 }
 
+
 bool GUIButton::OnMouseDown() {
-	if (PushedImage > 0)
-		CurrentImage = PushedImage;
+	int new_image = (PushedImage > 0) ? PushedImage : CurrentImage;
+	if (CurrentImage != new_image || !IsImageButton())
+		NotifyParentChanged();
+	CurrentImage = new_image;
 	IsPushed = true;
 	return false;
 }
 
 void GUIButton::OnMouseEnter() {
-	CurrentImage = IsPushed ? PushedImage : MouseOverImage;
+	int new_image = (IsPushed && PushedImage > 0) ? PushedImage :
+		(MouseOverImage > 0) ? MouseOverImage : Image;
+	if ((CurrentImage != new_image) || (IsPushed && !IsImageButton())) {
+		CurrentImage = new_image;
+		NotifyParentChanged();
+	}
 	IsMouseOver = true;
 }
 
 void GUIButton::OnMouseLeave() {
-	CurrentImage = Image;
+	if ((CurrentImage != Image) || (IsPushed && !IsImageButton())) {
+		CurrentImage = Image;
+		NotifyParentChanged();
+	}
 	IsMouseOver = false;
 }
 
 void GUIButton::OnMouseUp() {
+	int new_image;
 	if (IsMouseOver) {
-		CurrentImage = MouseOverImage;
+		new_image = MouseOverImage;
 		if (IsGUIEnabled(this) && IsClickable())
 			IsActivated = true;
 	} else {
-		CurrentImage = Image;
+		new_image = Image;
 	}
 
+	if ((CurrentImage != new_image) || (IsPushed && !IsImageButton())) {
+		CurrentImage = new_image;
+		NotifyParentChanged();
+	}
 	IsPushed = false;
 }
 
@@ -266,8 +284,8 @@ void GUIButton::WriteToSavegame(Stream *out) const {
 
 void GUIButton::DrawImageButton(Bitmap *ds, bool draw_disabled) {
 	// NOTE: the CLIP flag only clips the image, not the text
-	if (IsClippingImage())
-		ds->SetClip(Rect(X, Y, X + Width - 1, Y + Height - 1));
+	if (IsClippingImage() && !GUI::Options.ClipControls)
+		ds->SetClip(RectWH(X, Y, Width, Height));
 	if (_GP(spriteset)[CurrentImage] != nullptr)
 		draw_gui_sprite(ds, CurrentImage, X, Y, true);
 
@@ -293,17 +311,19 @@ void GUIButton::DrawImageButton(Bitmap *ds, bool draw_disabled) {
 		}
 	}
 
-	if ((draw_disabled) && (_G(gui_disabled_style) == GUIDIS_GREYOUT)) {
+	if ((draw_disabled) && (GUI::Options.DisabledStyle == kGuiDis_Greyout)) {
 		// darken the button when disabled
 		GUI::DrawDisabledEffect(ds, RectWH(X, Y,
 		                                   _GP(spriteset)[CurrentImage]->GetWidth(),
 		                                   _GP(spriteset)[CurrentImage]->GetHeight()));
 	}
-	ds->SetClip(Rect(0, 0, ds->GetWidth() - 1, ds->GetHeight() - 1));
 
 	// Don't print Text of (INV) (INVSHR) (INVNS)
 	if (_placeholder == kButtonPlace_None && !_unnamed)
 		DrawText(ds, draw_disabled);
+
+	if (IsClippingImage() && !GUI::Options.ClipControls)
+		ds->ResetClip();
 }
 
 void GUIButton::DrawText(Bitmap *ds, bool draw_disabled) {

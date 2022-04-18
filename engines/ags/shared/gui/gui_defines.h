@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,7 +27,6 @@ namespace AGS3 {
 #define GUIMAGIC          0xcafebeef
 #define MAX_GUIOBJ_EVENTS 10
 #define TEXTWINDOW_PADDING_DEFAULT  3
-//#define MAX_OBJ_EACH_TYPE 251
 
 // TODO: find out more about gui version history
 //=============================================================================
@@ -187,6 +185,23 @@ enum GUITextBoxFlags {
 enum GuiSvgVersion {
 	kGuiSvgVersion_Initial = 0,
 	kGuiSvgVersion_350 = 1
+};
+
+enum GuiDisableStyle {
+	kGuiDis_Greyout = 0,
+	kGuiDis_Blackout = 1,
+	kGuiDis_Unchanged = 2,
+	kGuiDis_Off = 3
+};
+
+// Global GUI options
+struct GuiOptions {
+	// Clip GUI control's contents to the control's rectangle
+	bool ClipControls = true;
+	// How the GUI controls are drawn when the interface is disabled
+	GuiDisableStyle DisabledStyle = kGuiDis_Unchanged;
+	// Whether to graphically outline GUI controls
+	bool OutlineControls = false;
 };
 
 } // namespace Shared

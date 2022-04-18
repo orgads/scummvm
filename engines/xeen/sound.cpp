@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -77,13 +76,13 @@ void Sound::playSound(const Common::String &name, int ccNum, int unused) {
 }
 
 void Sound::playVoice(const Common::String &name, int ccMode) {
+	stopSound();
+	if (!_fxOn)
+		return;
 	File f;
 	bool result = (ccMode == -1) ? f.open(name) : f.open(name, ccMode);
 	if (!result)
 		error("Could not open sound - %s", name.c_str());
-
-	stopSound();
-
 	Common::SeekableReadStream *srcStream = f.readStream(f.size());
 	Audio::SeekableAudioStream *stream = Audio::makeVOCStream(srcStream,
 		Audio::FLAG_UNSIGNED, DisposeAfterUse::YES);
@@ -109,6 +108,7 @@ void Sound::setFxOn(bool isOn) {
 	ConfMan.setBool("sfx_mute", !isOn);
 	if (isOn)
 		ConfMan.setBool("mute", false);
+	ConfMan.flushToDisk();
 
 	g_vm->syncSoundSettings();
 }
@@ -148,6 +148,8 @@ void Sound::loadEffectsData() {
 
 void Sound::playFX(uint effectId) {
 	stopFX();
+	if (!_fxOn)
+		return;
 	loadEffectsData();
 
 	if (effectId < _effectsOffsets.size()) {
@@ -193,7 +195,8 @@ void Sound::playSong(Common::SeekableReadStream &stream) {
 }
 
 void Sound::playSong(const Common::String &name, int param) {
-	_priorMusic = _currentMusic;
+	if (isMusicPlaying() && name == _currentMusic)
+		return;
 	_currentMusic = name;
 
 	Common::File mf;
@@ -209,6 +212,7 @@ void Sound::setMusicOn(bool isOn) {
 	ConfMan.setBool("music_mute", !isOn);
 	if (isOn)
 		ConfMan.setBool("mute", false);
+	ConfMan.flushToDisk();
 
 	g_vm->syncSoundSettings();
 }
@@ -232,6 +236,8 @@ void Sound::updateSoundSettings() {
 	_musicOn = !ConfMan.getBool("music_mute");
 	if (!_musicOn)
 		stopSong();
+	else if (!_currentMusic.empty())
+		playSong(_currentMusic);
 
 	_subtitles = ConfMan.hasKey("subtitles") ? ConfMan.getBool("subtitles") : true;
 	_musicVolume = CLIP(ConfMan.getInt("music_volume"), 0, 255);

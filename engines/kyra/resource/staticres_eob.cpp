@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -84,8 +83,7 @@ bool StaticResource::loadEoB2ShapeData(Common::SeekableReadStream &stream, void 
 bool StaticResource::loadEoBNpcData(Common::SeekableReadStream &stream, void *&ptr, int &size) {
 	size = stream.readUint16BE();
 
-	EoBCharacter *e = new EoBCharacter[size];
-	memset(e, 0, size * sizeof(EoBCharacter));
+	EoBCharacter *e = new EoBCharacter[size]();
 	EoBCharacter *s = e;
 
 	for (int i = 0; i < size; i++, s++) {
@@ -1264,8 +1262,7 @@ void EoBCoreEngine::initSpells() {
 	ec2(monster_causeCriticalWounds);
 	ec2(monster_fleshToStone);
 
-	_spells = new EoBSpell[_numSpells];
-	memset(_spells, 0, _numSpells * sizeof(EoBSpell));
+	_spells = new EoBSpell[_numSpells]();
 
 	for (int i = 0, n = 0; i < _numSpells; i++, n++) {
 		EoBSpell *s = &_spells[i];
@@ -1353,8 +1350,7 @@ void EoBEngine::initStaticResource() {
 
 	const uint8 *ps = _staticres->loadRawData(kEoB1MonsterProperties, temp);
 	temp /= 27;
-	_monsterProps = new EoBMonsterProperty[temp];
-	memset(_monsterProps, 0, temp * sizeof(EoBMonsterProperty));
+	_monsterProps = new EoBMonsterProperty[temp]();
 	// Convert EOB1 (hard coded) monster properties to EOB2 type monster properties.
 	for (int i = 0; i < temp; i++) {
 		EoBMonsterProperty *p = &_monsterProps[i];

@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -32,38 +31,18 @@ const unsigned int Magic = 0xCAFE0000;
 const unsigned int Version = 2;
 const unsigned int SaveMagic = Magic + Version;
 
-IAGSEngine *AGSParallax::_engine;
-int32 AGSParallax::_screenWidth;
-int32 AGSParallax::_screenHeight;
-int32 AGSParallax::_screenColorDepth;
-bool AGSParallax::_enabled;
-Sprite AGSParallax::_sprites[MAX_SPRITES];
-
-
-AGSParallax::AGSParallax() : PluginBase() {
-	_engine = nullptr;
-	_screenWidth = 320;
-	_screenHeight = 200;
-	_screenColorDepth = 32;
-	_enabled = false;
-
-	DLL_METHOD(AGS_GetPluginName);
-	DLL_METHOD(AGS_EngineStartup);
-	DLL_METHOD(AGS_EngineOnEvent);
-}
-
 const char *AGSParallax::AGS_GetPluginName() {
 	return "Parallax plugin recreation";
 }
 
 void AGSParallax::AGS_EngineStartup(IAGSEngine *engine) {
-	_engine = engine;
+	PluginBase::AGS_EngineStartup(engine);
 
 	if (_engine->version < 13)
 		_engine->AbortGame("Engine interface is too old, need newer version of AGS.");
 
-	SCRIPT_METHOD(pxDrawSprite);
-	SCRIPT_METHOD(pxDeleteSprite);
+	SCRIPT_METHOD(pxDrawSprite, AGSParallax::pxDrawSprite);
+	SCRIPT_METHOD(pxDeleteSprite, AGSParallax::pxDeleteSprite);
 
 	_engine->RequestEventHook(AGSE_PREGUIDRAW);
 	_engine->RequestEventHook(AGSE_PRESCREENDRAW);
@@ -147,11 +126,6 @@ void AGSParallax::Draw(bool foreground) {
 
 void AGSParallax::pxDrawSprite(ScriptMethodParams &params) {
 	PARAMS5(int, id, int, x, int, y, int, slot, int, speed);
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%s %d %d %d %d %d\n", "pxDrawSprite", id, x, y, slot, speed);
-	_engine->PrintDebugConsole(buffer);
-#endif
 
 	if ((id < 0) || (id >= MAX_SPRITES))
 		return;
@@ -172,11 +146,6 @@ void AGSParallax::pxDrawSprite(ScriptMethodParams &params) {
 
 void AGSParallax::pxDeleteSprite(ScriptMethodParams &params) {
 	PARAMS1(int, id);
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%s %d\n", "pxDeleteSprite", id);
-	_engine->PrintDebugConsole(buffer);
-#endif
 
 	if ((id < 0) || (id >= MAX_SPRITES))
 		return;

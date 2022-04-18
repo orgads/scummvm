@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,6 +24,8 @@
 
 #include "common/debug.h"
 #include "common/md5.h"
+
+#include "gui/error.h"
 
 #include "scumm/detection_tables.h"
 #include "scumm/scumm-md5.h"
@@ -110,7 +111,7 @@ static bool testGame(const GameSettings *g, const DescMap &fileMD5Map, const Com
 
 // Search for a node with the given "name", inside fslist. Ignores case
 // when performing the matching. The first match is returned, so if you
-// search for "resource" and two nodes "RESOURE and "resource" are present,
+// search for "resource" and two nodes "RESOURCE" and "resource" are present,
 // the first match is used.
 static bool searchFSNode(const Common::FSList &fslist, const Common::String &name, Common::FSNode &result) {
 	for (Common::FSList::const_iterator file = fslist.begin(); file != fslist.end(); ++file) {
@@ -215,7 +216,7 @@ static Common::Language detectLanguage(const Common::FSList &fslist, byte id, Co
 
 	if (searchFSNode(fslist, "chinese_gb16x12.fnt", fontFile)) {
 		debugC(0, kDebugGlobalDetection, "Chinese detected");
-		return Common::ZH_CNA;
+		return Common::ZH_CHN;
 	}
 
 	if (id != GID_CMI && id != GID_DIG) {
@@ -331,6 +332,37 @@ static void computeGameSettingsFromMD5(const Common::FSList &fslist, const GameF
 			// The gameid either matches, or is empty. The latter indicates
 			// a generic entry, currently used for some generic HE settings.
 			if (g->variant == 0 || !scumm_stricmp(md5Entry->variant, g->variant)) {
+
+				// See https://dwatteau.github.io/scummfixes/corrupted-monkey1-ega-files-limitedrungames.html
+				if (g->id == GID_MONKEY_EGA && g->platform == Common::kPlatformDOS) {
+					Common::String md5Disk04, md5Lfl903;
+					Common::FSNode resFile;
+					Common::File f;
+
+					if (searchFSNode(fslist, "903.LFL", resFile))
+						f.open(resFile);
+					if (f.isOpen()) {
+						md5Lfl903 = Common::computeStreamMD5AsString(f, kMD5FileSizeLimit);
+						f.close();
+					}
+
+					if (searchFSNode(fslist, "DISK04.LEC", resFile))
+						f.open(resFile);
+					if (f.isOpen()) {
+						md5Disk04 = Common::computeStreamMD5AsString(f, kMD5FileSizeLimit);
+						f.close();
+					}
+
+					if ((!md5Lfl903.empty() && md5Lfl903 == "54d4e17df08953b483d17416043345b9") ||
+					    (!md5Disk04.empty() && md5Disk04 == "f338cc1d3117c1077a3a9d0c1d70b1e8")) {
+						::GUI::displayErrorDialog(_("This version of Monkey Island can't be played, because Limited Run Games "
+						    "provided corrupted DISK04.LEC and 903.LFL files.\n\nPlease contact their technical support for "
+						    "replacement files, or look online for some guides which can help you recover valid files from "
+						    "the KryoFlux dumps that Limited Run Games also provided."));
+						continue;
+					}
+				}
+
 				// Perfect match found, use it and stop the loop.
 				dr.game = *g;
 				dr.game.gameid = md5Entry->gameid;

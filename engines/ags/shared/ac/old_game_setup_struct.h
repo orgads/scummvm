@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,7 +23,7 @@
 #define AGS_SHARED_AC_OLD_GAME_SETUP_STRUCT_H
 
 #include "ags/shared/ac/character_info.h"       // OldCharacterInfo, CharacterInfo
-#ifdef UNUSED_CODE
+#if defined (OBSOLETE)
 #include "ags/shared/ac/event_block.h"       // EventBlock
 #endif
 #include "ags/shared/ac/interface_element.h"    // InterfaceElement
@@ -37,7 +36,7 @@ namespace AGS3 {
 
 struct OriGameSetupStruct {
 	char              gamename[30];
-	char              options[20];
+	int8              options[20];
 	unsigned char     paluses[256];
 	RGB               defpal[256];
 	InterfaceElement  iface[10];
@@ -47,10 +46,10 @@ struct OriGameSetupStruct {
 	char *globalscript;
 	int               numcharacters;
 	OldCharacterInfo *chars;
-	#ifdef UNUSED_CODE
-	EventBlock        __charcond[50];   // [IKM] 2012-06-22: does not seem to be used anywhere
-	EventBlock        __invcond[100];   // same
-	#endif
+#if defined (OBSOLETE)
+	EventBlock        __charcond[50];
+	EventBlock        __invcond[100];
+#endif
 	ccScript *compiled_script;
 	int               playercharacter;
 	unsigned char     __old_spriteflags[2100];
@@ -72,7 +71,7 @@ struct OriGameSetupStruct {
 
 struct OriGameSetupStruct2 : public OriGameSetupStruct {
 	unsigned char   fontflags[10];
-	char            fontoutline[10];
+	int8            fontoutline[10];
 	int             numgui;
 	WordsDictionary *dict;
 	int             reserved2[8];

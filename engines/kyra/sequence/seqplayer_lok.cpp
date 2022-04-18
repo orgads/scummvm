@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,8 +24,6 @@
 #include "kyra/sound/sound.h"
 
 #include "common/system.h"
-
-#define SEQOP(n, x) { n, &SeqPlayer::x, #x }
 
 namespace Kyra {
 
@@ -39,12 +36,12 @@ SeqPlayer::SeqPlayer(KyraEngine_LoK *vm, OSystem *system) {
 	_res = vm->resource();
 
 	_copyViewOffs = false;
-	_specialBuffer = 0;
+	_specialBuffer = nullptr;
 
 	for (int i = 0; i < ARRAYSIZE(_handShapes); ++i)
-		_handShapes[i] = 0;
+		_handShapes[i] = nullptr;
 	for (int i = 0; i < ARRAYSIZE(_seqMovies); ++i)
-		_seqMovies[i].movie = 0;
+		_seqMovies[i].movie = nullptr;
 }
 
 SeqPlayer::~SeqPlayer() {
@@ -55,12 +52,12 @@ SeqPlayer::~SeqPlayer() {
 			continue;
 		_seqMovies[i].movie->close();
 		delete _seqMovies[i].movie;
-		_seqMovies[i].movie = 0;
+		_seqMovies[i].movie = nullptr;
 	}
 }
 
 uint8 *SeqPlayer::setPanPages(int pageNum, int shape) {
-	uint8 *panPage = 0;
+	uint8 *panPage = nullptr;
 	const uint8 *data = _screen->getCPagePtr(pageNum);
 	uint16 numShapes = READ_LE_UINT16(data);
 	if (shape < numShapes) {
@@ -108,7 +105,7 @@ void SeqPlayer::makeHandShapes() {
 void SeqPlayer::freeHandShapes() {
 	for (int i = 0; i < ARRAYSIZE(_handShapes); ++i) {
 		delete[] _handShapes[i];
-		_handShapes[i] = 0;
+		_handShapes[i] = nullptr;
 	}
 }
 
@@ -119,7 +116,7 @@ void SeqPlayer::s1_wsaOpen() {
 	_seqWsaCurDecodePage = _seqMovies[wsaObj].page = (offscreenDecode == 0) ? 0 : 3;
 	if (!_seqMovies[wsaObj].movie)
 		_seqMovies[wsaObj].movie = _vm->createWSAMovie();
-	_seqMovies[wsaObj].movie->open(_vm->seqWSATable()[wsaObj], offscreenDecode, 0);
+	_seqMovies[wsaObj].movie->open(_vm->seqWSATable()[wsaObj], offscreenDecode, nullptr);
 	_seqMovies[wsaObj].frame = 0;
 	_seqMovies[wsaObj].numFrames = _seqMovies[wsaObj].movie->frames() - 1;
 }
@@ -138,7 +135,7 @@ void SeqPlayer::s1_wsaPlayFrame() {
 	_seqMovies[wsaObj].pos.x = READ_LE_UINT16(_seqData); _seqData += 2;
 	_seqMovies[wsaObj].pos.y = *_seqData++;
 	assert(_seqMovies[wsaObj].movie);
-	_seqMovies[wsaObj].movie->displayFrame(frame, _seqMovies[wsaObj].page, _seqMovies[wsaObj].pos.x, _seqMovies[wsaObj].pos.y, 0, 0, 0);
+	_seqMovies[wsaObj].movie->displayFrame(frame, _seqMovies[wsaObj].page, _seqMovies[wsaObj].pos.x, _seqMovies[wsaObj].pos.y, 0, nullptr, nullptr);
 	_seqMovies[wsaObj].frame = frame;
 }
 
@@ -150,7 +147,7 @@ void SeqPlayer::s1_wsaPlayNextFrame() {
 		frame = 0;
 		_seqMovies[wsaObj].frame = 0;
 	}
-	_seqMovies[wsaObj].movie->displayFrame(frame, _seqMovies[wsaObj].page, _seqMovies[wsaObj].pos.x, _seqMovies[wsaObj].pos.y, 0, 0, 0);
+	_seqMovies[wsaObj].movie->displayFrame(frame, _seqMovies[wsaObj].page, _seqMovies[wsaObj].pos.x, _seqMovies[wsaObj].pos.y, 0, nullptr, nullptr);
 }
 
 void SeqPlayer::s1_wsaPlayPrevFrame() {
@@ -161,7 +158,7 @@ void SeqPlayer::s1_wsaPlayPrevFrame() {
 		frame = _seqMovies[wsaObj].numFrames;
 		_seqMovies[wsaObj].frame = frame;
 	} else {
-		_seqMovies[wsaObj].movie->displayFrame(frame, _seqMovies[wsaObj].page, _seqMovies[wsaObj].pos.x, _seqMovies[wsaObj].pos.y, 0, 0, 0);
+		_seqMovies[wsaObj].movie->displayFrame(frame, _seqMovies[wsaObj].page, _seqMovies[wsaObj].pos.x, _seqMovies[wsaObj].pos.y, 0, nullptr, nullptr);
 	}
 }
 
@@ -214,7 +211,7 @@ void SeqPlayer::s1_loopInc() {
 		_seqData = _seqLoopTable[seqLoop].ptr;
 	} else if (_seqLoopTable[seqLoop].count == 0) {
 		_seqLoopTable[seqLoop].count = 0xFFFF;
-		_seqLoopTable[seqLoop].ptr = 0;
+		_seqLoopTable[seqLoop].ptr = nullptr;
 	} else {
 		--_seqLoopTable[seqLoop].count;
 		_seqData = _seqLoopTable[seqLoop].ptr;
@@ -338,7 +335,7 @@ void SeqPlayer::s1_copyRegion() {
 
 void SeqPlayer::s1_copyRegionSpecial() {
 	static const uint8 colorMap[] = { 0, 0, 0, 0, 0, 12, 12, 0, 0, 0, 0, 0 };
-	const char *copyStr = 0;
+	const char *copyStr = nullptr;
 	if (!_vm->gameFlags().isTalkie)
 		copyStr = "Copyright (c) 1992 Westwood Studios";
 	else
@@ -418,16 +415,22 @@ void SeqPlayer::s1_playEffect() {
 void SeqPlayer::s1_playTrack() {
 	uint8 msg = *_seqData++;
 
-	if (msg == 0 && _vm->gameFlags().platform == Common::kPlatformPC98) {
+	if (_vm->gameFlags().platform != Common::kPlatformMacintosh && _vm->gameFlags().platform != Common::kPlatformAmiga)
+		_vm->delay(3 * _vm->tickLength());
+
+	if (msg == 0 && (_vm->gameFlags().platform != Common::kPlatformDOS && _vm->gameFlags().platform != Common::kPlatformAmiga)) {
 		_sound->haltTrack();
 	} else if (msg == 1) {
 		_sound->beginFadeOut();
 	} else {
 		_sound->haltTrack();
-		if (_vm->gameFlags().platform == Common::kPlatformFMTowns)
-			msg += 2;
-		_sound->playTrack(msg);
+		if (_vm->gameFlags().platform != Common::kPlatformMacintosh && _vm->gameFlags().platform != Common::kPlatformAmiga)
+			_vm->delay(3 * _vm->tickLength());
+		_sound->playTrack(_vm->gameFlags().platform == Common::kPlatformFMTowns ? msg + 2 : msg);
 	}
+
+	if (msg < 2 && (_vm->gameFlags().platform != Common::kPlatformMacintosh && _vm->gameFlags().platform != Common::kPlatformAmiga))
+		_vm->delay(3 * _vm->tickLength());
 }
 
 void SeqPlayer::s1_allocTempBuffer() {
@@ -473,6 +476,8 @@ void SeqPlayer::s1_prefetchVocFile() {
 	_seqData++;
 	// we do not have to prefetch the vocfiles on modern systems
 }
+
+#define SEQOP(n, x) { n, &SeqPlayer::x, #x }
 
 bool SeqPlayer::playSequence(const uint8 *seqData, bool skipSeq) {
 	assert(seqData);
@@ -595,7 +600,7 @@ bool SeqPlayer::playSequence(const uint8 *seqData, bool skipSeq) {
 	_seqWsaCurDecodePage = 0;
 
 	for (int i = 0; i < 20; ++i) {
-		_seqLoopTable[i].ptr = 0;
+		_seqLoopTable[i].ptr = nullptr;
 		_seqLoopTable[i].count = 0xFFFF;
 	}
 
@@ -608,6 +613,7 @@ bool SeqPlayer::playSequence(const uint8 *seqData, bool skipSeq) {
 	memset(revBuffer, 0, sizeof(revBuffer));
 	int charIdx = 0;
 	while (!_seqQuitFlag && !_vm->shouldQuit()) {
+		uint32 startFrameCt = _vm->_system->getMillis();
 		if (skipSeq && _vm->seq_skipSequence()) {
 			while (1) {
 				uint8 code = *_seqData;
@@ -636,9 +642,11 @@ bool SeqPlayer::playSequence(const uint8 *seqData, bool skipSeq) {
 					charIdx++;
 				}
 				charStr[1] = charStr[2] = '\0';
-				if (_vm->gameFlags().lang == Common::JA_JPN)
+				if (_vm->gameFlags().lang == Common::JA_JPN || _vm->gameFlags().lang == Common::ZH_TWN) {
 					charStr[1] = _vm->seqTextsTable()[_seqDisplayedText][++_seqDisplayedChar];
-				if (_vm->gameFlags().lang == Common::HE_ISR) {
+					_screen->printText(charStr, _seqDisplayedTextX, 180, 0xF, 0xC);
+					_seqDisplayedTextX += _screen->getTextWidth(charStr);
+				} else if (_vm->gameFlags().lang == Common::HE_ISR) {
 					_seqDisplayedTextX -= _screen->getCharWidth((uint8)charStr[0]);
 					_screen->printText(revBuffer, _seqDisplayedTextX, 180, 0xF, 0xC);
 				} else {
@@ -666,17 +674,21 @@ bool SeqPlayer::playSequence(const uint8 *seqData, bool skipSeq) {
 			error("Invalid sequence opcode %d called from 0x%.04X", seqCode, (uint16)(_seqData - 1 - seqData));
 		}
 
-		_screen->updateScreen();
+		int extraDelay = _screen->updateScreen();
+		uint32 ct = _system->getMillis();
+		_vm->delayUntil(startFrameCt + extraDelay > ct ? startFrameCt + extraDelay : ct + 8);
 	}
 	delete[] _specialBuffer;
-	_specialBuffer = 0;
+	_specialBuffer = nullptr;
 
 	for (uint i = 0; i < ARRAYSIZE(_seqMovies); ++i) {
 		delete _seqMovies[i].movie;
-		_seqMovies[i].movie = 0;
+		_seqMovies[i].movie = nullptr;
 	}
 	return seqSkippedFlag;
 }
 
+#undef SEQOP
+#undef KYRA_SEQ_SCREENFRAMEDELAY_MIN
 
 } // End of namespace Kyra

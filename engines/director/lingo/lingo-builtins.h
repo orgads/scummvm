@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -44,8 +43,6 @@ void b_tan(int nargs);
 
 void b_chars(int nargs);
 void b_charToNum(int nargs);
-void b_delete(int nargs);
-void b_hilite(int nargs);
 void b_length(int nargs);
 void b_numToChar(int nargs);
 void b_offset(int nargs);
@@ -124,6 +121,7 @@ void b_unLoad(int nargs);
 void b_unLoadCast(int nargs);
 void b_updateStage(int nargs);
 void b_zoomBox(int nargs);
+void b_immediateSprite(int nargs);
 
 void b_abort(int nargs);
 void b_continue(int nargs);
@@ -144,7 +142,6 @@ void b_restart(int nargs);
 void b_shutDown(int nargs);
 void b_startTimer(int nargs);
 void b_return(int nargs);
-void b_returnNumber(int nargs);
 
 void b_closeDA(int nargs);
 void b_closeResFile(int nargs);
@@ -187,26 +184,18 @@ void b_true(int nargs);
 void b_version(int nargs);
 
 void b_cast(int nargs);
-void b_field(int nargs);
 void b_script(int nargs);
 
 void b_numberofchars(int nargs);
 void b_numberofitems(int nargs);
 void b_numberoflines(int nargs);
 void b_numberofwords(int nargs);
-void b_lastcharof(int nargs);
-void b_lastitemof(int nargs);
-void b_lastlineof(int nargs);
-void b_lastwordof(int nargs);
 
 void b_scummvmassert(int nargs);
 void b_scummvmassertequal(int nargs);
 
-// XCOD/XFCN (HyperCard), normally exposed
+// XCMD/XFCN (HyperCard), normally exposed
 void b_getVolumes(int nargs);
-
-// Used in "Eastern Mind", normally a TheEntity
-void b_colorQD(int nargs);
 
 } // End of namespace LB
 

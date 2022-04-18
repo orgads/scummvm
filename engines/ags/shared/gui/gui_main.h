@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +23,8 @@
 #define AGS_SHARED_GUI_GUI_MAIN_H
 
 #include "ags/lib/std/vector.h"
+#include "ags/engine/ac/draw.h"
+#include "ags/shared/ac/common.h"
 #include "ags/shared/ac/common_defines.h" // TODO: split out gui drawing helpers
 #include "ags/shared/gfx/gfx_def.h" // TODO: split out gui drawing helpers
 #include "ags/shared/gui/gui_defines.h"
@@ -205,6 +206,7 @@ public:
 
 namespace GUI {
 extern GuiVersion GameGuiVersion;
+extern GuiOptions Options;
 
 // Draw standart "shading" effect over rectangle
 void DrawDisabledEffect(Bitmap *ds, const Rect &rc);
@@ -215,6 +217,8 @@ void DrawTextAlignedHor(Bitmap *ds, const char *text, int font, color_t text_col
 
 // Mark all existing GUI for redraw
 void MarkAllGUIForUpdate();
+// Mark all GUI which use the given font for redraw
+void MarkForFontUpdate(int font);
 // Mark labels that acts as special text placeholders for redraw
 void MarkSpecialLabelsForUpdate(GUILabelMacro macro);
 // Mark inventory windows for redraw, optionally only ones linked to given character
@@ -223,10 +227,14 @@ void MarkInventoryForUpdate(int char_id, bool is_player);
 // Parses the string and returns combination of label macro flags
 GUILabelMacro FindLabelMacros(const String &text);
 
+// Reads all GUIs and their controls.
+// WARNING: the data is read into the global arrays (guis, guibuts, and so on)
 // TODO: remove is_savegame param after dropping support for old saves
 // because only they use ReadGUI to read runtime GUI data
-HError ReadGUI(std::vector<GUIMain> &guis, Stream *in, bool is_savegame = false);
-void WriteGUI(const std::vector<GUIMain> &guis, Stream *out);
+HError ReadGUI(Stream *in, bool is_savegame = false);
+// Writes all GUIs and their controls.
+// WARNING: the data is written from the global arrays (guis, guibuts, and so on)
+void WriteGUI(Stream *out);
 // Converts legacy GUIVisibility into appropriate GUIMain properties
 void ApplyLegacyVisibility(GUIMain &gui, LegacyGUIVisState vis);
 }
@@ -238,26 +246,12 @@ extern int get_adjusted_spritewidth(int spr);
 extern int get_adjusted_spriteheight(int spr);
 extern bool is_sprite_alpha(int spr);
 
-// This function has distinct implementations in Engine and Editor
-extern void draw_gui_sprite(Shared::Bitmap *ds, int spr, int x, int y, bool use_alpha = true,
-                            Shared::BlendMode blend_mode = Shared::kBlendMode_Alpha);
-
-extern AGS_INLINE int game_to_data_coord(int coord);
-extern AGS_INLINE int data_to_game_coord(int coord);
-extern AGS_INLINE void data_to_game_coords(int *x, int *y);
-extern AGS_INLINE int get_fixed_pixel_size(int pixels);
-
 // Those function have distinct implementations in Engine and Editor
-extern void wouttext_outline(Shared::Bitmap *ds, int xxp, int yyp, int usingfont, color_t text_color, const char *texx);
-extern int wgettextwidth_compensate(Shared::Bitmap *ds, const char *tex, int font);
-extern void check_font(int32_t *fontnum);
+extern int get_text_width_outlined(Shared::Bitmap *ds, const char *tex, int font);
 
-extern void set_our_eip(int eip);
 #define SET_EIP(x) set_our_eip(x);
 extern void set_eip_guiobj(int eip);
 extern int get_eip_guiobj();
-
-extern bool outlineGuiObjects;
 
 } // namespace AGS3
 

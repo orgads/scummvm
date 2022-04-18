@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -90,8 +89,8 @@ public:
 
 	bool isFalling() const;
 
-	CombatProcess *getCombatProcess(); 	// in U8
-	AttackProcess *getAttackProcess();	// in Crusader
+	CombatProcess *getCombatProcess() const; 	// in U8
+	AttackProcess *getAttackProcess() const;	// in Crusader
 	virtual void setInCombat(int activity);
 	virtual void clearInCombat();
 
@@ -229,8 +228,8 @@ public:
 		_lastActivityNo = 0;
 	}
 
-	int32 getLastTimeWasHit() const {
-		return _lastTimeWasHit;
+	int32 getLastTickWasHit() const {
+		return _lastTickWasHit;
 	}
 
 	//! run the given animation
@@ -298,14 +297,17 @@ public:
 
 	bool activeWeaponIsSmall() const;
 
-	// A cru-specific behavior - mostly make "ugh" noises, or explode for some robots.
+	//! A cru-specific behavior - mostly make "ugh" noises, or explode for some robots.
 	void tookHitCru();
+
+	//! Whether this NPC has the controlled actor in their sights (Crusader only)
+	bool canSeeControlledActor(bool forcombat);
 
 	//! Add the x/y/z fire offsets given the current state of the actor
 	void addFireAnimOffsets(int32 &x, int32 &y, int32 &z);
 
-	uint32 getAttackMoveTimeoutFinish() const {
-		return _attackMoveStartTime + _attackMoveTimeout;
+	uint32 getAttackMoveTimeoutFinishFrame() const {
+		return _attackMoveStartFrame + _attackMoveTimeout;
 	}
 
 	uint16 getAttackMoveDodgeFactor() const {
@@ -452,11 +454,11 @@ protected:
 	uint16 _activeWeapon;
 
 	//! Kernel timer last time NPC was hit (only used in Crusader)
-	int32 _lastTimeWasHit;
+	int32 _lastTickWasHit;
 
 	//! The frame certain animations last happened (for Crusader).
 	//! Used in calcualting how hard controlled actor is to hit.
-	uint32 _attackMoveStartTime;
+	uint32 _attackMoveStartFrame;
 	//! The number of frames the above effect lasts for.
 	uint32 _attackMoveTimeout;
 	//! A spread divisor used by shots targeting the controlled actor when they

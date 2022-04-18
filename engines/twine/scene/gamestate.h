@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,10 +24,7 @@
 
 #include "common/savefile.h"
 #include "common/scummsys.h"
-#include "common/util.h"
-#include "twine/holomap.h"
 #include "twine/menu/menu.h"
-#include "twine/scene/actor.h"
 
 namespace TwinE {
 
@@ -78,38 +74,6 @@ private:
 public:
 	GameState(TwinEEngine *engine);
 
-	inline bool inventoryDisabled() const {
-		return hasGameFlag(GAMEFLAG_INVENTORY_DISABLED) != 0;
-	}
-
-	inline bool hasOpenedFunfrocksSafe() const {
-		return hasGameFlag(30) != 0;
-	}
-
-	inline bool hasItem(InventoryItems item) const {
-		return hasGameFlag(item) != 0;
-	}
-
-	inline void giveItem(InventoryItems item) {
-		setGameFlag(item, 1);
-	}
-
-	inline void removeItem(InventoryItems item) {
-		setGameFlag(item, 0);
-	}
-
-	void clearGameFlags() {
-		debug(2, "Clear all gameStateFlags");
-		Common::fill(&_gameStateFlags[0], &_gameStateFlags[NUM_GAME_FLAGS], 0);
-	}
-
-	inline uint8 hasGameFlag(uint8 index) const {
-		debug(6, "Query gameStateFlags[%u]=%u", index, _gameStateFlags[index]);
-		return _gameStateFlags[index];
-	}
-
-	void setGameFlag(uint8 index, uint8 value);
-
 	/**
 	 * LBA engine chapter
 	 *  0: Inprisoned
@@ -129,29 +93,77 @@ public:
 	 * 14: - still looking for plans
 	 * 15: The final showdown - "good day"
 	 */
-	int16 gameChapter = 0;
+	int16 _gameChapter = 0;
 
 	/** Magic ball type index */
-	int16 magicBallIdx = 0;
+	int16 _magicBallIdx = 0;
 	/** Magic ball num bounce */
-	int16 magicBallNumBounce = 0;
+	int16 _magicBallNumBounce = 0;
 	/** Magic ball auxiliar bounce number */
-	int16 magicBallAuxBounce = 0; // magicBallParam
+	int16 _magicBallAuxBounce = 0; // magicBallParam
 	/** Magic level index */
-	int16 magicLevelIdx = 0;
+	int16 _magicLevelIdx = 0;
 
 	/** Store the number of inventory keys */
-	int16 inventoryNumKeys = 0;
+	int16 _inventoryNumKeys = 0;
 	/** Store the number of inventory kashes */
-	int16 inventoryNumKashes = 0;
+	int16 _inventoryNumKashes = 0;
 	/** Store the number of inventory clover leafs boxes */
-	int16 inventoryNumLeafsBox = 0;
+	int16 _inventoryNumLeafsBox = 0;
 	/** Store the number of inventory clover leafs */
-	int16 inventoryNumLeafs = 0;
+	int16 _inventoryNumLeafs = 0;
 	/** Store the number of inventory magic points */
-	int16 inventoryMagicPoints = 0;
+	int16 _inventoryMagicPoints = 0;
 	/** Store the number of gas */
-	int16 inventoryNumGas = 0;
+	int16 _inventoryNumGas = 0;
+
+	/** Its using FunFrock Sabre */
+	bool _usingSabre = false;
+
+	/**
+	 * Inventory used flags
+	 * 0 means never used, 1 means already used and automatic re-use
+	 */
+	uint8 _inventoryFlags[NUM_INVENTORY_ITEMS];
+
+	uint8 _holomapFlags[NUM_LOCATIONS]; // GV14
+
+	char _sceneName[30] {};
+
+	TextId _gameChoices[10];  // inGameMenuData
+	int32 _numChoices = 0;   // numOfOptionsInChoice
+	TextId _choiceAnswer = TextId::kNone; // inGameMenuAnswer
+
+	inline bool inventoryDisabled() const {
+		return hasGameFlag(GAMEFLAG_INVENTORY_DISABLED) != 0;
+	}
+
+	inline bool hasOpenedFunfrocksSafe() const {
+		return hasGameFlag(30) != 0;
+	}
+
+	// Arrived on the hamalayi with the rebels
+	inline bool hasArrivedHamalayi() const {
+		return hasGameFlag(90) != 0;
+	}
+
+	inline bool hasItem(InventoryItems item) const {
+		return hasGameFlag(item) != 0;
+	}
+
+	inline void giveItem(InventoryItems item) {
+		setGameFlag(item, 1);
+	}
+
+	inline void removeItem(InventoryItems item) {
+		setGameFlag(item, 0);
+	}
+
+	void clearGameFlags();
+
+	uint8 hasGameFlag(uint8 index) const;
+
+	void setGameFlag(uint8 index, uint8 value);
 
 	int16 setKeys(int16 value);
 	int16 setGas(int16 value);
@@ -167,23 +179,6 @@ public:
 	void addMagicPoints(int16 val);
 	void addLeafs(int16 val);
 	void addLeafBoxes(int16 val);
-
-	/** Its using FunFrock Sabre */
-	bool usingSabre = false;
-
-	/**
-	 * Inventory used flags
-	 * 0 means never used, 1 means already used and automatic re-use
-	 */
-	uint8 inventoryFlags[NUM_INVENTORY_ITEMS];
-
-	uint8 holomapFlags[NUM_LOCATIONS]; // GV14
-
-	char sceneName[30] {};
-
-	TextId gameChoices[10];  // inGameMenuData
-	int32 numChoices = 0;   // numOfOptionsInChoice
-	TextId choiceAnswer = TextId::kNone; // inGameMenuAnswer
 
 	/** Initialize all engine variables */
 	void initEngineVars();

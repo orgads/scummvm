@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -34,6 +33,7 @@
 
 namespace Graphics {
 struct Surface;
+class FrameLimiter;
 }
 
 namespace Common {
@@ -79,7 +79,6 @@ class ScriptedMovie;
 class ShakeEffect;
 class RotationEffect;
 class Transition;
-class FrameLimiter;
 struct NodeData;
 struct Myst3GameDescription;
 
@@ -89,9 +88,9 @@ class Myst3Engine : public Engine {
 
 protected:
 	// Engine APIs
-	virtual Common::Error run() override;
-	virtual void syncSoundSettings() override;
-	virtual void pauseEngineIntern(bool pause) override;
+	Common::Error run() override;
+	void syncSoundSettings() override;
+	void pauseEngineIntern(bool pause) override;
 
 public:
 	GameState *_state;
@@ -212,7 +211,7 @@ private:
 	// Used by Voltaic's spinning gears
 	RotationEffect *_rotationEffect;
 
-	FrameLimiter *_frameLimiter;
+	Graphics::FrameLimiter *_frameLimiter;
 	Transition *_transition;
 
 	bool _inputSpacePressed;

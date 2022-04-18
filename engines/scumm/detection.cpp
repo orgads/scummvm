@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -83,7 +82,7 @@ public:
 
 	PlainGameList getSupportedGames() const override;
 	PlainGameDescriptor findGame(const char *gameid) const override;
-	DetectedGames detectGames(const Common::FSList &fslist) const override;
+	DetectedGames detectGames(const Common::FSList &fslist) override;
 
 	const ExtraGuiOptions getExtraGuiOptions(const Common::String &target) const override;
 };
@@ -122,10 +121,10 @@ static Common::String generatePreferredTarget(const DetectorResult &x) {
 	return res;
 }
 
-DetectedGames ScummMetaEngineDetection::detectGames(const Common::FSList &fslist) const {
+DetectedGames ScummMetaEngineDetection::detectGames(const Common::FSList &fslist) {
 	DetectedGames detectedGames;
 	Common::List<DetectorResult> results;
-	::detectGames(fslist, results, 0);
+	::detectGames(fslist, results, nullptr);
 
 	for (Common::List<DetectorResult>::iterator
 	          x = results.begin(); x != results.end(); ++x) {
@@ -193,22 +192,70 @@ static const ExtraGuiOption fmtownsTrimTo200 = {
 	false
 };
 
+static const ExtraGuiOption macV3LowQualityMusic = {
+	_s("Play simplified music"),
+	_s("This music was presumably intended for low-end Macs, and uses only one channel."),
+	"mac_v3_low_quality_music",
+	false
+};
+
+static const ExtraGuiOption smoothScrolling = {
+	_s("Enable smooth scrolling"),
+	_s("(instead of the normal 8-pixels steps scrolling)"),
+	"smooth_scroll",
+	true
+};
+
+static const ExtraGuiOption enableEnhancements {
+	_s("Enable game-specific enhancements"),
+	_s("Allow ScummVM to make small enhancements to the game, usually based on other versions of the same game."),
+	"enable_enhancements",
+	true
+};
 
 const ExtraGuiOptions ScummMetaEngineDetection::getExtraGuiOptions(const Common::String &target) const {
 	ExtraGuiOptions options;
 	// Query the GUI options
 	const Common::String guiOptionsString = ConfMan.get("guioptions", target);
+	const Common::String gameid = ConfMan.get("gameid", target);
+	const Common::String extra = ConfMan.get("extra", target);
 	const Common::String guiOptions = parseGameGUIOptions(guiOptionsString);
+	const Common::Platform platform = Common::parsePlatform(ConfMan.get("platform", target));
 
-	if (target.empty() || ConfMan.get("gameid", target) == "comi") {
+	if (target.empty() ||
+		gameid == "monkey" ||
+		gameid == "monkey2" ||
+		gameid == "samnmax" ||
+		gameid == "loom" ||
+		(gameid == "indy3" && platform == Common::kPlatformMacintosh && extra != "Steam") ||
+		gameid == "atlantis" ||
+		gameid == "tentacle") {
+		options.push_back(enableEnhancements);
+	}
+
+	if (target.empty() || gameid == "comi") {
 		options.push_back(comiObjectLabelsOption);
 	}
-	if (target.empty() || Common::parsePlatform(ConfMan.get("platform", target)) == Common::kPlatformNES) {
+	if (target.empty() || platform == Common::kPlatformNES) {
 		options.push_back(mmnesObjectLabelsOption);
 	}
-	if (target.empty() || (ConfMan.get("platform", target) == "fmtowns" && guiOptions.contains(GUIO_TRIM_FMTOWNS_TO_200_PIXELS))) {
-		options.push_back(fmtownsTrimTo200);
+	if (target.empty() || platform == Common::kPlatformFMTowns) {
+		options.push_back(smoothScrolling);
+		if (guiOptions.contains(GUIO_TRIM_FMTOWNS_TO_200_PIXELS))
+			options.push_back(fmtownsTrimTo200);
 	}
+
+	// The Steam Mac versions of Loom and Indy 3 are more akin to the VGA
+	// DOS versions, and that's how ScummVM usually sees them. But that
+	// rebranding does not happen until later.
+
+	// The low quality music in Loom was probably intended for low-end
+	// Macs. It plays only one channel, instead of three.
+
+	if (target.empty() || (gameid == "loom" && platform == Common::kPlatformMacintosh && extra != "Steam")) {
+		options.push_back(macV3LowQualityMusic);
+	}
+
 	return options;
 }
 

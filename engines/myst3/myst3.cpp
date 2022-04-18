@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -57,6 +56,7 @@
 #include "graphics/conversion.h"
 #include "graphics/renderer.h"
 #include "graphics/yuv_to_rgb.h"
+#include "graphics/framelimiter.h"
 
 #include "math/vector2d.h"
 
@@ -64,19 +64,19 @@ namespace Myst3 {
 
 Myst3Engine::Myst3Engine(OSystem *syst, const Myst3GameDescription *version) :
 		Engine(syst), _system(syst), _gameDescription(version),
-		_db(0), _scriptEngine(0),
-		_state(0), _node(0), _scene(0), _archiveNode(0),
-		_cursor(0), _inventory(0), _gfx(0), _menu(0),
-		_rnd(0), _sound(0), _ambient(0),
+		_db(nullptr), _scriptEngine(nullptr),
+		_state(nullptr), _node(nullptr), _scene(nullptr), _archiveNode(nullptr),
+		_cursor(nullptr), _inventory(nullptr), _gfx(nullptr), _menu(nullptr),
+		_rnd(nullptr), _sound(nullptr), _ambient(nullptr),
 		_inputSpacePressed(false), _inputEnterPressed(false),
 		_inputEscapePressed(false), _inputTildePressed(false),
 		_inputEscapePressedNotConsumed(false),
 		_interactive(false),
-		_menuAction(0), _projectorBackground(0),
-		_shakeEffect(0), _rotationEffect(0),
+		_menuAction(0), _projectorBackground(nullptr),
+		_shakeEffect(nullptr), _rotationEffect(nullptr),
 		_backgroundSoundScriptLastRoomId(0),
 		_backgroundSoundScriptLastAgeId(0),
-		_transition(0), _frameLimiter(0), _inventoryManualHide(false) {
+		_transition(nullptr), _frameLimiter(nullptr), _inventoryManualHide(false) {
 
 	// Add subdirectories to the search path to allow running from a full HDD install
 	const Common::FSNode gameDataDir(ConfMan.get("path"));
@@ -127,8 +127,18 @@ Myst3Engine::~Myst3Engine() {
 bool Myst3Engine::hasFeature(EngineFeature f) const {
 	// The TinyGL renderer does not support arbitrary resolutions for now
 	Common::String rendererConfig = ConfMan.get("renderer");
-	Graphics::RendererType desiredRendererType = Graphics::parseRendererTypeCode(rendererConfig);
-	Graphics::RendererType matchingRendererType = Graphics::getBestMatchingAvailableRendererType(desiredRendererType);
+	Graphics::RendererType desiredRendererType = Graphics::Renderer::parseTypeCode(rendererConfig);
+	Graphics::RendererType matchingRendererType = Graphics::Renderer::getBestMatchingAvailableType(desiredRendererType,
+#if defined(USE_OPENGL_GAME)
+			Graphics::kRendererTypeOpenGL |
+#endif
+#if defined(USE_OPENGL_SHADERS)
+			Graphics::kRendererTypeOpenGLShaders |
+#endif
+#if defined(USE_TINYGL)
+			Graphics::kRendererTypeTinyGL |
+#endif
+			0);
 	bool softRenderer = matchingRendererType == Graphics::kRendererTypeTinyGL;
 
 	return
@@ -148,7 +158,7 @@ Common::Error Myst3Engine::run() {
 	_gfx->init();
 	_gfx->clear();
 
-	_frameLimiter = new FrameLimiter(_system, ConfMan.getInt("engine_speed"));
+	_frameLimiter = new Graphics::FrameLimiter(_system, ConfMan.getInt("engine_speed"));
 	_sound = new Sound(this);
 	_ambient = new Ambient(this);
 	_rnd = new Common::RandomSource("sprint");
@@ -222,7 +232,7 @@ Common::Error Myst3Engine::run() {
 
 bool Myst3Engine::addArchive(const Common::String &file, bool mandatory) {
 	Archive *archive = new Archive();
-	bool opened = archive->open(file.c_str(), 0);
+	bool opened = archive->open(file.c_str(), nullptr);
 
 	if (opened) {
 		_archivesCommon.push_back(archive);
@@ -399,7 +409,7 @@ HotSpot *Myst3Engine::getHoveredHotspot(NodePtr nodeData, uint16 var) {
 		}
 	}
 
-	return 0;
+	return nullptr;
 }
 
 void Myst3Engine::updateCursor() {
@@ -1066,7 +1076,7 @@ void Myst3Engine::loadMovie(uint16 id, uint16 condition, bool resetCond, bool lo
 		movie = new ScriptedMovie(this, id);
 	} else {
 		movie = new ProjectorMovie(this, id, _projectorBackground);
-		_projectorBackground = 0;
+		_projectorBackground = nullptr;
 		_state->setMovieUseBackground(0);
 	}
 
@@ -1525,7 +1535,7 @@ Common::Error Myst3Engine::loadGameState(Common::String fileName, TransitionType
 	}
 
 	if (saveFile->err()) {
-		warning("An error occured when reading '%s'", fileName.c_str());
+		warning("An error occrured when reading '%s'", fileName.c_str());
 		return Common::kReadingFailed;
 	}
 
@@ -1601,7 +1611,7 @@ Common::Error Myst3Engine::saveGameState(const Common::String &desc, const Graph
 	}
 
 	if (save->err()) {
-		warning("An error occured when writing '%s'", fileName.c_str());
+		warning("An error occurred when writing '%s'", fileName.c_str());
 		return Common::kWritingFailed;
 	}
 

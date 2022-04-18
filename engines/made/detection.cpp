@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,12 +24,14 @@
 
 #include "made/detection.h"
 
+#include "common/config-manager.h"
+
 static const PlainGameDescriptor madeGames[] = {
 	{"manhole", "The Manhole"},
 	{"rtz", "Return to Zork"},
 	{"lgop2", "Leather Goddesses of Phobos 2"},
 	{"rodney", "Rodney's Funscreen"},
-	{0, 0}
+	{nullptr, nullptr}
 };
 
 #include "made/detection_tables.h"
@@ -52,8 +53,28 @@ public:
 		return "MADE Engine (C) Activision";
 	}
 
+	const ExtraGuiOptions getExtraGuiOptions(const Common::String &target) const override;
+
 	ADDetectedGame fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const override;
 };
+
+static const ExtraGuiOption introMusicDigital = {
+	_s("Play a digital soundtrack during the opening movie"),
+	_s("If selected, the game will use a digital soundtrack during the introduction. Otherwise, it will play MIDI music."),
+	"intro_music_digital",
+	true
+};
+
+const ExtraGuiOptions MadeMetaEngineDetection::getExtraGuiOptions(const Common::String &target) const {
+	const Common::String gameid = ConfMan.get("gameid", target);
+	const Common::String extra = ConfMan.get("extra", target);
+
+	ExtraGuiOptions options;
+	if (target.empty() || (gameid == "rtz" && extra.contains("CD"))) {
+		options.push_back(introMusicDigital);
+	}
+	return options;
+}
 
 ADDetectedGame MadeMetaEngineDetection::fallbackDetect(const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const {
 	// Set the default values for the fallback descriptor's ADGameDescription part.

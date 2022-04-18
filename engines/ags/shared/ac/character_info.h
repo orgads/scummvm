@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,14 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef AGS_SHARED_AC_CHARACTER_INFO_H
 #define AGS_SHARED_AC_CHARACTER_INFO_H
 
+#include "ags/lib/std/vector.h"
 #include "ags/shared/ac/common_defines.h" // constants
 
 namespace AGS3 {
@@ -62,8 +62,10 @@ using namespace AGS; // FIXME later
 #define FOLLOW_ALWAYSONTOP  0x7ffe
 
 struct CharacterExtras; // forward declaration
-// remember - if change this struct, also change AGSDEFNS.SH and
-// plugin header file struct
+// IMPORTANT: exposed to script API, and plugin API as AGSCharacter!
+// For older script compatibility the struct also has to maintain its size;
+// do not extend or change existing fields, unless planning breaking compatibility.
+// Use CharacterExtras struct for any extensions
 struct CharacterInfo {
 	int   defview;
 	int   talkview;
@@ -86,7 +88,7 @@ struct CharacterInfo {
 	short pic_yoffs; // this is fixed in screen coordinates
 	int   z;    // z-location, for flying etc
 	int   walkwait;
-	short speech_anim_speed, reserved1;  // only 1 reserved left!!
+	short speech_anim_speed, idle_anim_speed;
 	short blocking_width, blocking_height;
 	int   index_id;  // used for object functions to know the id
 	short pic_xoffs; // this is fixed in screen coordinates
@@ -98,7 +100,7 @@ struct CharacterInfo {
 	short actx, acty;
 	char  name[40];
 	char  scrname[MAX_SCRIPT_NAME_LEN];
-	char  on;
+	int8  on;
 
 	int get_effective_y();   // return Y - Z
 	int get_baseline();      // return baseline, or Y if not set
@@ -119,14 +121,14 @@ struct CharacterInfo {
 	//
 	// [IKM] 2016-08-26: these methods should NOT be in CharacterInfo class,
 	// bit in distinct runtime character class!
-	void UpdateMoveAndAnim(int &char_index, CharacterExtras *chex, int &numSheep, int *followingAsSheep);
+	void UpdateMoveAndAnim(int &char_index, CharacterExtras *chex, std::vector<int> &followingAsSheep);
 	void UpdateFollowingExactlyCharacter();
 
 	int  update_character_walking(CharacterExtras *chex);
 	void update_character_moving(int &char_index, CharacterExtras *chex, int &doing_nothing);
 	int  update_character_animating(int &char_index, int &doing_nothing);
 	void update_character_idle(CharacterExtras *chex, int &doing_nothing);
-	void update_character_follower(int &char_index, int &numSheep, int *followingAsSheep, int &doing_nothing);
+	void update_character_follower(int &char_index, std::vector<int> &followingAsSheep, int &doing_nothing);
 
 	void ReadFromFile(Shared::Stream *in);
 	void WriteToFile(Shared::Stream *out);
@@ -154,7 +156,7 @@ struct OldCharacterInfo {
 	short actx, acty;
 	char  name[30];
 	char  scrname[16];
-	char  on;
+	int8  on;
 };
 
 #define COPY_CHAR_VAR(name) ci->name = oci->name

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -103,12 +102,13 @@ void GraphicsDriverBase::OnScalingChanged() {
 	_scaling.Init(_srcRect.GetSize(), _dstRect);
 }
 
-void GraphicsDriverBase::OnSetNativeSize(const Size &src_size) {
-	_srcRect = RectWH(0, 0, src_size.Width, src_size.Height);
+void GraphicsDriverBase::OnSetNativeRes(const GraphicResolution &native_res) {
+	_srcRect = RectWH(0, 0, native_res.Width, native_res.Height);
+	_srcColorDepth = native_res.ColorDepth;
 	OnScalingChanged();
 
 	// Adjust default sprite batch making it comply to native size
-	_spriteBatchDesc[0].Viewport = RectWH(src_size);
+	_spriteBatchDesc[0].Viewport = RectWH(native_res);
 	InitSpriteBatch(_actSpriteBatch, _spriteBatchDesc[_actSpriteBatch]);
 }
 
@@ -292,7 +292,7 @@ __inline void get_pixel_if_not_transparent32(const unsigned int *pixel, unsigned
 	( (((a) & 0xFF) << _vmem_a_shift_32) | (((r) & 0xFF) << _vmem_r_shift_32) | (((g) & 0xFF) << _vmem_g_shift_32) | (((b) & 0xFF) << _vmem_b_shift_32) )
 
 
-void VideoMemoryGraphicsDriver::BitmapToVideoMem(const Bitmap *bitmap, const bool has_alpha, const TextureTile *tile, const VideoMemDDB *target,
+void VideoMemoryGraphicsDriver::BitmapToVideoMem(const Bitmap *bitmap, const bool has_alpha, const TextureTile *tile,
         char *dst_ptr, const int dst_pitch, const bool usingLinearFiltering) {
 	const int src_depth = bitmap->GetColorDepth();
 	bool lastPixelWasTransparent = false;
@@ -409,7 +409,7 @@ void VideoMemoryGraphicsDriver::BitmapToVideoMem(const Bitmap *bitmap, const boo
 	}
 }
 
-void VideoMemoryGraphicsDriver::BitmapToVideoMemOpaque(const Bitmap *bitmap, const bool has_alpha, const TextureTile *tile, const VideoMemDDB *target,
+void VideoMemoryGraphicsDriver::BitmapToVideoMemOpaque(const Bitmap *bitmap, const bool has_alpha, const TextureTile *tile,
         char *dst_ptr, const int dst_pitch) {
 	const int src_depth = bitmap->GetColorDepth();
 	for (int y = 0; y < tile->height; y++) {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -124,6 +123,7 @@ void MonsterStruct::synchronize(Common::SeekableReadStream &s) {
 	_gold = s.readUint16LE();
 	_gems = s.readByte();
 	_itemDrop = s.readByte();
+	assert(_itemDrop >= 0 && _itemDrop <= 20);
 	_flying = s.readByte() != 0;
 	_imageNumber = s.readByte();
 	_loopAnimation = s.readByte();
@@ -149,8 +149,12 @@ void MonsterData::synchronize(Common::SeekableReadStream &s) {
 	clear();
 
 	MonsterStruct spr;
+	int i = 0;
 	while (!s.eos()) {
 		spr.synchronize(s);
+		if (Common::RU_RUS == g_vm->getLanguage() && GType_Clouds == g_vm->getGameID()) {
+			spr._name = Res.CLOUDS_MONSTERS[i++];
+		}
 		push_back(spr);
 	}
 }
@@ -897,8 +901,7 @@ void Map::load(int mapId) {
 		} else {
 			musName = "outdoors.m";
 		}
-		if (musName != sound._currentMusic)
-			sound.playSong(musName, 207);
+		sound.playSong(musName, 207);
 
 		// Load sprite sets needed for scene rendering
 		_groundSprites.load("water.out");
@@ -934,8 +937,7 @@ void Map::load(int mapId) {
 		} else {
 			musName = Res.MUSIC_FILES1[MUS_INDEXES[_mazeData->_wallKind]];
 		}
-		if (musName != sound._currentMusic)
-			sound.playSong(musName, 207);
+		sound.playSong(musName, 207);
 
 		// Load sprite sets needed for scene rendering
 		_skySprites[1].load(Common::String::format("%s.sky",
@@ -1451,7 +1453,10 @@ Common::String Map::getMazeName(int mapId, int ccNum) {
 		ccNum = g_vm->_files->_ccNum;
 
 	if (g_vm->getGameID() == GType_Clouds) {
-		return Res._cloudsMapNames[mapId];
+		if (Common::RU_RUS == g_vm->getLanguage()) {
+			return Res.CLOUDS_MAP_NAMES[mapId];
+		} else
+			return Res._cloudsMapNames[mapId];
 	} else {
 		Common::String txtName = Common::String::format("%s%c%03d.txt",
 			ccNum ? "dark" : "xeen", mapId >= 100 ? 'x' : '0', mapId);

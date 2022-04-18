@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,11 +15,11 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
+#include "ags/lib/std/algorithm.h"
 #include "ags/lib/alfont/alfont.h"
 #include "ags/lib/std/vector.h"
 #include "ags/shared/ac/common.h" // set_our_eip
@@ -34,28 +34,17 @@
 
 namespace AGS3 {
 
-#define STD_BUFFER_SIZE 3000
-
 using namespace AGS::Shared;
-
-namespace AGS {
-namespace Shared {
-
-Font::Font()
-	: Renderer(nullptr)
-	, Renderer2(nullptr) {
-}
-
-} // Common
-} // AGS
 
 FontInfo::FontInfo()
 	: Flags(0)
-	, SizePt(0)
+	, Size(0)
 	, SizeMultiplier(1)
 	, Outline(FONT_OUTLINE_NONE)
 	, YOffset(0)
-	, LineSpacing(0) {
+	, LineSpacing(0)
+	, AutoOutlineStyle(kSquared)
+	, AutoOutlineThickness(0) {
 }
 
 
@@ -80,7 +69,37 @@ bool font_first_renderer_loaded() {
 }
 
 bool is_font_loaded(size_t fontNumber) {
-	return fontNumber < _GP(fonts).size() && _GP(fonts)[fontNumber].Renderer != nullptr;
+	return fontNumber < _GP(fonts).size() && _GP(fonts)[fontNumber].Renderer != nullptr;;
+}
+
+// Finish font's initialization
+static void font_post_init(size_t fontNumber) {
+	Font &font = _GP(fonts)[fontNumber];
+	if (font.Metrics.Height == 0) {
+		// There is no explicit method for getting maximal possible height of any
+		// random font renderer at the moment; the implementations of GetTextHeight
+		// are allowed to return varied results depending on the text parameter.
+		// We use special line of text to get more or less reliable font height.
+		const char *height_test_string = "ZHwypgfjqhkilIK";
+		int height = font.Renderer->GetTextHeight(height_test_string, fontNumber);
+		font.Metrics.Height = height;
+		font.Metrics.RealHeight = height;
+	}
+	// Use either nominal or real pixel height to define font's logical height
+	// and default linespacing; logical height = nominal height is compatible with the old games
+	font.Metrics.CompatHeight = (font.Info.Flags & FFLG_REPORTNOMINALHEIGHT) != 0 ?
+		font.Metrics.Height : font.Metrics.RealHeight;
+
+	if (font.Info.Outline != FONT_OUTLINE_AUTO) {
+		font.Info.AutoOutlineThickness = 0;
+	}
+
+	// If there's no explicit linespacing property set, then calculate
+	// default linespacing from the font height + outline thickness.
+	font.LineSpacingCalc = font.Info.LineSpacing;
+	if (font.Info.LineSpacing == 0) {
+		font.LineSpacingCalc = font.Metrics.CompatHeight + 2 * font.Info.AutoOutlineThickness;
+	}
 }
 
 IAGSFontRenderer *font_replace_renderer(size_t fontNumber, IAGSFontRenderer *renderer) {
@@ -89,6 +108,7 @@ IAGSFontRenderer *font_replace_renderer(size_t fontNumber, IAGSFontRenderer *ren
 	IAGSFontRenderer *oldRender = _GP(fonts)[fontNumber].Renderer;
 	_GP(fonts)[fontNumber].Renderer = renderer;
 	_GP(fonts)[fontNumber].Renderer2 = nullptr;
+	font_post_init(fontNumber);
 	return oldRender;
 }
 
@@ -104,6 +124,19 @@ bool font_supports_extended_characters(size_t fontNumber) {
 	return _GP(fonts)[fontNumber].Renderer->SupportsExtendedCharacters(fontNumber);
 }
 
+const char *get_font_name(size_t fontNumber) {
+	if (fontNumber >= _GP(fonts).size() || !_GP(fonts)[fontNumber].Renderer2)
+		return "";
+	const char *name = _GP(fonts)[fontNumber].Renderer2->GetName(fontNumber);
+	return name ? name : "";
+}
+
+int get_font_flags(size_t fontNumber) {
+	if (fontNumber >= _GP(fonts).size())
+		return 0;
+	return _GP(fonts)[fontNumber].Info.Flags;
+}
+
 void ensure_text_valid_for_font(char *text, size_t fontnum) {
 	if (fontnum >= _GP(fonts).size() || !_GP(fonts)[fontnum].Renderer)
 		return;
@@ -116,16 +149,10 @@ int get_font_scaling_mul(size_t fontNumber) {
 	return _GP(fonts)[fontNumber].Info.SizeMultiplier;
 }
 
-int wgettextwidth(const char *texx, size_t fontNumber) {
+int get_text_width(const char *texx, size_t fontNumber) {
 	if (fontNumber >= _GP(fonts).size() || !_GP(fonts)[fontNumber].Renderer)
 		return 0;
 	return _GP(fonts)[fontNumber].Renderer->GetTextWidth(texx, fontNumber);
-}
-
-int wgettextheight(const char *text, size_t fontNumber) {
-	if (fontNumber >= _GP(fonts).size() || !_GP(fonts)[fontNumber].Renderer)
-		return 0;
-	return _GP(fonts)[fontNumber].Renderer->GetTextHeight(text, fontNumber);
 }
 
 int get_font_outline(size_t font_number) {
@@ -134,46 +161,78 @@ int get_font_outline(size_t font_number) {
 	return _GP(fonts)[font_number].Info.Outline;
 }
 
-void set_font_outline(size_t font_number, int outline_type) {
+int get_font_outline_thickness(size_t font_number) {
+	if (font_number >= _GP(fonts).size())
+		return 0;
+	return _GP(fonts)[font_number].Info.AutoOutlineThickness;
+}
+
+void set_font_outline(size_t font_number, int outline_type,
+		enum FontInfo::AutoOutlineStyle style, int thickness) {
 	if (font_number >= _GP(fonts).size())
 		return;
 	_GP(fonts)[font_number].Info.Outline = outline_type;
+	_GP(fonts)[font_number].Info.AutoOutlineStyle = style;
+	_GP(fonts)[font_number].Info.AutoOutlineThickness = thickness;
 }
 
-int getfontheight(size_t fontNumber) {
+int get_font_height(size_t fontNumber) {
 	if (fontNumber >= _GP(fonts).size() || !_GP(fonts)[fontNumber].Renderer)
 		return 0;
-	// There is no explicit method for getting maximal possible height of any
-	// random font renderer at the moment; the implementations of GetTextHeight
-	// are allowed to return varied results depending on the text parameter.
-	// We use special line of text to get more or less reliable font height.
-	const char *height_test_string = "ZHwypgfjqhkilIK";
-	return _GP(fonts)[fontNumber].Renderer->GetTextHeight(height_test_string, fontNumber);
+	return _GP(fonts)[fontNumber].Metrics.CompatHeight;
 }
 
-int getfontlinespacing(size_t fontNumber) {
+int get_font_height_outlined(size_t fontNumber) {
+	if (fontNumber >= _GP(fonts).size() || !_GP(fonts)[fontNumber].Renderer)
+		return 0;
+	return _GP(fonts)[fontNumber].Metrics.CompatHeight
+		+ 2 * _GP(fonts)[fontNumber].Info.AutoOutlineThickness;
+}
+
+int get_font_surface_height(size_t fontNumber) {
+	if (fontNumber >= _GP(fonts).size() || !_GP(fonts)[fontNumber].Renderer)
+		return 0;
+	return _GP(fonts)[fontNumber].Metrics.RealHeight;
+}
+
+int get_font_linespacing(size_t fontNumber) {
 	if (fontNumber >= _GP(fonts).size())
 		return 0;
-	int spacing = _GP(fonts)[fontNumber].Info.LineSpacing;
-	// If the spacing parameter is not provided, then return default
-	// spacing, that is font's height.
-	return spacing > 0 ? spacing : getfontheight(fontNumber);
+	return _GP(fonts)[fontNumber].LineSpacingCalc;
 }
 
-bool use_default_linespacing(size_t fontNumber) {
-	if (fontNumber >= _GP(fonts).size())
-		return false;
-	return _GP(fonts)[fontNumber].Info.LineSpacing == 0;
+void set_font_linespacing(size_t fontNumber, int spacing) {
+	if (fontNumber < _GP(fonts).size()) {
+		_GP(fonts)[fontNumber].Info.Flags &= ~FFLG_DEFLINESPACING;
+		_GP(fonts)[fontNumber].Info.LineSpacing = spacing;
+		_GP(fonts)[fontNumber].LineSpacingCalc = spacing;
+	}
+}
+
+int get_text_lines_height(size_t fontNumber, size_t numlines) {
+	if (fontNumber >= _GP(fonts).size() || numlines == 0)
+		return 0;
+	return _GP(fonts)[fontNumber].LineSpacingCalc * (numlines - 1) +
+		(_GP(fonts)[fontNumber].Metrics.CompatHeight +
+			2 * _GP(fonts)[fontNumber].Info.AutoOutlineThickness);
+}
+
+int get_text_lines_surf_height(size_t fontNumber, size_t numlines) {
+	if (fontNumber >= _GP(fonts).size() || numlines == 0)
+		return 0;
+	return _GP(fonts)[fontNumber].LineSpacingCalc * (numlines - 1) +
+		(_GP(fonts)[fontNumber].Metrics.RealHeight +
+			2 * _GP(fonts)[fontNumber].Info.AutoOutlineThickness);
 }
 
 // Project-dependent implementation
-extern int wgettextwidth_compensate(const char *tex, int font);
+extern int get_text_width_outlined(const char *tex, int font);
 
 namespace AGS {
 namespace Shared {
 SplitLines Lines;
-}
-}
+} // namespace Shared
+} // namespace AGS
 
 // Replaces AGS-specific linebreak tags with common '\n'
 void unescape_script_string(const char *cstr, std::vector<char> &out) {
@@ -184,6 +243,8 @@ void unescape_script_string(const char *cstr, std::vector<char> &out) {
 		cstr++;
 	}
 	// Replace all other occurrences as they're found
+	// NOTE: we do not need to decode utf8 here, because
+	// we are only searching for low-code ascii chars.
 	const char *off;
 	for (off = cstr; *off; ++off) {
 		if (*off != '[') continue;
@@ -203,80 +264,90 @@ void unescape_script_string(const char *cstr, std::vector<char> &out) {
 
 // Break up the text into lines
 size_t split_lines(const char *todis, SplitLines &lines, int wii, int fonnt, size_t max_lines) {
-	// NOTE: following hack accomodates for the legacy math mistake in split_lines.
-	// It's hard to tell how cruicial it is for the game looks, so research may be needed.
+	// NOTE: following hack accommodates for the legacy math mistake in split_lines.
+	// It's hard to tell how crucial it is for the game looks, so research may be needed.
 	// TODO: IMHO this should rely not on game format, but script API level, because it
 	// defines necessary adjustments to game scripts. If you want to fix this, find a way to
-	// pass this flag here all the way from _GP(game).options[OPT_BASESCRIPTAPI] (or game format).
+	// pass this flag here all the way from game.options[OPT_BASESCRIPTAPI] (or game format).
 	//
-	// if (_GP(game).options[OPT_BASESCRIPTAPI] < $Your current version$)
+	// if (game.options[OPT_BASESCRIPTAPI] < $Your current version$)
 	wii -= 1;
 
 	lines.Reset();
 	unescape_script_string(todis, lines.LineBuf);
 	char *theline = &lines.LineBuf.front();
 
-	size_t i = 0;
-	size_t splitAt;
-	char nextCharWas;
+	char *scan_ptr = theline;
+	char *prev_ptr = theline;
+	char *last_whitespace = nullptr;
 	while (1) {
-		splitAt = (size_t)-1;
+		char *split_at = nullptr;
 
-		if (theline[i] == 0) {
+		if (*scan_ptr == 0) {
 			// end of the text, add the last line if necessary
-			if (i > 0) {
+			if (scan_ptr > theline) {
 				lines.Add(theline);
 			}
 			break;
 		}
 
-		// temporarily terminate the line here and test its width
-		nextCharWas = theline[i + 1];
-		theline[i + 1] = 0;
+		if (*scan_ptr == ' ')
+			last_whitespace = scan_ptr;
 
 		// force end of line with the \n character
-		if (theline[i] == '\n')
-			splitAt = i;
-		// otherwise, see if we are too wide
-		else if (wgettextwidth_compensate(theline, fonnt) > wii) {
-			int endline = i;
-			while ((theline[endline] != ' ') && (endline > 0))
-				endline--;
+		if (*scan_ptr == '\n') {
+			split_at = scan_ptr;
+			// otherwise, see if we are too wide
+		} else {
+			// temporarily terminate the line in the *next* char and test its width
+			char *next_ptr = scan_ptr;
+			ugetx(&next_ptr);
+			const int next_chwas = ugetc(next_ptr);
+			*next_ptr = 0;
 
-			// single very wide word, display as much as possible
-			if (endline == 0)
-				endline = i - 1;
+			if (get_text_width_outlined(theline, fonnt) > wii) {
+				// line is too wide, order the split
+				if (last_whitespace)
+					// revert to the last whitespace
+					split_at = last_whitespace;
+				else
+					// single very wide word, display as much as possible
+					split_at = prev_ptr;
+			}
 
-			splitAt = endline;
+			// restore the character that was there before
+			usetc(next_ptr, next_chwas);
 		}
 
-		// restore the character that was there before
-		theline[i + 1] = nextCharWas;
-
-		if (splitAt != (size_t)-1) {
-			if (splitAt == 0 && !((theline[0] == ' ') || (theline[0] == '\n'))) {
+		if (split_at == nullptr) {
+			prev_ptr = scan_ptr;
+			ugetx(&scan_ptr);
+		} else {
+			// check if even one char cannot fit...
+			if (split_at == theline && !((*theline == ' ') || (*theline == '\n'))) {
 				// cannot split with current width restriction
 				lines.Reset();
 				break;
 			}
-			// add this line
-			nextCharWas = theline[splitAt];
-			theline[splitAt] = 0;
+			// add this line; do the temporary terminator trick again
+			const int next_chwas = *split_at;
+			*split_at = 0;
 			lines.Add(theline);
-			theline[splitAt] = nextCharWas;
+			usetc(split_at, next_chwas);
+			// check if too many lines
 			if (lines.Count() >= max_lines) {
 				lines[lines.Count() - 1].Append("...");
 				break;
 			}
-			// the next line starts from here
-			theline += splitAt;
+			// the next line starts from the split point
+			theline = split_at;
 			// skip the space or new line that caused the line break
-			if ((theline[0] == ' ') || (theline[0] == '\n'))
+			if ((*theline == ' ') || (*theline == '\n'))
 				theline++;
-			i = (size_t)-1;
+			scan_ptr = theline;
+			prev_ptr = theline;
+			last_whitespace = nullptr;
 		}
-
-		i++;
 	}
 	return lines.Count();
 }
@@ -294,32 +365,44 @@ void wouttextxy(Shared::Bitmap *ds, int xxx, int yyy, size_t fontNumber, color_t
 }
 
 void set_fontinfo(size_t fontNumber, const FontInfo &finfo) {
-	if (fontNumber < _GP(fonts).size() && _GP(fonts)[fontNumber].Renderer)
+	if (fontNumber < _GP(fonts).size() && _GP(fonts)[fontNumber].Renderer) {
 		_GP(fonts)[fontNumber].Info = finfo;
+		font_post_init(fontNumber);
+	}
+}
+
+FontInfo get_fontinfo(size_t font_number) {
+	if (font_number < _GP(fonts).size())
+		return _GP(fonts)[font_number].Info;
+	return FontInfo();
 }
 
 // Loads a font from disk
-bool wloadfont_size(size_t fontNumber, const FontInfo &font_info) {
+bool load_font_size(size_t fontNumber, const FontInfo &font_info) {
 	if (_GP(fonts).size() <= fontNumber)
 		_GP(fonts).resize(fontNumber + 1);
 	else
 		wfreefont(fontNumber);
 	FontRenderParams params;
 	params.SizeMultiplier = font_info.SizeMultiplier;
+	params.LoadMode = (font_info.Flags & FFLG_LOADMODEMASK);
+	FontMetrics metrics;
 
-	if (_GP(ttfRenderer).LoadFromDiskEx(fontNumber, font_info.SizePt, &params)) {
+	if (_GP(ttfRenderer).LoadFromDiskEx(fontNumber, font_info.Size, &params, &metrics)) {
 		_GP(fonts)[fontNumber].Renderer = &_GP(ttfRenderer);
 		_GP(fonts)[fontNumber].Renderer2 = &_GP(ttfRenderer);
-	} else if (_GP(wfnRenderer).LoadFromDiskEx(fontNumber, font_info.SizePt, &params)) {
+	} else if (_GP(wfnRenderer).LoadFromDiskEx(fontNumber, font_info.Size, &params, &metrics)) {
 		_GP(fonts)[fontNumber].Renderer = &_GP(wfnRenderer);
 		_GP(fonts)[fontNumber].Renderer2 = &_GP(wfnRenderer);
 	}
 
-	if (_GP(fonts)[fontNumber].Renderer) {
-		_GP(fonts)[fontNumber].Info = font_info;
-		return true;
-	}
-	return false;
+	if (!_GP(fonts)[fontNumber].Renderer)
+		return false;
+
+	_GP(fonts)[fontNumber].Info = font_info;
+	_GP(fonts)[fontNumber].Metrics = metrics;
+	font_post_init(fontNumber);
+	return true;
 }
 
 void wgtprintf(Shared::Bitmap *ds, int xxx, int yyy, size_t fontNumber, color_t text_color, char *fmt, ...) {
@@ -335,9 +418,46 @@ void wgtprintf(Shared::Bitmap *ds, int xxx, int yyy, size_t fontNumber, color_t 
 	wouttextxy(ds, xxx, yyy, fontNumber, text_color, tbuffer);
 }
 
+void alloc_font_outline_buffers(size_t font_number,
+	Bitmap **text_stencil, Bitmap **outline_stencil,
+	int text_width, int text_height, int color_depth) {
+	if (font_number >= _GP(fonts).size())
+		return;
+	Font &f = _GP(fonts)[font_number];
+	const int thick = 2 * f.Info.AutoOutlineThickness;
+	if (f.TextStencil.IsNull() || (f.TextStencil.GetColorDepth() != color_depth) ||
+		(f.TextStencil.GetWidth() < text_width) || (f.TextStencil.GetHeight() < text_height)) {
+		int sw = f.TextStencil.IsNull() ? 0 : f.TextStencil.GetWidth();
+		int sh = f.TextStencil.IsNull() ? 0 : f.TextStencil.GetHeight();
+		sw = std::max(text_width, sw);
+		sh = std::max(text_height, sh);
+		f.TextStencil.Create(sw, sh, color_depth);
+		f.OutlineStencil.Create(sw, sh + thick, color_depth);
+		f.TextStencilSub.CreateSubBitmap(&f.TextStencil, RectWH(Size(text_width, text_height)));
+		f.OutlineStencilSub.CreateSubBitmap(&f.OutlineStencil, RectWH(Size(text_width, text_height + thick)));
+	} else {
+		f.TextStencilSub.ResizeSubBitmap(text_width, text_height);
+		f.OutlineStencilSub.ResizeSubBitmap(text_width, text_height + thick);
+	}
+	*text_stencil = &f.TextStencilSub;
+	*outline_stencil = &f.OutlineStencilSub;
+}
+
+void adjust_fonts_for_render_mode(bool aa_mode) {
+	for (size_t i = 0; i < _GP(fonts).size(); ++i) {
+		if (_GP(fonts)[i].Renderer2 != nullptr)
+			_GP(fonts)[i].Renderer2->AdjustFontForAntiAlias(i, aa_mode);
+	}
+}
+
 void wfreefont(size_t fontNumber) {
 	if (fontNumber >= _GP(fonts).size())
 		return;
+
+	_GP(fonts)[fontNumber].TextStencilSub.Destroy();
+	_GP(fonts)[fontNumber].OutlineStencilSub.Destroy();
+	_GP(fonts)[fontNumber].TextStencil.Destroy();
+	_GP(fonts)[fontNumber].OutlineStencil.Destroy();
 
 	if (_GP(fonts)[fontNumber].Renderer != nullptr)
 		_GP(fonts)[fontNumber].Renderer->FreeMemory(fontNumber);

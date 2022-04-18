@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -48,6 +47,7 @@ enum TraFileErrorType {
 };
 
 enum TraFileBlock {
+	kTraFblk_ExtStrID = 0,
 	kTraFblk_Dict = 1,
 	kTraFblk_GameID = 2,
 	kTraFblk_TextOpts = 3,
@@ -71,6 +71,7 @@ struct Translation {
 	int NormalFont = -1; // replacement for normal font, or -1 for default
 	int SpeechFont = -1; // replacement for speech font, or -1 for default
 	int RightToLeft = -1; // r2l text mode (0, 1), or -1 for default
+	StringMap StrOptions; // to store extended options with string values
 };
 
 
@@ -81,7 +82,7 @@ HError ReadTraData(Translation &tra, Stream *in);
 // Writes all translation data to the stream
 void WriteTraData(const Translation &tra, Stream *out);
 
-} // namespace Common
+} // namespace Shared
 } // namespace AGS
 } // namespace AGS3
 

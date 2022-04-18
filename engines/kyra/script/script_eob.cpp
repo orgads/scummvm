@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -137,15 +136,12 @@ EoBInfProcessor::EoBInfProcessor(EoBCoreEngine *engine, Screen_EoB *screen) : _v
 	_lastScriptFunc = 0;
 	_lastScriptFlags = 0;
 
-	_subroutineStack = new int8*[10];
-	memset(_subroutineStack, 0, 10 * sizeof(int8 *));
+	_subroutineStack = new int8*[10]();
 	_subroutineStackPos = 0;
 
-	_flagTable = new uint32[18];
-	memset(_flagTable, 0, 18 * sizeof(uint32));
+	_flagTable = new uint32[18]();
 
-	_stack = new int16[30];
-	memset(_stack, 0, 30 * sizeof(int16));
+	_stack = new int16[30]();
 	_stackIndex = 0;
 
 	_activeCharacter = -1;

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,9 +37,8 @@ class MacWindowManager;
 
 namespace Director {
 
-const int SCALE_THRESHOLD = 0x100;
-
 class Channel;
+class MacArchive;
 struct MacShape;
 
 struct TransParams {
@@ -87,12 +85,12 @@ struct TransParams {
 };
 
 class Window : public Graphics::MacWindow, public Object<Window> {
- public:
+public:
 	Window(int id, bool scrollable, bool resizable, bool editable, Graphics::MacWindowManager *wm, DirectorEngine *vm, bool isStage);
 	~Window();
 
 	bool render(bool forceRedraw = false, Graphics::ManagedSurface *blitTo = nullptr);
-	void invertChannel(Channel *channel);
+	void invertChannel(Channel *channel, const Common::Rect &destRect);
 
 	bool needsAppliedColor(DirectorPlotData *pd);
 	void setStageColor(uint32 stageColor, bool forceReset = false);
@@ -116,21 +114,25 @@ class Window : public Graphics::MacWindow, public Object<Window> {
 	Archive *getMainArchive() const { return _mainArchive; }
 	Movie *getCurrentMovie() const { return _currentMovie; }
 	Common::String getCurrentPath() const { return _currentPath; }
+	DirectorSound *getSoundManager() const { return _soundManager; }
 
-	virtual void setVisible(bool visible, bool silent = false) override;
+	void setVisible(bool visible, bool silent = false) override;
 	bool setNextMovie(Common::String &movieFilenameRaw);
 
 	void setWindowType(int type) { _windowType = type; updateBorderType(); }
 	int getWindowType() const { return _windowType; }
 	void setTitleVisible(bool titleVisible) { _titleVisible = titleVisible; updateBorderType(); };
 	bool isTitleVisible() { return _titleVisible; };
+	Datum getStageRect();
 
 	void updateBorderType();
 
 	bool step();
 
+	Common::String getSharedCastPath();
+
 	// events.cpp
-	virtual bool processEvent(Common::Event &event) override;
+	bool processEvent(Common::Event &event) override;
 
 	// tests.cpp
 	Common::HashMap<Common::String, Movie *> *scanMovies(const Common::String &folder);
@@ -143,6 +145,7 @@ class Window : public Graphics::MacWindow, public Object<Window> {
 	// resource.cpp
 	Common::Error loadInitialMovie();
 	void probeProjector(const Common::String &movie);
+	void probeMacBinary(MacArchive *archive);
 	Archive *openMainArchive(const Common::String movie);
 	void loadEXE(const Common::String movie);
 	void loadEXEv3(Common::SeekableReadStream *stream);
@@ -151,6 +154,7 @@ class Window : public Graphics::MacWindow, public Object<Window> {
 	void loadEXEv7(Common::SeekableReadStream *stream);
 	void loadEXERIFX(Common::SeekableReadStream *stream, uint32 offset);
 	void loadMac(const Common::String movie);
+	void loadStartMovieXLibs();
 
 	// lingo/lingo-object.cpp
 	Common::String asString() override;
@@ -169,10 +173,20 @@ public:
 	Common::List<MovieReference> _movieStack;
 	bool _newMovieStarted;
 
+	// saved Lingo state
+	Common::Array<CFrame *> _callstack;
+	uint _retPC;
+	ScriptData *_retScript;
+	ScriptContext *_retContext;
+	bool _retFreezeContext;
+	DatumHash *_retLocalVars;
+	Datum _retMe;
+
 private:
 	uint32 _stageColor;
 
 	DirectorEngine *_vm;
+	DirectorSound *_soundManager;
 	bool _isStage;
 	Archive *_mainArchive;
 	Common::MacResManager *_macBinary;
@@ -185,13 +199,9 @@ private:
 	bool _titleVisible;
 
 private:
-	int preprocessColor(DirectorPlotData *p, uint32 src);
 
 	void inkBlitFrom(Channel *channel, Common::Rect destRect, Graphics::ManagedSurface *blitTo = nullptr);
-	void inkBlitShape(DirectorPlotData *pd, Common::Rect &srcRect);
 
-	void inkBlitSurface(DirectorPlotData *pd, Common::Rect &srcRect, const Graphics::Surface *mask);
-	void inkBlitStretchSurface(DirectorPlotData *pd, Common::Rect &srcRect, const Graphics::Surface *mask);
 };
 
 } // End of namespace Director

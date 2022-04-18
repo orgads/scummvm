@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -64,8 +63,15 @@ bool AnimationTracker::init(const Actor *actor, Animation::Sequence action,
 	uint32 actionnum = AnimDat::getActionNumberForSequence(action, actor);
 	_animAction = GameData::get_instance()->getMainShapes()->
 	             getAnim(shape, actionnum);
-	if (!_animAction)
+	if (!_animAction) {
+#ifdef WATCHACTOR
+		if (actor && actor->getObjId() == watchactor) {
+			debug(6, "AnimationTracker: no animation action %d for shape %d",
+				  actionnum, shape);
+		}
+#endif
 		return false;
+	}
 
 	_dir = dir;
 
@@ -652,7 +658,7 @@ bool AnimationTracker::load(Common::ReadStream *rs, uint32 version) {
 			unsigned int i = _currentFrame;
 			if (!_firstFrame) i = getNextFrame(i);
 
-			for (; i != _endFrame; i = getNextFrame(i)) {
+			for (; _animAction && i != _endFrame; i = getNextFrame(i)) {
 				const AnimFrame &f = _animAction->getFrame(_dir, i);
 				if (f.is_onground())
 					++_targetOffGroundLeft;

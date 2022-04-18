@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -914,7 +913,7 @@ void VMDPlayer::submitPalette(const uint8 rawPalette[256 * 3]) const {
 	for (uint16 i = _endColor + 1; i < ARRAYSIZE(palette.colors); ++i) {
 		palette.colors[i].used = false;
 	}
-#if SCI_VMD_BLACK_PALETTE
+#ifdef SCI_VMD_BLACK_PALETTE
 	if (_blackPalette) {
 		for (uint16 i = _startColor; i <= _endColor; ++i) {
 			palette.colors[i].r = palette.colors[i].g = palette.colors[i].b = 0;
@@ -937,7 +936,7 @@ void VMDPlayer::submitPalette(const uint8 rawPalette[256 * 3]) const {
 		g_sci->_gfxPalette32->updateHardware();
 	}
 
-#if SCI_VMD_BLACK_PALETTE
+#ifdef SCI_VMD_BLACK_PALETTE
 	if (_blackPalette) {
 		fillPalette(rawPalette, palette);
 		if (_isComposited) {

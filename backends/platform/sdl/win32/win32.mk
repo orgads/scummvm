@@ -19,14 +19,15 @@ win32-data: all
 	$(STRIP) $(EXECUTABLE) -o $(WIN32PATH)/$(EXECUTABLE)
 	cp $(srcdir)/AUTHORS $(WIN32PATH)/AUTHORS.txt
 	cp $(srcdir)/COPYING $(WIN32PATH)/COPYING.txt
-	cp $(srcdir)/COPYING.BSD $(WIN32PATH)/COPYING.BSD.txt
-	cp $(srcdir)/COPYING.LGPL $(WIN32PATH)/COPYING.LGPL.txt
-	cp $(srcdir)/COPYING.FREEFONT $(WIN32PATH)/COPYING.FREEFONT.txt
-	cp $(srcdir)/COPYING.OFL $(WIN32PATH)/COPYING.OFL.txt
-	cp $(srcdir)/COPYING.ISC $(WIN32PATH)/COPYING.ISC.txt
-	cp $(srcdir)/COPYING.LUA $(WIN32PATH)/COPYING.LUA.txt
-	cp $(srcdir)/COPYING.MIT $(WIN32PATH)/COPYING.MIT.txt
-	cp $(srcdir)/COPYING.TINYGL $(WIN32PATH)/COPYING.TINYGL.txt
+	cp $(srcdir)/LICENSES/COPYING.BSD $(WIN32PATH)/COPYING.BSD.txt
+	cp $(srcdir)/LICENSES/COPYING.LGPL $(WIN32PATH)/COPYING.LGPL.txt
+	cp $(srcdir)/LICENSES/COPYING.FREEFONT $(WIN32PATH)/COPYING.FREEFONT.txt
+	cp $(srcdir)/LICENSES/COPYING.OFL $(WIN32PATH)/COPYING.OFL.txt
+	cp $(srcdir)/LICENSES/COPYING.ISC $(WIN32PATH)/COPYING.ISC.txt
+	cp $(srcdir)/LICENSES/COPYING.LUA $(WIN32PATH)/COPYING.LUA.txt
+	cp $(srcdir)/LICENSES/COPYING.MIT $(WIN32PATH)/COPYING.MIT.txt
+	cp $(srcdir)/LICENSES/COPYING.TINYGL $(WIN32PATH)/COPYING.TINYGL.txt
+	cp $(srcdir)/LICENSES/COPYING.GLAD $(WIN32PATH)/COPYING.GLAD.txt
 	cp $(srcdir)/COPYRIGHT $(WIN32PATH)/COPYRIGHT.txt
 	cp $(srcdir)/doc/cz/PrectiMe $(WIN32PATH)/doc/cz/PrectiMe.txt
 	cp $(srcdir)/doc/QuickStart $(WIN32PATH)/doc/QuickStart.txt
@@ -85,7 +86,11 @@ endif
 endif
 
 win32dist-mingw: win32-data
+ifneq (,$(findstring peldd,$(LDD)))
+	$(LDD) $(WIN32PATH)/$(EXECUTABLE) | xargs -I files cp -vu files $(WIN32PATH)
+else
 	ldd $(WIN32PATH)/$(EXECUTABLE) | grep -i mingw | cut -d">" -f2 | cut -d" " -f2 | sort -u | xargs -I files cp -vu files $(WIN32PATH)
+endif
 
 .PHONY: win32-data win32dist win32dist-mingw
 

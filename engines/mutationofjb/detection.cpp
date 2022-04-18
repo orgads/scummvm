@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -69,6 +68,24 @@ static const ADGameDescription mutationofjbDescriptions[] = {
 		Common::DE_DEU,
 		Common::kPlatformDOS,
 		ADGF_CD,
+		GUIO1(GUIO_NOMIDI)
+	},
+	{	// Demo from Riki Multimedia Magazine (Slovakia) #23 - Nov 1996
+		"mutationofjb",
+		"Demo",
+		{
+			{"jbdemo.exe", 0, "97943a569bacc4131447577436389276", 121696},
+			{"strt.dat", 0, nullptr, -1},
+			{"startupb.dat", 0, nullptr, -1},
+			{"global.atn", 0, nullptr, -1},
+			{"piggy.apk", 0, nullptr, -1},
+			{"font1.aft", 0, nullptr, -1},
+			{"sysfnt.aft", 0, nullptr, -1},
+			{nullptr, 0, nullptr, 0}
+		},
+		Common::SK_SVK,
+		Common::kPlatformDOS,
+		ADGF_DEMO,
 		GUIO1(GUIO_NOMIDI)
 	},
 	AD_TABLE_END_MARKER

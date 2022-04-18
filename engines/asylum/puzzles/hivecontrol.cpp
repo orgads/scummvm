@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -125,25 +124,6 @@ bool PuzzleHiveControl::init(const AsylumEvent &) {
 
 	getSound()->playSound(getWorld()->graphicResourceIds[73], true, _soundVolume);
 	getSound()->playSound(getWorld()->graphicResourceIds[74], true, Config.ambientVolume);
-
-	return true;
-}
-
-bool PuzzleHiveControl::update(const AsylumEvent &evt) {
-	updateCursor();
-	updateScreen();
-
-	if (!_data_457260 && !_data_457264)
-		playSound();
-
-	if (_counter) {
-		if (_counter < 30 || getSound()->isPlaying(getWorld()->graphicResourceIds[83])) {
-			++_counter;
-		} else {
-			mouseRightDown(evt);
-			getCursor()->show();
-		}
-	}
 
 	return true;
 }
@@ -334,7 +314,6 @@ Control PuzzleHiveControl::findControl() {
 }
 
 void PuzzleHiveControl::updateScreen() {
-	getScreen()->clear();
 	getScreen()->clearGraphicsInQueue();
 	getScreen()->addGraphicToQueue(getWorld()->graphicResourceIds[28], 0, Common::Point(0, 0), kDrawFlagNone, 0, 3);
 
@@ -461,8 +440,18 @@ void PuzzleHiveControl::updateScreen() {
 
 	getScreen()->addGraphicToQueue(getWorld()->graphicResourceIds[kElementSwirlRim], _frameIndexes[kElementSwirlRim], Common::Point(458, 278), kDrawFlagNone, 0, 2);
 
-	getScreen()->drawGraphicsInQueue();
-	getScreen()->copyBackBufferToScreen();
+	if (!_data_457260 && !_data_457264)
+		playSound();
+
+	if (_counter) {
+		if (_counter < 30 || getSound()->isPlaying(getWorld()->graphicResourceIds[83])) {
+			++_counter;
+		} else {
+			AsylumEvent evt;
+			mouseRightDown(evt);
+			getCursor()->show();
+		}
+	}
 }
 
 void PuzzleHiveControl::playSound() {

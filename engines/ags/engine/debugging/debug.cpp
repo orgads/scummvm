@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -91,7 +90,12 @@ PDebugOutput create_log_output(const String &name, const String &path = "", LogF
 		return _GP(DbgMgr).RegisterOutput(OutputSystemID, AGSPlatformDriver::GetDriver(), kDbgMsg_None);
 	} else if (name.CompareNoCase(OutputFileID) == 0) {
 		_GP(DebugLogFile).reset(new LogFile());
-		String logfile_path = !path.IsEmpty() ? path : Path::ConcatPaths(_G(platform)->GetAppOutputDirectory(), "ags.log");
+		String logfile_path = path;
+		if (logfile_path.IsEmpty()) {
+			FSLocation fs = _G(platform)->GetAppOutputDirectory();
+			CreateFSDirs(fs);
+			logfile_path = Path::ConcatPaths(fs.FullDir, "ags.log");
+		}
 		if (!_GP(DebugLogFile)->OpenFile(logfile_path, open_mode))
 			return nullptr;
 		Debug::Printf(kDbgMsg_Info, "Logging to %s", logfile_path.GetCStr());
@@ -265,7 +269,7 @@ void debug_set_console(bool enable) {
 }
 
 // Prepends message text with current room number and running script info, then logs result
-void debug_script_print(const String &msg, MessageType mt) {
+static void debug_script_print_impl(const String &msg, MessageType mt) {
 	String script_ref;
 	ccInstance *curinst = ccInstance::GetCurrentInstance();
 	if (curinst != nullptr) {
@@ -284,12 +288,20 @@ void debug_script_print(const String &msg, MessageType mt) {
 	Debug::Printf(kDbgGroup_Game, mt, "(room:%d)%s %s", _G(displayed_room), script_ref.GetCStr(), msg.GetCStr());
 }
 
+void debug_script_print(MessageType mt, const char *msg, ...) {
+	va_list ap;
+	va_start(ap, msg);
+	String full_msg = String::FromFormatV(msg, ap);
+	va_end(ap);
+	debug_script_print_impl(full_msg, mt);
+}
+
 void debug_script_warn(const char *msg, ...) {
 	va_list ap;
 	va_start(ap, msg);
 	String full_msg = String::FromFormatV(msg, ap);
 	va_end(ap);
-	debug_script_print(full_msg, kDbgMsg_Warn);
+	debug_script_print_impl(full_msg, kDbgMsg_Warn);
 }
 
 void debug_script_log(const char *msg, ...) {
@@ -297,7 +309,7 @@ void debug_script_log(const char *msg, ...) {
 	va_start(ap, msg);
 	String full_msg = String::FromFormatV(msg, ap);
 	va_end(ap);
-	debug_script_print(full_msg, kDbgMsg_Debug);
+	debug_script_print_impl(full_msg, kDbgMsg_Debug);
 }
 
 
@@ -490,12 +502,11 @@ void break_into_debugger() {
 }
 
 int scrDebugWait = 0;
-extern int pluginsWantingDebugHooks;
 
 // allow LShift to single-step,  RShift to pause flow
 void scriptDebugHook(ccInstance *ccinst, int linenum) {
 
-	if (pluginsWantingDebugHooks > 0) {
+	if (_G(pluginsWantingDebugHooks) > 0) {
 		// a plugin is handling the debugging
 		String scname = GetScriptName(ccinst);
 		pl_run_plugin_debug_hooks(scname.GetCStr(), linenum);

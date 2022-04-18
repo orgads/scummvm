@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -36,7 +35,7 @@ namespace Kyra {
 
 void KyraEngine_MR::loadButtonShapes() {
 	_res->exists("BUTTONS.SHP", true);
-	uint8 *data = _res->fileData("BUTTONS.SHP", 0);
+	uint8 *data = _res->fileData("BUTTONS.SHP", nullptr);
 	assert(data);
 	for (int i = 0; i <= 10; ++i)
 		addShapeToPool(data, 0x1C7+i, i);
@@ -59,7 +58,7 @@ void KyraEngine_MR::loadButtonShapes() {
 }
 
 int KyraEngine_MR::callbackButton1(Button *button) {
-	const uint8 *shapePtr = 0;
+	const uint8 *shapePtr = nullptr;
 	if (button->index == 1)
 		shapePtr = getShapePtr(0x1CD);
 	else if (button->index == 22)
@@ -74,7 +73,7 @@ int KyraEngine_MR::callbackButton1(Button *button) {
 }
 
 int KyraEngine_MR::callbackButton2(Button *button) {
-	const uint8 *shapePtr = 0;
+	const uint8 *shapePtr = nullptr;
 	if (button->index == 1)
 		shapePtr = getShapePtr(0x1CE);
 	else if (button->index == 22)
@@ -89,7 +88,7 @@ int KyraEngine_MR::callbackButton2(Button *button) {
 }
 
 int KyraEngine_MR::callbackButton3(Button *button) {
-	const uint8 *shapePtr = 0;
+	const uint8 *shapePtr = nullptr;
 	if (button->index == 1)
 		shapePtr = getShapePtr(0x1CE);
 	else if (button->index == 22)
@@ -232,9 +231,9 @@ void KyraEngine_MR::showInventory() {
 
 	while (y > _interfaceCommandLineY2) {
 		_screen->copyRegion(0, 0, 0, y, 320, height, 2, 0, Screen::CR_NO_P_CHECK);
-		_screen->updateScreen();
-
-		++times;
+		if (times++ == 0)
+			_screen->updateScreen();
+	
 		if (_inventoryScrollSpeed == 1 && times == 3) {
 			while (waitTill > _system->getMillis())
 				_system->delayMillis(10);
@@ -299,9 +298,9 @@ void KyraEngine_MR::hideInventory() {
 	while (y2 < _interfaceCommandLineY1) {
 		_screen->copyRegion(0, 0, 0, y2, 320, _interfaceH, 2, 0, Screen::CR_NO_P_CHECK);
 		_screen->copyRegion(0, y, 0, y, 320, _inventoryScrollSpeed, 2, 0, Screen::CR_NO_P_CHECK);
-		_screen->updateScreen();
+		if (times++ == 0)
+			_screen->updateScreen();
 
-		++times;
 		if (_inventoryScrollSpeed == 1 && times == 3) {
 			while (waitTill > _system->getMillis())
 				_system->delayMillis(10);
@@ -369,10 +368,10 @@ void KyraEngine_MR::drawMalcolmsMoodPointer(int frame, int page) {
 		frame = 13;
 
 	if (page == 0) {
-		_invWsa->displayFrame(frame, 0, 0, 0, 0, 0, 0);
+		_invWsa->displayFrame(frame, 0, 0, 0, 0, nullptr, nullptr);
 		_screen->updateScreen();
 	} else if (page == 30) {
-		_invWsa->displayFrame(frame, 2, 0, -_interfaceCommandLineY2, 0, 0, 0);
+		_invWsa->displayFrame(frame, 2, 0, -_interfaceCommandLineY2, 0, nullptr, nullptr);
 	}
 
 	_invWsaFrame = frame;
@@ -669,7 +668,7 @@ void KyraEngine_MR::showAlbum() {
 		error("Couldn't load ALBUM");
 
 	if (!queryGameFlag(0x8B))
-		_album.wsa->open("ALBMGNTH.WSA", 1, 0);
+		_album.wsa->open("ALBMGNTH.WSA", 1, nullptr);
 	_album.backUpRect = new uint8[3100];
 	assert(_album.backUpRect);
 	_album.backUpPage = new uint8[64000];
@@ -690,10 +689,10 @@ void KyraEngine_MR::showAlbum() {
 	loadAlbumPageWSA();
 
 	if (_album.leftPage.wsa->opened())
-		_album.leftPage.wsa->displayFrame(_album.leftPage.curFrame, 2, _albumWSAX[_album.nextPage+0], _albumWSAY[_album.nextPage+0], 0x4000, 0, 0);
+		_album.leftPage.wsa->displayFrame(_album.leftPage.curFrame, 2, _albumWSAX[_album.nextPage+0], _albumWSAY[_album.nextPage+0], 0x4000, nullptr, nullptr);
 
 	if (_album.rightPage.wsa->opened())
-		_album.rightPage.wsa->displayFrame(_album.rightPage.curFrame, 2, _albumWSAX[_album.nextPage+1], _albumWSAY[_album.nextPage+1], 0x4000, 0, 0);
+		_album.rightPage.wsa->displayFrame(_album.rightPage.curFrame, 2, _albumWSAX[_album.nextPage+1], _albumWSAY[_album.nextPage+1], 0x4000, nullptr, nullptr);
 
 	printAlbumPageText();
 	_screen->copyRegion(0, 0, 0, 0, 320, 200, 2, 0, Screen::CR_NO_P_CHECK);
@@ -716,11 +715,11 @@ void KyraEngine_MR::showAlbum() {
 	_screen->fadePalette(_screen->getPalette(0), 9);
 
 	delete[] _album.backUpRect;
-	_album.backUpRect = 0;
+	_album.backUpRect = nullptr;
 	delete[] _album.backUpPage;
-	_album.backUpPage = 0;
+	_album.backUpPage = nullptr;
 	delete[] _album.file;
-	_album.file = 0;
+	_album.file = nullptr;
 
 	_eventList.clear();
 }
@@ -740,7 +739,7 @@ void KyraEngine_MR::loadAlbumPage() {
 	}
 
 	_screen->copyRegion(0, 0, 0, 0, 320, 200, 2, 4, Screen::CR_NO_P_CHECK);
-	_screen->loadBitmap(filename.c_str(), 3, 3, 0);
+	_screen->loadBitmap(filename.c_str(), 3, 3, nullptr);
 }
 
 void KyraEngine_MR::loadAlbumPageWSA() {
@@ -756,13 +755,13 @@ void KyraEngine_MR::loadAlbumPageWSA() {
 
 	if (_album.curPage) {
 		filename = Common::String::format("PAGE%x.WSA", _album.curPage);
-		_album.leftPage.wsa->open(filename.c_str(), 1, 0);
+		_album.leftPage.wsa->open(filename.c_str(), 1, nullptr);
 		_album.leftPage.maxFrame = _album.leftPage.wsa->frames()-1;
 	}
 
 	if (_album.curPage != 14) {
 		filename = Common::String::format("PAGE%x.WSA", _album.curPage+1);
-		_album.rightPage.wsa->open(filename.c_str(), 1, 0);
+		_album.rightPage.wsa->open(filename.c_str(), 1, nullptr);
 		_album.rightPage.maxFrame = _album.rightPage.wsa->frames()-1;
 	}
 }
@@ -827,7 +826,7 @@ void KyraEngine_MR::processAlbum() {
 	GUI_V2_BUTTON(albumButtons[4], 40, 0, 0, 1, 1, 1, 0x4487, 0, 170,   8, 142, 180, 0xFF, 0xF0, 0xFF, 0xF0, 0xFF, 0xF0, 0);
 	albumButtons[4].buttonCallback = BUTTON_FUNCTOR(KyraEngine_MR, this, &KyraEngine_MR::albumNextPage);
 
-	Button *buttonList = 0;
+	Button *buttonList = nullptr;
 	for (int i = 0; i < 5; ++i)
 		buttonList = _gui->addButtonToList(buttonList, &albumButtons[i]);
 
@@ -851,10 +850,10 @@ void KyraEngine_MR::processAlbum() {
 			loadAlbumPageWSA();
 
 			if (_album.leftPage.wsa->opened())
-				_album.leftPage.wsa->displayFrame(_album.leftPage.curFrame, 2, _albumWSAX[_album.nextPage+0], _albumWSAY[_album.nextPage+0], 0x4000, 0, 0);
+				_album.leftPage.wsa->displayFrame(_album.leftPage.curFrame, 2, _albumWSAX[_album.nextPage+0], _albumWSAY[_album.nextPage+0], 0x4000, nullptr, nullptr);
 
 			if (_album.rightPage.wsa->opened())
-				_album.rightPage.wsa->displayFrame(_album.rightPage.curFrame, 2, _albumWSAX[_album.nextPage+1], _albumWSAY[_album.nextPage+1], 0x4000, 0, 0);
+				_album.rightPage.wsa->displayFrame(_album.rightPage.curFrame, 2, _albumWSAX[_album.nextPage+1], _albumWSAY[_album.nextPage+1], 0x4000, nullptr, nullptr);
 
 			printAlbumPageText();
 
@@ -907,7 +906,7 @@ void KyraEngine_MR::albumUpdateAnims() {
 
 	nextRun = _album.leftPage.timer + 5 * _tickLength;
 	if (nextRun < _system->getMillis() && _album.leftPage.wsa->opened()) {
-		_album.leftPage.wsa->displayFrame(_album.leftPage.curFrame, 2, _albumWSAX[_album.nextPage+0], _albumWSAY[_album.nextPage+0], 0x4000, 0, 0);
+		_album.leftPage.wsa->displayFrame(_album.leftPage.curFrame, 2, _albumWSAX[_album.nextPage+0], _albumWSAY[_album.nextPage+0], 0x4000, nullptr, nullptr);
 		_screen->copyRegion(40, 17, 40, 17, 87, 73, 2, 0, Screen::CR_NO_P_CHECK);
 
 		++_album.leftPage.curFrame;
@@ -926,7 +925,7 @@ void KyraEngine_MR::albumUpdateAnims() {
 
 	nextRun = _album.rightPage.timer + 5 * _tickLength;
 	if (nextRun < _system->getMillis() && _album.rightPage.wsa->opened()) {
-		_album.rightPage.wsa->displayFrame(_album.rightPage.curFrame, 2, _albumWSAX[_album.nextPage+1], _albumWSAY[_album.nextPage+1], 0x4000, 0, 0);
+		_album.rightPage.wsa->displayFrame(_album.rightPage.curFrame, 2, _albumWSAX[_album.nextPage+1], _albumWSAY[_album.nextPage+1], 0x4000, nullptr, nullptr);
 		_screen->copyRegion(194, 20, 194, 20, 85, 69, 2, 0, Screen::CR_NO_P_CHECK);
 
 		++_album.rightPage.curFrame;
@@ -944,13 +943,13 @@ void KyraEngine_MR::albumUpdateAnims() {
 void KyraEngine_MR::albumAnim1() {
 	for (int i = 6; i >= 3; --i) {
 		albumRestoreRect();
-		_album.wsa->displayFrame(i, 2, -100, 90, 0x4000, 0, 0);
+		_album.wsa->displayFrame(i, 2, -100, 90, 0x4000, nullptr, nullptr);
 		albumUpdateRect();
 		delayWithTicks(1);
 	}
 
 	albumRestoreRect();
-	_album.wsa->displayFrame(14, 2, -100, 90, 0x4000, 0, 0);
+	_album.wsa->displayFrame(14, 2, -100, 90, 0x4000, nullptr, nullptr);
 	albumUpdateRect();
 	delayWithTicks(1);
 }
@@ -958,7 +957,7 @@ void KyraEngine_MR::albumAnim1() {
 void KyraEngine_MR::albumAnim2() {
 	for (int i = 3; i <= 6; ++i) {
 		albumRestoreRect();
-		_album.wsa->displayFrame(i, 2, -100, 90, 0x4000, 0, 0);
+		_album.wsa->displayFrame(i, 2, -100, 90, 0x4000, nullptr, nullptr);
 		albumUpdateRect();
 		delayWithTicks(1);
 	}
@@ -1188,7 +1187,7 @@ int GUI_MR::optionsButton(Button *button) {
 
 	_screen->setFontStyles(_screen->_currentFont, Font::kStyleNone);
 
-	_vm->showMessage(0, 0xF0, 0xF0);
+	_vm->showMessage(nullptr, 0xF0, 0xF0);
 
 	if (_vm->_mouseState < -1) {
 		_vm->_mouseState = -1;
@@ -1221,7 +1220,7 @@ int GUI_MR::optionsButton(Button *button) {
 		_loadedSave = false;
 
 		--_loadMenu.numberOfItems;
-		loadMenu(0);
+		loadMenu(nullptr);
 		++_loadMenu.numberOfItems;
 
 		if (_loadedSave) {
@@ -1466,6 +1465,8 @@ void GUI_MR::fontBasedMenuResize() {
 		resizeMenu(_gameOptions, 174, 8, 30, 22, 20, 145, 32, 0);
 		resizeMenu(_audioOptions, 140, 8, 28, 22, 20, 110, 30, 0);
 		_audioOptions.item[3].y = 81;
+		_audioOptions.item[1].labelY = 47;
+		_audioOptions.item[2].labelY = 64;
 		_audioOptions.item[3].labelY = 83;
 		resizeMenu(_choiceMenu, 56, 8, 30, 0, 20, 30, 0, 0);
 		_loadMenu.numberOfItems = 6;

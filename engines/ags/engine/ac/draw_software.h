@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -87,6 +86,8 @@ struct DirtyRects {
 	void Reset();
 };
 
+// Sets global viewport offset (used for legacy letterbox)
+void set_invalidrects_globaloffs(int x, int y);
 // Inits dirty rects array for the given room camera/viewport pair
 // View_index indicates the room viewport (>= 0) or the main viewport (-1)
 void init_invalid_regions(int view_index, const Size &surf_size, const Rect &viewport);
@@ -100,7 +101,10 @@ void set_invalidrects_cameraoffs(int view_index, int x, int y);
 void invalidate_all_rects();
 // Mark the whole camera surface dirty
 void invalidate_all_camera_rects(int view_index);
+// Mark certain rectangle dirty; in_room tells if coordinates are room viewport or screen coords
 void invalidate_rect_ds(int x1, int y1, int x2, int y2, bool in_room);
+// Mark rectangle dirty, treat pos as global screen coords (not offset by legacy letterbox mode)
+void invalidate_rect_global(int x1, int y1, int x2, int y2);
 // Paints the black screen background in the regions marked as dirty
 void update_black_invreg_and_reset(AGS::Shared::Bitmap *ds);
 // Copies the room regions marked as dirty from source (src) to destination (ds) with the given offset (x, y)

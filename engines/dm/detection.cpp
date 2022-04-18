@@ -1,30 +1,28 @@
 /* ScummVM - Graphic Adventure Engine
-*
-* ScummVM is the legal property of its developers, whose names
-* are too numerous to list here. Please refer to the COPYRIGHT
-* file distributed with this source distribution.
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-*
-*/
+ *
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
 
 /*
-* Based on the Reverse Engineering work of Christophe Fontanel,
-* maintainer of the Dungeon Master Encyclopaedia (http://dmweb.free.fr/)
-*/
-
+ * Based on the Reverse Engineering work of Christophe Fontanel,
+ * maintainer of the Dungeon Master Encyclopaedia (http://dmweb.free.fr/)
+ */
 
 #include "base/plugins.h"
 #include "engines/advancedDetector.h"
@@ -35,7 +33,7 @@ namespace DM {
 
 static const PlainGameDescriptor DMGames[] = {
 	{"dm", "Dungeon Master"},
-	{0, 0}
+	{nullptr, nullptr}
 };
 
 static const DMADGameDescription gameDescriptions[] = {
@@ -67,6 +65,18 @@ static const DMADGameDescription gameDescriptions[] = {
 			AD_ENTRY2s("graphics.dat",	"3932c8359bb36c24291b09e915114d38", 192421,
 					   "DemoDun.dat",	"78848e1a2d3d5a11e5954deb8c7b772b", 1209),
 			Common::EN_ANY, Common::kPlatformAmiga, ADGF_DEMO, GUIO1(GUIO_NOMIDI),
+		},
+		kDMSaveTargetDM21, kDMSaveFormatAmigaPC98FmTowns, kDMSavePlatformAtariSt,
+		{ kDMSaveTargetDM21, kDMSaveTargetEndOfList},
+		{ kDMSaveFormatAmigaPC98FmTowns, kDMSaveFormatEndOfList},
+		{ kDMSavePlatformAcceptAny }
+	},
+	{
+		// Added by trembyle
+		{"dm", "Apple IIgs Demo v1.4 English",
+			AD_ENTRY2s("DEMOIIGS.DAT", "6d30bde1f4d7be1cee500e7bb160658b", 190792,
+					   "DEMODUN.DAT",  "9c1b9996aceacb3fffb5bd21ca408fa8", 1487),
+			Common::EN_ANY, Common::kPlatformApple2GS, ADGF_DEMO, GUIO1(GUIO_NOMIDI),
 		},
 		kDMSaveTargetDM21, kDMSaveFormatAmigaPC98FmTowns, kDMSavePlatformAtariSt,
 		{ kDMSaveTargetDM21, kDMSaveTargetEndOfList},

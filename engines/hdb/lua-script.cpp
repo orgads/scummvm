@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -947,7 +946,7 @@ static int dialogChoice(lua_State *L) {
 	const char *title = lua_tostring(L, 1);
 	const char *text = lua_tostring(L, 2);
 	const char *func = lua_tostring(L, 3);
-	const char *choice[10] = {0,0,0,0,0,0,0,0,0,0};
+	const char *choice[10] = {nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr};
 
 	int	amount = lua_gettop(L) - 3;
 	if (amount > 9)
@@ -1368,7 +1367,7 @@ static int openFile(lua_State *L) {
 
 	lua_pop(L, 2); // drop 2 parameters
 
-	lua_pushlightuserdata(L, 0);
+	lua_pushlightuserdata(L, nullptr);
 
 	return 1;
 }
@@ -1873,7 +1872,7 @@ bool LuaScript::initScript(Common::SeekableReadStream *stream, const char *scrip
 	lua_insert(_state, -2);
 
 	if (lua_pcall(_state, 0, 0, -2)) {
-		error("LuaScript::initScript: An error occured while executing \"%s\": %s.", "level_init", lua_tostring(_state, -1));
+		error("LuaScript::initScript: An error occurred while executing \"%s\": %s.", "level_init", lua_tostring(_state, -1));
 		lua_pop(_state, -1);
 
 		return false;
@@ -1913,7 +1912,7 @@ void LuaScript::call(int args, int returns) {
 		return;
 
 	if (lua_pcall(_state, args, returns, -2)) {
-		error("LuaScript::call: An error occured while executing: %s.", lua_tostring(_state, -1));
+		error("LuaScript::call: An error occurred while executing: %s.", lua_tostring(_state, -1));
 		lua_pop(_state, -1);
 	}
 }
@@ -1926,7 +1925,7 @@ bool LuaScript::callFunction(const char *name, int returns) {
 	lua_getglobal(_state, name);
 
 	if (lua_pcall(_state, 0, returns, -2)) {
-		error("LuaScript::callFunction: An error occured while executing \"%s\": %s.", name, lua_tostring(_state, -1));
+		error("LuaScript::callFunction: An error occurred while executing \"%s\": %s.", name, lua_tostring(_state, -1));
 		lua_pop(_state, -1);
 
 		return false;
@@ -2042,7 +2041,7 @@ bool LuaScript::executeChunk(Common::String &chunk, const Common::String &chunkN
 
 	// Execute Chunk
 	if (lua_pcall(_state, 0, 0, -2)) {
-		error("LuaScript::executeChunk: An error occured while executing \"%s\": %s.", chunkName.c_str(), lua_tostring(_state, -1));
+		error("LuaScript::executeChunk: An error occurred while executing \"%s\": %s.", chunkName.c_str(), lua_tostring(_state, -1));
 		lua_pop(_state, -1);
 
 		return false;

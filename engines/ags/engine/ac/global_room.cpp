@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -108,13 +107,21 @@ void NewRoom(int nrnum) {
 		_G(inv_screen_newroom) = nrnum;
 		return;
 	} else if ((_G(inside_script) == 0) & (_G(in_graph_script) == 0)) {
+		// Compatibility: old games had a *possibly unintentional* effect:
+		// if a character was walking, and a "change room" is called
+		// *NOT* from a script, but by some other trigger,
+		// they ended up forced to a walkable area in the next room.
+		if (_G(loaded_game_file_version) < kGameVersion_300) {
+			_G(new_room_placeonwalkable) = is_char_walking_ndirect(_G(playerchar));
+		}
+
 		new_room(nrnum, _G(playerchar));
 		return;
 	} else if (_G(inside_script)) {
 		_G(curscript)->queue_action(ePSANewRoom, nrnum, "NewRoom");
 		// we might be within a MoveCharacterBlocking -- the room
 		// change should abort it
-		if ((_G(playerchar)->walking > 0) && (_G(playerchar)->walking < TURNING_AROUND)) {
+		if (is_char_walking_ndirect(_G(playerchar))) {
 			// nasty hack - make sure it doesn't move the character
 			// to a walkable area
 			_G(mls)[_G(playerchar)->walking].direct = 1;

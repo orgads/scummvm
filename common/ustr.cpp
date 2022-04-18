@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -47,6 +46,13 @@ U32String::U32String(const char *beginP, const char *endP, Common::CodePage page
 
 U32String::U32String(const String &str, Common::CodePage page) : BaseString<u32char_type_t>() {
 	decodeInternal(str.c_str(), str.size(), page);
+}
+
+U32String::U32String(u32char_type_t c) : BaseString<u32char_type_t>() {
+	_storage[0] = c;
+	_storage[1] = 0;
+
+	_size = (c == 0) ? 0 : 1;
 }
 
 U32String &U32String::operator=(const U32String &str) {
@@ -265,6 +271,43 @@ char* U32String::itoa(int num, char* str, int base) {
 	}
 
 	return str;
+}
+
+U32String toPrintable(const U32String &in, bool keepNewLines) {
+	U32String res;
+
+	const char *tr = "\x01\x01\x02\x03\x04\x05\x06" "a"
+				  //"\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f";
+					   "b" "t" "n" "v" "f" "r\x0e\x0f"
+					"\x10\x11\x12\x13\x14\x15\x16\x17"
+					"\x18\x19\x1a" "e\x1c\x1d\x1e\x1f";
+
+	for (const u32char_type_t *p = in.c_str(); *p; p++) {
+		if (*p == '\n') {
+			if (keepNewLines)
+				res += *p;
+			else
+				res += U32String("\\n");
+
+			continue;
+		}
+
+		if (*p < 0x20 || *p == '\'' || *p == '\"' || *p == '\\') {
+			res += '\\';
+
+			if (*p < 0x20) {
+				if (tr[*p] < 0x20)
+					res += Common::String::format("x%02x", *p);
+				else
+					res += tr[*p];
+			} else {
+				res += *p;	// We will escape it
+			}
+		} else
+			res += *p;
+	}
+
+	return res;
 }
 
 } // End of namespace Common

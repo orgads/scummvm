@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,14 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef AUDIO_MIXER_H
 #define AUDIO_MIXER_H
 
+#include "common/mutex.h"
 #include "common/types.h"
 #include "common/noncopyable.h"
 
@@ -94,6 +94,10 @@ public:
 	 */
 	virtual bool isReady() const = 0;
 
+	/**
+	 * Return the mixer's internal mutex so that audio players can use it.
+	 */
+	virtual Common::Mutex &mutex() = 0;
 
 	/**
 	 * Start playing the given audio stream.
@@ -261,6 +265,11 @@ public:
 	virtual Timestamp getElapsedTime(SoundHandle handle) = 0;
 
 	/**
+	 * Replace the channel's stream with a version that loops indefinitely.
+	 */
+	virtual void loopChannel(SoundHandle handle) = 0;
+
+	/**
 	 * Check whether any channel of the given sound type is active.
 	 *
 	 * For example, this can be used to check whether any SFX sound
@@ -295,6 +304,13 @@ public:
 	 * @return The output sample rate in Hz.
 	 */
 	virtual uint getOutputRate() const = 0;
+
+	/**
+	 * Return the output sample buffer size of the system.
+	 *
+	 * @return The number of samples processed at each audio callback.
+	 */
+	virtual uint getOutputBufSize() const = 0;
 };
 
 /** @} */

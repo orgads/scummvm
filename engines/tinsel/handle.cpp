@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * This file contains the handle based Memory Manager code
  */
@@ -24,12 +23,16 @@
 #define BODGE
 
 #include "common/file.h"
+#include "common/memstream.h"
 #include "common/textconsole.h"
 
+#include "tinsel/actors.h"
+#include "tinsel/background.h"
 #include "tinsel/drives.h"
 #include "tinsel/dw.h"
 #include "tinsel/handle.h"
 #include "tinsel/heapmem.h"			// heap memory manager
+#include "tinsel/palette.h"
 #include "tinsel/scn.h"		// for the DW1 Mac resource handler
 #include "tinsel/timers.h"	// for DwGetCurrentTime()
 #include "tinsel/tinsel.h"
@@ -83,7 +86,7 @@ void Handle::SetupHandleTable() {
 	int len;
 	uint i;
 	MEMHANDLE *pH;
-	TinselFile f;
+	TinselFile f(TinselV1Mac || TinselV1Saturn);
 
 	const char *indexFileName = TinselV1PSX ? PSX_INDEX_FILENAME : INDEX_FILENAME;
 
@@ -295,6 +298,148 @@ void Handle::LoadFile(MEMHANDLE *pH) {
 
 	// cannot find file
 	error(CANNOT_FIND_FILE, szFilename);
+}
+
+/**
+ * Return a font specified by a SCNHANDLE
+ * Handles endianess internally
+ * @param offset			Handle and offset to data
+ * @return FONT structure
+*/
+FONT *Handle::GetFont(SCNHANDLE offset) {
+	byte *data = LockMem(offset);
+	const bool isBE = TinselV1Mac || TinselV1Saturn;
+	const uint32 size = (TinselV3 ? 12 * 4 : 11 * 4) + 300 * 4;	// FONT struct size
+	Common::MemoryReadStreamEndian *stream = new Common::MemoryReadStreamEndian(data, size, isBE);
+
+	FONT *font = new FONT();
+	font->xSpacing = stream->readSint32();
+	font->ySpacing = stream->readSint32();
+	font->xShadow = stream->readSint32();
+	font->yShadow = stream->readSint32();
+	font->spaceSize = stream->readSint32();
+	font->baseColor = TinselV3 ? stream->readSint32() : 0;
+	font->fontInit.hObjImg = stream->readUint32();
+	font->fontInit.objFlags = stream->readSint32();
+	font->fontInit.objID = stream->readSint32();
+	font->fontInit.objX = stream->readSint32();
+	font->fontInit.objY = stream->readSint32();
+	font->fontInit.objZ = stream->readSint32();
+	for (int i = 0; i < 300; i++)
+		font->fontDef[i] = stream->readUint32();
+
+	delete stream;
+
+	return font;
+}
+
+/**
+ * Return a palette specified by a SCNHANDLE
+ * Handles endianess internally
+ * @param offset			Handle and offset to data
+ * @return PALETTE structure
+*/
+PALETTE *Handle::GetPalette(SCNHANDLE offset) {
+	byte *data = LockMem(offset);
+	const bool isBE = TinselV1Mac || TinselV1Saturn;
+	const uint32 size = 4 + 256 * 4;	// numColors + 256 COLORREF (max)
+	Common::MemoryReadStreamEndian *stream = new Common::MemoryReadStreamEndian(data, size, isBE);
+
+	PALETTE *pal = new PALETTE();
+
+	pal->numColors = stream->readSint32();
+	for (int32 i = 0; i < pal->numColors; i++) {
+		pal->palRGB[i] = stream->readUint32();
+
+		// get the RGB color model values
+		pal->palette[i * 3] = (byte)(pal->palRGB[i] & 0xFF);
+		pal->palette[i * 3 + 1] = (byte)((pal->palRGB[i] >> 8) & 0xFF);
+		pal->palette[i * 3 + 2] = (byte)((pal->palRGB[i] >> 16) & 0xFF);
+	}
+
+	delete stream;
+
+	return pal;
+}
+
+/**
+ * Return an image specified by a SCNHANDLE
+ * Handles endianess internally
+ * @param offset			Handle and offset to data
+ * @return IMAGE structure
+*/
+const IMAGE *Handle::GetImage(SCNHANDLE offset) {
+	byte *data = LockMem(offset);
+	const bool isBE = TinselV1Mac || TinselV1Saturn;
+	const uint32 size = 16; // IMAGE struct size
+
+	Common::MemoryReadStreamEndian *stream = new Common::MemoryReadStreamEndian(data, size, isBE);
+
+	IMAGE *img = new IMAGE();
+
+	img->imgWidth = stream->readSint16();
+	img->imgHeight = stream->readUint16();
+	img->anioffX = stream->readSint16();
+	img->anioffY = stream->readSint16();
+	img->hImgBits = stream->readUint32();
+
+	if (!TinselV3) {
+		img->hImgPal = stream->readUint32();
+	} else {
+		img->isRLE = stream->readSint16();
+		img->colorFlags = stream->readSint16();
+	}
+
+	delete stream;
+
+	return img;
+}
+
+void Handle::SetImagePalette(SCNHANDLE offset, SCNHANDLE palHandle) {
+	byte *img = LockMem(offset);
+	WRITE_32(img + 12, palHandle); // hImgPal
+}
+
+SCNHANDLE Handle::GetFontImageHandle(SCNHANDLE offset) {
+	FONT *font = GetFont(offset);
+	SCNHANDLE handle = font->fontInit.hObjImg;
+	delete font;
+
+	return handle;
+}
+
+/**
+ * Return an actor's data specified by a SCNHANDLE
+ * Handles endianess internally
+ * @param offset			Handle and offset to data
+ * @return IMAGE structure
+*/
+const ACTORDATA *Handle::GetActorData(SCNHANDLE offset, int numActors) {
+	byte *data = LockMem(offset);
+	const bool isBE = TinselV1Mac || TinselV1Saturn;
+	const uint32 size = TinselV2 ? 20 : 12; // ACTORDATA struct size
+
+	Common::MemoryReadStreamEndian *stream = new Common::MemoryReadStreamEndian(data, size * numActors, isBE);
+
+	ACTORDATA *actorData = new ACTORDATA[numActors];
+
+	for (int i = 0; i < numActors; i++) {
+		if (!TinselV2) {
+			actorData[i].masking = stream->readSint32();
+			actorData[i].hActorId = stream->readUint32();
+			actorData[i].hActorCode = stream->readUint32();
+		} else {
+			actorData[i].hActorId = stream->readUint32();
+			actorData[i].hTagText = stream->readUint32();
+			actorData[i].tagPortionV = stream->readSint32();
+			actorData[i].tagPortionH = stream->readSint32();
+			actorData[i].hActorCode = stream->readUint32();
+		}
+	}
+
+	delete stream;
+
+	return actorData;
 }
 
 /**

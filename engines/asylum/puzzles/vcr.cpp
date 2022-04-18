@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -81,29 +80,6 @@ bool PuzzleVCR::init(const AsylumEvent &)  {
 		getSharedData()->setFlag(kFlag1, true);
 	} else {
 		getCursor()->set(getWorld()->graphicResourceIds[28]);
-	}
-
-	return true;
-}
-
-bool PuzzleVCR::update(const AsylumEvent &evt)  {
-	uint32 ticks = _vm->getTick();
-
-	if (!getSharedData()->getFlag(kFlagRedraw)) {
-		updateScreen(evt);
-
-		getSharedData()->setFlag(kFlagRedraw, true);
-	}
-
-	if (ticks > getSharedData()->getNextScreenUpdate()) {
-		if (getSharedData()->getFlag(kFlagRedraw)) {
-			getScreen()->copyBackBufferToScreen();
-
-			getSharedData()->setEventUpdate(getSharedData()->getEventUpdate() ^ 1);
-
-			getSharedData()->setFlag(kFlagRedraw, false);
-			getSharedData()->setNextScreenUpdate(ticks + 55);
-		}
 	}
 
 	return true;
@@ -297,9 +273,7 @@ bool PuzzleVCR::mouseRightDown(const AsylumEvent &) {
 //////////////////////////////////////////////////////////////////////////
 // Drawing
 //////////////////////////////////////////////////////////////////////////
-void PuzzleVCR::updateScreen(const AsylumEvent &) {
-	updateCursor();
-
+void PuzzleVCR::updateScreen() {
 	// Draw background
 	getScreen()->clearGraphicsInQueue();
 	getScreen()->fillRect(0, 0, 640, 480, 252);
@@ -324,10 +298,12 @@ void PuzzleVCR::updateScreen(const AsylumEvent &) {
 	if (_isAccomplished) {
 		getCursor()->show();
 		getScreen()->draw(getWorld()->graphicResourceIds[0]);
-		getScreen()->drawGraphicsInQueue();
 
-		for (int16 barSize = 0; barSize < 84; barSize += 4)
+		getScreen()->clearDefaultColor();
+		for (int16 barSize = 0; barSize < 84; barSize += 4) {
 			getScreen()->drawWideScreenBars(barSize);
+			_vm->_system->updateScreen();
+		}
 
 		// Palette fade
 		getScreen()->paletteFade(0, 25, 10);
@@ -348,12 +324,11 @@ void PuzzleVCR::updateScreen(const AsylumEvent &) {
 		getScreen()->clear();
 
 		// setupPalette();
-		getScreen()->setupPalette(NULL, 0, 0);
+		getScreen()->setupPalette(nullptr, 0, 0);
 
-		getScreen()->setPalette(MAKE_RESOURCE(kResourcePackTowerCells, 28));
-		getScreen()->setGammaLevel(MAKE_RESOURCE(kResourcePackTowerCells, 28));
-	} else {
-		getScreen()->drawGraphicsInQueue();
+		int paletteId = _vm->checkGameVersion("Demo") ? 20 : 28;
+		getScreen()->setPalette(MAKE_RESOURCE(kResourcePackTowerCells, paletteId));
+		getScreen()->setGammaLevel(MAKE_RESOURCE(kResourcePackTowerCells, paletteId));
 	}
 }
 

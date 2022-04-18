@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -53,7 +52,7 @@ Common::Platform ComposerEngine::getPlatform() const {
 
 bool ComposerEngine::loadDetectedConfigFile(Common::INIFile &configFile) const {
 	const ADGameFileDescription *res = _gameDescription->desc.filesDescriptions;
-	while (res->fileName != NULL) {
+	while (res->fileName != nullptr) {
 		if (res->fileType == GAME_CONFIGFILE) {
 			return configFile.loadFromFile(res->fileName);
 		}
@@ -76,6 +75,14 @@ public:
 
 	int getMaximumSaveSlot() const override;
 	SaveStateList listSaves(const char* target) const override;
+	Common::String getSavegameFile(int saveGameIdx, const char *target) const override {
+		if (!target)
+			target = getEngineId();
+		if (saveGameIdx == kSavegameFilePattern)
+			return Common::String::format("%s.##", target);
+		else
+			return Common::String::format("%s.%02d", target, saveGameIdx);
+	}
 };
 
 Common::Error ComposerMetaEngine::createInstance(OSystem *syst, Engine **engine, const ADGameDescription *desc) const {
@@ -88,7 +95,7 @@ bool ComposerMetaEngine::hasFeature(MetaEngineFeature f) const {
 }
 
 Common::String getSaveName(Common::InSaveFile *in) {
-	Common::Serializer ser(in, NULL);
+	Common::Serializer ser(in, nullptr);
 	Common::String name;
 	uint32 tmp;
 	ser.syncAsUint32LE(tmp);
@@ -103,9 +110,8 @@ SaveStateList ComposerMetaEngine::listSaves(const char *target) const {
 	Common::SaveFileManager *saveFileMan = g_system->getSavefileManager();
 	Common::StringArray filenames;
 	Common::String saveDesc;
-	Common::String pattern = Common::String::format("%s.##", target);
 
-	filenames = saveFileMan->listSavefiles(pattern);
+	filenames = saveFileMan->listSavefiles(getSavegameFilePattern(target));
 
 	SaveStateList saveList;
 	for (Common::StringArray::const_iterator file = filenames.begin(); file != filenames.end(); ++file) {
@@ -116,7 +122,7 @@ SaveStateList ComposerMetaEngine::listSaves(const char *target) const {
 			Common::InSaveFile *in = saveFileMan->openForLoading(*file);
 			if (in) {
 				saveDesc = getSaveName(in);
-				saveList.push_back(SaveStateDescriptor(slotNum, saveDesc));
+				saveList.push_back(SaveStateDescriptor(this, slotNum, saveDesc));
 				delete in;
 			}
 		}

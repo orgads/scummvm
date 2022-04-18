@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,14 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "ags/shared/core/platform.h"
 #include "ags/shared/util/string_utils.h" //strlwr()
 #include "ags/shared/ac/common.h"
+#include "ags/engine/ac/character.h"
 #include "ags/engine/ac/character_cache.h"
 #include "ags/engine/ac/character_extras.h"
 #include "ags/engine/ac/draw.h"
@@ -103,6 +103,14 @@ ScriptDrawingSurface *Room_GetDrawingSurfaceForBackground(int backgroundNumber) 
 	return surface;
 }
 
+ScriptDrawingSurface *Room_GetDrawingSurfaceForMask(RoomAreaMask mask) {
+	if (_G(displayed_room) < 0)
+		quit("!Room_GetDrawingSurfaceForMask: no room is currently loaded");
+	ScriptDrawingSurface *surface = new ScriptDrawingSurface();
+	surface->roomMaskType = mask;
+	ccRegisterManagedObject(surface, surface);
+	return surface;
+}
 
 int Room_GetObjectCount() {
 	return _G(croom)->numobj;
@@ -166,12 +174,17 @@ const char *Room_GetMessages(int index) {
 	return CreateNewScriptString(buffer);
 }
 
+bool Room_Exists(int room) {
+	String room_filename;
+	room_filename.Format("room%d.crm", room);
+	return _GP(AssetMgr)->DoesAssetExist(room_filename);
+}
 
 //=============================================================================
 
 // Makes sure that room background and walk-behind mask are matching room size
 // in game resolution coordinates; in other words makes graphics appropriate
-// for display in the _GP(game).
+// for display in the game.
 void convert_room_background_to_game_res() {
 	if (!_GP(game).AllowRelativeRes() || !_GP(thisroom).IsRelativeRes())
 		return;
@@ -191,6 +204,11 @@ void convert_room_background_to_game_res() {
 	_GP(thisroom).HotspotMask = FixBitmap(_GP(thisroom).HotspotMask, mask_width, mask_height);
 	_GP(thisroom).RegionMask = FixBitmap(_GP(thisroom).RegionMask, mask_width, mask_height);
 	_GP(thisroom).WalkAreaMask = FixBitmap(_GP(thisroom).WalkAreaMask, mask_width, mask_height);
+
+	for (size_t i = 0; i < _GP(thisroom).WalkAreaCount; ++i) {
+		_GP(thisroom).WalkAreas[i].Top = room_to_mask_coord(_GP(thisroom).WalkAreas[i].Top);
+		_GP(thisroom).WalkAreas[i].Bottom = room_to_mask_coord(_GP(thisroom).WalkAreas[i].Bottom);
+	}
 }
 
 
@@ -222,7 +240,7 @@ void unload_old_room() {
 		_G(objs)[ff].moving = 0;
 
 	if (!_GP(play).ambient_sounds_persist) {
-		for (ff = 1; ff < MAX_SOUND_CHANNELS; ff++)
+		for (ff = NUM_SPEECH_CHANS; ff < _GP(game).numGameChannels; ff++)
 			StopAmbientSound(ff);
 	}
 
@@ -243,8 +261,6 @@ void unload_old_room() {
 		_G(roominst) = nullptr;
 	} else _G(croom)->tsdatasize = 0;
 	memset(&_GP(play).walkable_areas_on[0], 1, MAX_WALK_AREAS + 1);
-	_GP(play).bg_frame = 0;
-	_GP(play).bg_frame_locked = 0;
 	remove_screen_overlay(-1);
 	delete _G(raw_saved_screen);
 	_G(raw_saved_screen) = nullptr;
@@ -284,31 +300,10 @@ void unload_old_room() {
 
 	croom_ptr_clear();
 
-	// clear the object cache
-	for (ff = 0; ff < MAX_ROOM_OBJECTS; ff++) {
-		delete _G(objcache)[ff].image;
-		_G(objcache)[ff].image = nullptr;
-	}
-	// clear the _G(actsps) buffers to save memory, since the
+	// clear the _GP(actsps) buffers to save memory, since the
 	// objects/characters involved probably aren't on the
 	// new screen. this also ensures all cached data is flushed
-	for (ff = 0; ff < MAX_ROOM_OBJECTS + _GP(game).numcharacters; ff++) {
-		delete _G(actsps)[ff];
-		_G(actsps)[ff] = nullptr;
-
-		if (_G(actspsbmp)[ff] != nullptr)
-			_G(gfxDriver)->DestroyDDB(_G(actspsbmp)[ff]);
-		_G(actspsbmp)[ff] = nullptr;
-
-		delete _G(actspswb)[ff];
-		_G(actspswb)[ff] = nullptr;
-
-		if (_G(actspswbbmp)[ff] != nullptr)
-			_G(gfxDriver)->DestroyDDB(_G(actspswbbmp)[ff]);
-		_G(actspswbbmp)[ff] = nullptr;
-
-		_G(actspswbcache)[ff].valid = 0;
-	}
+	clear_drawobj_cache();
 
 	// if Hide Player Character was ticked, restore it to visible
 	if (_GP(play).temporarily_turned_off_character >= 0) {
@@ -368,6 +363,7 @@ void update_letterbox_mode() {
 
 	_GP(play).SetMainViewport(CenterInRect(game_frame, new_main_view));
 	_GP(play).SetUIViewport(new_main_view);
+	on_mainviewport_changed();
 }
 
 // Automatically reset primary room viewport and camera to match the new room size
@@ -396,7 +392,31 @@ static void update_all_viewcams_with_newroom() {
 	}
 }
 
-// forchar = _G(playerchar) on NewRoom, or NULL if restore saved game
+// Looks up for the room script available as a separate asset.
+// This is optional, so no error is raised if one is not found.
+// If found however, it will replace room script if one had been loaded
+// from the room file itself.
+HError LoadRoomScript(RoomStruct *room, int newnum) {
+	String filename = String::FromFormat("room%d.o", newnum);
+	std::unique_ptr<Stream> in(_GP(AssetMgr)->OpenAsset(filename));
+	if (in) {
+		PScript script(ccScript::CreateFromStream(in.get()));
+		if (!script)
+			return new Error(String::FromFormat(
+				"Failed to load a script module: %s", filename.GetCStr()),
+				_G(ccErrorString));
+		room->CompiledScript = script;
+	}
+	return HError::None();
+}
+
+static void reset_temp_room() {
+	_GP(troom).FreeScriptData();
+	_GP(troom).FreeProperties();
+	_GP(troom) = RoomStatus();
+}
+
+// forchar = playerchar on NewRoom, or NULL if restore saved game
 void load_new_room(int newnum, CharacterInfo *forchar) {
 
 	debug_script_log("Loading room %d", newnum);
@@ -434,15 +454,15 @@ void load_new_room(int newnum, CharacterInfo *forchar) {
 		quitprintf("!Unable to load '%s'. This room file is assigned to a different _GP(game).", room_filename.GetCStr());
 	}
 
+	HError err = LoadRoomScript(&_GP(thisroom), newnum);
+	if (!err)
+		quitprintf("!Unable to load '%s'. Error: %s", room_filename.GetCStr(),
+			err->FullMessage().GetCStr());
+
 	convert_room_coordinates_to_data_res(&_GP(thisroom));
 
 	update_polled_stuff_if_runtime();
 	_G(our_eip) = 201;
-	/*  // apparently, doing this stops volume spiking between tracks
-	if (_GP(thisroom).Options.StartupMusic>0) {
-	stopmusic();
-	delay(100);
-	}*/
 
 	_GP(play).room_width = _GP(thisroom).Width;
 	_GP(play).room_height = _GP(thisroom).Height;
@@ -502,16 +522,13 @@ void load_new_room(int newnum, CharacterInfo *forchar) {
 	// setup objects
 	if (forchar != nullptr) {
 		// if not restoring a game, always reset this room
-		_GP(troom).beenhere = 0;
-		_GP(troom).FreeScriptData();
-		_GP(troom).FreeProperties();
-		memset(&_GP(troom).hotspot_enabled[0], 1, MAX_ROOM_HOTSPOTS);
-		memset(&_GP(troom).region_enabled[0], 1, MAX_ROOM_REGIONS);
+		reset_temp_room();
 	}
 	if ((newnum >= 0) & (newnum < MAX_ROOMS))
 		_G(croom) = getRoomStatus(newnum);
 	else _G(croom) = &_GP(troom);
 
+	// Decide what to do if we have been or not in this room before
 	if (_G(croom)->beenhere > 0) {
 		// if we've been here before, save the Times Run information
 		// since we will overwrite the actual NewInteraction structs
@@ -527,8 +544,18 @@ void load_new_room(int newnum, CharacterInfo *forchar) {
 			for (cc = 0; cc < MAX_ROOM_REGIONS; cc++)
 				_GP(thisroom).Regions[cc].Interaction->CopyTimesRun(_G(croom)->intrRegion[cc]);
 		}
-	}
-	if (_G(croom)->beenhere == 0) {
+		for (size_t i = 0; i < _GP(thisroom).LocalVariables.size() && i < (size_t)MAX_GLOBAL_VARIABLES; ++i)
+			_GP(thisroom).LocalVariables[i].Value = _G(croom)->interactionVariableValues[i];
+
+		// Always copy object and hotspot names for < 3.6.0 games, because they were not settable
+		if (_G(loaded_game_file_version) < kGameVersion_360_16) {
+			for (cc = 0; cc < _G(croom)->numobj; ++cc)
+				_G(croom)->obj[cc].name = _GP(thisroom).Objects[cc].Name;
+			for (cc = 0; cc < MAX_ROOM_HOTSPOTS; cc++)
+				_G(croom)->hotspot[cc].Name = _GP(thisroom).Hotspots[cc].Name;
+		}
+	} else {
+		// If we have not been in this room before, then copy necessary fields from _GP(thisroom)
 		_G(croom)->numobj = _GP(thisroom).ObjectCount;
 		_G(croom)->tsdatasize = 0;
 		for (cc = 0; cc < _G(croom)->numobj; cc++) {
@@ -544,11 +571,12 @@ void load_new_room(int newnum, CharacterInfo *forchar) {
 			_G(croom)->obj[cc].moving = -1;
 			_G(croom)->obj[cc].flags = _GP(thisroom).Objects[cc].Flags;
 			_G(croom)->obj[cc].baseline = -1;
-			_G(croom)->obj[cc].last_zoom = 100;
+			_G(croom)->obj[cc].zoom = 100;
 			_G(croom)->obj[cc].last_width = 0;
 			_G(croom)->obj[cc].last_height = 0;
 			_G(croom)->obj[cc].blocking_width = 0;
 			_G(croom)->obj[cc].blocking_height = 0;
+			_G(croom)->obj[cc].name = _GP(thisroom).Objects[cc].Name;
 			if (_GP(thisroom).Objects[cc].Baseline >= 0)
 				_G(croom)->obj[cc].baseline = _GP(thisroom).Objects[cc].Baseline;
 			if (_GP(thisroom).Objects[cc].Sprite > UINT16_MAX)
@@ -557,28 +585,27 @@ void load_new_room(int newnum, CharacterInfo *forchar) {
 		}
 		for (size_t i = 0; i < (size_t)MAX_WALK_BEHINDS; ++i)
 			_G(croom)->walkbehind_base[i] = _GP(thisroom).WalkBehinds[i].Baseline;
-		for (cc = 0; cc < MAX_FLAGS; cc++) _G(croom)->flagstates[cc] = 0;
-
-		/*    // we copy these structs for the Score column to work
-		_G(croom)->misccond=_GP(thisroom).misccond;
-		for (cc=0;cc<MAX_ROOM_HOTSPOTS;cc++)
-		_G(croom)->hscond[cc]=_GP(thisroom).hscond[cc];
-		for (cc=0;cc<MAX_ROOM_OBJECTS;cc++)
-		_G(croom)->objcond[cc]=_GP(thisroom).objcond[cc];*/
 
 		for (cc = 0; cc < MAX_ROOM_HOTSPOTS; cc++) {
-			_G(croom)->hotspot_enabled[cc] = 1;
+			_G(croom)->hotspot[cc].Enabled = true;
+			_G(croom)->hotspot[cc].Name = _GP(thisroom).Hotspots[cc].Name;
 		}
 		for (cc = 0; cc < MAX_ROOM_REGIONS; cc++) {
 			_G(croom)->region_enabled[cc] = 1;
 		}
 
+#if defined (OBSOLETE)
+		for (cc = 0; cc < MAX_LEGACY_ROOM_FLAGS; cc++) _G(croom)->flagstates[cc] = 0;
+		// we copy these structs for the Score column to work
+		_G(croom)->misccond = _GP(thisroom).misccond;
+		for (cc = 0; cc < MAX_ROOM_HOTSPOTS; cc++)
+			_G(croom)->hscond[cc] = _GP(thisroom).hscond[cc];
+		for (cc = 0; cc < MAX_ROOM_OBJECTS; cc++)
+			_G(croom)->objcond[cc] = _GP(thisroom).objcond[cc];
+#endif
+
 		_G(croom)->beenhere = 1;
 		_G(in_new_room) = 2;
-	} else {
-		// We have been here before
-		for (size_t i = 0; i < _GP(thisroom).LocalVariables.size() && i < (size_t)MAX_GLOBAL_VARIABLES; ++i)
-			_GP(thisroom).LocalVariables[i].Value = _G(croom)->interactionVariableValues[i];
 	}
 
 	update_polled_stuff_if_runtime();
@@ -598,8 +625,6 @@ void load_new_room(int newnum, CharacterInfo *forchar) {
 	_G(objs) = &_G(croom)->obj[0];
 
 	for (cc = 0; cc < MAX_ROOM_OBJECTS; cc++) {
-		// 64 bit: Using the id instead
-		// _G(scrObj)[cc].obj = &_G(croom)->obj[cc];
 		_G(objectScriptObjNames)[cc].Free();
 	}
 
@@ -619,17 +644,6 @@ void load_new_room(int newnum, CharacterInfo *forchar) {
 	}
 
 	_G(our_eip) = 206;
-	/*  THIS IS DONE IN THE EDITOR NOW
-	_GP(thisroom).BgFrames.IsPaletteShared[0] = 1;
-	for (dd = 1; dd < _GP(thisroom).BgFrameCount; dd++) {
-	if (memcmp (&_GP(thisroom).BgFrames.Palette[dd][0], &_G(palette)[0], sizeof(color) * 256) == 0)
-	_GP(thisroom).BgFrames.IsPaletteShared[dd] = 1;
-	else
-	_GP(thisroom).BgFrames.IsPaletteShared[dd] = 0;
-	}
-	// only make the first frame shared if the last is
-	if (_GP(thisroom).BgFrames.IsPaletteShared[_GP(thisroom).BgFrameCount - 1] == 0)
-	_GP(thisroom).BgFrames.IsPaletteShared[0] = 0;*/
 
 	update_polled_stuff_if_runtime();
 
@@ -669,10 +683,10 @@ void load_new_room(int newnum, CharacterInfo *forchar) {
 
 		forchar->prevroom = forchar->room;
 		forchar->room = newnum;
+
 		// only stop moving if it's a new room, not a restore game
 		for (cc = 0; cc < _GP(game).numcharacters; cc++)
 			StopMoving(cc);
-
 	}
 
 	update_polled_stuff_if_runtime();
@@ -693,12 +707,17 @@ void load_new_room(int newnum, CharacterInfo *forchar) {
 	if ((_G(new_room_x) != SCR_NO_VALUE) && (forchar != nullptr)) {
 		forchar->x = _G(new_room_x);
 		forchar->y = _G(new_room_y);
+		if (_G(new_room_placeonwalkable))
+			Character_PlaceOnWalkableArea(forchar);
 
 		if (_G(new_room_loop) != SCR_NO_VALUE)
 			forchar->loop = _G(new_room_loop);
 	}
-	_G(new_room_x) = SCR_NO_VALUE;
+
+	// reset new_room instructions
+	_G(new_room_x) = _G(new_room_y) = SCR_NO_VALUE;
 	_G(new_room_loop) = SCR_NO_VALUE;
+	_G(new_room_placeonwalkable) = false;
 
 	if ((_G(new_room_pos) > 0) & (forchar != nullptr)) {
 		if (_G(new_room_pos) >= 4000) {
@@ -862,8 +881,6 @@ void load_new_room(int newnum, CharacterInfo *forchar) {
 	debug_script_log("Now in room %d", _G(displayed_room));
 	GUI::MarkAllGUIForUpdate();
 	pl_run_plugin_hooks(AGSE_ENTERROOM, _G(displayed_room));
-	//  MoveToWalkableArea(_GP(game).playercharacter);
-	//  MSS_CHECK_ALL_BLOCKS;
 }
 
 // new_room: changes the current room number, and loads the new room from disk
@@ -899,25 +916,32 @@ void new_room(int newnum, CharacterInfo *forchar) {
 	// change rooms
 	unload_old_room();
 
-	if (_G(psp_clear_cache_on_room_change)) {
+	if (_GP(usetup).clear_cache_on_room_change) {
 		// Delete all cached sprites
 		_GP(spriteset).DisposeAll();
 
-		// Delete all gui background images
-		for (int i = 0; i < _GP(game).numgui; i++) {
-			delete _G(guibg)[i];
-			_G(guibg)[i] = nullptr;
-
-			if (_G(guibgbmp)[i])
-				_G(gfxDriver)->DestroyDDB(_G(guibgbmp)[i]);
-			_G(guibgbmp)[i] = nullptr;
-		}
 		GUI::MarkAllGUIForUpdate();
 	}
 
 	update_polled_stuff_if_runtime();
 
 	load_new_room(newnum, forchar);
+
+	// Reset background frame state (it's not a part of the RoomStatus currently)
+	_GP(play).bg_frame = 0;
+	_GP(play).bg_frame_locked = (_GP(thisroom).Options.Flags & kRoomFlag_BkgFrameLocked) != 0;
+}
+
+void set_room_placeholder() {
+	_GP(thisroom).InitDefaults();
+	std::shared_ptr<Bitmap> dummy_bg(new Bitmap(1, 1, 8));
+	_GP(thisroom).BgFrames[0].Graphic = dummy_bg;
+	_GP(thisroom).HotspotMask = dummy_bg;
+	_GP(thisroom).RegionMask = dummy_bg;
+	_GP(thisroom).WalkAreaMask = dummy_bg;
+	_GP(thisroom).WalkBehindMask = dummy_bg;
+	reset_temp_room();
+	_G(croom) = &_GP(troom);
 }
 
 int find_highest_room_entered() {
@@ -926,15 +950,17 @@ int find_highest_room_entered() {
 		if (isRoomStatusValid(qq) && (getRoomStatus(qq)->beenhere != 0))
 			fndas = qq;
 	}
-	// This is actually legal - they might start in room 400 and save
-	//if (fndas<0) quit("find_highest_room: been in no rooms?");
 	return fndas;
 }
 
 void first_room_initialization() {
 	_G(starting_room) = _G(displayed_room);
+	_G(playerchar)->prevroom = -1;
 	set_loop_counter(0);
 	_G(mouse_z_was) = _G(sys_mouse_z);
+	// Reset background frame state
+	_GP(play).bg_frame = 0;
+	_GP(play).bg_frame_locked = (_GP(thisroom).Options.Flags & kRoomFlag_BkgFrameLocked) != 0;
 }
 
 void check_new_room() {
@@ -953,7 +979,6 @@ void check_new_room() {
 		process_event(&evh);
 		_GP(play).disabled_user_interface --;
 		_G(in_new_room) = newroom_was;
-		//    setevent(EV_RUNEVBLOCK,EVB_ROOM,0,5);
 	}
 }
 
@@ -961,14 +986,19 @@ void compile_room_script() {
 	_G(ccError) = 0;
 
 	_G(roominst) = ccInstance::CreateFromScript(_GP(thisroom).CompiledScript);
-
 	if ((_G(ccError) != 0) || (_G(roominst) == nullptr)) {
-		quitprintf("Unable to create local script: %s", _G(ccErrorString).GetCStr());
+		quitprintf("Unable to create local script:\n%s", _G(ccErrorString).GetCStr());
 	}
+
+	if (!_G(roominst)->ResolveScriptImports(_G(roominst)->instanceof.get()))
+		quitprintf("Unable to resolve imports in room script:\n%s", _G(ccErrorString).GetCStr());
+
+	if (!_G(roominst)->ResolveImportFixups(_G(roominst)->instanceof.get()))
+		quitprintf("Unable to resolve import fixups in room script:\n%s", _G(ccErrorString).GetCStr());
 
 	_G(roominstFork) = _G(roominst)->Fork();
 	if (_G(roominstFork) == nullptr)
-		quitprintf("Unable to create forked room instance: %s", _G(ccErrorString).GetCStr());
+		quitprintf("Unable to create forked room instance:\n%s", _G(ccErrorString).GetCStr());
 
 	_GP(repExecAlways).roomHasFunction = true;
 	_GP(lateRepExecAlways).roomHasFunction = true;
@@ -1134,41 +1164,30 @@ RuntimeScriptValue Sc_RoomProcessClick(const RuntimeScriptValue *params, int32_t
 	API_SCALL_VOID_PINT3(RoomProcessClick);
 }
 
+RuntimeScriptValue Sc_Room_Exists(const RuntimeScriptValue *params, int32_t param_count) {
+	API_SCALL_BOOL_PINT(Room_Exists);
+}
+
 
 void RegisterRoomAPI() {
 	ccAddExternalStaticFunction("Room::GetDrawingSurfaceForBackground^1",   Sc_Room_GetDrawingSurfaceForBackground);
-	ccAddExternalStaticFunction("Room::GetProperty^1",                      Sc_Room_GetProperty);
-	ccAddExternalStaticFunction("Room::GetTextProperty^1",                  Sc_Room_GetTextProperty);
-	ccAddExternalStaticFunction("Room::SetProperty^2",                      Sc_Room_SetProperty);
-	ccAddExternalStaticFunction("Room::SetTextProperty^2",                  Sc_Room_SetTextProperty);
-	ccAddExternalStaticFunction("Room::ProcessClick^3",                     Sc_RoomProcessClick);
-	ccAddExternalStaticFunction("ProcessClick",                             Sc_RoomProcessClick);
-	ccAddExternalStaticFunction("Room::get_BottomEdge",                     Sc_Room_GetBottomEdge);
-	ccAddExternalStaticFunction("Room::get_ColorDepth",                     Sc_Room_GetColorDepth);
-	ccAddExternalStaticFunction("Room::get_Height",                         Sc_Room_GetHeight);
-	ccAddExternalStaticFunction("Room::get_LeftEdge",                       Sc_Room_GetLeftEdge);
-	ccAddExternalStaticFunction("Room::geti_Messages",                      Sc_Room_GetMessages);
-	ccAddExternalStaticFunction("Room::get_MusicOnLoad",                    Sc_Room_GetMusicOnLoad);
-	ccAddExternalStaticFunction("Room::get_ObjectCount",                    Sc_Room_GetObjectCount);
-	ccAddExternalStaticFunction("Room::get_RightEdge",                      Sc_Room_GetRightEdge);
-	ccAddExternalStaticFunction("Room::get_TopEdge",                        Sc_Room_GetTopEdge);
-	ccAddExternalStaticFunction("Room::get_Width",                          Sc_Room_GetWidth);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("Room::GetDrawingSurfaceForBackground^1", (void *)Room_GetDrawingSurfaceForBackground);
-	ccAddExternalFunctionForPlugin("Room::GetProperty^1", (void *)Room_GetProperty);
-	ccAddExternalFunctionForPlugin("Room::GetTextProperty^1", (void *)Room_GetTextProperty);
-	ccAddExternalFunctionForPlugin("Room::get_BottomEdge", (void *)Room_GetBottomEdge);
-	ccAddExternalFunctionForPlugin("Room::get_ColorDepth", (void *)Room_GetColorDepth);
-	ccAddExternalFunctionForPlugin("Room::get_Height", (void *)Room_GetHeight);
-	ccAddExternalFunctionForPlugin("Room::get_LeftEdge", (void *)Room_GetLeftEdge);
-	ccAddExternalFunctionForPlugin("Room::geti_Messages", (void *)Room_GetMessages);
-	ccAddExternalFunctionForPlugin("Room::get_MusicOnLoad", (void *)Room_GetMusicOnLoad);
-	ccAddExternalFunctionForPlugin("Room::get_ObjectCount", (void *)Room_GetObjectCount);
-	ccAddExternalFunctionForPlugin("Room::get_RightEdge", (void *)Room_GetRightEdge);
-	ccAddExternalFunctionForPlugin("Room::get_TopEdge", (void *)Room_GetTopEdge);
-	ccAddExternalFunctionForPlugin("Room::get_Width", (void *)Room_GetWidth);
+	ccAddExternalStaticFunction("Room::GetProperty^1",      Sc_Room_GetProperty);
+	ccAddExternalStaticFunction("Room::GetTextProperty^1",  Sc_Room_GetTextProperty);
+	ccAddExternalStaticFunction("Room::SetProperty^2",      Sc_Room_SetProperty);
+	ccAddExternalStaticFunction("Room::SetTextProperty^2",  Sc_Room_SetTextProperty);
+	ccAddExternalStaticFunction("Room::ProcessClick^3",     Sc_RoomProcessClick);
+	ccAddExternalStaticFunction("ProcessClick",             Sc_RoomProcessClick);
+	ccAddExternalStaticFunction("Room::get_BottomEdge",     Sc_Room_GetBottomEdge);
+	ccAddExternalStaticFunction("Room::get_ColorDepth",     Sc_Room_GetColorDepth);
+	ccAddExternalStaticFunction("Room::get_Height",         Sc_Room_GetHeight);
+	ccAddExternalStaticFunction("Room::get_LeftEdge",       Sc_Room_GetLeftEdge);
+	ccAddExternalStaticFunction("Room::geti_Messages",      Sc_Room_GetMessages);
+	ccAddExternalStaticFunction("Room::get_MusicOnLoad",    Sc_Room_GetMusicOnLoad);
+	ccAddExternalStaticFunction("Room::get_ObjectCount",    Sc_Room_GetObjectCount);
+	ccAddExternalStaticFunction("Room::get_RightEdge",      Sc_Room_GetRightEdge);
+	ccAddExternalStaticFunction("Room::get_TopEdge",        Sc_Room_GetTopEdge);
+	ccAddExternalStaticFunction("Room::get_Width",          Sc_Room_GetWidth);
+	ccAddExternalStaticFunction("Room::Exists",             Sc_Room_Exists);
 }
 
 } // namespace AGS3

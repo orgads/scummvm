@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -48,7 +47,8 @@ SoundSubfolder::SoundSubfolder(const Common::FSNode &folder) : _folder(folder) {
 	}
 }
 
-bool SoundSubfolder::hasFile(const Common::String &name) const {
+bool SoundSubfolder::hasFile(const Common::Path &path) const {
+	Common::String name = path.toString();
 	return _filenames.contains(name);
 }
 
@@ -62,14 +62,16 @@ int SoundSubfolder::listMembers(Common::ArchiveMemberList &list) const {
 	return total;
 }
 
-const Common::ArchiveMemberPtr SoundSubfolder::getMember(const Common::String &name) const {
+const Common::ArchiveMemberPtr SoundSubfolder::getMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	if (!hasFile(name))
 		return Common::ArchiveMemberPtr();
 
 	return Common::ArchiveMemberPtr(new Common::GenericArchiveMember(name, this));
 }
 
-Common::SeekableReadStream *SoundSubfolder::createReadStreamForMember(const Common::String &name) const {
+Common::SeekableReadStream *SoundSubfolder::createReadStreamForMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	Common::File *f = new Common::File();
 	if (_filenames.contains(name) && f->open(_folder.getChild(_filenames[name])))
 		return f;
@@ -112,7 +114,8 @@ SoundZip::~SoundZip() {
 	delete _zip;
 }
 
-bool SoundZip::hasFile(const Common::String &name) const {
+bool SoundZip::hasFile(const Common::Path &path) const {
+	Common::String name = path.toString();
 	return _filenames.contains(name);
 }
 
@@ -127,7 +130,8 @@ int SoundZip::listMembers(Common::ArchiveMemberList &list) const {
 	return total;
 }
 
-const Common::ArchiveMemberPtr SoundZip::getMember(const Common::String &name) const {
+const Common::ArchiveMemberPtr SoundZip::getMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	if (!hasFile(name))
 		return Common::ArchiveMemberPtr();
 
@@ -135,7 +139,8 @@ const Common::ArchiveMemberPtr SoundZip::getMember(const Common::String &name) c
 
 }
 
-Common::SeekableReadStream *SoundZip::createReadStreamForMember(const Common::String &name) const {
+Common::SeekableReadStream *SoundZip::createReadStreamForMember(const Common::Path &path) const {
+	Common::String name = path.toString();
 	if (!_filenames.contains(name))
 		return nullptr;
 

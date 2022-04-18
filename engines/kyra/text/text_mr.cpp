@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -48,19 +47,18 @@ char *TextDisplayer_MR::preprocessString(const char *str) {
 	if (_vm->_lang == 3) {
 		Screen::FontId curFont = _screen->setFont(Screen::FID_CHINESE_FNT);
 		int textLen = Common::strnlen(p, sizeof(_talkBuffer));
-		int maxTextWidth;
 
 		if (textLen > 68) {
-			maxTextWidth = ((textLen + 3) / 3) & ~1;
+			int maxTextWidth = ((textLen + 3) / 3) & ~1;
 			for (int i = textLen + 1; i >= maxTextWidth; --i)
 				p[i + 1] = p[i];
 			p[maxTextWidth] = '\r';
-			++p;
+			p += (maxTextWidth + 1);
 			textLen -= maxTextWidth;
 		}
 
 		if (textLen > 34) {
-			maxTextWidth = ((textLen + 2) / 2) & ~1;
+			int maxTextWidth = ((textLen + 2) / 2) & ~1;
 			for (int i = textLen + 1; i >= maxTextWidth; --i)
 				p[i + 1] = p[i];
 			p[maxTextWidth] = '\r';
@@ -598,7 +596,7 @@ void KyraEngine_MR::albumChatWaitToFinish() {
 				frame = 13;
 
 			albumRestoreRect();
-			_album.wsa->displayFrame(frame, 2, -100, 90, 0x4000, 0, 0);
+			_album.wsa->displayFrame(frame, 2, -100, 90, 0x4000, nullptr, nullptr);
 			albumUpdateRect();
 
 			nextFrame = _system->getMillis() + _rnd.getRandomNumberRng(4, 8) * _tickLength;

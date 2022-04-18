@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,12 +27,12 @@
 
 namespace GUI {
 
-EditableWidget::EditableWidget(GuiObject *boss, int x, int y, int w, int h, const U32String &tooltip, uint32 cmd)
+EditableWidget::EditableWidget(GuiObject *boss, int x, int y, int w, int h, const Common::U32String &tooltip, uint32 cmd)
 	: Widget(boss, x, y, w, h, tooltip), CommandSender(boss), _cmd(cmd) {
 	init();
 }
 
-EditableWidget::EditableWidget(GuiObject *boss, const String &name, const U32String &tooltip, uint32 cmd)
+EditableWidget::EditableWidget(GuiObject *boss, const Common::String &name, const Common::U32String &tooltip, uint32 cmd)
 	: Widget(boss, name, tooltip), CommandSender(boss), _cmd(cmd) {
 	init();
 }
@@ -69,7 +68,7 @@ void EditableWidget::reflowLayout() {
 	}
 }
 
-void EditableWidget::setEditString(const U32String &str) {
+void EditableWidget::setEditString(const Common::U32String &str) {
 	// TODO: We probably should filter the input string here,
 	// e.g. using tryInsertChar.
 	_editString = str;
@@ -197,7 +196,7 @@ bool EditableWidget::handleKeyDown(Common::KeyState state) {
 	case Common::KEYCODE_v:
 		if (state.flags & Common::KBD_CTRL) {
 			if (g_system->hasTextInClipboard()) {
-				U32String text = g_system->getTextFromClipboard();
+				Common::U32String text = g_system->getTextFromClipboard();
 				for (uint32 i = 0; i < text.size(); ++i) {
 					if (tryInsertChar(text[i], _caretPos))
 						++_caretPos;
@@ -222,7 +221,7 @@ bool EditableWidget::handleKeyDown(Common::KeyState state) {
 	// Let ctrl-a / ctrl-e move the caret to the start / end of the line.
 	//
 	// These shortcuts go back a long time for command line programs. As
-	// for edit fields in GUIs, they are supported natively on Mac OS X,
+	// for edit fields in GUIs, they are supported natively on macOS,
 	// which is why I enabled these shortcuts there.
 	// On other systems (Windows, Gnome), Ctrl-A by default means
 	// "select all", which is why I didn't enable the shortcuts there
@@ -314,7 +313,7 @@ void EditableWidget::drawCaret(bool erase) {
 	g_gui.theme()->drawCaret(Common::Rect(x, y, x + 1, y + editRect.height()), erase);
 
 	if (erase) {
-		GUI::EditableWidget::String character;
+		Common::String character;
 		int width;
 
 		if ((uint)_caretPos < _editString.size()) {

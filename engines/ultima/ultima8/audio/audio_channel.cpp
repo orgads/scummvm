@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -39,7 +38,7 @@ AudioChannel::AudioChannel(Audio::Mixer *mixer, uint32 sampleRate, bool stereo) 
 AudioChannel::~AudioChannel(void) {
 }
 
-void AudioChannel::playSample(AudioSample *sample, int loop, int priority, bool paused, uint32 pitchShift, int lvol, int rvol) {
+void AudioChannel::playSample(AudioSample *sample, int loop, int priority, bool paused, bool isSpeech, uint32 pitchShift, int lvol, int rvol) {
 	_sample = sample;
 	_loop = loop;
 	_priority = priority;
@@ -93,7 +92,7 @@ void AudioChannel::playSample(AudioSample *sample, int loop, int priority, bool 
 	// Play it
 	int vol = (_lVol + _rVol) / 2;		 // range is 0 ~ 255
 	int balance = (_rVol - _lVol) / 2; // range is -127 ~ +127
-	_mixer->playStream(Audio::Mixer::kPlainSoundType, &_soundHandle, stream, -1, vol, balance);
+	_mixer->playStream(isSpeech ? Audio::Mixer::kSpeechSoundType : Audio::Mixer::kSFXSoundType, &_soundHandle, stream, -1, vol, balance);
 	if (paused)
 		_mixer->pauseHandle(_soundHandle, true);
 }

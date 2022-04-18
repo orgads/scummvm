@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,8 +24,7 @@
 //
 
 #include "ags/lib/std/limits.h"
-//include <chrono>
-//include <SDL.h>
+#include "ags/engine/ac/button.h"
 #include "ags/shared/ac/common.h"
 #include "ags/engine/ac/character_extras.h"
 #include "ags/shared/ac/character_info.h"
@@ -46,27 +44,27 @@
 #include "ags/shared/ac/keycode.h"
 #include "ags/engine/ac/mouse.h"
 #include "ags/engine/ac/overlay.h"
+#include "ags/shared/ac/sprite_cache.h"
 #include "ags/engine/ac/sys_events.h"
 #include "ags/engine/ac/room.h"
 #include "ags/engine/ac/room_object.h"
 #include "ags/engine/ac/room_status.h"
 #include "ags/engine/debugging/debugger.h"
 #include "ags/engine/debugging/debug_log.h"
+#include "ags/engine/device/mouse_w32.h"
+#include "ags/engine/gui/animating_gui_button.h"
 #include "ags/shared/gui/gui_inv.h"
 #include "ags/shared/gui/gui_main.h"
 #include "ags/shared/gui/gui_textbox.h"
-#include "ags/engine/main/main_header.h"
 #include "ags/engine/main/engine.h"
 #include "ags/engine/main/game_run.h"
 #include "ags/engine/main/update.h"
+#include "ags/engine/media/audio/audio_system.h"
+#include "ags/engine/platform/base/ags_platform_driver.h"
 #include "ags/plugins/ags_plugin.h"
 #include "ags/plugins/plugin_engine.h"
 #include "ags/engine/script/script.h"
-#include "ags/shared/ac/sprite_cache.h"
-#include "ags/engine/media/audio/audio_system.h"
-#include "ags/engine/platform/base/ags_platform_driver.h"
-#include "ags/engine/ac/timer.h"
-#include "ags/shared/ac/keycode.h"
+#include "ags/engine/script/script_runtime.h"
 #include "ags/events.h"
 #include "ags/globals.h"
 
@@ -193,13 +191,11 @@ static void check_mouse_controls() {
 		remove_popup_interface(_G(ifacepopped));
 
 	// check mouse clicks on GUIs
-	static int wasbutdown = 0, wasongui = 0;
-
-	if ((wasbutdown > 0) && (ags_misbuttondown(wasbutdown - 1))) {
-		gui_on_mouse_hold(wasongui, wasbutdown);
-	} else if ((wasbutdown > 0) && (!ags_misbuttondown(wasbutdown - 1))) {
-		gui_on_mouse_up(wasongui, wasbutdown);
-		wasbutdown = 0;
+	if ((_G(wasbutdown) > 0) && (ags_misbuttondown(_G(wasbutdown) - 1))) {
+		gui_on_mouse_hold(_G(wasongui), _G(wasbutdown));
+	} else if ((_G(wasbutdown) > 0) && (!ags_misbuttondown(_G(wasbutdown) - 1))) {
+		gui_on_mouse_up(_G(wasongui), _G(wasbutdown));
+		_G(wasbutdown) = 0;
 	}
 
 	int mbut = MouseNone;
@@ -209,21 +205,23 @@ static void check_mouse_controls() {
 		check_skip_cutscene_mclick(mbut);
 
 		if (_GP(play).fast_forward || _GP(play).IsIgnoringInput()) { /* do nothing if skipping cutscene or input disabled */
-		} else if ((_GP(play).wait_counter > 0) && (_GP(play).key_skip_wait & SKIP_MOUSECLICK) != 0)
-			_GP(play).wait_counter = -1;
-		else if (_G(is_text_overlay) > 0) {
-			if (_GP(play).cant_skip_speech & SKIP_MOUSECLICK)
-				remove_screen_overlay(OVER_TEXTMSG);
+		} else if ((_GP(play).wait_counter != 0) && (_GP(play).key_skip_wait & SKIP_MOUSECLICK) != 0) {
+			_GP(play).SetWaitSkipResult(SKIP_MOUSECLICK, mbut);
+		} else if (_GP(play).text_overlay_on > 0) {
+			if (_GP(play).cant_skip_speech & SKIP_MOUSECLICK) {
+				remove_screen_overlay(_GP(play).text_overlay_on);
+				_GP(play).SetWaitSkipResult(SKIP_MOUSECLICK, mbut);
+			}
 		} else if (!IsInterfaceEnabled());  // blocking cutscene, ignore mouse
 		else if (pl_run_plugin_hooks(AGSE_MOUSECLICK, mbut + 1)) {
 			// plugin took the click
 			debug_script_log("Plugin handled mouse button %d", mbut + 1);
 		} else if (mongu >= 0) {
-			if (wasbutdown == 0) {
+			if (_G(wasbutdown) == 0) {
 				gui_on_mouse_down(mongu, mbut + 1);
 			}
-			wasongui = mongu;
-			wasbutdown = mbut + 1;
+			_G(wasongui) = mongu;
+			_G(wasbutdown) = mbut + 1;
 		} else setevent(EV_TEXTSCRIPT, TS_MCLICK, mbut + 1);
 		//    else RunTextScriptIParam(_G(gameinst),"on_mouse_click",aa+1);
 	}
@@ -245,7 +243,7 @@ int old_key_mod = 0; // for saving previous key mods
 
 // Runs service key controls, returns false if service key combinations were handled
 // and no more processing required, otherwise returns true and provides current keycode and key shifts.
-bool run_service_key_controls(int &out_key) {
+bool run_service_key_controls(KeyInput &out_key) {
 	bool handled = false;
 	const bool key_valid = ags_keyevent_ready();
 	const Common::Event key_evt = key_valid ? ags_get_next_keyevent() : Common::Event();
@@ -305,7 +303,8 @@ bool run_service_key_controls(int &out_key) {
 		return false; // rest of engine currently does not use pressed mod keys
 	// change this when it's no longer true (but be mindful about key-skipping!)
 
-	int agskey = ::AGS::EventsManager::ags_keycode_from_scummvm(key_evt);
+	KeyInput ki = ags_keycode_from_scummvm(key_evt);
+	eAGSKeyCode agskey = ki.Key;
 	if (agskey == eAGSKeyCodeNone)
 		return false; // should skip this key event
 
@@ -337,7 +336,6 @@ bool run_service_key_controls(int &out_key) {
 		// ctrl+D - show info
 		char infobuf[900];
 		int ff;
-		// MACPORT FIX 9/6/5: added last %s
 		sprintf(infobuf, "In room %d %s[Player at %d, %d (view %d, loop %d, frame %d)%s%s%s",
 		        _G(displayed_room), (_G(noWalkBehindsAtAll) ? "(has no walk-behinds)" : ""), _G(playerchar)->x, _G(playerchar)->y,
 		        _G(playerchar)->view + 1, _G(playerchar)->loop, _G(playerchar)->frame,
@@ -380,7 +378,7 @@ bool run_service_key_controls(int &out_key) {
 	}
 
 	if (((agskey == eAGSKeyCodeCtrlV) && (cur_key_mods & Common::KBD_ALT) != 0)
-	        && (_GP(play).wait_counter < 1) && (_G(is_text_overlay) == 0) && (_G(restrict_until) == 0)) {
+	        && (_GP(play).wait_counter < 1) && (_GP(play).text_overlay_on == 0) && (_G(restrict_until) == 0)) {
 		// make sure we can't interrupt a Wait()
 		// and desync the music to cutscene
 		_GP(play).debug_mode++;
@@ -390,7 +388,7 @@ bool run_service_key_controls(int &out_key) {
 	}
 
 	// No service operation triggered? return active keypress and mods to caller
-	out_key = agskey;
+	out_key = ki;
 	return true;
 }
 
@@ -408,10 +406,11 @@ bool run_service_mb_controls(int &mbut, int &mwheelz) {
 // Runs default keyboard handling
 static void check_keyboard_controls() {
 	// First check for service engine's combinations (mouse lock, display mode switch, and so forth)
-	int kgn;
-	if (!run_service_key_controls(kgn)) {
+	KeyInput ki;
+	if (!run_service_key_controls(ki)) {
 		return;
 	}
+	eAGSKeyCode kgn = ki.Key;
 	// Then, check cutscene skip
 	check_skip_cutscene_keypress(kgn);
 	if (_GP(play).fast_forward) {
@@ -428,22 +427,23 @@ static void check_keyboard_controls() {
 	}
 
 	// skip speech if desired by Speech.SkipStyle
-	if ((_G(is_text_overlay) > 0) && (_GP(play).cant_skip_speech & SKIP_KEYPRESS)) {
+	if ((_GP(play).text_overlay_on > 0) && (_GP(play).cant_skip_speech & SKIP_KEYPRESS)) {
 		// only allow a key to remove the overlay if the icon bar isn't up
 		if (IsGamePaused() == 0) {
 			// check if it requires a specific keypress
 			if ((_GP(play).skip_speech_specific_key > 0) &&
-			        (kgn != _GP(play).skip_speech_specific_key)) {
-			} else
-				remove_screen_overlay(OVER_TEXTMSG);
+				(kgn != _GP(play).skip_speech_specific_key)) {
+			} else {
+				remove_screen_overlay(_GP(play).text_overlay_on);
+				_GP(play).SetWaitSkipResult(SKIP_KEYPRESS, kgn);
+			}
 		}
 
 		return;
 	}
 
-	if ((_GP(play).wait_counter > 0) && (_GP(play).key_skip_wait & SKIP_KEYPRESS) != 0) {
-		_GP(play).wait_counter = -1;
-		debug_script_log("Keypress code %d ignored - in Wait", kgn);
+	if ((_GP(play).wait_counter != 0) && (_GP(play).key_skip_wait & SKIP_KEYPRESS) != 0) {
+		_GP(play).SetWaitSkipResult(SKIP_KEYPRESS, kgn);
 		return;
 	}
 
@@ -460,7 +460,7 @@ static void check_keyboard_controls() {
 	// pressed, but exclude control characters (<32) and
 	// extended keys (eg. up/down arrow; 256+)
 	if ((((kgn >= 32) && (kgn <= 255) && (kgn != '[')) || (kgn == eAGSKeyCodeReturn) || (kgn == eAGSKeyCodeBackspace))
-	        && !_G(all_buttons_disabled)) {
+			&& (_G(all_buttons_disabled) < 0)) {
 		for (int guiIndex = 0; guiIndex < _GP(game).numgui; guiIndex++) {
 			auto &gui = _GP(guis)[guiIndex];
 
@@ -487,7 +487,7 @@ static void check_keyboard_controls() {
 
 				keywasprocessed = 1;
 
-				guitex->OnKeyPress(kgn);
+				guitex->OnKeyPress(ki);
 
 				if (guitex->IsActivated) {
 					guitex->IsActivated = false;
@@ -498,9 +498,9 @@ static void check_keyboard_controls() {
 	}
 
 	if (!keywasprocessed) {
-		kgn = AGSKeyToScriptKey(kgn);
-		debug_script_log("Running on_key_press keycode %d", kgn);
-		setevent(EV_TEXTSCRIPT, TS_KEYPRESS, kgn);
+		int sckey = AGSKeyToScriptKey(kgn);
+		debug_script_log("Running on_key_press keycode %d", sckey);
+		setevent(EV_TEXTSCRIPT, TS_KEYPRESS, sckey);
 	}
 
 	// RunTextScriptIParam(_G(gameinst),"on_key_press",kgn);
@@ -580,10 +580,10 @@ static void game_loop_update_animated_buttons() {
 	// update animating GUI buttons
 	// this bit isn't in update_stuff because it always needs to
 	// happen, even when the game is paused
-	for (int aa = 0; aa < _G(numAnimButs); aa++) {
-		if (UpdateAnimatingButton(aa)) {
-			StopButtonAnimation(aa);
-			aa--;
+	for (size_t i = 0; i < GetAnimatingButtonCount(); ++i) {
+		if (UpdateAnimatingButton(i)) {
+			StopButtonAnimation(i);
+			i--;
 		}
 	}
 }
@@ -726,6 +726,8 @@ void UpdateGameOnce(bool checkControls, IDriverDependantBitmap *extraBitmap, int
 	_G(our_eip) = 1004;
 
 	game_loop_check_new_room();
+	if (_G(abort_engine))
+		return;
 
 	_G(our_eip) = 1005;
 
@@ -765,6 +767,8 @@ void UpdateGameOnce(bool checkControls, IDriverDependantBitmap *extraBitmap, int
 	_G(our_eip) = 7;
 
 	update_polled_stuff_if_runtime();
+	if (_G(abort_engine))
+		return;
 
 	game_loop_update_background_animation();
 
@@ -779,7 +783,16 @@ void UpdateGameOnce(bool checkControls, IDriverDependantBitmap *extraBitmap, int
 	game_loop_update_fps();
 
 	update_polled_stuff_if_runtime();
+	if (_G(abort_engine))
+		return;
 
+	WaitForNextFrame();
+}
+
+void UpdateGameAudioOnly() {
+	update_audio_system_on_game_loop();
+	game_loop_update_loop_counter();
+	game_loop_update_fps();
 	WaitForNextFrame();
 }
 
@@ -825,7 +838,7 @@ static int ShouldStayInWaitMode() {
 		const int *wkptr = (const int *)_G(user_disabled_data);
 		if (wkptr[0] < 0) retval = 0;
 	} else if (_G(restrict_until) == UNTIL_NOOVERLAY) {
-		if (_G(is_text_overlay) < 1) retval = 0;
+		if (_GP(play).text_overlay_on == 0) retval = 0;
 	} else if (_G(restrict_until) == UNTIL_INTIS0) {
 		const int *wkptr = (const int *)_G(user_disabled_data);
 		if (wkptr[0] == 0) retval = 0;
@@ -852,7 +865,7 @@ static int UpdateWaitMode() {
 	auto was_disabled_for = _G(user_disabled_for);
 
 	set_default_cursor();
-	if (_G(gui_disabled_style) != GUIDIS_UNCHANGED) { // If GUI looks change when disabled, then update them all
+	if (GUI::Options.DisabledStyle != kGuiDis_Unchanged) { // If GUI looks change when disabled, then update them all
 		GUI::MarkAllGUIForUpdate();
 	}
 	_GP(play).disabled_user_interface--;
@@ -898,7 +911,7 @@ static int GameTick() {
 
 static void SetupLoopParameters(int untilwhat, const void *udata) {
 	_GP(play).disabled_user_interface++;
-	if (_G(gui_disabled_style) != GUIDIS_UNCHANGED) { // If GUI looks change when disabled, then update them all
+	if (GUI::Options.DisabledStyle != kGuiDis_Unchanged) { // If GUI looks change when disabled, then update them all
 		GUI::MarkAllGUIForUpdate();
 	}
 	// Only change the mouse cursor if it hasn't been specifically changed first
@@ -935,7 +948,7 @@ static void GameLoopUntilEvent(int untilwhat, const void *daaa) {
 	_G(user_disabled_for) = cached_user_disabled_for;
 }
 
-void GameLoopUntilValueIsZero(const char *value) {
+void GameLoopUntilValueIsZero(const int8 *value) {
 	GameLoopUntilEvent(UNTIL_CHARIS0, value);
 }
 
@@ -964,7 +977,7 @@ void GameLoopUntilNotMoving(const short *move) {
 }
 
 void GameLoopUntilNoOverlay() {
-	GameLoopUntilEvent(UNTIL_NOOVERLAY, 0);
+	GameLoopUntilEvent(UNTIL_NOOVERLAY, nullptr);
 }
 
 
@@ -989,9 +1002,8 @@ void update_polled_stuff_if_runtime() {
 	if (_G(want_exit)) {
 		_G(want_exit) = 0;
 		quit("||exit!");
-	}
 
-	if (_G(editor_debugging_initialized))
+	} else if (_G(editor_debugging_initialized))
 		check_for_messages_from_editor();
 }
 

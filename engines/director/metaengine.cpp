@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -56,29 +55,6 @@ const char *DirectorEngine::getExtra() {
 	return _gameDescription->desc.extra;
 }
 
-Common::String DirectorEngine::getEXEName() const {
-	StartMovie startMovie = getStartMovie();
-	if (startMovie.startMovie.size() > 0)
-		return startMovie.startMovie;
-
-	return _gameDescription->desc.filesDescriptions[0].fileName;
-}
-
-StartMovie DirectorEngine::getStartMovie() const {
-	StartMovie startMovie;
-	startMovie.startFrame = -1;
-
-	if (ConfMan.hasKey("start_movie")) {
-		Common::String option = ConfMan.get("start_movie");
-		int atPos = option.findLastOf("@");
-		startMovie.startMovie = option.substr(0, atPos);
-		Common::String tail = option.substr(atPos + 1, option.size());
-		if (tail.size() > 0)
-			startMovie.startFrame = atoi(tail.c_str());
-	}
-	return startMovie;
-}
-
 bool DirectorEngine::hasFeature(EngineFeature f) const {
 	return false;
 		//(f == kSupportsReturnToLauncher);
@@ -96,6 +72,12 @@ public:
 };
 
 Common::Error DirectorMetaEngine::createInstance(OSystem *syst, Engine **engine, const ADGameDescription *desc) const {
+	Common::StringArray dirs = AdvancedMetaEngineDetection::getPathsFromEntry(desc);
+	Common::FSNode gameDataDir = Common::FSNode(ConfMan.get("path"));
+
+	for (auto dir = dirs.begin(); dir != dirs.end(); ++dir)
+		SearchMan.addSubDirectoryMatching(gameDataDir, *dir);
+
 	*engine = new Director::DirectorEngine(syst, (const Director::DirectorGameDescription *)desc);
 	return Common::kNoError;
 }

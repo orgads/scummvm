@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -138,7 +137,7 @@ _route_stat _prim_route_builder::Calc_route(PXreal startx, PXreal startz, PXreal
 
 	// reset the hit tables
 	for (go = 0; go < total_points; go++) { // goes for total number of points excluding target
-#if PRIM_BYTE_ARRAYS
+#if defined(PRIM_BYTE_ARRAYS) && PRIM_BYTE_ARRAYS
 		for (l = 0; l < total_points; l++) {
 			hits[go][l] = 0;
 			gohits[go][l] = 0;
@@ -191,7 +190,7 @@ _route_stat _prim_route_builder::Calc_route(PXreal startx, PXreal startz, PXreal
 
 				return (__PRIM_ROUTE_OK);
 			}
-#if PRIM_BYTE_ARRAYS
+#if defined(PRIM_BYTE_ARRAYS) && PRIM_BYTE_ARRAYS
 			hits[to][j] = 1;
 			gohits[0][j] = 1; // what hit in go 0
 #endif
@@ -214,7 +213,7 @@ _route_stat _prim_route_builder::Calc_route(PXreal startx, PXreal startz, PXreal
 			jremainder = lastp & 0x7;
 			flag = gohitsBits[go - 1][jplace] & (1 << jremainder);
 
-#if PRIM_BYTE_ARRAYS
+#if defined(PRIM_BYTE_ARRAYS) && PRIM_BYTE_ARRAYS
 			if ((flag != 0) != (gohits[go - 1][lastp] != 0)) {
 				Fatal_error("bits i:%d j:%d p:%d r:%d flag:%d gohits:%d", go - 1, lastp, jplace, jremainder, flag, gohits[go - 1][lastp]);
 			}
@@ -239,7 +238,7 @@ _route_stat _prim_route_builder::Calc_route(PXreal startx, PXreal startz, PXreal
 						// if it gets there then mark in
 						if (l == total_points - 2) {
 
-#if PRIM_BYTE_ARRAYS
+#if defined(PRIM_BYTE_ARRAYS) && PRIM_BYTE_ARRAYS
 							hits[lastp][thisp] = 1; // hits[point-hit-last-go] [point-that's-just-connected-this-go]
 							gohits[go][thisp] = 1; // this point hit this go
 #endif
@@ -317,7 +316,7 @@ void _prim_route_builder::Find_connects(uint32 point, PXreal cur_len, uint32 lev
 		jplace = point >> 3;
 		jremainder = point & 0x7;
 		flag = hitsBits[j][jplace] & (1 << jremainder);
-#if PRIM_BYTE_ARRAYS
+#if defined(PRIM_BYTE_ARRAYS) && PRIM_BYTE_ARRAYS
 		if ((flag != 0) != (hits[j][point] != 0)) {
 			Fatal_error("bits i:%d j:%d p:%d r:%d flag:%d hits:%d", j, point, jplace, jremainder, flag, hits[j][point]);
 		}

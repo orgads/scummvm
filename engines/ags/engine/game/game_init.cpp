@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,14 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "ags/engine/ac/character.h"
 #include "ags/engine/ac/character_cache.h"
 #include "ags/engine/ac/dialog.h"
+#include "ags/engine/ac/display.h"
 #include "ags/engine/ac/draw.h"
 #include "ags/engine/ac/file.h"
 #include "ags/engine/ac/game.h"
@@ -30,11 +30,14 @@
 #include "ags/shared/ac/game_setup_struct.h"
 #include "ags/engine/ac/game_state.h"
 #include "ags/engine/ac/gui.h"
+#include "ags/engine/ac/lip_sync.h"
 #include "ags/engine/ac/move_list.h"
 #include "ags/engine/ac/dynobj/all_dynamic_classes.h"
 #include "ags/engine/ac/dynobj/all_script_classes.h"
 #include "ags/engine/ac/statobj/ags_static_object.h"
 #include "ags/engine/ac/statobj/static_array.h"
+#include "ags/shared/ac/view.h"
+#include "ags/shared/core/asset_manager.h"
 #include "ags/engine/debugging/debug_log.h"
 #include "ags/shared/debugging/out.h"
 #include "ags/shared/font/ags_font_renderer.h"
@@ -43,12 +46,14 @@
 #include "ags/shared/gfx/bitmap.h"
 #include "ags/engine/gfx/ddb.h"
 #include "ags/shared/gui/gui_label.h"
+#include "ags/engine/media/audio/audio_system.h"
 #include "ags/engine/platform/base/ags_platform_driver.h"
 #include "ags/plugins/plugin_engine.h"
 #include "ags/shared/script/cc_error.h"
 #include "ags/engine/script/exports.h"
 #include "ags/engine/script/script.h"
 #include "ags/engine/script/script_runtime.h"
+#include "ags/shared/util/string_compat.h"
 #include "ags/shared/util/string_utils.h"
 #include "ags/engine/media/audio/audio_system.h"
 #include "ags/globals.h"
@@ -75,6 +80,8 @@ String GetGameInitErrorText(GameInitErrorType err) {
 		return "Too many plugins for this engine to handle.";
 	case kGameInitErr_PluginNameInvalid:
 		return "Plugin name is invalid.";
+	case kGameInitErr_NoGlobalScript:
+		return "No global script in game.";
 	case kGameInitErr_ScriptLinkFailed:
 		return "Script link failed.";
 	}
@@ -83,7 +90,7 @@ String GetGameInitErrorText(GameInitErrorType err) {
 
 // Initializes audio channels and clips and registers them in the script system
 void InitAndRegisterAudioObjects() {
-	for (int i = 0; i <= MAX_SOUND_CHANNELS; ++i) {
+	for (int i = 0; i < _GP(game).numGameChannels; ++i) {
 		_G(scrAudioChannel)[i].id = i;
 		ccRegisterManagedObject(&_G(scrAudioChannel)[i], &_GP(ccDynamicAudio));
 	}
@@ -251,11 +258,62 @@ HError InitAndRegisterGameEntities() {
 	return HError::None();
 }
 
-void LoadFonts(GameDataVersion data_ver) {
+void LoadFonts(GameSetupStruct &game, GameDataVersion data_ver) {
 	for (int i = 0; i < _GP(game).numfonts; ++i) {
-		if (!wloadfont_size(i, _GP(game).fonts[i]))
+		FontInfo &finfo = _GP(game).fonts[i];
+		if (!load_font_size(i, finfo))
 			quitprintf("Unable to load font %d, no renderer could load a matching file", i);
+
+		const bool is_wfn = is_bitmap_font(i);
+		// Outline thickness corresponds to 1 game pixel by default;
+		// but if it's a scaled up bitmap font, then it equals to scale
+		if (data_ver < kGameVersion_360) {
+			if (is_wfn && (finfo.Outline == FONT_OUTLINE_AUTO)) {
+				set_font_outline(i, FONT_OUTLINE_AUTO, FontInfo::kSquared, get_font_scaling_mul(i));
+			}
+		}
 	}
+
+	// Additional fixups - after all the fonts are registered
+	for (int i = 0; i < _GP(game).numfonts; ++i) {
+		if (!is_bitmap_font(i)) {
+			// Check for the LucasFan font since it comes with an outline font that
+			// is drawn incorrectly with Freetype versions > 2.1.3.
+			// A simple workaround is to disable outline fonts for it and use
+			// automatic outline drawing.
+			const int outline_font = get_font_outline(i);
+			if (outline_font < 0)
+				continue;
+			const char *name = get_font_name(i);
+			const char *outline_name = get_font_name(outline_font);
+			if ((ags_stricmp(name, "LucasFan-Font") == 0) &&
+					(ags_stricmp(outline_name, "Arcade") == 0))
+				set_font_outline(i, FONT_OUTLINE_AUTO);
+		}
+	}
+}
+
+void LoadLipsyncData() {
+	std::unique_ptr<Stream> speechsync(_GP(AssetMgr)->OpenAsset("syncdata.dat", "voice"));
+	if (!speechsync)
+		return;
+	// this game has voice lip sync
+	int lipsync_fmt = speechsync->ReadInt32();
+	if (lipsync_fmt != 4) {
+		Debug::Printf(kDbgMsg_Info, "Unknown speech lip sync format (%d).\nLip sync disabled.", lipsync_fmt);
+	} else {
+		_G(numLipLines) = speechsync->ReadInt32();
+		_G(splipsync) = (SpeechLipSyncLine *)malloc(sizeof(SpeechLipSyncLine) * _G(numLipLines));
+		for (int ee = 0; ee < _G(numLipLines); ee++) {
+			_G(splipsync)[ee].numPhonemes = speechsync->ReadInt16();
+			speechsync->Read(_G(splipsync)[ee].filename, 14);
+			_G(splipsync)[ee].endtimeoffs = (int32_t *)malloc(_G(splipsync)[ee].numPhonemes * sizeof(int));
+			speechsync->ReadArrayOfInt32(_G(splipsync)[ee].endtimeoffs, _G(splipsync)[ee].numPhonemes);
+			_G(splipsync)[ee].frame = (short *)malloc(_G(splipsync)[ee].numPhonemes * sizeof(short));
+			speechsync->ReadArrayOfInt16(_G(splipsync)[ee].frame, _G(splipsync)[ee].numPhonemes);
+		}
+	}
+	Debug::Printf(kDbgMsg_Info, "Lipsync data found and loaded");
 }
 
 void AllocScriptModules() {
@@ -276,50 +334,55 @@ void AllocScriptModules() {
 }
 
 HGameInitError InitGameState(const LoadedGameEntities &ents, GameDataVersion data_ver) {
-	const ScriptAPIVersion base_api = (ScriptAPIVersion)_GP(game).options[OPT_BASESCRIPTAPI];
-	const ScriptAPIVersion compat_api = (ScriptAPIVersion)_GP(game).options[OPT_SCRIPTCOMPATLEV];
+	GameSetupStruct &game = ents.Game;
+	const ScriptAPIVersion base_api = (ScriptAPIVersion)game.options[OPT_BASESCRIPTAPI];
+	const ScriptAPIVersion compat_api = (ScriptAPIVersion)game.options[OPT_SCRIPTCOMPATLEV];
 	if (data_ver >= kGameVersion_341) {
-		// TODO: find a way to either automate this list of strings or make it more visible (shared & easier to find in engine code)
-		// TODO: stack-allocated strings, here and in other similar places
-		const String scapi_names[kScriptAPI_Current + 1] = { "v3.2.1", "v3.3.0", "v3.3.4", "v3.3.5", "v3.4.0", "v3.4.1", "v3.5.0", "v3.5.0.7" };
+		const char *base_api_name = GetScriptAPIName(base_api);
+		const char *compat_api_name = GetScriptAPIName(compat_api);
 		Debug::Printf(kDbgMsg_Info, "Requested script API: %s (%d), compat level: %s (%d)",
-		              base_api >= 0 && base_api <= kScriptAPI_Current ? scapi_names[base_api].GetCStr() : "unknown", base_api,
-		              compat_api >= 0 && compat_api <= kScriptAPI_Current ? scapi_names[compat_api].GetCStr() : "unknown", compat_api);
+			base_api >= 0 && base_api <= kScriptAPI_Current ? base_api_name : "unknown", base_api,
+			compat_api >= 0 && compat_api <= kScriptAPI_Current ? compat_api_name : "unknown", compat_api);
 	}
 	// If the game was compiled using unsupported version of the script API,
 	// we warn about potential incompatibilities but proceed further.
-	if (_GP(game).options[OPT_BASESCRIPTAPI] > kScriptAPI_Current)
+	if (game.options[OPT_BASESCRIPTAPI] > kScriptAPI_Current)
 		_G(platform)->DisplayAlert("Warning: this game requests a higher version of AGS script API, it may not run correctly or run at all.");
 
 	//
 	// 1. Check that the loaded data is valid and compatible with the current
 	// engine capabilities.
 	//
-	if (_GP(game).numfonts == 0)
+	if (game.numfonts == 0)
 		return new GameInitError(kGameInitErr_NoFonts);
-	if (_GP(game).audioClipTypes.size() > MAX_AUDIO_TYPES)
+	if (game.audioClipTypes.size() > MAX_AUDIO_TYPES)
 		return new GameInitError(kGameInitErr_TooManyAudioTypes,
-			String::FromFormat("Required: %zu, max: %zu", _GP(game).audioClipTypes.size(), MAX_AUDIO_TYPES));
+			String::FromFormat("Required: %zu, max: %zu", game.audioClipTypes.size(), MAX_AUDIO_TYPES));
 
 	//
 	// 3. Allocate and init game objects
 	//
-	_G(charextra) = (CharacterExtras *)calloc(_GP(game).numcharacters, sizeof(CharacterExtras));
-	_G(charcache) = (CharacterCache *)calloc(1, sizeof(CharacterCache) * _GP(game).numcharacters + 5);
-	_G(mls) = (MoveList *)calloc(_GP(game).numcharacters + MAX_ROOM_OBJECTS + 1, sizeof(MoveList));
-	_G(actSpsCount) = _GP(game).numcharacters + MAX_ROOM_OBJECTS + 2;
-	_G(actsps) = (Bitmap **)calloc(_G(actSpsCount), sizeof(Bitmap *));
-	_G(actspsbmp) = (IDriverDependantBitmap **)calloc(_G(actSpsCount), sizeof(IDriverDependantBitmap *));
-	_G(actspswb) = (Bitmap **)calloc(_G(actSpsCount), sizeof(Bitmap *));
-	_G(actspswbbmp) = (IDriverDependantBitmap **)calloc(_G(actSpsCount), sizeof(IDriverDependantBitmap *));
-	_G(actspswbcache) = (CachedActSpsData *)calloc(_G(actSpsCount), sizeof(CachedActSpsData));
-	_GP(play).charProps.resize(_GP(game).numcharacters);
+	_G(charextra) = (CharacterExtras *)calloc(game.numcharacters, sizeof(CharacterExtras));
+	_G(charcache) = (CharacterCache *)calloc(1, sizeof(CharacterCache) * game.numcharacters + 5);
+	_G(mls) = (MoveList *)calloc(game.numcharacters + MAX_ROOM_OBJECTS + 1, sizeof(MoveList));
+	init_game_drawdata();
+	_GP(views) = std::move(ents.Views);
+
+	_GP(play).charProps.resize(game.numcharacters);
 	_G(old_dialog_scripts) = ents.OldDialogScripts;
 	_G(old_speech_lines) = ents.OldSpeechLines;
+
+	// Set number of game channels corresponding to the loaded game version
+	if (_G(loaded_game_file_version) < kGameVersion_360)
+		game.numGameChannels = MAX_GAME_CHANNELS_v320;
+	else
+		game.numGameChannels = MAX_GAME_CHANNELS;
+
 	HError err = InitAndRegisterGameEntities();
 	if (!err)
 		return new GameInitError(kGameInitErr_EntityInitFail, err);
-	LoadFonts(data_ver);
+	LoadFonts(game, data_ver);
+	LoadLipsyncData();
 
 	//
 	// 4. Initialize certain runtime variables
@@ -328,12 +391,12 @@ HGameInitError InitGameState(const LoadedGameEntities &ents, GameDataVersion dat
 	_G(ifacepopped) = -1;
 
 	String svg_suffix;
-	if (_GP(game).saveGameFileExtension[0] != 0)
-		svg_suffix.Format(".%s", _GP(game).saveGameFileExtension);
+	if (game.saveGameFileExtension[0] != 0)
+		svg_suffix.Format(".%s", game.saveGameFileExtension);
 	set_save_game_suffix(svg_suffix);
 
-	_GP(play).score_sound = _GP(game).scoreClipID;
-	_GP(play).fade_effect = _GP(game).options[OPT_FADETYPE];
+	_GP(play).score_sound = game.scoreClipID;
+	_GP(play).fade_effect = game.options[OPT_FADETYPE];
 
 	//
 	// 5. Initialize runtime state of certain game objects
@@ -342,7 +405,7 @@ HGameInitError InitGameState(const LoadedGameEntities &ents, GameDataVersion dat
 		// labels are not clickable by default
 		_GP(guilabels)[i].SetClickable(false);
 	}
-	_GP(play).gui_draw_order = (int32_t *)calloc(_GP(game).numgui * sizeof(int), 1);
+	_GP(play).gui_draw_order = (int32_t *)calloc(game.numgui * sizeof(int), 1);
 	update_gui_zorder();
 	calculate_reserved_channel_count();
 
@@ -366,6 +429,8 @@ HGameInitError InitGameState(const LoadedGameEntities &ents, GameDataVersion dat
 	// NOTE: we must do this after plugins, because some plugins may export
 	// script symbols too.
 	//
+	if (!ents.GlobalScript)
+		return new GameInitError(kGameInitErr_NoGlobalScript);
 	_GP(gamescript) = ents.GlobalScript;
 	_GP(dialogScriptsScript) = ents.DialogScript;
 	_G(numScriptModules) = ents.ScriptModules.size();

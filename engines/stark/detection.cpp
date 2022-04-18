@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +23,7 @@
 
 #include "common/translation.h"
 
+#include "stark/detection.h"
 #include "stark/debug.h"
 
 namespace Stark {
@@ -44,6 +44,20 @@ static const DebugChannelDef debugFlagList[] = {
 };
 
 static const ADGameDescription gameDescriptions[] = {
+
+	// The Longest Journey
+	// English Steam (game.exe missing valid 147.bmp resource for dialog boxes background)
+	{
+		"tlj", "Steam",
+		AD_ENTRY3s("x.xarc",        "de8327850d7bba90b690b141eaa23f61", 3032,
+				   "chapters.ini",  "5b5a1f1dd2297d9ce0d3d12216d5d2c5", 485,
+				   "game.exe",      "2a68bd64e71635c74a5c6bb172ec1cb1", 95744),
+		Common::EN_ANY,
+		Common::kPlatformWindows,
+		GF_MISSING_EXE_RESOURCES|ADGF_NO_FLAGS,
+		GUIO_NONE
+	},
+
 	// The Longest Journey
 	// English DVD
 	{
@@ -99,7 +113,7 @@ static const ADGameDescription gameDescriptions[] = {
 		"tlj", "4 CD build 142",
 		AD_ENTRY2s("x.xarc",		"a0559457126caadab0cadac02d35f26f", 3032,
 				   "chapters.ini",	"547f0b9c04c00d330b60eed6e8d24732", 484),
-		Common::CZ_CZE,
+		Common::CS_CZE,
 		Common::kPlatformWindows,
 		ADGF_NO_FLAGS,
 		GUIO_NONE

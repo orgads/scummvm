@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -41,9 +40,9 @@
 
 namespace Cine {
 
-Sound *g_sound = 0;
+Sound *g_sound = nullptr;
 
-CineEngine *g_cine = 0;
+CineEngine *g_cine = nullptr;
 
 CineEngine::CineEngine(OSystem *syst, const CINEGameDescription *gameDesc)
 	: Engine(syst),
@@ -100,8 +99,12 @@ Common::Error CineEngine::run() {
 	// Initialize backend
 	initGraphics(320, 200);
 
-	if (g_cine->getGameType() == GType_FW && (g_cine->getFeatures() & GF_CD))
-		checkCD();
+	if (g_cine->getGameType() == GType_FW && (g_cine->getFeatures() & GF_CD)) {
+		if (!existExtractedCDAudioFiles()
+		    && !isDataAndCDAudioReadFromSameCD()) {
+			warnMissingExtractedCDAudio();
+		}
+	}
 
 	if (getPlatform() == Common::kPlatformDOS) {
 		g_sound = new PCSound(_mixer, this);
@@ -122,6 +125,7 @@ Common::Error CineEngine::run() {
 
 		delete renderer;
 		delete[] collisionPage;
+		delete _scriptInfo;
 	} while (_restartRequested);
 
 	delete g_sound;
@@ -172,7 +176,7 @@ void CineEngine::initialize() {
 	Common::fill(g_cine->_zoneQuery.begin(), g_cine->_zoneQuery.end(), 0);
 
 	setDefaultGameSpeed();
-	setupOpcodes();
+	_scriptInfo = setupOpcodes();
 
 	initLanguage(getLanguage());
 
@@ -191,8 +195,7 @@ void CineEngine::initialize() {
 	lastSafeControlObjIdx = -1;
 	currentDisk = 1;
 
-	collisionPage = new byte[320 * 200];
-	memset(collisionPage, 0, 320 * 200);
+	collisionPage = new byte[320 * 200]();
 
 	// Clear part buffer as there's nothing loaded into it yet.
 	// Its size will change when loading data into it with the loadPart function.

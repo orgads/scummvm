@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -168,34 +167,23 @@ KyraRpgEngine::~KyraRpgEngine() {
 Common::Error KyraRpgEngine::init() {
 	gui_resetButtonList();
 
-	_levelDecorationProperties = new LevelDecorationProperty[100];
-	memset(_levelDecorationProperties, 0, 100 * sizeof(LevelDecorationProperty));
+	_levelDecorationProperties = new LevelDecorationProperty[100]();
 	_levelDecorationShapes = new const uint8*[400];
 	memset(_levelDecorationShapes, 0, 400 * sizeof(uint8 *));
-	_levelBlockProperties = new LevelBlockProperty[1025];
-	memset(_levelBlockProperties, 0, 1025 * sizeof(LevelBlockProperty));
+	_levelBlockProperties = new LevelBlockProperty[1025]();
 
-	_wllVmpMap = new uint8[256];
-	memset(_wllVmpMap, 0, 256);
-	_wllShapeMap = new int8[256];
-	memset(_wllShapeMap, 0, 256);
-	_specialWallTypes = new uint8[256];
-	memset(_specialWallTypes, 0, 256);
-	_wllWallFlags = new uint8[256];
-	memset(_wllWallFlags, 0, 256);
+	_wllVmpMap = new uint8[256]();
+	_wllShapeMap = new int8[256]();
+	_specialWallTypes = new uint8[256]();
+	_wllWallFlags = new uint8[256]();
 
-	_blockDrawingBuffer = new uint16[1320];
-	memset(_blockDrawingBuffer, 0, 1320 * sizeof(uint16));
+	_blockDrawingBuffer = new uint16[1320]();
 	int windowBufferSize = _flags.useHiColorMode ? 42240 : 21120;
-	_sceneWindowBuffer = new uint8[windowBufferSize];
-	memset(_sceneWindowBuffer, 0, windowBufferSize);
+	_sceneWindowBuffer = new uint8[windowBufferSize]();
 
-	_lvlShapeTop = new int16[18];
-	memset(_lvlShapeTop, 0, 18 * sizeof(int16));
-	_lvlShapeBottom = new int16[18];
-	memset(_lvlShapeBottom, 0, 18 * sizeof(int16));
-	_lvlShapeLeftRight = new int16[36];
-	memset(_lvlShapeLeftRight, 0, 36 * sizeof(int16));
+	_lvlShapeTop = new int16[18]();
+	_lvlShapeBottom = new int16[18]();
+	_lvlShapeLeftRight = new int16[36]();
 
 	_vcnColTable = new uint8[128];
 	for (int i = 0; i < 128; i++)
@@ -211,8 +199,7 @@ Common::Error KyraRpgEngine::init() {
 		_vcnDrawLine = new VcnLineDrawingMethods(new VcnDrawProc(this, &KyraRpgEngine::vcnDraw_fw_4bit), new VcnDrawProc(this, &KyraRpgEngine::vcnDraw_bw_4bit),
 			new VcnDrawProc(this, &KyraRpgEngine::vcnDraw_fw_trans_4bit), new VcnDrawProc(this, &KyraRpgEngine::vcnDraw_bw_trans_4bit));
 
-	_doorShapes = new uint8*[6];
-	memset(_doorShapes, 0, 6 * sizeof(uint8 *));
+	_doorShapes = new uint8*[6]();
 
 	initStaticResource();
 

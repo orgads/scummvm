@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -75,47 +74,30 @@ Common::Language BuriedEngine::getLanguage() const {
 
 class BuriedMetaEngine : public AdvancedMetaEngine {
 public:
-	const char *getName() const {
+	const char *getName() const override {
 		return "buried";
 	}
 
-	virtual bool hasFeature(MetaEngineFeature f) const;
-	virtual Common::Error createInstance(OSystem *syst, Engine **engine, const ADGameDescription *desc) const;
-	virtual SaveStateList listSaves(const char *target) const;
-	virtual int getMaximumSaveSlot() const { return 999; }
-	virtual void removeSaveState(const char *target, int slot) const;
+	bool hasFeature(MetaEngineFeature f) const override;
+	Common::Error createInstance(OSystem *syst, Engine **engine, const ADGameDescription *desc) const override;
+	int getMaximumSaveSlot() const override { return 999; }
+	Common::String getSavegameFile(int saveGameIdx, const char *target) const override {
+		// We set a standard target because saves are compatible among all versions
+		return AdvancedMetaEngine::getSavegameFile(saveGameIdx, "buried");
+	}
 };
 
 bool BuriedMetaEngine::hasFeature(MetaEngineFeature f) const {
 	return
-		(f == kSupportsListSaves)
-		|| (f == kSupportsLoadingDuringStartup)
-		|| (f == kSupportsDeleteSave);
-}
-
-SaveStateList BuriedMetaEngine::listSaves(const char *target) const {
-	// The original had no pattern, so the user must rename theirs
-	// Note that we ignore the target because saves are compatible between
-	// all versions
-	Common::StringArray fileNames = Buried::BuriedEngine::listSaveFiles();
-
-	SaveStateList saveList;
-	for (uint32 i = 0; i < fileNames.size(); i++) {
-		// Isolate the description from the file name
-		Common::String desc = fileNames[i].c_str() + 7;
-		for (int j = 0; j < 4; j++)
-			desc.deleteLastChar();
-
-		saveList.push_back(SaveStateDescriptor(i, desc));
-	}
-
-	return saveList;
-}
-
-void BuriedMetaEngine::removeSaveState(const char *target, int slot) const {
-	// See listSaves() for info on the pattern
-	const Common::StringArray &fileNames = Buried::BuriedEngine::listSaveFiles();
-	g_system->getSavefileManager()->removeSavefile(fileNames[slot].c_str());
+		f == kSupportsListSaves ||
+		f == kSupportsLoadingDuringStartup ||
+		f == kSupportsDeleteSave ||
+		f == kSavesSupportMetaInfo ||
+		f == kSavesSupportThumbnail ||
+		f == kSavesSupportCreationDate ||
+		f == kSavesSupportPlayTime ||
+		f == kSimpleSavesNames ||
+		f == kSavesUseExtendedFormat;
 }
 
 Common::Error BuriedMetaEngine::createInstance(OSystem *syst, Engine **engine, const ADGameDescription *desc) const {

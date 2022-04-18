@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -811,15 +810,15 @@ static void dscrobj(Aword obj) {
 }
 
 static void dscract(Aword act) {
-	ScrElem *scr = NULL;
+	ScrElem *scr = nullptr;
 
 	if (acts[act - ACTMIN].script != 0) {
 		for (scr = (ScrElem *) addrTo(acts[act - ACTMIN].scradr); !endOfTable(scr); scr++)
 			if (scr->code == acts[act - ACTMIN].script)
 				break;
-		if (endOfTable(scr)) scr = NULL;
+		if (endOfTable(scr)) scr = nullptr;
 	}
-	if (scr != NULL && scr->dscr != 0)
+	if (scr != nullptr && scr->dscr != 0)
 		interpret(scr->dscr);
 	else if (acts[act - ACTMIN].dscr != 0)
 		interpret(acts[act - ACTMIN].dscr);
@@ -1125,7 +1124,7 @@ Aword contains(Aptr string, Aptr substring) {
 	strlow((char *)string);
 	strlow((char *)substring);
 
-	found = (strstr((char *)string, (char *)substring) != 0);
+	found = (strstr((char *)string, (char *)substring) != nullptr);
 
 	free((char *)string);
 	free((char *)substring);

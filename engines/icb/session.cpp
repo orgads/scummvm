@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -233,7 +232,7 @@ void _game_session::___init(const char *mission, const char *new_session_name) {
 	Tdebug("text_lines.txt", "\n\n---Text Lines---\n");
 
 	// text
-	text = NULL; // game can exist with this file
+	text = nullptr; // game can exist with this file
 
 	char textFileName[100];
 
@@ -259,7 +258,7 @@ void _game_session::___init(const char *mission, const char *new_session_name) {
 
 	// A copy of the code above to open the global text file.  Feel free to edit this if I've ballsed up
 	// anywhere.
-	global_text = NULL;
+	global_text = nullptr;
 
 	char global_cluster[ENGINE_STRING_LEN];
 
@@ -982,7 +981,7 @@ void _game_session::Script_cycle() {
 			}
 
 			if (!L->logic_level) { // restart the object
-				L->logic_ref[1] = 0; // completely reset L 1 so that context choose will select ok
+				L->logic_ref[1] = nullptr; // completely reset L 1 so that context choose will select ok
 				// it is acceptable to choose the logic that had previously been running
 
 				// temp reset PC the hard way
@@ -1203,7 +1202,7 @@ _linked_data_file *LoadTranslatedFile(const char *mission, const char *session) 
 	// Load in this file
 	Common::SeekableReadStream *stream = openDiskFileForBinaryStreamRead(fname.c_str());
 
-	if (stream == NULL) // if it could not be opened
+	if (stream == nullptr) // if it could not be opened
 		Fatal_error("Unable to load file %s", (const char *)fname);
 
 	uint32 len = stream->size();

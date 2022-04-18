@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +23,7 @@
 #include "ultima/ultima8/world/map.h"
 #include "ultima/ultima8/world/item_factory.h"
 #include "ultima/ultima8/world/container.h"
+#include "ultima/ultima8/world/coord_utils.h"
 #include "ultima/ultima8/kernel/object_manager.h"
 #include "ultima/ultima8/ultima8.h"
 #include "ultima/ultima8/games/game_data.h"
@@ -220,10 +220,7 @@ void Map::loadFixedFormatObjects(Std::list<Item *> &itemlist,
 		int32 y = static_cast<int32>(rs->readUint16LE());
 		int32 z = static_cast<int32>(rs->readByte());
 
-		if (GAME_IS_CRUSADER) {
-			x *= 2;
-			y *= 2;
-		}
+		World_FromUsecodeXY(x, y);
 
 		uint32 shape = rs->readUint16LE();
 		uint32 frame = rs->readByte();

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -50,14 +49,14 @@ Input::Input(TwinEEngine *engine) : _engine(engine) {}
 
 bool Input::isActionActive(TwinEActionType actionType, bool onlyFirstTime) const {
 	if (onlyFirstTime) {
-		return actionStates[actionType] == 1;
+		return _actionStates[actionType] == 1;
 	}
-	return actionStates[actionType] > 0;
+	return _actionStates[actionType] > 0;
 }
 
 bool Input::toggleActionIfActive(TwinEActionType actionType) {
-	if (actionStates[actionType] > 0) {
-		actionStates[actionType] = 0;
+	if (_actionStates[actionType] > 0) {
+		_actionStates[actionType] = 0;
 		return true;
 	}
 	return false;
@@ -117,12 +116,13 @@ void Input::enableKeyMap(const char *id) {
 }
 
 void Input::processCustomEngineEventStart(const Common::Event &event) {
-	if (!_engine->cfgfile.Debug) {
+	if (!_engine->_cfgfile.Debug) {
 		switch (event.customType) {
 		case TwinEActionType::DebugGridCameraPressUp:
 		case TwinEActionType::DebugGridCameraPressDown:
 		case TwinEActionType::DebugGridCameraPressLeft:
 		case TwinEActionType::DebugGridCameraPressRight:
+		case TwinEActionType::DebugPlaceActorAtCenterOfScreen:
 		case TwinEActionType::DebugMenu:
 		case TwinEActionType::DebugMenuActivate:
 		case TwinEActionType::NextRoom:
@@ -132,16 +132,18 @@ void Input::processCustomEngineEventStart(const Common::Event &event) {
 		case TwinEActionType::DecreaseCellingGridIndex:
 			break;
 		default:
-			actionStates[event.customType] = 1 + event.kbdRepeat;
+			_actionStates[event.customType] = 1 + event.kbdRepeat;
 			break;
 		}
 	} else {
-		actionStates[event.customType] = 1 + event.kbdRepeat;
+		_actionStates[event.customType] = 1 + event.kbdRepeat;
 	}
+	debug(3, "twine custom event type start: %i", event.customType);
 }
 
 void Input::processCustomEngineEventEnd(const Common::Event &event) {
-	actionStates[event.customType] = 0;
+	_actionStates[event.customType] = 0;
+	debug(3, "twine custom event type end: %i", event.customType);
 }
 
 void Input::readKeys() {
@@ -165,7 +167,7 @@ Common::Point Input::getMousePositions() const {
 }
 
 bool Input::isMouseHovering(const Common::Rect &rect) const {
-	if (!_engine->cfgfile.Mouse) {
+	if (!_engine->_cfgfile.Mouse) {
 		return false;
 	}
 	const Common::Point &point = getMousePositions();

@@ -2,9 +2,11 @@ MODULE := audio
 
 MODULE_OBJS := \
 	adlib.o \
+	adlib_ms.o \
 	audiostream.o \
 	fmopl.o \
 	mididrv.o \
+	mididrv_ms.o \
 	midiparser_qt.o \
 	midiparser_smf.o \
 	midiparser_xmidi.o \
@@ -96,6 +98,11 @@ endif
 ifdef ENABLE_OPL2LPT
 MODULE_OBJS += \
 	opl2lpt.o
+endif
+
+ifdef USE_RETROWAVE
+MODULE_OBJS += \
+	rwopl3.o
 endif
 
 # Include common rules

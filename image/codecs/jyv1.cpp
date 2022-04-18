@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -75,8 +74,6 @@ const Graphics::Surface *JYV1Decoder::decodeFrame(Common::SeekableReadStream &st
 		offsets[i] = stream.readUint32LE() + startOffset;
 	}
 
-	int y = 0;
-	int x = 0;
 	bool upscale = false;
 
 	//
@@ -106,7 +103,10 @@ const Graphics::Surface *JYV1Decoder::decodeFrame(Common::SeekableReadStream &st
 			upscale = true;
 	}
 
-	for (int i = 0; i < numOffsets; i++) {
+	int y = 0;
+	int x = 0;
+
+	for (int i = 0; i < numOffsets && y < _height; i++) {
 		stream.seek(offsets[i], SEEK_SET);
 		const int cmdLen = stream.readUint32LE();
 
@@ -116,7 +116,7 @@ const Graphics::Surface *JYV1Decoder::decodeFrame(Common::SeekableReadStream &st
 		Common::BitStreamMemoryStream cmdMemStream(cmdData, cmdLen);
 		Common::BitStreamMemory8MSB cmdBitStream(cmdMemStream);
 		bool skipping = true;
-		while (!cmdBitStream.eos()) {
+		while (cmdBitStream.size() - cmdBitStream.pos() >= 4 && y < _height) {
 			uint32 idx = cmdBitStream.getBits(4);
 			uint32 blocksize = BASE_LEN[idx];
 			if (idx != 0 && idx != 8) {
@@ -137,7 +137,7 @@ const Graphics::Surface *JYV1Decoder::decodeFrame(Common::SeekableReadStream &st
 				}
 			} else {
 				// draw blocksize pixels from data block
-				while (blocksize) {
+				while (blocksize && y < _height) {
 					// TODO: would be nicer to read these in whole scanlines.
 					// Also this upscale code is kinda ugly.
 					const uint8 p = stream.readByte();

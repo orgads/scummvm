@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -183,9 +182,9 @@ void _mission::___init_mission(const char *new_mission_name, const char *session
 	num_medi = 0;
 	inited_globals = FALSE8;
 
-	if (new_mission_name == NULL)
+	if (new_mission_name == nullptr)
 		Fatal_error("new mission no mission name");
-	if (session_name == NULL)
+	if (session_name == nullptr)
 		Fatal_error("new mission no session name");
 
 	// Work out which CD we should be using
@@ -257,7 +256,7 @@ void _mission::___delete_mission() {
 	Zdebug("deleting mission");
 
 	// kill the pointer which doubles as an inited yes/no flag
-	g_mission = NULL;
+	g_mission = nullptr;
 
 	session->___destruct();
 
@@ -281,7 +280,7 @@ void _mission::End_mission() {
 }
 
 _mission::_mission()
-		: session(NULL), camera_follow_id_overide(0), remora_save_mode(0), ad_time(0), lt_time(0), set_time(0), flip_time(0), cycle_time(0), logic_time(0), resman_logic_time(0),
+		: session(nullptr), camera_follow_id_overide(0), remora_save_mode(0), ad_time(0), lt_time(0), set_time(0), flip_time(0), cycle_time(0), logic_time(0), resman_logic_time(0),
 		los_time(0), event_time(0), sound_time(0), xtra_mega_time(0), nActorsDrawn(0), nActorsConsidered(0), old_hits_value(0), chi_following(0), num_bullets(0), num_clips(0),
 		num_medi(0), inited_globals(FALSE8), mission_terminate(0), mission_status(0), number_sessions_saved(0), new_session(FALSE8), init_nico(FALSE8) {
 	memset(new_session_name, '\0', TINY_NAME_LEN);
@@ -311,7 +310,7 @@ uint32 _mission::Game_cycle() {
 	//				1 finish the mission
 
 	// safety check for no session
-	if (session == NULL)
+	if (session == nullptr)
 		Fatal_error("no session");
 
 	if (new_session == TRUE8) { // a new session has been requested
@@ -614,7 +613,7 @@ void _mission::Save_game_position(const char *filename, const char *slot_label, 
 	// first save the index file which contains the session name and mission name that we're currently running - and hence want to
 	// restore to later
 	Common::WriteStream *stream = openDiskWriteStream(filename); // attempt to open the file for writing
-	if (stream == NULL)
+	if (stream == nullptr)
 		Fatal_error("Save_game_position cannot *OPEN* [%s]", (const char *)filename);
 
 	// specific stuff for pc save game menu
@@ -638,7 +637,7 @@ void _mission::Save_game_position(const char *filename, const char *slot_label, 
 	stream->writeByte(atinyvalue);
 
 	for (j = 0; j < atinyvalue; j++) {
-		avalue = (int32)g_globalScriptVariables->GetVariable((*g_globalScriptVariables)[j].hash, 0, 0);
+		avalue = (int32)g_globalScriptVariables->GetVariable((*g_globalScriptVariables)[j].hash, nullptr, 0);
 		stream->writeSint32LE(avalue);
 		Tdebug("save_restore.txt", "  %d 0x%08x = %d", j, (*g_globalScriptVariables)[j].hash, avalue);
 	}
@@ -912,7 +911,7 @@ void _mission::Restore_micro_session_from_save_game(Common::SeekableReadStream *
 
 __load_result Load_game(const char *filename) {
 	// load a save game
-	Common::SeekableReadStream *stream = 0; // file pointer
+	Common::SeekableReadStream *stream = nullptr; // file pointer
 	uint32 avalue;
 	uint8 atinyvalue;
 	char mission_name[64];
@@ -928,7 +927,7 @@ __load_result Load_game(const char *filename) {
 	// open the index file
 	stream = openDiskFileForBinaryStreamRead(filename); // attempt to open the file for reading
 
-	if (stream == NULL)
+	if (stream == nullptr)
 		return __NO_SUCH_FILE;
 
 	char label[MAX_LABEL_LENGTH];           // load into here cause i'm too thick to know how to skip it (tw)

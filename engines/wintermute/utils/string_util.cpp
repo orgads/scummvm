@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,9 +27,9 @@
 
 #include "common/language.h"
 #include "common/tokenizer.h"
+#include "common/str-enc.h"
 #include "engines/wintermute/base/base_engine.h"
 #include "engines/wintermute/utils/string_util.h"
-#include "engines/wintermute/utils/convert_utf.h"
 
 namespace Wintermute {
 
@@ -52,49 +51,12 @@ bool StringUtil::compareNoCase(const AnsiString &str1, const AnsiString &str2) {
 
 //////////////////////////////////////////////////////////////////////////
 WideString StringUtil::utf8ToWide(const Utf8String &Utf8Str) {
-	size_t wideSize = Utf8Str.size();
-
-	uint32 *wideStringNative = new uint32[wideSize + 1];
-
-	const UTF8 *sourceStart = reinterpret_cast<const UTF8 *>(Utf8Str.c_str());
-	const UTF8 *sourceEnd = sourceStart + wideSize;
-
-	UTF32 *targetStart = reinterpret_cast<UTF32 *>(wideStringNative);
-	UTF32 *targetEnd = targetStart + wideSize;
-
-	ConversionResult res = ConvertUTF8toUTF32(&sourceStart, sourceEnd, &targetStart, targetEnd, strictConversion);
-	if (res != conversionOK) {
-		delete[] wideStringNative;
-		return WideString();
-	}
-	*targetStart = 0;
-	WideString resultString(wideStringNative);
-	delete[] wideStringNative;
-	return resultString;
+	return Common::convertToU32String(Utf8Str.c_str(), Common::kUtf8);
 }
 
 //////////////////////////////////////////////////////////////////////////
 Utf8String StringUtil::wideToUtf8(const WideString &WideStr) {
-	size_t wideSize = WideStr.size();
-
-	size_t utf8Size = 4 * wideSize + 1;
-	char *utf8StringNative = new char[utf8Size];
-
-	const UTF32 *sourceStart = reinterpret_cast<const UTF32 *>(WideStr.c_str());
-	const UTF32 *sourceEnd = sourceStart + wideSize;
-
-	UTF8 *targetStart = reinterpret_cast<UTF8 *>(utf8StringNative);
-	UTF8 *targetEnd = targetStart + utf8Size;
-
-	ConversionResult res = ConvertUTF32toUTF8(&sourceStart, sourceEnd, &targetStart, targetEnd, strictConversion);
-	if (res != conversionOK) {
-		delete[] utf8StringNative;
-		return Utf8String();
-	}
-	*targetStart = 0;
-	Utf8String resultString(utf8StringNative);
-	delete[] utf8StringNative;
-	return resultString;
+	return Common::convertFromU32String(WideStr, Common::kUtf8);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -128,7 +90,7 @@ Common::CodePage StringUtil::mapCodePage(TTextCharset charset) {
 		switch (BaseEngine::instance().getLanguage()) {
 
 		//cp1250: Central Europe
-		case Common::CZ_CZE:
+		case Common::CS_CZE:
 		case Common::HR_HRV:
 		case Common::HU_HUN:
 		case Common::PL_POL:
@@ -141,7 +103,7 @@ Common::CodePage StringUtil::mapCodePage(TTextCharset charset) {
 			return Common::kWindows1251;
 
 		//cp1252: Western Europe
-		case Common::DA_DAN:
+		case Common::DA_DNK:
 		case Common::DE_DEU:
 		case Common::EN_ANY:
 		case Common::EN_GRB:
@@ -153,13 +115,13 @@ Common::CodePage StringUtil::mapCodePage(TTextCharset charset) {
 		case Common::NB_NOR:
 		case Common::NL_NLD:
 		case Common::PT_BRA:
-		case Common::PT_POR:
+		case Common::PT_PRT:
 		case Common::SE_SWE:
 		case Common::UNK_LANG:
 			return Common::kWindows1252;
 
 		//cp1253: Greek
-		case Common::GR_GRE:
+		case Common::EL_GRC:
 			return Common::kWindows1253;
 
 		//cp1254: Turkish
@@ -176,12 +138,12 @@ Common::CodePage StringUtil::mapCodePage(TTextCharset charset) {
 
 		//cp1257: Baltic
 		case Common::ET_EST:
-		case Common::LV_LAT:
+		case Common::LV_LVA:
 			return Common::kWindows1257;
 
 		case Common::JA_JPN:
 		case Common::KO_KOR:
-		case Common::ZH_CNA:
+		case Common::ZH_CHN:
 		case Common::ZH_TWN:
 		default:
 			warning("Unsupported charset: %d", charset);

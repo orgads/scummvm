@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -59,9 +58,6 @@ uint32 SONICS_BUFFER_SIZE;
 
 // private session data (scripts+objects+walkgrids) : 200KB
 #define PRIVATE_RESMAN_SIZE (400 * 1024)
-
-// local prototypes
-void Mission_and_console();
 
 uint32 getConfigValueWithDefault(const ConfigFile &config, const Common::String &section, const Common::String &key, uint32 defaultValue) {
 	if (scumm_stricmp("MusicVolume", key.c_str()) == 0) {
@@ -239,7 +235,7 @@ void InitEngine(const char *lpCmdLine) {
 
 	// ok, see if the special gameScript is present
 	// if so set the stub mode to GameScript mode
-	if (gs.Init_game_script() && strstr(lpCmdLine, "mission") == NULL) {
+	if (gs.Init_game_script() && strstr(lpCmdLine, "mission") == nullptr) {
 		// GameScript mode
 		// unless there is a console.icb file we dont allow debugging
 
@@ -287,14 +283,17 @@ bool mainLoopIteration() {
 	while (g_system->getEventManager()->pollEvent(event)) {
 		switch (event.type) {
 		case Common::EVENT_KEYDOWN: {
+			// FIXME: All branches execute effectively the same code
+#if 0
 			// Pass ENTER and BACKSPACE KEYDOWN events to WriteKey() so the save menu in options_manager_pc.cpp can see them.
 			if (event.kbd.keycode == Common::KEYCODE_RETURN) {
 				WriteKey((char)event.kbd.keycode);
 			} else if (event.kbd.keycode == Common::KEYCODE_BACKSPACE) {
 				WriteKey((char)event.kbd.keycode);
 			} else {
+#endif
 				WriteKey(event.kbd.keycode);
-			}
+			//}
 			setKeyState(event.kbd.keycode, true);
 			break;
 		}

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,14 +37,16 @@
 #include "graphics/thumbnail.h"
 
 Common::String MetaEngine::getSavegameFile(int saveGameIdx, const char *target) const {
+	if (!target)
+		target = getEngineId();
 	if (saveGameIdx == kSavegameFilePattern) {
 		// Pattern requested
-		const char *pattern = hasFeature(kSavesUseExtendedFormat) ? "%s.###" : "%s.s##";
-		return Common::String::format(pattern, target == nullptr ? getEngineId() : target);
+		const char *pattern = hasFeature(kSimpleSavesNames) ? "%s.###" : "%s.s##";
+		return Common::String::format(pattern, target);
 	} else {
 		// Specific filename requested
-		const char *pattern = hasFeature(kSavesUseExtendedFormat) ? "%s.%03d" : "%s.s%02d";
-		return Common::String::format(pattern, target == nullptr ? getEngineId() : target, saveGameIdx);
+		const char *pattern = hasFeature(kSimpleSavesNames) ? "%s.%03d" : "%s.s%02d";
+		return Common::String::format(pattern, target, saveGameIdx);
 	}
 }
 
@@ -165,14 +166,22 @@ bool MetaEngine::hasFeature(MetaEngineFeature f) const {
 		(f == kSavesSupportCreationDate) ||
 		(f == kSavesSupportPlayTime) ||
 		(f == kSupportsLoadingDuringStartup) ||
+		(f == kSimpleSavesNames) ||
 		(f == kSavesUseExtendedFormat);
 }
 
 void MetaEngine::appendExtendedSave(Common::OutSaveFile *saveFile, uint32 playtime,
 		Common::String desc, bool isAutosave) {
+	appendExtendedSaveToStream(saveFile, playtime, desc, isAutosave);
+
+	saveFile->finalize();
+}
+
+void MetaEngine::appendExtendedSaveToStream(Common::WriteStream *saveFile, uint32 playtime,
+		Common::String desc, bool isAutosave, uint32 posoffset) {
 	ExtendedSavegameHeader header;
 
-	uint headerPos = saveFile->pos();
+	uint headerPos = saveFile->pos() + posoffset;
 
 	strcpy(header.id, "SVMCR");
 	header.version = EXTENDED_SAVE_VERSION;
@@ -200,8 +209,15 @@ void MetaEngine::appendExtendedSave(Common::OutSaveFile *saveFile, uint32 playti
 	thumb.free();
 
 	saveFile->writeUint32LE(headerPos);	// Store where the header starts
+}
 
-	saveFile->finalize();
+bool MetaEngine::copySaveFileToFreeSlot(const char *target, int slot)
+{
+	const int emptySlot = findEmptySaveSlot(target);
+	if (emptySlot == -1)
+		return false;
+	Common::SaveFileManager *saveFileMan = g_system->getSavefileManager();
+	return saveFileMan->copySavefile(getSavegameFile(slot, target), getSavegameFile(emptySlot, target));
 }
 
 void MetaEngine::getSavegameThumbnail(Graphics::Surface &thumb) {
@@ -290,6 +306,20 @@ WARN_UNUSED_RESULT bool MetaEngine::readSavegameHeader(Common::InSaveFile *in, E
 // MetaEngine default implementations
 //////////////////////////////////////////////
 
+int MetaEngine::findEmptySaveSlot(const char *target) {
+	Common::SaveFileManager *saveFileMan = g_system->getSavefileManager();
+	const int maxSaveSlot = getMaximumSaveSlot();
+	const int autosaveSlot = getAutosaveSlot();
+	for (int slot = 0; slot <= maxSaveSlot; ++slot) {
+		if (slot == autosaveSlot)
+			continue;
+		const Common::String filename = getSavegameFile(slot, target);
+		if (!saveFileMan->exists(filename))
+			return slot;
+	}
+	return -1;
+}
+
 SaveStateList MetaEngine::listSaves(const char *target) const {
 	if (!hasFeature(kSavesUseExtendedFormat))
 		return SaveStateList();
@@ -302,8 +332,12 @@ SaveStateList MetaEngine::listSaves(const char *target) const {
 
 	SaveStateList saveList;
 	for (Common::StringArray::const_iterator file = filenames.begin(); file != filenames.end(); ++file) {
-		// Obtain the last 2 digits of the filename, since they correspond to the save slot
-		int slotNum = atoi(file->c_str() + file->size() - 2);
+		// Obtain the last 2/3 digits of the filename, since they correspond to the save slot
+		const char *slotStr = file->c_str() + file->size() - 2;
+		const char *prev = slotStr - 1;
+		if (*prev >= '0' && *prev <= '9')
+			slotStr = prev;
+		int slotNum = atoi(slotStr);
 
 		if (slotNum >= 0 && slotNum <= getMaximumSaveSlot()) {
 			SaveStateDescriptor desc = querySaveMetaInfos(target, slotNum);
@@ -326,21 +360,14 @@ SaveStateList MetaEngine::listSaves(const char *target, bool saveMode) const {
 
 	// Check to see if an autosave is present
 	for (SaveStateList::iterator it = saveList.begin(); it != saveList.end(); ++it) {
-		int slot = it->getSaveSlot();
-		if (slot == autosaveSlot) {
-			// It has an autosave
-			it->setWriteProtectedFlag(true);
+		// It has an autosave
+		if (it->isAutosave())
 			return saveList;
-		}
 	}
 
-	// No autosave yet. We want to add a dummy one in so that it can be marked as'
+	// No autosave yet. We want to add a dummy one in so that it can be marked as
 	// write protected, and thus be prevented from being saved in
-	SaveStateDescriptor desc;
-	desc.setDescription(_("Autosave"));
-	desc.setSaveSlot(autosaveSlot);
-	desc.setWriteProtectedFlag(true);
-
+	SaveStateDescriptor desc(this, autosaveSlot, _("Autosave"));
 	saveList.push_back(desc);
 	Common::sort(saveList.begin(), saveList.end(), SaveStateDescriptorSlotComparator());
 
@@ -359,15 +386,6 @@ void MetaEngineDetection::registerDefaultSettings(const Common::String &) const 
 }
 
 GUI::OptionsContainerWidget *MetaEngineDetection::buildEngineOptionsWidgetStatic(GUI::GuiObject *boss, const Common::String &name, const Common::String &target) const {
-	const ExtraGuiOptions engineOptions = getExtraGuiOptions(target);
-	if (engineOptions.empty()) {
-		return nullptr;
-	}
-
-	return new GUI::ExtraGuiOptionsWidget(boss, name, target, engineOptions);
-}
-
-GUI::OptionsContainerWidget *MetaEngine::buildEngineOptionsWidgetDynamic(GUI::GuiObject *boss, const Common::String &name, const Common::String &target) const {
 	const ExtraGuiOptions engineOptions = getExtraGuiOptions(target);
 	if (engineOptions.empty()) {
 		return nullptr;
@@ -397,16 +415,9 @@ SaveStateDescriptor MetaEngine::querySaveMetaInfos(const char *target, int slot)
 		}
 
 		// Create the return descriptor
-		SaveStateDescriptor desc;
-
+		SaveStateDescriptor desc(this, slot, Common::U32String());
 		parseSavegameHeader(&header, &desc);
-
-		desc.setSaveSlot(slot);
 		desc.setThumbnail(header.thumbnail);
-		desc.setAutosave(header.isAutosave);
-		if (slot == getAutosaveSlot())
-			desc.setWriteProtectedFlag(true);
-
 		return desc;
 	}
 

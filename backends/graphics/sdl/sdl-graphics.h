@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -94,14 +93,14 @@ public:
 	 */
 	virtual bool notifyMousePosition(Common::Point &mouse);
 
-	virtual bool showMouse(bool visible) override;
-	virtual bool lockMouse(bool lock) override;
+	bool showMouse(bool visible) override;
+	bool lockMouse(bool lock) override;
 
 	virtual bool saveScreenshot(const Common::String &filename) const { return false; }
 	void saveScreenshot() override;
 
 	// Override from Common::EventObserver
-	virtual bool notifyEvent(const Common::Event &event) override;
+	bool notifyEvent(const Common::Event &event) override;
 
 	/**
 	 * A (subset) of the graphic manager's state. This is used when switching
@@ -133,7 +132,7 @@ public:
 	 */
 	SdlWindow *getWindow() const { return _window; }
 
-	virtual void initSizeHint(const Graphics::ModeList &modes) override;
+	void initSizeHint(const Graphics::ModeList &modes) override;
 
 	Common::Keymap *getKeymap();
 
@@ -154,10 +153,7 @@ protected:
 	/** Obtain the user configured fullscreen resolution, or default to the desktop resolution */
 	Common::Rect getPreferredFullscreenResolution();
 
-	virtual int getGraphicsModeScale(int mode) const = 0;
-
 	bool defaultGraphicsModeConfig() const;
-	int getGraphicsModeIdByName(const Common::String &name) const;
 
 	/**
 	 * Gets the dimensions of the window directly from SDL instead of from the
@@ -180,48 +176,11 @@ protected:
 #endif
 	}
 
-	void getDisplayDpiFromSdl(float *dpi, float *defaultDpi) const {
-		const float systemDpi =
-#ifdef __APPLE__
-		72.0f;
-#elif defined(_WIN32)
-		96.0f;
-#else
-		90.0f; // ScummVM default
-#endif
-		if (defaultDpi)
-			*defaultDpi = systemDpi;
+	void setSystemMousePosition(const int x, const int y) override;
 
-		if (dpi) {
-#if SDL_VERSION_ATLEAST(2, 0, 4)
-			if (SDL_GetDisplayDPI(_window->getDisplayIndex(), NULL, dpi, NULL) != 0) {
-				*dpi = systemDpi;
-			}
-#else
-			*dpi = systemDpi;
-#endif
-		}
-	}
+	void notifyActiveAreaChanged() override;
 
-	/**
-	 * Returns the scaling mode based on the display DPI
-	 */
-	void getDpiScalingFactor(uint *scale) const {
-		float dpi, defaultDpi, ratio;
-
-		getDisplayDpiFromSdl(&dpi, &defaultDpi);
-		debug(4, "dpi: %g default: %g", dpi, defaultDpi);
-		ratio = dpi / defaultDpi;
-		if (ratio >= 1.5f) {
-			*scale = 2;
-		} else {
-			*scale = 1;
-		}
-	}
-
-	virtual void setSystemMousePosition(const int x, const int y) override;
-
-	virtual void handleResizeImpl(const int width, const int height) override;
+	void handleResizeImpl(const int width, const int height) override;
 
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 public:

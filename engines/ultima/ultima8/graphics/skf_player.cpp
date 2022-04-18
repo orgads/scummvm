@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -141,6 +140,8 @@ void SKFPlayer::paint(RenderSurface *surf, int /*lerp*/) {
 void SKFPlayer::run() {
 	if (!_playing || !_buffer) return;
 
+	MusicProcess *musicproc = MusicProcess::get_instance();
+
 	// if doing something, continue
 	if (_curAction) {
 		if (_curAction == SKF_FadeOut || _curAction == SKF_FadeWhite) {
@@ -149,6 +150,15 @@ void SKFPlayer::run() {
 		} else if (_curAction == SKF_FadeIn) {
 			_fadeLevel--;
 			if (_fadeLevel == 0) _curAction = 0; // done
+		} else if (_curAction == SKF_SlowStopMusic) {
+			if (!musicproc || !musicproc->isFading()) {
+				if (musicproc)
+					musicproc->playMusic(0); // stop playback
+				_curAction = 0; // done
+			} else {
+				// continue to wait for fade to finish
+				return;
+			}
 		} else {
 			pout << "Unknown fade action: " << _curAction << Std::endl;
 		}
@@ -169,7 +179,6 @@ void SKFPlayer::run() {
 	Font *redfont;
 	redfont = FontManager::get_instance()->getGameFont(6, true);
 
-	MusicProcess *musicproc = MusicProcess::get_instance();
 	AudioProcess *audioproc = AudioProcess::get_instance();
 
 	bool subtitles = ConfMan.getBool("subtitles");
@@ -207,7 +216,9 @@ void SKFPlayer::run() {
 			break;
 		case SKF_SlowStopMusic:
 //			pout << "SlowStopMusic" << Std::endl;
-			if (musicproc && !_introMusicHack) musicproc->playMusic(0);
+			if (musicproc)
+				musicproc->fadeMusic(1500);
+			_curAction = SKF_SlowStopMusic;
 			break;
 		case SKF_PlaySFX:
 //			pout << "PlaySFX " << _events[_curEvent]->_data << Std::endl;
@@ -232,7 +243,7 @@ void SKFPlayer::run() {
 				bool stereo = (buf[8] == 2);
 				s = new RawAudioSample(buf + 34, bufsize - 34,
 				                                  rate, true, stereo);
-				audioproc->playSample(s, 0x60, 0);
+				audioproc->playSample(s, 0x60, 0, true);
 				// FIXME: memory leak! (sample is never deleted)
 			}
 

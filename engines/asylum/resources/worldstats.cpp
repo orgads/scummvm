@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -143,7 +142,7 @@ void WorldStats::load(Common::SeekableReadStream *stream) {
 	uint32 numActions   = stream->readUint32LE();
 	uint32 numObjects   = stream->readUint32LE();
 
-	for (int32 c = 0; c < 7; c++)
+	for (int32 c = 0; c < 7 + _vm->checkGameVersion("Demo"); c++)
 		coordinates[c] = (int16)stream->readSint32LE();
 
 	uint32 numActors = stream->readUint32LE();
@@ -174,6 +173,12 @@ void WorldStats::load(Common::SeekableReadStream *stream) {
 	for (int32 s = 0; s < ARRAYSIZE(soundResourceIds); s++)
 		soundResourceIds[s] = (ResourceId)stream->readSint32LE();
 
+	if (_vm->checkGameVersion("Demo")) {
+		stream->readSint32LE();
+		stream->readSint32LE();
+		goto load_objects;
+	}
+
 	for (int32 s = 0; s < ARRAYSIZE(ambientSounds); s++) {
 		ambientSounds[s].field_0  = stream->readSint32LE();
 		ambientSounds[s].flags    = stream->readSint32LE();
@@ -196,6 +201,11 @@ void WorldStats::load(Common::SeekableReadStream *stream) {
 	musicResourceIndex        = stream->readSint32LE();
 	musicStatusExt            = stream->readSint32LE();
 
+	// Patch a flag number which is too big
+	if (chapter == kChapter8 && ambientSounds[1].flagNum[1] == 99999)
+		ambientSounds[1].flagNum[1] = 0;
+
+load_objects:
 	//////////////////////////////////////////////////////////////////////////
 	// Read Objects
 	for (uint32 a = 0; a < numObjects; a++) {
@@ -205,7 +215,10 @@ void WorldStats::load(Common::SeekableReadStream *stream) {
 		objects.push_back(object);
 	}
 
-	stream->seek((OBJECTS_MAX_COUNT - numObjects) * OBJECTS_SIZE, SEEK_CUR);
+	if (_vm->checkGameVersion("Demo"))
+		stream->seek(0x1C93A, SEEK_SET);
+	else
+		stream->seek((OBJECTS_MAX_COUNT - numObjects) * OBJECTS_SIZE, SEEK_CUR);
 
 	//////////////////////////////////////////////////////////////////////////
 	// Read Actors
@@ -214,6 +227,11 @@ void WorldStats::load(Common::SeekableReadStream *stream) {
 		actor->load(stream);
 
 		actors.push_back(actor);
+	}
+
+	if (_vm->checkGameVersion("Demo")) {
+		stream->seek(0x1D2AA, SEEK_SET);
+		goto load_inventory;
 	}
 
 	stream->seek((ACTORS_MAX_COUNT - numActors) * ACTORS_SIZE, SEEK_CUR);
@@ -230,6 +248,7 @@ void WorldStats::load(Common::SeekableReadStream *stream) {
 	numScripts  = stream->readUint32LE();
 	numPolygons = stream->readUint32LE();
 
+load_inventory:
 	// Load inventory resources
 	for (uint32 i = 0; i < ARRAYSIZE(inventoryIconsActive); i++)
 		inventoryIconsActive[i] = (ResourceId)stream->readSint32LE();
@@ -240,6 +259,9 @@ void WorldStats::load(Common::SeekableReadStream *stream) {
 	for (uint32 i = 0; i < ARRAYSIZE(inventoryCursorsBlinking); i++)
 		inventoryCursorsBlinking[i] = (ResourceId)stream->readSint32LE();
 
+	if (_vm->checkGameVersion("Demo"))
+		stream->seek(0x1A60A, SEEK_SET);
+
 	//////////////////////////////////////////////////////////////////////////
 	// Read actions
 	for (uint32 a = 0; a < numActions; a++) {
@@ -247,6 +269,17 @@ void WorldStats::load(Common::SeekableReadStream *stream) {
 		action->load(stream);
 
 		actions.push_back(action);
+	}
+
+	if (_vm->checkGameVersion("Demo"))
+		return;
+
+	// Patch for Chapter 2 Lockout bug
+	if (_vm->checkGameVersion("Unpatched") && chapter == kChapter2) {
+		ActionArea *area978 = actions[getActionAreaIndexById(978)];
+		area978->flagNums[0] = -556;
+		area978->flagNums[1] = -368;
+		area978->flagNums[2] = -50;
 	}
 
 	stream->seek((ACTIONS_MAX_COUNT - numActions) * ACTIONS_SIZE, SEEK_CUR);
@@ -280,7 +313,7 @@ void WorldStats::load(Common::SeekableReadStream *stream) {
 		ObjectId id = (ObjectId)stream->readUint32LE();
 
 		if (id == 0)
-			wheels[i] = NULL;
+			wheels[i] = nullptr;
 		else
 			wheels[i] = getObjectById(id);
 	}
@@ -459,7 +492,7 @@ void WorldStats::saveLoadWithSerializer(Common::Serializer &s) {
 
 		if (s.isLoading()) {
 			if (id == kObjectNone)
-				wheels[i] = NULL;
+				wheels[i] = nullptr;
 			else
 				wheels[i] = getObjectById(id);
 		}
@@ -501,7 +534,7 @@ int32 WorldStats::getRandomActionAreaIndexById(int32 id) {
 	return indexes[_vm->getRandom(count)];
 }
 
-ActionArea* WorldStats::getActionAreaById(int32 id) {
+ActionArea *WorldStats::getActionAreaById(int32 id) {
 	int index = getActionAreaIndexById(id);
 	if (index == -1)
 		error("[WorldStats::getActionAreaById] action id is invalid");
@@ -509,12 +542,12 @@ ActionArea* WorldStats::getActionAreaById(int32 id) {
 	return actions[index];
 }
 
-Object* WorldStats::getObjectById(ObjectId id) {
+Object *WorldStats::getObjectById(ObjectId id) {
 	for (uint32 i = 0; i < objects.size(); i++)
 		if (objects[i]->getId() == id)
 			return objects[i];
 
-	return NULL;
+	return nullptr;
 }
 
 void WorldStats::setWheelObjects() {

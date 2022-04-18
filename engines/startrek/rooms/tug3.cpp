@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -91,49 +90,49 @@ enum tug3TextIds {
 
 // TODO: Finish floppy offsets
 extern const RoomTextOffsets tug3TextOffsets[] = {
-	{ TX_SPEAKER_KIRK, 5426, 0 },
-	{ TX_SPEAKER_MCCOY, 5437, 0 },
-	{ TX_SPEAKER_SPOCK, 5447, 0 },
-	{ TX_SPEAKER_SULU, 5457, 0 },
-	{ TX_SPEAKER_SHIPS_COMPUTER, 5466, 0 },
-	{ TX_SPEAKER_CHRISTENSEN, 5482, 0 },
-	{ TX_SPEAKER_ELASI_CERETH, 5498, 0 },
-	{ TX_SPEAKER_ELASI_CLANSMAN, 5511, 0 },
-	{ TX_SPEAKER_STARFLEET, 5526, 0 },
-	{ TX_SPEAKER_SCOTT, 5536, 0 },
-	{ TX_TUG3_001, 4914, 0 },
-	{ TX_TUG3_002, 6171, 0 },
-	{ TX_TUG3_003, 6121, 0 },
-	{ TX_TUG3_004, 6026, 0 },
-	{ TX_TUG3_005, 5224, 0 },
-	{ TX_TUG3_006, 3810, 0 },
-	{ TX_TUG3_007, 3553, 0 },
-	{ TX_TUG3_008, 3349, 0 },
-	{ TX_TUG3_009, 3231, 0 },
-	{ TX_TUG3_011, 3117, 0 },
-	{ TX_TUG3_013, 3042, 0 },
-	{ TX_TUG3_015, 3618, 0 },
-	{ TX_TUG3_F27, 2224, 0 },
-	{ TX_TUG3_S07, 3867, 0 },
-	{ TX_TUG3_S08, 5282, 0 },
-	{ TX_TUG3L003, 3470, 0 },
-	{ TX_TUG3L080, 2701, 0 },
-	{ TX_TUG3L081,  792, 0 },
-	{ TX_TUG3L083, 2480, 0 },
-	{ TX_TUG3L084, 2057, 0 },
-	{ TX_TUG3N000, 5824, 0 },
-	{ TX_TUG3N001, 2845, 0 },
-	{ TX_TUG3N002, 5873, 0 },
-	{ TX_TUG3N003, 5634, 0 },
-	{ TX_TUG3N004, 5751, 0 },
-	{ TX_TUG3N005, 5694, 0 },
-	{ TX_TUG3N006, 4725, 0 },
-	{ TX_TUG3N007,  421, 0 },
-	{ TX_TUG3N008, 5547, 0 },
-	{ TX_COMPA180, 3724, 0 },
-	{ TX_COMPU181, 4618, 0 },
-	{ TX_COMPU182, 4535, 0 },
-	{          -1, 0,    0 }
+	{ TX_SPEAKER_KIRK, 5426, 0, 0, 0 },
+	{ TX_SPEAKER_MCCOY, 5437, 0, 0, 0 },
+	{ TX_SPEAKER_SPOCK, 5447, 0, 0, 0 },
+	{ TX_SPEAKER_SULU, 5457, 0, 0, 0 },
+	{ TX_SPEAKER_SHIPS_COMPUTER, 5466, 0, 0, 0 },
+	{ TX_SPEAKER_CHRISTENSEN, 5482, 0, 0, 0 },
+	{ TX_SPEAKER_ELASI_CERETH, 5498, 0, 0, 0 },
+	{ TX_SPEAKER_ELASI_CLANSMAN, 5511, 0, 0, 0 },
+	{ TX_SPEAKER_STARFLEET, 5526, 0, 0, 0 },
+	{ TX_SPEAKER_SCOTT, 5536, 0, 0, 0 },
+	{ TX_TUG3_001, 4914, 0, 0, 0 },
+	{ TX_TUG3_002, 6171, 0, 0, 0 },
+	{ TX_TUG3_003, 6121, 0, 0, 0 },
+	{ TX_TUG3_004, 6026, 0, 0, 0 },
+	{ TX_TUG3_005, 5224, 0, 0, 0 },
+	{ TX_TUG3_006, 3810, 0, 0, 0 },
+	{ TX_TUG3_007, 3553, 0, 0, 0 },
+	{ TX_TUG3_008, 3349, 0, 0, 0 },
+	{ TX_TUG3_009, 3231, 0, 0, 0 },
+	{ TX_TUG3_011, 3117, 0, 0, 0 },
+	{ TX_TUG3_013, 3042, 0, 0, 0 },
+	{ TX_TUG3_015, 3618, 0, 0, 0 },
+	{ TX_TUG3_F27, 2224, 0, 0, 0 },
+	{ TX_TUG3_S07, 3867, 0, 0, 0 },
+	{ TX_TUG3_S08, 5282, 0, 0, 0 },
+	{ TX_TUG3L003, 3470, 0, 0, 0 },
+	{ TX_TUG3L080, 2701, 0, 0, 0 },
+	{ TX_TUG3L081,  792, 0, 0, 0 },
+	{ TX_TUG3L083, 2480, 0, 0, 0 },
+	{ TX_TUG3L084, 2057, 0, 0, 0 },
+	{ TX_TUG3N000, 5824, 0, 0, 0 },
+	{ TX_TUG3N001, 2845, 0, 0, 0 },
+	{ TX_TUG3N002, 5873, 0, 0, 0 },
+	{ TX_TUG3N003, 5634, 0, 0, 0 },
+	{ TX_TUG3N004, 5751, 0, 0, 0 },
+	{ TX_TUG3N005, 5694, 0, 0, 0 },
+	{ TX_TUG3N006, 4725, 0, 0, 0 },
+	{ TX_TUG3N007,  421, 0, 0, 0 },
+	{ TX_TUG3N008, 5547, 0, 0, 0 },
+	{ TX_COMPA180, 3724, 0, 0, 0 },
+	{ TX_COMPU181, 4618, 0, 0, 0 },
+	{ TX_COMPU182, 4535, 0, 0, 0 },
+	{          -1, 0,    0, 0, 0 }
 };
 
 extern const RoomText tug3Texts[] = {

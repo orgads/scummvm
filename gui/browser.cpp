@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -104,8 +103,23 @@ void BrowserDialog::open() {
 	// Call super implementation
 	Dialog::open();
 
+#if defined(ANDROID_PLAIN_PORT)
+	// Currently, the "default" path in Android port will present a list of shortcuts, (most of) which should be usable.
+	// The "/" will list these shortcuts (see POSIXFilesystemNode::getChildren())
+	Common::String blPath = "/";
+	if (ConfMan.hasKey("browser_lastpath")) {
+		Common::String blPathCandidate = ConfMan.get("browser_lastpath");
+		blPathCandidate.trim();
+		if (!blPathCandidate.empty()) {
+			blPath = blPathCandidate;
+		}
+	}
+	_node = Common::FSNode(blPath);
+#else
 	if (ConfMan.hasKey("browser_lastpath"))
 		_node = Common::FSNode(ConfMan.get("browser_lastpath"));
+#endif
+
 	if (!_node.isDirectory())
 		_node = Common::FSNode(".");
 
@@ -119,7 +133,23 @@ void BrowserDialog::handleCommand(CommandSender *sender, uint32 cmd, uint32 data
 	switch (cmd) {
 	//Search for typed-in directory
 	case kPathEditedCmd:
+#if defined(ANDROID_PLAIN_PORT)
+	{
+		// Currently, the "default" path in Android port will present a list of shortcuts, (most of) which should be usable.
+		// The "/" will list these shortcuts (see POSIXFilesystemNode::getChildren())
+		// If the user enters an empty text or blank spaces for the path, then upon committing it as an edit,
+		// Android will show the list of shortcuts and default the path text field to "/".
+		// The code is placed in brackets for edtPath var to have proper local scope in this particular switch case.
+		Common::String edtPath = Common::convertFromU32String(_currentPath->getEditString());
+		edtPath.trim();
+		if (edtPath.empty()) {
+			edtPath = "/";
+		}
+		_node = Common::FSNode(edtPath);
+	}
+#else
 		_node = Common::FSNode(Common::convertFromU32String(_currentPath->getEditString()));
+#endif
 		updateListing();
 		break;
 	//Search by text input
@@ -201,13 +231,13 @@ void BrowserDialog::updateListing() {
 		Common::sort(_nodeContent.begin(), _nodeContent.end());
 
 	// Populate the ListWidget
-	ListWidget::U32StringArray list;
+	Common::U32StringArray list;
 	ListWidget::ColorList colors;
 	for (Common::FSList::iterator i = _nodeContent.begin(); i != _nodeContent.end(); ++i) {
 		if (i->isDirectory())
-			list.push_back(i->getDisplayName() + "/");
+			list.push_back(i->getName() + "/");
 		else
-			list.push_back(i->getDisplayName());
+			list.push_back(i->getName());
 
 		if (_isDirBrowser) {
 			if (i->isDirectory())

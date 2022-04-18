@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -103,7 +102,7 @@ int Scene::ITEStartProc() {
 	firstScene.loadFlag = kLoadBySceneNumber;
 	firstScene.sceneDescriptor = _vm->getStartSceneNumber();
 	firstScene.sceneSkipTarget = true;
-	firstScene.sceneProc = NULL;
+	firstScene.sceneProc = nullptr;
 	firstScene.transitionType = kTransitionFade;
 	firstScene.actorsEntrance = 0;
 	firstScene.chapter = -1;
@@ -257,7 +256,7 @@ EventColumns *Scene::queueCredits(int delta_time, int duration, int n_credits, c
 	TextListEntry textEntry;
 	TextListEntry *entry;
 	Event event;
-	EventColumns *eventColumns = NULL;
+	EventColumns *eventColumns = nullptr;
 
 	textEntry.knownColor = (_vm->getPlatform() == Common::kPlatformPC98) ? kKnownColorBrightWhite : kKnownColorSubtitleTextColor;
 	textEntry.effectKnownColor = (_vm->getPlatform() == Common::kPlatformPC98) ? kKnownColorVerbTextShadow : kKnownColorTransparent;
@@ -394,22 +393,9 @@ int Scene::ITEIntroAnimProc(int param) {
 
 int Scene::ITEIntroCaveCommonProc(int param, int caveScene) {
 	Event event;
-	EventColumns *eventColumns = NULL;
+	EventColumns *eventColumns = nullptr;
 	const IntroDialogue *dialogue;
-
-	int lang = 0;
-
-	if (_vm->getLanguage() == Common::DE_DEU)
-		lang = 1;
-	else if (_vm->getLanguage() == Common::IT_ITA)
-		lang = 2;
-	else if (_vm->getLanguage() == Common::FR_FRA)
-		lang = 3;
-	else if (_vm->getLanguage() == Common::JA_JPN)
-		lang = 4;
-	else if (_vm->getLanguage() == Common::RU_RUS)
-		lang = 5;
-
+	int lang = _vm->getLanguageIndex();
 	int n_dialogues = 0;
 
 	switch (caveScene) {
@@ -476,7 +462,7 @@ int Scene::ITEIntroCaveCommonProc(int param, int caveScene) {
 
 int Scene::ITEIntroCaveDemoProc(int param) {
 	Event event;
-	EventColumns *eventColumns = NULL;
+	EventColumns *eventColumns = nullptr;
 
 	switch (param) {
 	case SCENE_BEGIN:

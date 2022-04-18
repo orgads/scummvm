@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -40,7 +39,6 @@
 
 #include "sword25/gfx/image/art.h"
 #include "sword25/gfx/image/vectorimage.h"
-#include "graphics/colormasks.h"
 
 namespace Sword25 {
 
@@ -51,7 +49,7 @@ void art_rgb_fill_run1(byte *buf, byte r, byte g, byte b, int n) {
 		memset(buf, g, n + n + n + n);
 	} else {
 		uint32 *alt = (uint32 *)buf;
-		uint32 color = Graphics::ARGBToColor<Graphics::ColorMasks<8888> >(r, g, b, 0xff);
+		uint32 color = TS_RGB(r, g, b);
 
 		for (i = 0; i < n; i++)
 			*alt++ = color;
@@ -225,19 +223,16 @@ void art_rgb_svp_alpha1(const ArtSVP *svp,
 						uint32 color,
 						byte *buf, int rowstride) {
 	ArtRgbSVPAlphaData data;
-	byte r, g, b, alpha;
 	int i;
 	int a, da;
 
-	Graphics::colorToARGB<Graphics::ColorMasks<8888> >(color, alpha, r, g, b);
-
-	data.r = r;
-	data.g = g;
-	data.b = b;
-	data.alpha = alpha;
+	data.r     = (color >> 16) & 0xFF;
+	data.g     = (color >>  8) & 0xFF;
+	data.b     = (color >>  0) & 0xFF;
+	data.alpha = (color >> 24) & 0xFF;
 
 	a = 0x8000;
-	da = (alpha * 66051 + 0x80) >> 8; /* 66051 equals 2 ^ 32 / (255 * 255) */
+	da = (data.alpha * 66051 + 0x80) >> 8; /* 66051 equals 2 ^ 32 / (255 * 255) */
 
 	for (i = 0; i < 256; i++) {
 		data.alphatab[i] = a >> 16;
@@ -248,7 +243,7 @@ void art_rgb_svp_alpha1(const ArtSVP *svp,
 	data.rowstride = rowstride;
 	data.x0 = x0;
 	data.x1 = x1;
-	if (alpha == 255)
+	if (data.alpha == 255)
 		art_svp_render_aa(svp, x0, y0, x1, y1, art_rgb_svp_alpha_opaque_callback1, &data);
 	else
 		art_svp_render_aa(svp, x0, y0, x1, y1, art_rgb_svp_alpha_callback1, &data);
@@ -357,7 +352,7 @@ void drawBez(ArtBpath *bez1, ArtBpath *bez2, byte *buffer, int width, int height
 	// HACK: Some frames have green bounding boxes drawn.
 	// Perhaps they were used by original game artist Umriss
 	// We skip them just like the original
-	if (bez2 == 0 && color == Graphics::ARGBToColor<Graphics::ColorMasks<8888> >(0xff, 0x00, 0xff, 0x00)) {
+	if (bez2 == 0 && color == BS_RGB(0x00, 0xff, 0x00)) {
 		return;
 	}
 

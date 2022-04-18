@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -952,7 +951,6 @@ void agx_create(fc_type fc);
 void write_descr(descr_ptr *dp, descr_line *txt);
 void agx_write(void);
 void agx_wclose(void);
-void agx_wabort(void);
 
 /* ------------------------------------------------------------------- */
 /*  In AUXFILE.C                                                       */
@@ -965,7 +963,6 @@ rbool parse_config_line(char *s, rbool lastpass);
 descr_line *read_ttl(fc_type fc); /* This returns the title. The return string
 					  must be freed with free_ttl() and not
 					  with free_descr */
-void free_ttl(descr_line *title);
 
 void read_voc(fc_type fc);
 void init_verbrec(void);
@@ -1126,7 +1123,6 @@ void buffclose(void); /* Close the current file */
 
 void bw_open(fc_type fc, filetype ext); /* Open buffered file for writing */
 void bw_close(void); /* Close buffered file */
-void bw_abort(void); /* Close and delete buffered file */
 
 /* "Universal" file routines */
 extern const size_t ft_leng[FT_COUNT];  /* File lengths of the data types */
@@ -1199,7 +1195,6 @@ rbool filevalid(genfile f, filetype ft);
 void readclose(genfile f);
 void writeclose(genfile f, file_id_type fileid);
 
-void binremove(genfile f, file_id_type fileid);
 void binseek(genfile f, long offset);
 rbool binread(genfile f, void *buff, long recsize, long recnum, const char **errstr);
 long varread(genfile f, void *buff, long recsize, long recnum, const char **errstr);

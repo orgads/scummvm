@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -194,7 +193,7 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 			item->callUsecodeEvent_combine();
 			item->moveToContainer(this);
 			if (showtoast)
-				pickupArea->addPickup(item, true);
+				pickupArea->addPickup(item, false);
 			return 1;
 		} else {
 			// already have this, add some ammo.
@@ -203,7 +202,7 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 				ammo->setQuality(q + 1);
 				ammo->callUsecodeEvent_combine();
 				if (showtoast)
-					pickupArea->addPickup(item, true);
+					pickupArea->addPickup(item, false);
 				item->destroy();
 				return 1;
 			}
@@ -327,6 +326,11 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 	return 0;
 }
 
+bool MainActor::removeItemCru(Item *item) {
+	warning("TODO: Implement MainActor::removeItemCru");
+	return false;
+}
+
 const ShapeInfo *MainActor::getShapeInfoFromGameInstance() const {
 	const ShapeInfo *info = Item::getShapeInfoFromGameInstance();
 
@@ -347,6 +351,17 @@ const ShapeInfo *MainActor::getShapeInfoFromGameInstance() const {
 	}
 
 	return _kneelingShapeInfo;
+}
+
+void MainActor::move(int32 x, int32 y, int32 z) {
+	Actor::move(x, y, z);
+	if (_shieldSpriteProc != 0) {
+		SpriteProcess *sprite = dynamic_cast<SpriteProcess *>(
+			Kernel::get_instance()->getProcess(_shieldSpriteProc));
+		if (sprite) {
+			sprite->move(x, y, z);
+		}
+	}
 }
 
 void MainActor::teleport(int mapNum, int32 x, int32 y, int32 z) {
@@ -648,7 +663,7 @@ void MainActor::getWeaponOverlay(const WeaponOverlayFrame *&frame, uint32 &shape
 	const ShapeInfo *shapeinfo = weapon->getShapeInfo();
 	if (!shapeinfo) return;
 
-	WeaponInfo *weaponinfo = shapeinfo->_weaponInfo;
+	const WeaponInfo *weaponinfo = shapeinfo->_weaponInfo;
 	if (!weaponinfo) return;
 
 	shape = weaponinfo->_overlayShape;
@@ -720,10 +735,26 @@ void MainActor::nextWeapon() {
 	}
 }
 
+void MainActor::dropWeapon() {
+	uint16 oldweapon = _activeWeapon;
+	Item *wpn = getItem(oldweapon);
+	if (!wpn || (wpn->getShape() == 0x32e && World::get_instance()->getGameDifficulty() < 2))
+		return;
+
+	nextWeapon();
+	removeItem(wpn);
+	wpn->move(_x, _y, _z);
+}
+
 void MainActor::nextInvItem() {
 	Std::vector<Item *> items;
 	getItemsWithShapeFamily(items, ShapeInfo::SF_CRUINVITEM, true);
 	getItemsWithShapeFamily(items, ShapeInfo::SF_CRUBOMB, true);
+	if (GAME_IS_REMORSE) {
+		Item *credits = getFirstItemWithShape(0x4ed, true);
+		if (credits)
+			items.push_back(credits);
+	}
 	_activeInvItem = getIdOfNextItemInList(items, _activeInvItem);
 }
 
@@ -788,7 +819,7 @@ uint32 MainActor::I_teleportToEgg(const uint8 *args, unsigned int argsize) {
 	}
 
 	ARG_UINT16(teleport_id);
-	ARG_UINT16(put_in_stasis); // 0/1
+	ARG_NULL16(); // TODO: put_in_stasis, 0/1
 
 	return Kernel::get_instance()->addProcess(
 	           new TeleportToEggProcess(mapnum, teleport_id));
@@ -911,6 +942,21 @@ uint32 MainActor::I_switchMap(const uint8 *args,
 	return 0;
 }
 
+uint32 MainActor::I_removeItemCru(const uint8 *args,
+								 unsigned int /*argsize*/) {
+	MainActor *av = getMainActor();
+	ARG_ITEM_FROM_ID(item);
+
+	if (!av || !item)
+		return 0;
+
+	if (av->removeItemCru(item))
+		return 1;
+
+	return 0;
+}
+
+
 void MainActor::useInventoryItem(uint32 shapenum) {
 	Item *item = getFirstItemWithShape(shapenum, true);
 	useInventoryItem(item);
@@ -959,8 +1005,9 @@ int MainActor::receiveShieldHit(int damage, uint16 damage_type) {
 	int energy = getMana();
 	Kernel *kernel = Kernel::get_instance();
 
-	if (shieldtype && firetype && firetype->getShieldCost() && (firetype->getShieldMask() & shieldtype) && damage < energy) {
-		setMana(energy - damage);
+	if (shieldtype && firetype && firetype->getShieldCost() && (firetype->getShieldMask() & shieldtype)
+			&& firetype->getShieldCost() <= energy) {
+		setMana(energy - firetype->getShieldCost());
 		damage = 0;
 		AudioProcess *audio = AudioProcess::get_instance();
 		audio->playSFX(0x48, 0x10, _objId, 1, true);
@@ -1027,9 +1074,7 @@ void MainActor::detonateBomb() {
 			continue;
 		founditem->callUsecodeEvent_use();
 	}
-	return;
 }
-
 
 } // End of namespace Ultima8
 } // End of namespace Ultima

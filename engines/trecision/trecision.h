@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -64,6 +63,11 @@ class AnimTypeManager;
 #define MAXOBJ          	  1400           // Game objects
 #define MAXINVENTORY    	  150            // Inventory Items
 #define MAXSAVEFILE		12
+
+enum TrecisionGameId {
+	GID_ArkOfTime = 0,
+	GID_NightLong = 1
+};
 
 enum TrecisionMessageIds {
 	kMessageSavePosition = 9,
@@ -136,12 +140,13 @@ class TrecisionEngine : public Engine {
 	static bool isBetween(int a, int x, int b);
 
 	// Others
-	void performLoad(int slot, bool skipLoad);
 	bool canPlayerInteract();
 
 	// Objects
 	void readObj(Common::SeekableReadStream *stream);
 	void readObject(Common::SeekableReadStream *stream, uint16 objIndex, uint16 objectId);
+
+	TrecisionGameId _gameId;
 
 	char *_textArea;
 	uint16 _curScriptFrame[10];
@@ -160,6 +165,7 @@ public:
 
 	// ScummVM
 	Common::Error run() override;
+	TrecisionGameId getGameId() const { return _gameId; }
 	bool isDemo() const { return _gameDescription->flags & ADGF_DEMO; }
 	bool isAmiga() const { return _gameDescription->platform == Common::kPlatformAmiga; }
 	bool hasFeature(EngineFeature f) const override;
@@ -226,6 +232,7 @@ public:
 	void setObjectAnim(uint16 objectId, uint16 animId);
 	void redrawRoom();
 	void readLoc();
+	Common::SeekableReadStreamEndian *getLocStream();
 	void tendIn();
 	void readExtraObj2C();
 	void readPositionerSnapshots();
@@ -328,29 +335,29 @@ public:
 	uint8 _textStatus;
 
 	uint32 _pauseStartTime;
+};
 
-	uint8 const _defActionLen[hLAST + 1] = {
-		/* STAND */ 1,
-		/* PARTE */ 1,
-		/* WALK  */ 10,
-		/* END   */ 1,
-		/* STOP0 */ 3,
-		/* STOP1 */ 4,
-		/* STOP2 */ 3,
-		/* STOP3 */ 2,
-		/* STOP4 */ 3,
-		/* STOP5 */ 4,
-		/* STOP6 */ 3,
-		/* STOP7 */ 3,
-		/* STOP8 */ 2,
-		/* STOP9 */ 3,
-		/* WALKI */ 12,
-		/* BOH   */ 9,
-		/* UGG   */ 41,
-		/* UTT   */ 35,
-		/* WALKO */ 12,
-		/* LAST  */ 15
-	};
+uint8 static const defActionLen[hLAST + 1] = {
+	/* STAND */ 1,
+	/* PARTE */ 1,
+	/* WALK  */ 10,
+	/* END   */ 1,
+	/* STOP0 */ 3,
+	/* STOP1 */ 4,
+	/* STOP2 */ 3,
+	/* STOP3 */ 2,
+	/* STOP4 */ 3,
+	/* STOP5 */ 4,
+	/* STOP6 */ 3,
+	/* STOP7 */ 3,
+	/* STOP8 */ 2,
+	/* STOP9 */ 3,
+	/* WALKI */ 12,
+	/* BOH   */ 9,
+	/* UGG   */ 41,
+	/* UTT   */ 35,
+	/* WALKO */ 12,
+	/* LAST  */ 15
 };
 
 } // End of namespace Trecision

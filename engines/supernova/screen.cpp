@@ -1,24 +1,23 @@
 /* ScummVM - Graphic Adventure Engine
-*
-* ScummVM is the legal property of its developers, whose names
-* are too numerous to list here. Please refer to the COPYRIGHT
-* file distributed with this source distribution.
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-*
-*/
+ *
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
 
 #include "common/str.h"
 #include "common/system.h"
@@ -27,6 +26,7 @@
 #include "graphics/palette.h"
 #include "graphics/surface.h"
 #include "common/config-manager.h"
+#include "common/text-to-speech.h"
 
 #include "supernova/imageid.h"
 #include "supernova/resman.h"
@@ -141,7 +141,7 @@ Marquee::Marquee(Screen *screen, MarqueeId id, const char *text)
 Marquee::~Marquee() {
 	if (_screen->_vm->_MSPart == 2) {
 		_screen->_vm->_system->getPaletteManager()->setPalette(_oldColor, kColorPurple, 1);
-		delete _oldColor;
+		delete[] _oldColor;
 	}
 }
 
@@ -285,6 +285,7 @@ void Screen::renderMessage(int stringId, MessagePosition position,
 		else
 			text = Common::String::format(text.c_str(), var1.c_str());
 	}
+
 
 	renderMessage(text, position);
 }
@@ -545,6 +546,17 @@ void Screen::renderMessage(const char *text, MessagePosition position, int posit
 		int rowWidth = textWidth(row[i]);
 		if (rowWidth > rowWidthMax)
 			rowWidthMax = rowWidth;
+	}
+
+	Common::TextToSpeechManager *ttsMan = g_system->getTextToSpeechManager();
+	if (ttsMan != nullptr && ConfMan.getBool("tts_enabled")) {
+		Common::String ttsText;
+		for (uint i = 0; i < numRows; ++i) {
+			if (!ttsText.empty())
+				ttsText += ' ';
+			ttsText += row[i];
+		}
+		ttsMan->say(ttsText,  Common::TextToSpeechManager::QUEUE_NO_REPEAT, Common::kDos850);
 	}
 
 	switch (position) {

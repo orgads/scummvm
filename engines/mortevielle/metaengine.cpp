@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -51,6 +50,14 @@ public:
 	int getMaximumSaveSlot() const override;
 	SaveStateList listSaves(const char *target) const override;
 	SaveStateDescriptor querySaveMetaInfos(const char *target, int slot) const override;
+	Common::String getSavegameFile(int saveGameIdx, const char *target) const override {
+		if (!target)
+			target = getEngineId();
+		if (saveGameIdx == kSavegameFilePattern)
+			return Common::String::format("%s.###", target); // There is also sav0.mor for slot 0
+		else
+			return Mortevielle::MortevielleEngine::generateSaveFilename(target, saveGameIdx);
+	}
 };
 
 Common::Error MortevielleMetaEngine::createInstance(OSystem *syst, Engine **engine, const ADGameDescription *desc) const {
@@ -76,12 +83,12 @@ bool MortevielleMetaEngine::hasFeature(MetaEngineFeature f) const {
 int MortevielleMetaEngine::getMaximumSaveSlot() const { return 99; }
 
 SaveStateList MortevielleMetaEngine::listSaves(const char *target) const {
-	return Mortevielle::SavegameManager::listSaves(target);
+	return Mortevielle::SavegameManager::listSaves(this, target);
 }
 
 SaveStateDescriptor MortevielleMetaEngine::querySaveMetaInfos(const char *target, int slot) const {
 	Common::String filename = Mortevielle::MortevielleEngine::generateSaveFilename(target, slot);
-	return Mortevielle::SavegameManager::querySaveMetaInfos(filename);
+	return Mortevielle::SavegameManager::querySaveMetaInfos(this, filename);
 }
 
 #if PLUGIN_ENABLED_DYNAMIC(MORTEVIELLE)

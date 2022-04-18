@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -119,8 +118,8 @@ public:
 	int32 musicFlag;
 	int32 musicResourceIndex;
 	int32 musicStatusExt;
-	Common::Array<Object*>     objects;   // maxsize 400
-	Common::Array<Actor*>      actors;   // maxsize 50
+	Common::Array<Object *> objects;   // maxsize 400
+	Common::Array<Actor *>  actors;    // maxsize  50
 	// ActorData is stored in each actor instance
 	uint32 numScripts;
 	uint32 numPolygons;
@@ -128,7 +127,7 @@ public:
 	ResourceId inventoryIconsNormal[16];
 	ResourceId inventoryCursorsNormal[16];
 	ResourceId inventoryCursorsBlinking[16];
-	Common::Array<ActionArea*> actions;  // maxsize 400
+	Common::Array<ActionArea *> actions;  // maxsize 400
 	int32 field_E848C;
 	int32 field_E8490;
 	int32 field_E8494;
@@ -150,9 +149,9 @@ public:
 
 	int32 getActionAreaIndexById(int32 id);
 	int32 getRandomActionAreaIndexById(int32 id);
-	ActionArea* getActionAreaById(int32 id);
+	ActionArea *getActionAreaById(int32 id);
 
-	Object* getObjectById(ObjectId id);
+	Object *getObjectById(ObjectId id);
 
 	Common::String toString();
 

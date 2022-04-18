@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,7 +37,6 @@
 #include "scumm/sound.h"
 #include "scumm/scumm.h"
 #include "scumm/imuse/imuse.h"
-#include "scumm/imuse_digi/dimuse.h"
 #include "scumm/verbs.h"
 
 #ifndef DISABLE_HELP
@@ -371,13 +369,24 @@ void HelpDialog::handleCommand(GUI::CommandSender *sender, uint32 cmd, uint32 da
 
 #pragma mark -
 
+static bool isCJKLanguage(Common::Language lang) {
+	switch (lang) {
+	case Common::KO_KOR:
+	case Common::JA_JPN:
+	case Common::ZH_TWN:
+	case Common::ZH_CHN:
+		return true;
+	default:
+		return false;
+	}
+}
+
 InfoDialog::InfoDialog(ScummEngine *scumm, int res)
 : ScummDialog(0, 0, 0, 0), _vm(scumm), _style(GUI::ThemeEngine::kFontStyleBold) { // dummy x and w
 
 	_message = queryResString(res);
 
-	Common::Language lang = (_vm->_language == Common::KO_KOR || _vm->_language == Common::JA_JPN ||
-		_vm->_language == Common::ZH_TWN || _vm->_language == Common::ZH_CNA) ? _vm->_language : Common::UNK_LANG;
+	Common::Language lang = isCJKLanguage(_vm->_language) ? _vm->_language : Common::UNK_LANG;
 
 	// Width and height are dummy
 	_text = new GUI::StaticTextWidget(this, 0, 0, 10, 10, _message, kTextAlignCenter, Common::U32String(), GUI::ThemeEngine::kFontStyleBold, lang);
@@ -419,6 +428,7 @@ void InfoDialog::reflowLayout() {
 
 const Common::U32String InfoDialog::queryResString(int stringno) {
 	byte buf[256];
+	byte reverseBuf[256];
 	const byte *result;
 
 	if (stringno == 0)
@@ -446,6 +456,8 @@ const Common::U32String InfoDialog::queryResString(int stringno) {
 		return _(string_map_table_v345[stringno - 1].string);
 	}
 
+	if (_vm->reverseIfNeeded(result, reverseBuf))
+		result = reverseBuf;
 	// Convert to a proper string (take care of FF codes)
 	byte chr;
 	String tmp;
@@ -457,16 +469,7 @@ const Common::U32String InfoDialog::queryResString(int stringno) {
 		}
 	}
 
-	Common::CodePage convertFromCodePage = Common::kCodePageInvalid;
-	if (_vm->_language == Common::KO_KOR)
-		convertFromCodePage = Common::kWindows949;
-	else if (_vm->_language == Common::JA_JPN)
-		convertFromCodePage = Common::kWindows932;
-	else if (_vm->_language == Common::ZH_TWN || _vm->_language == Common::ZH_CNA)
-		convertFromCodePage = Common::kWindows950;
-	else if (_vm->_language == Common::RU_RUS)
-		convertFromCodePage = Common::kDos866;
-
+	const Common::CodePage convertFromCodePage = _vm->getDialogCodePage();
 	return convertFromCodePage == Common::kCodePageInvalid ? _(tmp) : U32String(tmp, convertFromCodePage);
 }
 
@@ -694,6 +697,88 @@ void LoomTownsDifficultyDialog::handleCommand(GUI::CommandSender *sender, uint32
 	default:
 		GUI::Dialog::handleCommand(sender, cmd, data);
 	}
+}
+
+LoomEgaGameOptionsWidget::LoomEgaGameOptionsWidget(GuiObject *boss, const Common::String &name, const Common::String &domain) :
+		OptionsContainerWidget(boss, name, "LoomEgaGameOptionsDialog", false, domain) {
+	GUI::StaticTextWidget *text = new GUI::StaticTextWidget(widgetsBoss(), "LoomEgaGameOptionsDialog.OvertureTicksLabel", _("Overture Timing:"));
+
+	text->setAlign(Graphics::TextAlign::kTextAlignEnd);
+
+	_overtureTicksSlider = new GUI::SliderWidget(widgetsBoss(), "LoomEgaGameOptionsDialog.OvertureTicks", _("When using replacement music, this adjusts the time when the Overture changes to the scene with the Lucasfilm and Loom logotypes."), kOvertureTicksChanged);
+
+	// In the Ozawa recording, the transition happens at about 1:56. At is
+	// turns out, this is a fairly fast version of the tune. After checking
+	// a number of different recordings, I've settled on an interval of
+	// 1:40 - 2:50. This is larger than I had hoped, but I guess it's
+	// really necessary.
+	//
+	// Hopefully that still means you can set the slider back to its default
+	// value at most reasonable screen resolutions.
+
+	_overtureTicksSlider->setMinValue(-160);
+	_overtureTicksSlider->setMaxValue(540);
+
+	_overtureTicksValue = new GUI::StaticTextWidget(widgetsBoss(), "LoomEgaGameOptionsDialog.OvertureTicksValue", Common::U32String());
+
+	_overtureTicksValue->setFlags(GUI::WIDGET_CLEARBG);
+
+	// Normally this would be added as a static game settings widget, but
+	// I see no way to get both the dynamic and the static one, so we have
+	// to duplicate it here.
+
+	_enableEnhancements = new GUI::CheckboxWidget(widgetsBoss(), "LoomEgaGameOptionsDialog.EnableEnhancements", _("Enable game-specific enhancements"), _("Allow ScummVM to make small enhancements to the game, usually based on other versions of the same game."));
+}
+
+void LoomEgaGameOptionsWidget::load() {
+	int loomOvertureTicks = 0;
+
+	if (ConfMan.hasKey("loom_overture_ticks", _domain))
+		loomOvertureTicks = ConfMan.getInt("loom_overture_ticks", _domain);
+
+	_overtureTicksSlider->setValue(loomOvertureTicks);
+	updateOvertureTicksValue();
+
+	_enableEnhancements->setState(ConfMan.getBool("enable_enhancements", _domain));
+}
+
+bool LoomEgaGameOptionsWidget::save() {
+	ConfMan.setInt("loom_overture_ticks", _overtureTicksSlider->getValue(), _domain);
+	ConfMan.setBool("enable_enhancements", _enableEnhancements->getState(), _domain);
+	return true;
+}
+
+void LoomEgaGameOptionsWidget::defineLayout(GUI::ThemeEval &layouts, const Common::String &layoutName, const Common::String &overlayedLayout) const {
+	layouts.addDialog(layoutName, overlayedLayout)
+		.addLayout(GUI::ThemeLayout::kLayoutVertical, 12)
+			.addPadding(0, 0, 0, 0)
+			.addLayout(GUI::ThemeLayout::kLayoutHorizontal, 12)
+				.addPadding(0, 0, 12, 0)
+				.addWidget("OvertureTicksLabel", "OptionsLabel")
+				.addWidget("OvertureTicks", "WideSlider")
+				.addWidget("OvertureTicksValue", "ShortOptionsLabel")
+			.closeLayout()
+			.addWidget("EnableEnhancements", "Checkbox")
+		.closeLayout()
+	.closeDialog();
+}
+
+void LoomEgaGameOptionsWidget::handleCommand(GUI::CommandSender *sender, uint32 cmd, uint32 data) {
+
+	switch (cmd) {
+	case kOvertureTicksChanged:
+		updateOvertureTicksValue();
+		break;
+	default:
+		GUI::OptionsContainerWidget::handleCommand(sender, cmd, data);
+		break;
+	}
+}
+
+void LoomEgaGameOptionsWidget::updateOvertureTicksValue() {
+	int ticks = DEFAULT_LOOM_OVERTURE_TRANSITION + _overtureTicksSlider->getValue();
+
+	_overtureTicksValue->setLabel(Common::String::format("%d:%02d.%d", ticks / 600, (ticks % 600) / 10, ticks % 10));
 }
 
 } // End of namespace Scumm

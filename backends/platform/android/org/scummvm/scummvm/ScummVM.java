@@ -2,6 +2,8 @@ package org.scummvm.scummvm;
 
 import androidx.annotation.NonNull;
 import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.PixelFormat;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -33,6 +35,7 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 	private EGLSurface _egl_surface = EGL10.EGL_NO_SURFACE;
 
 	private SurfaceHolder _surface_holder;
+	private int bitsPerPixel;
 	private AudioTrack _audio_track;
 	private int _sample_rate = 0;
 	private int _buffer_size = 0;
@@ -46,7 +49,7 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 							   int sample_rate,
 							   int buffer_size);
 	private native void destroy();
-	private native void setSurface(int width, int height);
+	private native void setSurface(int width, int height, int bpp);
 	private native int main(String[] args);
 
 	// pause the engine and all native threads
@@ -54,6 +57,8 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 	// Feed an event to ScummVM.  Safe to call from other threads.
 	final public native void pushEvent(int type, int arg1, int arg2, int arg3,
 										int arg4, int arg5, int arg6);
+	// Update the 3D touch controls
+	final public native void updateTouch(int action, int ptr, int x, int y);
 
 	final public native String getNativeVersionInfo();
 
@@ -68,12 +73,17 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 	abstract protected void setWindowCaption(String caption);
 	abstract protected void showVirtualKeyboard(boolean enable);
 	abstract protected void showKeyboardControl(boolean enable);
+	abstract protected Bitmap getBitmapResource(int resource);
+	abstract protected void setTouch3DMode(boolean touch3DMode);
+	abstract protected boolean getTouch3DMode();
+	abstract protected void showSAFRevokePermsControl(boolean enable);
 	abstract protected String[] getSysArchives();
 	abstract protected String[] getAllStorageLocations();
 	abstract protected String[] getAllStorageLocationsNoPermissionRequest();
 	abstract protected boolean createDirectoryWithSAF(String dirPath);
 	abstract protected String createFileWithSAF(String filePath);
 	abstract protected void closeFileWithSAF(String hackyFilename);
+	abstract protected boolean isDirectoryWritableWithSAF(String dirPath);
 
 	public ScummVM(AssetManager asset_manager, SurfaceHolder holder, final MyScummVMDestroyedCallback scummVMDestroyedCallback) {
 		_asset_manager = asset_manager;
@@ -104,13 +114,17 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 			return;
 		}
 
-		Log.d(LOG_TAG, String.format(Locale.ROOT, "surfaceChanged: %dx%d (%d)",
-										width, height, format));
+		PixelFormat pixelFormat = new PixelFormat();
+		PixelFormat.getPixelFormatInfo(format, pixelFormat);
+		bitsPerPixel = pixelFormat.bitsPerPixel;
+
+		Log.d(LOG_TAG, String.format(Locale.ROOT, "surfaceChanged: %dx%d (%d: %dbpp)",
+										width, height, format, bitsPerPixel));
 
 		// store values for the native code
 		// make sure to do it before notifying the lock
 		// as it leads to a race condition otherwise
-		setSurface(width, height);
+		setSurface(width, height, bitsPerPixel);
 
 		synchronized(_sem_surface) {
 			_surface_holder = holder;
@@ -128,7 +142,7 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 		}
 
 		// clear values for the native code
-		setSurface(0, 0);
+		setSurface(0, 0, 0);
 	}
 
 	final public void setArgs(String[] args) {
@@ -137,14 +151,14 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 
 	final public void run() {
 		try {
-			initAudio();
-			initEGL();
-
 			// wait for the surfaceChanged callback
 			synchronized(_sem_surface) {
 				while (_surface_holder == null)
 					_sem_surface.wait();
 			}
+
+			initAudio();
+			initEGL();
 		} catch (Exception e) {
 			deinitEGL();
 			deinitAudio();
@@ -174,6 +188,7 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 
 		int[] version = new int[2];
 		_egl.eglInitialize(_egl_display, version);
+		Log.d(LOG_TAG, String.format(Locale.ROOT, "EGL version %d.%d initialized", version[0], version[1]));
 
 		int[] num_config = new int[1];
 		_egl.eglGetConfigs(_egl_display, null, 0, num_config);
@@ -188,10 +203,13 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 
 		// Android's eglChooseConfig is busted in several versions and
 		// devices so we have to filter/rank the configs ourselves.
-		_egl_config = chooseEglConfig(configs);
+		_egl_config = chooseEglConfig(configs, version);
 
+		int EGL_CONTEXT_CLIENT_VERSION = 0x3098;
+		int[] attrib_list = { EGL_CONTEXT_CLIENT_VERSION, 2,
+		                      EGL10.EGL_NONE };
 		_egl_context = _egl.eglCreateContext(_egl_display, _egl_config,
-											EGL10.EGL_NO_CONTEXT, null);
+		                                     EGL10.EGL_NO_CONTEXT, attrib_list);
 
 		if (_egl_context == EGL10.EGL_NO_CONTEXT)
 			throw new Exception(String.format(Locale.ROOT, "Failed to create context: 0x%x",
@@ -289,6 +307,11 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 				_buffer_size,
 				AudioTrack.MODE_STREAM,
 				AudioManager.AUDIO_SESSION_ID_GENERATE);
+
+			// Keep track of the actual obtained audio buffer size, if supported.
+			// We just requested 16 bit PCM stereo pcm so there are 4 bytes per frame.
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+				_buffer_size = _audio_track.getBufferSizeInFrames() * 4;
 		} else {
 			//support for Android KitKat or lower
 			_audio_track = new AudioTrack(AudioManager.STREAM_MUSIC,
@@ -337,8 +360,11 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 		EGL10.EGL_TRANSPARENT_TYPE,
 		EGL10.EGL_TRANSPARENT_RED_VALUE,
 		EGL10.EGL_TRANSPARENT_GREEN_VALUE,
-		EGL10.EGL_TRANSPARENT_BLUE_VALUE
+		EGL10.EGL_TRANSPARENT_BLUE_VALUE,
+		EGL10.EGL_RENDERABLE_TYPE
 	};
+	final private static int EGL_OPENGL_ES_BIT = 1;
+	final private static int EGL_OPENGL_ES2_BIT = 4;
 
 	final private class EglAttribs  {
 
@@ -380,6 +406,11 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 
 			if (get(EGL10.EGL_CONFIG_CAVEAT) != EGL10.EGL_NONE)
 				score -= 1000;
+
+			// If there is a config with EGL_OPENGL_ES2_BIT it must be favored
+			// This attribute can only be checked with EGL 1.3 but it may be present on older versions
+			if ((get(EGL10.EGL_RENDERABLE_TYPE) & EGL_OPENGL_ES2_BIT) > 0)
+				score += 5000;
 
 			// less MSAA is better
 			score -= get(EGL10.EGL_SAMPLES) * 100;
@@ -429,6 +460,12 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 			if ((get(EGL10.EGL_SURFACE_TYPE) & EGL10.EGL_PIXMAP_BIT) > 0)
 				s += " X";
 
+			if ((get(EGL10.EGL_RENDERABLE_TYPE) & EGL_OPENGL_ES_BIT) > 0)
+				s += " ES";
+			if ((get(EGL10.EGL_RENDERABLE_TYPE) & EGL_OPENGL_ES2_BIT) > 0)
+				s += " ES2";
+
+
 			switch (get(EGL10.EGL_CONFIG_CAVEAT)) {
 			case EGL10.EGL_NONE:
 				break;
@@ -457,7 +494,7 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 		}
 	}
 
-	private EGLConfig chooseEglConfig(EGLConfig[] configs) {
+	private EGLConfig chooseEglConfig(EGLConfig[] configs, int[] version) {
 		EGLConfig res = configs[0];
 		int bestScore = -1;
 
@@ -465,15 +502,30 @@ public abstract class ScummVM implements SurfaceHolder.Callback, Runnable {
 
 		for (EGLConfig config : configs) {
 			if (config != null) {
+				boolean good = true;
+
 				EglAttribs attr = new EglAttribs(config);
 
 				// must have
 				if ((attr.get(EGL10.EGL_SURFACE_TYPE) & EGL10.EGL_WINDOW_BIT) == 0)
-					continue;
+					good = false;
+
+				if (version[0] >= 2 ||
+					(version[0] == 1 && version[1] >= 3)) {
+					// EGL_OPENGL_ES2_BIT is only supported since EGL 1.3
+					if ((attr.get(EGL10.EGL_RENDERABLE_TYPE) & EGL_OPENGL_ES2_BIT) == 0)
+						good = false;
+				}
+				if (attr.get(EGL10.EGL_BUFFER_SIZE) < bitsPerPixel)
+					good = false;
 
 				int score = attr.weight();
 
-				Log.d(LOG_TAG, String.format(Locale.ROOT, "%s (%d)", attr.toString(), score));
+				Log.d(LOG_TAG, String.format(Locale.ROOT, "%s (%d, %s)", attr.toString(), score, good ? "OK" : "NOK"));
+
+				if (!good) {
+					continue;
+				}
 
 				if (score > bestScore) {
 					res = config;

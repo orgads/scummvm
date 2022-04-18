@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -126,10 +125,13 @@ void SceneScriptMA06::PlayerWalkedIn() {
 			Ambient_Sounds_Adjust_Looping_Sound(kSfxELEAMB3,  10, 0, 1u);
 			Ambient_Sounds_Adjust_Looping_Sound(kSfxAPRTFAN1, 10, 0, 1u);
 
-			Actor_Says(kActorAnsweringMachine, 80, 3);     // your floor number please
+			if (_vm->_cutContent) {
+				Actor_Says(kActorAnsweringMachine, 70, kAnimationModeTalk); // voice print identification
+			}
+			Actor_Says(kActorAnsweringMachine, 80, kAnimationModeTalk);     // your floor number please
 			Actor_Says(kActorMcCoy, 2940, 18);             // McCoy: McCoy 88F
 			Game_Flag_Set(kFlagMA06ToMA02);                // to McCoy's Apartment
-			Actor_Says(kActorAnsweringMachine, 90, 3);     // 88 thank you
+			Actor_Says(kActorAnsweringMachine, 90, kAnimationModeTalk);     // 88 thank you
 			Actor_Face_Actor(kActorMcCoy, kActorRachael, true);
 			Actor_Says(kActorMcCoy, 2710, 14);             // Excuse me
 
@@ -168,7 +170,10 @@ void SceneScriptMA06::PlayerWalkedIn() {
 			Ambient_Sounds_Adjust_Looping_Sound(kSfxELEAMB3,  10, 0, 1u);
 			Ambient_Sounds_Adjust_Looping_Sound(kSfxAPRTFAN1, 10, 0, 1u);
 
-			Actor_Says(kActorAnsweringMachine, 80, 3);      // your floor number please
+			if (_vm->_cutContent) {
+				Actor_Says(kActorAnsweringMachine, 70, kAnimationModeTalk); // voice print identification
+			}
+			Actor_Says(kActorAnsweringMachine, 80, kAnimationModeTalk);     // your floor number please
 			Actor_Set_Goal_Number(kActorRachael, kGoalRachaelIsInsideElevatorStartTalkAct4);
 			//
 			Delay(500);
@@ -256,7 +261,10 @@ void SceneScriptMA06::activateElevator() {
 			break;
 		}
 
-		Actor_Says(kActorAnsweringMachine, 80, kAnimationModeTalk);
+		if (_vm->_cutContent) {
+			Actor_Says(kActorAnsweringMachine, 70, kAnimationModeTalk); // voice print identification
+		}
+		Actor_Says(kActorAnsweringMachine, 80, kAnimationModeTalk);     // your floor number please
 		Player_Gains_Control();
 		int floorLevel = Elevator_Activate(kElevatorMA);
 #if BLADERUNNER_ORIGINAL_BUGS
@@ -279,7 +287,7 @@ void SceneScriptMA06::activateElevator() {
 			} else {
 				Sound_Play(kSfxELEBAD1, 100, 0, 0, 50);
 				Delay(500);
-				Actor_Says(kActorAnsweringMachine, 610, 3);
+				Actor_Says(kActorAnsweringMachine, 610, kAnimationModeTalk);
 			}
 		} else { // floorLevel == 0
 			Actor_Says(kActorMcCoy, 2940, 18);
@@ -293,7 +301,7 @@ void SceneScriptMA06::activateElevator() {
 				Actor_Says(kActorMcCoy, 8527, kAnimationModeTalk);
 			} else {
 				Game_Flag_Set(kFlagMA06ToMA02);
-				Actor_Says(kActorAnsweringMachine, 90, 3);
+				Actor_Says(kActorAnsweringMachine, 90, kAnimationModeTalk);
 			}
 		}
 	}

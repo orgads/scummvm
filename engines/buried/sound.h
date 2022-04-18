@@ -7,10 +7,10 @@
  * Additional copyright for this file:
  * Copyright (C) 1995 Presto Studios, Inc.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,14 +18,14 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef BURIED_SOUND_H
 #define BURIED_SOUND_H
 
+#include "audio/mixer.h"
 #include "common/str.h"
 
 namespace Audio {
@@ -49,7 +49,6 @@ public:
 	// AMBIENT SOUND CHANNEL FUNCTIONS
 	bool setAmbientSound(const Common::String &fileName = "", bool fade = false, byte finalVolumeLevel = 64);
 	bool adjustAmbientSoundVolume(byte newVolumeLevel, bool fade, byte steps, uint32 fadeLength);
-	uint32 getAmbientPosition();
 	bool isAmbientSoundPlaying();
 
 	bool setSecondaryAmbientSound(const Common::String &fileName = "", bool fade = false, byte finalVolumeLevel = 64);
@@ -61,6 +60,7 @@ public:
 	bool playSynchronousAIComment(const Common::String &fileName);
 	bool playAsynchronousAIComment(const Common::String &fileName);
 	bool isAsynchronousAICommentPlaying();
+	void stopAsynchronousAIComment();
 
 	// SOUND EFFECTS FUNCTIONS
 	int playSoundEffect(const Common::String &fileName, int volume = 127, bool loop = false, bool oneShot = true);
@@ -84,6 +84,7 @@ public:
 	// pause() is used for implementing pauseEngineIntern(). Since stop()/restart()
 	// are not re-entrant, they're not suitable for that purpose.
 	bool stop();
+	void stopSound(int soundId);
 	bool restart();
 	void pause(bool shouldPause);
 
@@ -134,6 +135,7 @@ private:
 		uint32 _timedEffectRemaining;             // The remaining amount of time for the effect
 
 		bool _wasPlaying;
+		Audio::Mixer::SoundType _soundType;
 	};
 
 	BuriedEngine *_vm;

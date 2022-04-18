@@ -116,6 +116,7 @@ QUIET_PLUGIN  = @echo '   ' PLUGIN ' ' $@;
 QUIET_LINK    = @echo '   ' LINK '   ' $@;
 QUIET_DWP     = @echo '   ' DWP '    ' $@;
 QUIET_WINDRES = @echo '   ' WINDRES '' $@;
+QUIET_CURL		= @echo '   ' CURL '   ' $@;
 QUIET         = @
 endif
 endif
@@ -130,8 +131,17 @@ $(EXECUTABLE).dwp: $(EXECUTABLE)
 	$(QUIET_DWP)$(DWP) -e $(EXECUTABLE)
 endif
 
+# Grab the ScummVM Manual from Read the Docs
+ifdef USE_CURL
+DIST_FILES_MANUAL := ScummVM\ Manual\ $(MANUALVERSION).pdf
+manual:
+	$(QUIET_CURL)$(CURL) -s https://docs.scummvm.org/_/downloads/en/$(MANUALVERSION)/pdf/ --output $(DIST_FILES_MANUAL)
+else
+manual:
+endif
+
 distclean: clean clean-devtools
-	$(RM) config.h config.mk config.log engines/engines.mk engines/plugins_table.h
+	$(RM) config.h config.mk config.log configure.stamp engines/engines.mk engines/detection_table.h engines/plugins_table.h "ScummVM Manual"*.pdf
 
 clean: clean-toplevel
 clean-toplevel:
@@ -161,7 +171,7 @@ ifdef CXX_UPDATE_DEP_FLAG
 	$(QUIET_CXX)$(CXX) $(CXX_UPDATE_DEP_FLAG) $(CXXFLAGS) $(CPPFLAGS) -c $(<) -o $@
 
 
-# Build rules for Objective-C and Objective-C++ files. Strictly speaking, this is for OS X only.
+# Build rules for Objective-C and Objective-C++ files. Strictly speaking, this is for macOS only.
 %.o: %.mm
 	$(QUIET)$(MKDIR) $(*D)/$(DEPDIR)
 	$(QUIET_CXX)$(CXX) $(CXX_UPDATE_DEP_FLAG) $(CXXFLAGS) $(CPPFLAGS) -c $(<) -o $@
@@ -293,6 +303,10 @@ DISTVERSION = git$(VER_REV)
 endif
 else
 DISTVERSION = $(VERSION)
+# Set the manual version to the release tag, unless a manual value was provided
+ifeq ($(MANUALVERSION),latest)
+MANUALVERSION = v$(VERSION)
+endif
 endif
 
 DISTNAME := scummvm-$(DISTVERSION)
@@ -339,9 +353,14 @@ dist-src: \
 	@#DEB-src?
 
 # Common files
-DIST_FILES_DOCS:=$(addprefix $(srcdir)/,AUTHORS COPYING COPYING.BSD COPYING.LGPL COPYING.FREEFONT COPYING.OFL COPYING.ISC COPYING.LUA COPYING.MIT COPYING.TINYGL COPYRIGHT NEWS.md README.md CONTRIBUTING.md)
+DIST_FILES_DOCS:=$(addprefix $(srcdir)/,AUTHORS COPYING LICENSES/COPYING.BSD LICENSES/COPYING.LGPL LICENSES/COPYING.FREEFONT LICENSES/COPYING.OFL LICENSES/COPYING.ISC LICENSES/COPYING.LUA LICENSES/COPYING.MIT LICENSES/COPYING.TINYGL LICENSES/COPYING.GLAD COPYRIGHT NEWS.md README.md CONTRIBUTING.md)
 ifdef USE_PANDOC
 DIST_FILES_DOCS+=README$(PANDOCEXT) NEWS$(PANDOCEXT) CONTRIBUTING$(PANDOCEXT)
+endif
+ifdef DIST_FILES_MANUAL
+ifneq ("$(wildcard $(DIST_FILES_MANUAL))","")
+DIST_FILES_DOCS+=$(DIST_FILES_MANUAL)
+endif
 endif
 
 DIST_FILES_DOCS_languages=cz da de es fr it no-nb se
@@ -358,7 +377,7 @@ DIST_FILES_DOCS_no-nb:=$(addprefix $(srcdir)/doc/no-nb/,HurtigStart)
 DIST_FILES_DOCS_se:=$(addprefix $(srcdir)/doc/se/,LasMig Snabbstart)
 
 # Themes files
-DIST_FILES_THEMES=scummmodern.zip scummclassic.zip scummremastered.zip residualvm.zip
+DIST_FILES_THEMES=scummmodern.zip scummclassic.zip scummremastered.zip residualvm.zip gui-icons.dat
 ifdef USE_TRANSLATION
 DIST_FILES_THEMES+=translations.dat
 endif
@@ -464,9 +483,9 @@ ifdef ENABLE_AGI
 DIST_FILES_ENGINEDATA+=$(srcdir)/dists/pred.dic
 endif
 
-# Shaders: install if USE_OPENGL_SHADERS or USE_GLES2 defined
+# Shaders: install if USE_OPENGL_SHADERS is defined
 DIST_FILES_SHADERS=
-ifneq ($(USE_OPENGL_SHADERS)$(USE_GLES2),)
+ifneq ($(USE_OPENGL_SHADERS),)
 ifdef ENABLE_GRIM
 DIST_FILES_SHADERS+=$(wildcard $(srcdir)/engines/grim/shaders/*)
 endif
@@ -479,6 +498,9 @@ endif
 ifdef ENABLE_WINTERMUTE
 DIST_FILES_SHADERS+=$(wildcard $(srcdir)/engines/wintermute/base/gfx/opengl/shaders/*)
 endif
+ifdef ENABLE_PLAYGROUND3D
+DIST_FILES_SHADERS+=$(wildcard $(srcdir)/engines/playground3d/shaders/*)
+endif
 endif
 
-.PHONY: all clean distclean plugins dist-src clean-toplevel
+.PHONY: all clean distclean plugins dist-src clean-toplevel manual

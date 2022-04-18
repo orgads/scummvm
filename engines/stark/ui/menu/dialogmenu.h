@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,7 +23,6 @@
 #define STARK_UI_MENU_DIALOG_H
 
 #include "engines/stark/ui/menu/locationscreen.h"
-
 #include "engines/stark/visual/text.h"
 
 namespace Stark {
@@ -101,7 +99,7 @@ public:
 	void onScreenChanged() { _text.resetTexture(); }
 
 private:
-	static const Color _color;
+	const Color _color = Color(0x68, 0x05, 0x04);
 
 	Common::Point _pos;
 	VisualText _text;
@@ -129,8 +127,8 @@ public:
 	}
 
 private:
-	static const Color _textColorApril;
-	static const Color _textColorNormal;
+	const Color _textColorApril = Color(0x68, 0x05, 0x04);
+	const Color _textColorNormal = Color(0x1E, 0x1E, 0x96);
 
 	Common::Point _namePos, _linePos;
 	VisualText _nameText, _lineText;
@@ -160,8 +158,8 @@ public:
 	void onScreenChanged() override;
 
 private:
-	static const Color _textColorHovered;
-	static const Color _textColorDefault;
+	const Color _textColorHovered = Color(0x1E, 0x1E, 0x96);
+	const Color _textColorDefault = Color(0x00, 0x00, 0x00);
 
 	uint _logIndex, _chapter;
 	int _width, _height;

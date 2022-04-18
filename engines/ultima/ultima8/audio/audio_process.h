@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -84,6 +83,7 @@ public:
 	INTRINSIC(I_isSFXPlaying);
 	INTRINSIC(I_isSFXPlayingForObject);
 	INTRINSIC(I_setVolumeSFX);
+	INTRINSIC(I_setVolumeForObjectSFX);
 	INTRINSIC(I_stopSFX);
 	INTRINSIC(I_stopSFXCru);
 	INTRINSIC(I_stopAllSFX);
@@ -106,6 +106,7 @@ public:
 	bool isSFXPlaying(int sfxNum);
 	bool isSFXPlayingForObject(int sfxNum, ObjId objId);
 	void setVolumeSFX(int sfxNum, uint8 volume);
+	void setVolumeForObjectSFX(ObjId objId, int sfxNum, uint8 volume);
 
 	bool playSpeech(const Std::string &barked, int shapenum, ObjId objId,
 					uint32 pitchShift = PITCH_SHIFT_NONE, uint16 volume = 255);
@@ -117,9 +118,9 @@ public:
 
 	//! play a sample (without storing a SampleInfo)
 	//! returns channel sample is played on, or -1
-	int playSample(AudioSample *sample, int priority, int loops,
+	int playSample(AudioSample *sample, int priority, int loops, bool isSpeech = false,
 				   uint32 pitchShift = PITCH_SHIFT_NONE, int16 lVol = 255,
-				   int16 rVol = 255, bool ambient=false);
+				   int16 rVol = 255, bool ambient = false);
 
 	//! pause all currently playing samples
 	void pauseAllSamples();

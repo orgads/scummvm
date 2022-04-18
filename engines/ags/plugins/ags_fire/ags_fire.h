@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,38 +15,37 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef AGS_PLUGINS_AGS_FIRE_AGS_FIRE_H
 #define AGS_PLUGINS_AGS_FIRE_AGS_FIRE_H
 
-#include "ags/plugins/plugin_base.h"
+#include "ags/plugins/ags_plugin.h"
 
 namespace AGS3 {
 namespace Plugins {
 namespace AGSFire {
 
 class AGSFire : public PluginBase {
+	SCRIPT_HASH(AGSFire)
 private:
-	static IAGSEngine *_engine;
-	static const char *AGS_GetPluginName();
-	static void AGS_EngineStartup(IAGSEngine *engine);
-
-private:
-	static void FireAddObject(ScriptMethodParams &params);
-	static void FirePreHeat(ScriptMethodParams &params);
-	static void FireDisableSeeding(ScriptMethodParams &params);
-	static void FireEnableSeeding(ScriptMethodParams &params);
-	static void FireSetStrength(ScriptMethodParams &params);
-	static void FireRemoveObject(ScriptMethodParams &params);
-	static void FireUpdate(ScriptMethodParams &params);
-	static void FireStop(ScriptMethodParams &params);
+	void FireAddObject(ScriptMethodParams &params);
+	void FirePreHeat(ScriptMethodParams &params);
+	void FireDisableSeeding(ScriptMethodParams &params);
+	void FireEnableSeeding(ScriptMethodParams &params);
+	void FireSetStrength(ScriptMethodParams &params);
+	void FireRemoveObject(ScriptMethodParams &params);
+	void FireUpdate(ScriptMethodParams &params);
+	void FireStop(ScriptMethodParams &params);
 
 public:
-	AGSFire();
+	AGSFire() : PluginBase() {}
+	virtual ~AGSFire() {}
+
+	const char *AGS_GetPluginName() override;
+	void AGS_EngineStartup(IAGSEngine *engine) override;
 };
 
 } // namespace AGSFire

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,9 +24,11 @@
 #include "common/util.h"
 #include "common/config-manager.h"
 #include "common/algorithm.h"
+#include "common/file.h"
 #include "common/rect.h"
 #include "common/textconsole.h"
 #include "common/translation.h"
+#include "common/unzip.h"
 #include "gui/EventRecorder.h"
 
 #include "backends/keymapper/action.h"
@@ -85,6 +86,7 @@ GuiManager::GuiManager() : _redrawStatus(kRedrawDisabled), _stateIsSaved(false),
 #endif // USE_TRANSLATION
 
 	initTextToSpeech();
+	initIconsSet();
 
 	ConfMan.registerDefault("gui_theme", "scummremastered");
 	Common::String themefile(ConfMan.get("gui_theme"));
@@ -106,37 +108,97 @@ GuiManager::~GuiManager() {
 	delete _theme;
 }
 
-void GuiManager::computeScaleFactor() {
-	uint16 w = g_system->getOverlayWidth();
-	uint16 h = g_system->getOverlayHeight();
-	uint scale = g_system->getFeatureState(OSystem::kFeatureHiDPI) ? 2 : 1;
+struct ArchiveMemberListBackComparator {
+	bool operator()(const Common::ArchiveMemberPtr &a, const Common::ArchiveMemberPtr &b) {
+		return a->getName() > b->getName();
+	}
+};
+void GuiManager::initIconsSet() {
+	Common::Archive *dat;
 
-	_baseHeight = 0;	// Clean up from previous iteration
+	_iconsSet.clear();
 
-	if (ConfMan.hasKey("gui_base")) {
-		_baseHeight = ConfMan.getInt("gui_base");
+	if (ConfMan.hasKey("iconspath")) {
+		Common::FSDirectory *iconDir = new Common::FSDirectory(ConfMan.get("iconspath"));
+		Common::ArchiveMemberList iconFiles;
 
-		if (h < _baseHeight)
-			_baseHeight = 0; // Switch to auto for lower resolutions
+		iconDir->listMatchingMembers(iconFiles, "gui-icons*.dat");
+		Common::sort(iconFiles.begin(), iconFiles.end(), ArchiveMemberListBackComparator());
+
+		for (Common::ArchiveMemberList::iterator ic = iconFiles.begin(); ic != iconFiles.end(); ++ic) {
+			debug(2, "GUI: Loaded icon file: %s", (*ic)->getName().c_str());
+
+			dat = Common::makeZipArchive((*ic)->createReadStream());
+
+			if (dat) {
+				_iconsSet.add((*ic)->getName(), dat);
+			}
+		}
+
+		delete iconDir;
 	}
 
-	if (_baseHeight == 0) {	// auto
-		if (h < 240 * scale) {	// 320 x 200
-			_baseHeight = MIN<int16>(200, h);
-		} else if (h < 400 * scale) {	// 320 x 240
-			_baseHeight = 240;
-		} else if (h < 480 * scale) {	// 640 x 400
-			_baseHeight = 400;
-		} else if (h < 720 * scale) {	// 640 x 480
-			_baseHeight = 480;
-		} else {				// 960 x 720
-			_baseHeight = 720;
+	dat = nullptr;
+
+	const char fname[] = "gui-icons.dat";
+
+	if (ConfMan.hasKey("themepath")) {
+		Common::FSNode *fs = new Common::FSNode(normalizePath(ConfMan.get("themepath") + "/" + fname, '/'));
+		if (fs->exists()) {
+			dat = Common::makeZipArchive(*fs);
+		}
+		delete fs;
+	}
+
+	if (!dat) {
+		Common::File *file = new Common::File;
+		if (ConfMan.hasKey("iconspath"))
+			file->open(normalizePath(ConfMan.get("iconspath") + "/" + fname, '/'));
+
+		if (!file->isOpen())
+			file->open(fname);
+
+		if (file->isOpen())
+			dat = Common::makeZipArchive(file);
+
+		if (!dat) {
+			warning("GUI: Could not find '%s'", fname);
+			delete file;
+			return;
 		}
 	}
 
-	_scaleFactor = (float)h / (float)_baseHeight;
+	_iconsSet.add(fname, dat);
 
+	debug(2, "GUI: Loaded icon file: %s", fname);
+}
+
+void GuiManager::computeScaleFactor() {
+	uint16 w = g_system->getOverlayWidth();
+	uint16 h = g_system->getOverlayHeight();
+
+	_scaleFactor = g_system->getHiDPIScreenFactor();
+	if (ConfMan.hasKey("gui_scale"))
+		_scaleFactor *= ConfMan.getInt("gui_scale") / 100.f;
+
+	_baseHeight = (int16)((float)h / _scaleFactor);
 	_baseWidth = (int16)((float)w / _scaleFactor);
+
+	// Never go below 320x200. Our GUI layout is not designed to go below that.
+	// On the DS, this causes issues at 256x192 due to the use of non-scalable
+	// BDF fonts.
+#ifndef __DS__
+	if (_baseHeight < 200) {
+		_baseHeight = 200;
+		_scaleFactor = (float)h / (float)_baseHeight;
+		_baseWidth = (int16)((float)w / _scaleFactor);
+	}
+	if (_baseWidth < 320) {
+		_baseWidth = 320;
+		_scaleFactor = (float)w / (float)_baseWidth;
+		_baseHeight = (int16)((float)h / _scaleFactor);
+	}
+#endif
 
 	if (_theme)
 		_theme->setBaseResolution(_baseWidth, _baseHeight, _scaleFactor);
@@ -287,8 +349,13 @@ void GuiManager::redraw() {
 	// Tanoku: Do not apply shading more than once when opening many dialogs
 	// on top of each other. Screen ends up being too dark and it's a
 	// performance hog.
-	if (_redrawStatus == kRedrawOpenDialog && _dialogStack.size() > 3)
+	if (_redrawStatus == kRedrawOpenDialog && _dialogStack.size() > 2)
 		shading = ThemeEngine::kShadingNone;
+
+	// Reset any custom RTL paddings set by stacked dialogs when we go back to the top
+	if (useRTL() && _dialogStack.size() == 1) {
+		setDialogPaddings(0, 0);
+	}
 
 	switch (_redrawStatus) {
 		case kRedrawCloseDialog:
@@ -342,7 +409,7 @@ Dialog *GuiManager::getTopDialog() const {
 	return _dialogStack.top();
 }
 
-void GuiManager::addToTrash(GuiObject* object, Dialog* parent) {
+void GuiManager::addToTrash(GuiObject* object, Dialog *parent) {
 	debug(7, "Adding Gui Object %p to trash", (void *)object);
 	GuiObjectTrashItem t;
 	t.object = object;
@@ -356,6 +423,14 @@ void GuiManager::addToTrash(GuiObject* object, Dialog* parent) {
 			}
 		}
 	}
+
+	for (auto it = _guiObjectTrash.begin(); it != _guiObjectTrash.end(); ++it) {
+		if (it->object == object) {
+			debug(6, "The object %p was already scheduled for deletion, skipping", (void *)(*it).object);
+			return;
+		}
+	}
+
 	_guiObjectTrash.push_back(t);
 }
 
@@ -368,7 +443,7 @@ void GuiManager::runLoop() {
 
 #ifdef ENABLE_EVENTRECORDER
 	// Suspend recording while GUI is shown
-	g_eventRec.suspendRecording();
+	g_eventRec.acquireRecording();
 #endif
 
 	if (!_stateIsSaved) {
@@ -478,17 +553,24 @@ void GuiManager::runLoop() {
 
 		redraw();
 
-		// Delay until the allocated frame time is elapsed to match the target frame rate
-		uint32 actualFrameDuration = _system->getMillis(true) - frameStartTime;
-		if (actualFrameDuration < targetFrameDuration) {
-			_system->delayMillis(targetFrameDuration - actualFrameDuration);
+		// Delay until the allocated frame time is elapsed to match the target frame rate.
+		// In case we have vsync enabled, we should rely on vsync to do take care about frame times.
+		// With vsync enabled, we currently have to force a frame time of 1ms since otherwise
+		// CPU usage will skyrocket on one thread as soon as no updateScreen(); calls happening.
+		if (g_system->getFeatureState(OSystem::kFeatureVSync)) {
+			_system->delayMillis(1);
+		} else {
+			uint32 actualFrameDuration = _system->getMillis(true) - frameStartTime;
+			if (actualFrameDuration < targetFrameDuration) {
+				_system->delayMillis(targetFrameDuration - actualFrameDuration);
+			}
 		}
 		_system->updateScreen();
 	}
 
 	// WORKAROUND: When quitting we might not properly close the dialogs on
 	// the dialog stack, thus we do this here to avoid any problems.
-	// This is most noticable in bug #5954 "LAUNCHER: Can't quit from unsupported game dialog".
+	// This is most noticeable in bug #5954 "LAUNCHER: Can't quit from unsupported game dialog".
 	// It seems that Dialog::runModal never removes the dialog from the dialog
 	// stack, thus if the dialog does not call Dialog::close to close itself
 	// it will never be removed. Since we can have multiple run loops being
@@ -505,7 +587,7 @@ void GuiManager::runLoop() {
 
 #ifdef ENABLE_EVENTRECORDER
 	// Resume recording once GUI is shown
-	g_eventRec.resumeRecording();
+	g_eventRec.releaseRecording();
 #endif
 }
 
@@ -621,6 +703,13 @@ bool GuiManager::checkScreenChange() {
 }
 
 void GuiManager::screenChange() {
+#ifdef ENABLE_EVENTRECORDER
+	// Suspend recording while GUI is redrawn.
+	// We need this in addition to the lock in runLoop, as EVENT_SCREEN_CHANGED can
+	// be fired by in-game GUI components (such as the event recorder itself)
+	g_eventRec.acquireRecording();
+#endif
+
 	_lastScreenChangeID = _system->getScreenChangeID();
 
 	computeScaleFactor();
@@ -638,6 +727,11 @@ void GuiManager::screenChange() {
 	_redrawStatus = kRedrawFull;
 	redraw();
 	_system->updateScreen();
+
+#ifdef ENABLE_EVENTRECORDER
+	// Resume recording once GUI has redrawn
+	g_eventRec.releaseRecording();
+#endif
 }
 
 void GuiManager::processEvent(const Common::Event &event, Dialog *const activeDialog) {
@@ -754,8 +848,6 @@ void GuiManager::initTextToSpeech() {
 		return;
 #ifdef USE_TRANSLATION
 	Common::String currentLanguage = TransMan.getCurrentLanguage();
-	if (currentLanguage == "C")
-		currentLanguage = "en";
 	ttsMan->setLanguage(currentLanguage);
 #endif
 	int volume = (ConfMan.getInt("speech_volume", "scummvm") * 100) / 256;

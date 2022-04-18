@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -96,7 +95,7 @@ void AgiBase::initVersion() {
 }
 
 const char *AgiBase::getDiskName(uint16 id) {
-	for (int i = 0; _gameDescription->desc.filesDescriptions[i].fileName != NULL; i++)
+	for (int i = 0; _gameDescription->desc.filesDescriptions[i].fileName != nullptr; i++)
 		if (_gameDescription->desc.filesDescriptions[i].fileType == id)
 			return _gameDescription->desc.filesDescriptions[i].fileName;
 
@@ -214,7 +213,7 @@ SaveStateList AgiMetaEngine::listSaves(const char *target) const {
 
 				delete in;
 
-				saveList.push_back(SaveStateDescriptor(slotNr, description));
+				saveList.push_back(SaveStateDescriptor(this, slotNr, description));
 			}
 		}
 	}
@@ -257,21 +256,11 @@ SaveStateDescriptor AgiMetaEngine::querySaveMetaInfos(const char *target, int sl
 			// broken description, ignore it
 			delete in;
 
-			SaveStateDescriptor descriptor(slotNr, "[broken saved game]");
+			SaveStateDescriptor descriptor(this, slotNr, "[broken saved game]");
 			return descriptor;
 		}
 
-		SaveStateDescriptor descriptor(slotNr, description);
-
-		// Do not allow save slot 0 (used for auto-saving) to be deleted or
-		// overwritten.
-		if (slotNr == 0) {
-			descriptor.setWriteProtectedFlag(true);
-			descriptor.setDeletableFlag(false);
-		} else {
-			descriptor.setWriteProtectedFlag(false);
-			descriptor.setDeletableFlag(true);
-		}
+		SaveStateDescriptor descriptor(this, slotNr, description);
 
 		char saveVersion = in->readByte();
 		if (saveVersion >= 4) {
@@ -313,6 +302,7 @@ SaveStateDescriptor AgiMetaEngine::querySaveMetaInfos(const char *target, int sl
 		SaveStateDescriptor emptySave;
 		// Do not allow save slot 0 (used for auto-saving) to be overwritten.
 		if (slotNr == 0) {
+			emptySave.setAutosave(true);
 			emptySave.setWriteProtectedFlag(true);
 		} else {
 			emptySave.setWriteProtectedFlag(false);
@@ -368,7 +358,7 @@ bool AgiBase::canSaveGameStateCurrently() {
 int AgiEngine::agiDetectGame() {
 	int ec = errOK;
 
-	assert(_gameDescription != NULL);
+	assert(_gameDescription != nullptr);
 
 	if (getVersion() <= 0x2001) {
 		_loader = new AgiLoader_v1(this);

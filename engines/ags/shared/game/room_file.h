@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -128,14 +127,7 @@ HRoomFileError WriteRoomData(const RoomStruct *room, Stream *out, RoomFileVersio
 // Reads room data header using stream assigned to RoomDataSource;
 // tests and saves its format index if successful
 HRoomFileError ReadRoomHeader(RoomDataSource &src);
-// Opens next room block from the stream, fills in its identifier and length on success
-HRoomFileError OpenNextRoomBlock(Stream *in, RoomFileVersion data_ver, RoomFileBlock &block_id, String &ext_id, soff_t &block_len);
-// Type of function that reads single room block and tells whether to continue reading
-typedef HError(*PfnReadRoomBlock)(Stream * in, RoomFileBlock block_id, const String & ext_id,
-	soff_t block_len, RoomFileVersion data_ver, bool &read_next);
-// Parses room file, passing each found block into callback; does not read any actual data itself
-HRoomFileError ReadRoomData(PfnReadRoomBlock reader, Stream *in, RoomFileVersion data_ver);
-// Type of function that writes single room block.
+
 typedef void(*PfnWriteRoomBlock)(const RoomStruct *room, Stream *out);
 // Writes room block with a new-style string id
 void WriteRoomBlock(const RoomStruct *room, const String &ext_id, PfnWriteRoomBlock writer, Stream *out);

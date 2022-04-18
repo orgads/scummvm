@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -34,30 +33,28 @@
 namespace TwinE {
 
 Resources::~Resources() {
-	for (size_t i = 0; i < ARRAYSIZE(spriteTable); ++i) {
-		free(spriteTable[i]);
+	for (size_t i = 0; i < ARRAYSIZE(_spriteTable); ++i) {
+		free(_spriteTable[i]);
 	}
-	for (size_t i = 0; i < ARRAYSIZE(samplesTable); ++i) {
-		free(samplesTable[i]);
+	for (size_t i = 0; i < ARRAYSIZE(_samplesTable); ++i) {
+		free(_samplesTable[i]);
 	}
-	free(fontPtr);
-	free(spriteShadowPtr);
-	free(holomapSurfacePtr);
-	free(holomapImagePtr);
-	free(_engine->_screens->mainPalette);
+	free(_fontPtr);
 }
 
 void Resources::initPalettes() {
-	const int32 size = HQR::getAllocEntry(&_engine->_screens->mainPalette, Resources::HQR_RESS_FILE, RESSHQR_MAINPAL);
+	uint8 *mainPalette = nullptr;
+	const int32 size = HQR::getAllocEntry(&mainPalette, Resources::HQR_RESS_FILE, RESSHQR_MAINPAL);
 	if (size == 0) {
 		error("Failed to load main palette");
 	}
-	_engine->_screens->convertPalToRGBA(_engine->_screens->mainPalette, _engine->_screens->mainPaletteRGBA);
+	_engine->_screens->convertPalToRGBA(mainPalette, _engine->_screens->_mainPaletteRGBA);
 
-	memcpy(_engine->_screens->palette, _engine->_screens->mainPalette, NUMOFCOLORS * 3);
+	memcpy(_engine->_screens->_palette, mainPalette, NUMOFCOLORS * 3);
 
-	_engine->_screens->convertPalToRGBA(_engine->_screens->palette, _engine->_screens->paletteRGBA);
-	_engine->setPalette(_engine->_screens->paletteRGBA);
+	_engine->_screens->convertPalToRGBA(_engine->_screens->_palette, _engine->_screens->_paletteRGBA);
+	_engine->setPalette(_engine->_screens->_paletteRGBA);
+	free(mainPalette);
 }
 
 void Resources::preloadSprites() {
@@ -68,8 +65,8 @@ void Resources::preloadSprites() {
 	}
 	debug("preload %i sprites", numEntries);
 	for (int32 i = 0; i < numEntries; i++) {
-		spriteSizeTable[i] = HQR::getAllocEntry(&spriteTable[i], Resources::HQR_SPRITES_FILE, i);
-		if (!spriteData[i].loadFromBuffer(spriteTable[i], spriteSizeTable[i])) {
+		_spriteSizeTable[i] = HQR::getAllocEntry(&_spriteTable[i], Resources::HQR_SPRITES_FILE, i);
+		if (!_spriteData[i].loadFromBuffer(_spriteTable[i], _spriteSizeTable[i], _engine->isLBA1())) {
 			warning("Failed to load sprite %i", i);
 		}
 	}
@@ -83,7 +80,7 @@ void Resources::preloadAnimations() {
 	}
 	debug("preload %i animations", numEntries);
 	for (int32 i = 0; i < numEntries; i++) {
-		animData[i].loadFromHQR(Resources::HQR_ANIM_FILE, i);
+		_animData[i].loadFromHQR(Resources::HQR_ANIM_FILE, i, _engine->isLBA1());
 	}
 }
 
@@ -107,19 +104,19 @@ void Resources::preloadSamples() {
 	debug("preload %i samples", numEntries);
 	for (int32 i = 0; i < numEntries; i++) {
 		if (_engine->isLBA1() && isLba1BlankSampleEntry(i)) {
-			samplesSizeTable[i] = 0;
-			samplesTable[i] = nullptr;
+			_samplesSizeTable[i] = 0;
+			_samplesTable[i] = nullptr;
 			continue;
 		}
-		samplesSizeTable[i] = HQR::getAllocEntry(&samplesTable[i], Resources::HQR_SAMPLES_FILE, i);
-		if (samplesSizeTable[i] == 0) {
+		_samplesSizeTable[i] = HQR::getAllocEntry(&_samplesTable[i], Resources::HQR_SAMPLES_FILE, i);
+		if (_samplesSizeTable[i] == 0) {
 			warning("Failed to load sample %i", i);
 			continue;
 		}
 		// Fix incorrect sample files first byte
-		if (*samplesTable[i] != 'C') {
-			debug("Sample %i has incorrect magic id (size: %u)", i, samplesSizeTable[i]);
-			*samplesTable[i] = 'C';
+		if (*_samplesTable[i] != 'C') {
+			debug("Sample %i has incorrect magic id (size: %u)", i, _samplesSizeTable[i]);
+			*_samplesTable[i] = 'C';
 		}
 	}
 }
@@ -131,15 +128,15 @@ void Resources::preloadInventoryItems() {
 	}
 	debug("preload %i inventory items", numEntries);
 	for (int32 i = 0; i < numEntries; i++) {
-		inventoryTable[i].loadFromHQR(Resources::HQR_INVOBJ_FILE, i);
+		_inventoryTable[i].loadFromHQR(Resources::HQR_INVOBJ_FILE, i, _engine->isLBA1());
 	}
 }
 
 void Resources::initResources() {
 	initPalettes();
 
-	fontBufSize = HQR::getAllocEntry(&fontPtr, Resources::HQR_RESS_FILE, RESSHQR_LBAFONT);
-	if (fontBufSize == 0) {
+	_fontBufSize = HQR::getAllocEntry(&_fontPtr, Resources::HQR_RESS_FILE, RESSHQR_LBAFONT);
+	if (_fontBufSize == 0) {
 		error("Failed to load font");
 	}
 
@@ -147,47 +144,36 @@ void Resources::initResources() {
 	_engine->_text->setFontColor(COLOR_14);
 	_engine->_text->setTextCrossColor(136, 143, 2);
 
-	spriteShadowSize = HQR::getAllocEntry(&spriteShadowPtr, Resources::HQR_RESS_FILE, RESSHQR_SPRITESHADOW);
-	if (spriteShadowSize == 0) {
-		error("Failed to load sprite shadow");
-	}
-
 	if (_engine->isLBA1()) {
-		if (!spriteBoundingBox.loadFromHQR(Resources::HQR_RESS_FILE, RESSHQR_SPRITEBOXDATA)) {
+		if (!_spriteShadowPtr.loadFromHQR(TwineResource(Resources::HQR_RESS_FILE, RESSHQR_SPRITESHADOW), _engine->isLBA1())) {
+			error("Failed to load shadow sprites");
+		}
+
+		if (!_spriteBoundingBox.loadFromHQR(TwineResource(Resources::HQR_RESS_FILE, RESSHQR_SPRITEBOXDATA), _engine->isLBA1())) {
 			error("Failed to load sprite bounding box data");
 		}
-	}
 
-	holomapSurfaceSize = HQR::getAllocEntry(&holomapSurfacePtr, Resources::HQR_RESS_FILE, RESSHQR_HOLOSURFACE);
-	if (holomapSurfaceSize == 0) {
-		error("Failed to load holomap surface");
-	}
+		if (!_holomapTwinsenModelPtr.loadFromHQR(TwineResource(Resources::HQR_RESS_FILE, RESSHQR_HOLOTWINMDL), _engine->isLBA1())) {
+			error("Failed to load holomap twinsen model");
+		}
 
-	holomapImageSize = HQR::getAllocEntry(&holomapImagePtr, Resources::HQR_RESS_FILE, RESSHQR_HOLOIMG);
-	if (holomapImageSize == 0) {
-		error("Failed to load holomap image");
-	}
+		if (!_holomapPointModelPtr.loadFromHQR(TwineResource(Resources::HQR_RESS_FILE, RESSHQR_HOLOPOINTMDL), _engine->isLBA1())) {
+			error("Failed to load holomap point model");
+		}
 
-	if (!holomapTwinsenModelPtr.loadFromHQR(Resources::HQR_RESS_FILE, RESSHQR_HOLOTWINMDL)) {
-		error("Failed to load holomap twinsen model");
-	}
+		if (!_holomapArrowPtr.loadFromHQR(TwineResource(Resources::HQR_RESS_FILE, RESSHQR_HOLOARROWMDL), _engine->isLBA1())) {
+			error("Failed to load holomap arrow model");
+		}
 
-	if (!holomapPointModelPtr.loadFromHQR(Resources::HQR_RESS_FILE, RESSHQR_HOLOPOINTMDL)) {
-		error("Failed to load holomap point model");
-	}
+		if (!_holomapTwinsenArrowPtr.loadFromHQR(TwineResource(Resources::HQR_RESS_FILE, RESSHQR_HOLOTWINARROWMDL), _engine->isLBA1())) {
+			error("Failed to load holomap twinsen arrow model");
+		}
 
-	if (!holomapArrowPtr.loadFromHQR(Resources::HQR_RESS_FILE, RESSHQR_HOLOARROWMDL)) {
-		error("Failed to load holomap arrow model");
+		if (!_trajectories.loadFromHQR(TwineResource(Resources::HQR_RESS_FILE, RESSHQR_HOLOPOINTANIM), _engine->isLBA1())) {
+			error("Failed to parse trajectory data");
+		}
+		debug("preload %i trajectories", (int)_trajectories.getTrajectories().size());
 	}
-
-	if (!holomapTwinsenArrowPtr.loadFromHQR(Resources::HQR_RESS_FILE, RESSHQR_HOLOTWINARROWMDL)) {
-		error("Failed to load holomap twinsen arrow model");
-	}
-
-	if (!_trajectories.loadFromHQR(Resources::HQR_RESS_FILE, RESSHQR_HOLOPOINTANIM)) {
-		error("Failed to parse trajectory data");
-	}
-	debug("preload %i trajectories", (int)_trajectories.getTrajectories().size());
 
 	preloadSprites();
 	preloadAnimations();
@@ -195,17 +181,21 @@ void Resources::initResources() {
 	preloadInventoryItems();
 
 	const int32 bodyCount = HQR::numEntries(Resources::HQR_BODY_FILE);
+	const int32 maxBodies = _engine->isLBA1() ? 200 : NUM_BODIES;
+	if (bodyCount > maxBodies) {
+		error("Max body count exceeded: %i", bodyCount);
+	}
 	for (int32 i = 0; i < bodyCount; ++i) {
-		if (!bodyData[i].loadFromHQR(Resources::HQR_BODY_FILE, i)) {
+		if (!_bodyData[i].loadFromHQR(TwineResource(Resources::HQR_BODY_FILE, i), _engine->isLBA1())) {
 			error("HQR ERROR: Parsing body entity for model %i failed", i);
 		}
 	}
 
-	loadFlaInfo();
+	loadMovieInfo();
 
 	const int32 textEntryCount = _engine->isLBA1() ? 28 : 30;
 	for (int32 i = 0; i < textEntryCount / 2; ++i) {
-		if (!_textData.loadFromHQR(Resources::HQR_TEXT_FILE, (TextBankId)i, _engine->cfgfile.LanguageId, textEntryCount)) {
+		if (!_textData.loadFromHQR(Resources::HQR_TEXT_FILE, (TextBankId)i, _engine->_cfgfile.LanguageId, _engine->isLBA1(), textEntryCount)) {
 			error("HQR ERROR: Parsing textbank %i failed", i);
 		}
 	}
@@ -220,35 +210,60 @@ const Trajectory *Resources::getTrajectory(int index) const {
 	return _trajectories.getTrajectory(index);
 }
 
-void Resources::loadFlaInfo() {
+int Resources::findSmkMovieIndex(const char *name) const {
+	Common::String smkName = name;
+	smkName.toLowercase();
+	const Common::Array<int32> &info = getMovieInfo(smkName);
+	return info[0];
+}
+
+void Resources::loadMovieInfo() {
 	uint8 *content = nullptr;
-	const int32 size = HQR::getAllocEntry(&content, Resources::HQR_RESS_FILE, RESSHQR_FLAINFO);
+	int32 size;
+	if (_engine->isLBA1()) {
+		size = HQR::getAllocEntry(&content, Resources::HQR_RESS_FILE, RESSHQR_FLAINFO);
+	} else {
+		size = HQR::getAllocEntry(&content, Resources::HQR_RESS_FILE, 48);
+	}
 	if (size == 0) {
 		return;
 	}
 	const Common::String str((const char *)content, size);
 	free(content);
-
+	debug(3, "movie info:\n%s", str.c_str());
 	Common::StringTokenizer tok(str, "\r\n");
+	int videoIndex = 0;
 	while (!tok.empty()) {
-		const Common::String &line = tok.nextToken();
-		Common::StringTokenizer lineTok(line);
-		if (lineTok.empty()) {
-			continue;
+		Common::String line = tok.nextToken();
+		if (_engine->isLBA1()) {
+			Common::StringTokenizer lineTok(line);
+			if (lineTok.empty()) {
+				continue;
+			}
+			const Common::String &name = lineTok.nextToken();
+			Common::Array<int32> frames;
+			while (!lineTok.empty()) {
+				const Common::String &frame = lineTok.nextToken();
+				const int32 frameIdx = atoi(frame.c_str());
+				frames.push_back(frameIdx);
+			}
+			_movieInfo.setVal(name, frames);
+		} else {
+			Common::Array<int32> info(1);
+			info[0] = videoIndex;
+			line.toLowercase();
+			if (line.hasSuffix(".smk")) {
+				line = line.substr(0, line.size() - 4);
+			}
+			_movieInfo.setVal(line, info);
+			debug(4, "movie name %s mapped to hqr index %i", line.c_str(), videoIndex);
+			++videoIndex;
 		}
-		const Common::String &name = lineTok.nextToken();
-		Common::Array<int32> frames;
-		while (!lineTok.empty()) {
-			const Common::String &frame = lineTok.nextToken();
-			const int32 frameIdx = atoi(frame.c_str());
-			frames.push_back(frameIdx);
-		}
-		_flaMovieFrames.setVal(name, frames);
 	}
 }
 
-const Common::Array<int32> &Resources::getFlaMovieInfo(const Common::String &name) const {
-	return _flaMovieFrames.getVal(name);
+const Common::Array<int32> &Resources::getMovieInfo(const Common::String &name) const {
+	return _movieInfo.getVal(name);
 }
 
 } // namespace TwinE

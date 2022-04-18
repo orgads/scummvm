@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -51,7 +50,7 @@ public:
 	int getMaximumSaveSlot() const override;
 	void removeSaveState(const char *target, int slot) const override;
 	SaveStateDescriptor querySaveMetaInfos(const char *target, int slot) const override;
-	virtual int getAutosaveSlot() const override { return 999; }
+	int getAutosaveSlot() const override { return 999; }
 
 	Common::KeymapArray initKeymaps(const char *target) const override;
 };
@@ -162,7 +161,7 @@ SaveStateList KyraMetaEngine::listSaves(const char *target) const {
 					if (slotNum == 0 && header.gameID == Kyra::GI_KYRA3)
 						header.description = "New Game";
 
-					saveList.push_back(SaveStateDescriptor(slotNum, header.description));
+					saveList.push_back(SaveStateDescriptor(this, slotNum, header.description));
 				}
 				delete in;
 			}
@@ -182,7 +181,8 @@ void KyraMetaEngine::removeSaveState(const char *target, int slot) const {
 	// In Kyra games slot 0 can't be deleted, it's for restarting the game(s).
 	// An exception makes Lands of Lore here, it does not have any way to restart the
 	// game except via its main menu.
-	if (slot == 0 && !ConfMan.getDomain(target)->getVal("gameid").equalsIgnoreCase("lol") && !ConfMan.getDomain(target)->getVal("gameid").equalsIgnoreCase("eob") && !ConfMan.getDomain(target)->getVal("gameid").equalsIgnoreCase("eob2"))
+	const Common::String gameId = ConfMan.getDomain(target)->getVal("gameid");
+	if (slot == 0 && !gameId.equalsIgnoreCase("lol") && !gameId.equalsIgnoreCase("eob") && !gameId.equalsIgnoreCase("eob2"))
 		return;
 
 	Common::String filename = Kyra::KyraEngine_v1::getSavegameFilename(target, slot);
@@ -192,7 +192,8 @@ void KyraMetaEngine::removeSaveState(const char *target, int slot) const {
 SaveStateDescriptor KyraMetaEngine::querySaveMetaInfos(const char *target, int slot) const {
 	Common::String filename = Kyra::KyraEngine_v1::getSavegameFilename(target, slot);
 	Common::InSaveFile *in = g_system->getSavefileManager()->openForLoading(filename);
-	const bool nonKyraGame = ConfMan.getDomain(target)->getVal("gameid").equalsIgnoreCase("lol") || ConfMan.getDomain(target)->getVal("gameid").equalsIgnoreCase("eob") || ConfMan.getDomain(target)->getVal("gameid").equalsIgnoreCase("eob2");
+	const Common::String gameId = ConfMan.getDomain(target)->getVal("gameid");
+	const bool nonKyraGame = gameId.equalsIgnoreCase("lol") || gameId.equalsIgnoreCase("eob") || gameId.equalsIgnoreCase("eob2");
 
 	if (in) {
 		Kyra::KyraEngine_v1::SaveHeader header;
@@ -202,7 +203,7 @@ SaveStateDescriptor KyraMetaEngine::querySaveMetaInfos(const char *target, int s
 		delete in;
 
 		if (error == Kyra::KyraEngine_v1::kRSHENoError) {
-			SaveStateDescriptor desc(slot, header.description);
+			SaveStateDescriptor desc(this, slot, header.description);
 
 			// Slot 0 is used for the 'restart game' save in all three Kyrandia games, thus
 			// we prevent it from being deleted.
@@ -212,18 +213,22 @@ SaveStateDescriptor KyraMetaEngine::querySaveMetaInfos(const char *target, int s
 			// The same goes for the 'Autosave', which is slot 999. Slot 0 will also
 			// be protected in Kyra 1-3, since it's the 'restart game' save.
 			desc.setWriteProtectedFlag((slot == 0 && !nonKyraGame) || slot >= 990);
+			if (slot == getAutosaveSlot())
+				desc.setAutosave(true);
 			desc.setThumbnail(header.thumbnail);
 
 			return desc;
 		}
 	}
 
-	SaveStateDescriptor desc(slot, Common::String());
+	SaveStateDescriptor desc(this, slot, Common::String());
 
 	// We don't allow quick saves (slot 990 till 998) to be overwritten.
 	// The same goes for the 'Autosave', which is slot 999. Slot 0 will also
 	// be protected in Kyra 1-3, since it's the 'restart game' save.
 	desc.setWriteProtectedFlag((slot == 0 && !nonKyraGame) || slot >= 990);
+	if (slot == getAutosaveSlot())
+		desc.setAutosave(true);
 
 	return desc;
 }

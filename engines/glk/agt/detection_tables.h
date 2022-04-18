@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -125,7 +124,7 @@ const PlainGameDescriptor AGT_GAME_LIST[] = {
 	{ "sonofstagefright", "Son of Stagefright" },
 	{ "spatent", "The Spatent Obstruction" },
 	{ "squynchia", "The Squynchia Adventure" },
-	{ "stiffy", "The Incredible Erotic Adventures of Stiffy Makane!" },
+	{ "agtstiffy", "The Incredible Erotic Adventures of Stiffy Makane!" },
 	{ "storms1", "Storms I" },
 	{ "susan", "Susan (A Lustful Game)" },
 	{ "tamoret", "Tamoret" },
@@ -252,7 +251,7 @@ const GlkDetectionEntry AGT_GAMES[] = {
 	DT_ENTRY0("sonofstagefright", "9527fa27e910470deac8ffbcb29e2427", 116640),
 	DT_ENTRY0("spatent", "acc4c60cbb9d0239ab9b1900b239771a", 85455),
 	DT_ENTRY0("squynchia", "e9e5c99ee87f3b38a9ea8e7fdd1ed79f", 81000),
-	DT_ENTRY0("stiffy", "a7f1902ab7aa9972ca46d5b36d06d2b1", 32805),
+	DT_ENTRY0("agtstiffy", "a7f1902ab7aa9972ca46d5b36d06d2b1", 32805),
 	DT_ENTRY0("storms1", "8567c2db37c80f015a950ef80d299a0a", 111942),
 	DT_ENTRY0("susan", "cb71705848aabcac90e7ea9e911ceee9", 15633),
 	DT_ENTRY0("tamoret", "3de37497ed763a58093e556a963ca14e", 156816),

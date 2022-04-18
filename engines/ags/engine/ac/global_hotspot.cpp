@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -42,23 +41,17 @@ namespace AGS3 {
 
 using namespace AGS::Shared;
 
-
-
-
-
-
-
 void DisableHotspot(int hsnum) {
 	if ((hsnum < 1) | (hsnum >= MAX_ROOM_HOTSPOTS))
 		quit("!DisableHotspot: invalid hotspot specified");
-	_G(croom)->hotspot_enabled[hsnum] = 0;
+	_G(croom)->hotspot[hsnum].Enabled = false;
 	debug_script_log("Hotspot %d disabled", hsnum);
 }
 
 void EnableHotspot(int hsnum) {
 	if ((hsnum < 1) | (hsnum >= MAX_ROOM_HOTSPOTS))
 		quit("!EnableHotspot: invalid hotspot specified");
-	_G(croom)->hotspot_enabled[hsnum] = 1;
+	_G(croom)->hotspot[hsnum].Enabled = true;
 	debug_script_log("Hotspot %d re-enabled", hsnum);
 }
 
@@ -84,12 +77,8 @@ int GetHotspotPointY(int hotspot) {
 
 int GetHotspotIDAtScreen(int scrx, int scry) {
 	VpPoint vpt = _GP(play).ScreenToRoomDivDown(scrx, scry);
-	if (vpt.second < 0)
-		return 0;
-	Point pt = vpt.first;
-	if ((pt.X >= _GP(thisroom).Width) | (pt.X < 0) | (pt.Y < 0) | (pt.Y >= _GP(thisroom).Height))
-		return 0;
-	return get_hotspot_at(pt.X, pt.Y);
+	if (vpt.second < 0) return 0;
+	return get_hotspot_at(vpt.first.X, vpt.first.Y);
 }
 
 void GetHotspotName(int hotspot, char *buffer) {
@@ -97,7 +86,7 @@ void GetHotspotName(int hotspot, char *buffer) {
 	if ((hotspot < 0) || (hotspot >= MAX_ROOM_HOTSPOTS))
 		quit("!GetHotspotName: invalid hotspot number");
 
-	strcpy(buffer, get_translation(_GP(thisroom).Hotspots[hotspot].Name.GetCStr()));
+	strcpy(buffer, get_translation(_G(croom)->hotspot[hotspot].Name.GetCStr()));
 }
 
 void RunHotspotInteraction(int hotspothere, int mood) {

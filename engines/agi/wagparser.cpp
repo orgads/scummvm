@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -55,7 +54,7 @@ void WagProperty::deepCopy(const WagProperty &other) {
 	_propNum  = other._propNum;
 	_propSize = other._propSize;
 
-	if (other._propData != NULL) {
+	if (other._propData != nullptr) {
 		_propData = new char[other._propSize + 1UL]; // Allocate space for property's data plus trailing zero
 		memcpy(_propData, other._propData, other._propSize + 1UL); // Copy the whole thing
 	}
@@ -93,13 +92,13 @@ void WagProperty::setDefaults() {
 	_propType = PT_UNDEFINED;
 	_propNum  = 0;
 	_propSize = 0;
-	_propData = NULL;
+	_propData = nullptr;
 }
 
 void WagProperty::deleteData() {
 	if (_propData)
 		delete[] _propData;
-	_propData = NULL;
+	_propData = nullptr;
 }
 
 WagFileParser::WagFileParser() :
@@ -183,7 +182,7 @@ void WagFileParser::addPropFromIni(Common::INIFile *iniWagFile, Common::String s
 
 bool WagFileParser::parse(const Common::FSNode &node) {
 	WagProperty property; // Temporary property used for reading
-	Common::SeekableReadStream *stream = NULL; // The file stream
+	Common::SeekableReadStream *stream = nullptr; // The file stream
 
 	_parsedOk = false; // We haven't parsed the file yet
 
@@ -234,7 +233,7 @@ bool WagFileParser::parse(const Common::FSNode &node) {
 const WagProperty *WagFileParser::getProperty(const WagProperty::WagPropertyCode code) const {
 	for (PropertyList::const_iterator iter = _propList.begin(); iter != _propList.end(); ++iter)
 		if (iter->getCode() == code) return iter;
-	return NULL;
+	return nullptr;
 }
 
 bool WagFileParser::endOfProperties(const Common::SeekableReadStream &stream) const {

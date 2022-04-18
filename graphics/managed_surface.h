@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -99,9 +98,9 @@ public:
 	 */
 	bool clip(Common::Rect &srcBounds, Common::Rect &destBounds);
 public:
-	uint16 &w;           /*!< Width of the surface rectangle. */
-	uint16 &h;           /*!< Height of the surface rectangle. */
-	uint16 &pitch;       /*!< Pitch of the surface rectangle. See @ref Surface::pitch. */
+	int16 &w;           /*!< Width of the surface rectangle. */
+	int16 &h;           /*!< Height of the surface rectangle. */
+	int16 &pitch;       /*!< Pitch of the surface rectangle. See @ref Surface::pitch. */
 	PixelFormat &format; /*!< Pixel format of the surface. See @ref PixelFormat. */
 public:
 	/**
@@ -249,12 +248,12 @@ public:
 	/**
 	 * Allocate memory for the pixel data of the surface.
 	 */
-	virtual void create(uint16 width, uint16 height);
+	virtual void create(int16 width, int16 height);
 
 	/**
 	 * Allocate memory for the pixel data of the surface.
 	 */
-	virtual void create(uint16 width, uint16 height, const PixelFormat &pixelFormat);
+	virtual void create(int16 width, int16 height, const PixelFormat &pixelFormat);
 
 	/**
 	 * Set up the surface as a subsection of another passed parent surface.
@@ -548,7 +547,7 @@ public:
 	 */
 	void drawLine(int x0, int y0, int x1, int y1, uint32 color) {
 		_innerSurface.drawLine(x0, y0, x1, y1, color);
-		addDirtyRect(Common::Rect(MIN(x0, x1), MIN(y0, y1), MAX(x0, x1), MAX(y0, y1)));
+		addDirtyRect(Common::Rect(MIN(x0, x1), MIN(y0, y1), MAX(x0, x1 + 1), MAX(y0, y1 + 1)));
 	}
 
 	/**

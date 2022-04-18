@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,7 +37,7 @@ public:
 		: Ima_ADPCMStream(stream, disposeAfterUse, size, rate, channels, blockAlign) {}
 
 protected:
-	int readBuffer(int16 *buffer, const int numSamples) {
+	int readBuffer(int16 *buffer, const int numSamples) override {
 		// Similar to MS IMA, but without the four-bytes-per-channel requirement
 		int samples;
 
@@ -64,6 +63,14 @@ protected:
 	}
 };
 
+static void skipString(Common::SeekableReadStream *stream) {
+	// Skip until the next space. Note that this will read past \0
+	// characters as well. That's not a bug.
+	byte ch;
+	while ((ch = stream->readByte()) != 0x20)
+		;
+}
+
 static Common::String readString(Common::SeekableReadStream *stream) {
 	Common::String ret = "";
 	byte ch;
@@ -75,7 +82,7 @@ static Common::String readString(Common::SeekableReadStream *stream) {
 
 Audio::RewindableAudioStream *makeISSStream(Common::SeekableReadStream *stream, DisposeAfterUse::Flag disposeAfterUse) {
 	Common::String codec;
-	uint16 blockSize, channels, freq;
+	uint16 blockSize, channels, freq = 44100;
 	uint32 size;
 	byte flags;
 
@@ -86,24 +93,26 @@ Audio::RewindableAudioStream *makeISSStream(Common::SeekableReadStream *stream, 
 		codec = readString(stream);
 		blockSize = (uint16)strtol(codec.c_str(), 0, 10);
 
-		readString(stream);
+		skipString(stream);
 		// name ?
 
-		readString(stream);
+		skipString(stream);
 		// ?
 
 		codec = readString(stream);
 		channels = (uint16)strtol(codec.c_str(), 0, 10) + 1;
 
-		readString(stream);
+		skipString(stream);
 		// ?
 
 		codec = readString(stream);
-		freq = 44100 / (uint16)strtol(codec.c_str(), 0, 10);
+		int val = strtol(codec.c_str(), 0, 10);
+		if (val)
+			freq /= val;
 
-		readString(stream);
+		skipString(stream);
 
-		readString(stream);
+		skipString(stream);
 
 		codec = readString(stream);
 		size = (uint32)strtol(codec.c_str(), 0, 10);
@@ -111,7 +120,7 @@ Audio::RewindableAudioStream *makeISSStream(Common::SeekableReadStream *stream, 
 		return new ISSADPCMStream(stream, DisposeAfterUse::YES, size, freq, channels, blockSize);
 	} else if (codec.equals("Sound")) {
 
-		readString(stream);
+		skipString(stream);
 		// name ?
 
 		codec = readString(stream);
@@ -120,15 +129,17 @@ Audio::RewindableAudioStream *makeISSStream(Common::SeekableReadStream *stream, 
 		codec = readString(stream);
 		channels = (uint16)strtol(codec.c_str(), 0, 10) + 1;
 
-		readString(stream);
+		skipString(stream);
 		// ?
 
 		codec = readString(stream);
-		freq = 44100 / (uint16)strtol(codec.c_str(), 0, 10);
+		int val = strtol(codec.c_str(), 0, 10);
+		if (val)
+			freq /= val;
 
-		readString(stream);
+		skipString(stream);
 
-		readString(stream);
+		skipString(stream);
 
 		flags = Audio::FLAG_16BITS | Audio::FLAG_LITTLE_ENDIAN;
 		if (channels == 2)

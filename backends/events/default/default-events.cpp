@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -110,7 +109,7 @@ bool DefaultEventManager::pollEvent(Common::Event &event) {
 			// WORKAROUND: Some engines incorrectly attempt to use the
 			// ascii value instead of the keycode to detect the backspace
 			// key (a non-portable behavior). This fails at least on
-			// Mac OS X, possibly also on other systems.
+			// macOS, possibly also on other systems.
 			// As a workaround, we force the ascii value for backspace
 			// key pressed. A better fix would be for engines to stop
 			// making invalid assumptions about ascii values.
@@ -155,8 +154,9 @@ bool DefaultEventManager::pollEvent(Common::Event &event) {
 		else if (_shouldReturnToLauncher)
 			event.type = Common::EVENT_RETURN_TO_LAUNCHER;
 		break;
-#ifdef ENABLE_VKEYBD
+
 	case Common::EVENT_VIRTUAL_KEYBOARD:
+#ifdef ENABLE_VKEYBD
 		if (!_vk)
 			break;
 
@@ -169,8 +169,17 @@ bool DefaultEventManager::pollEvent(Common::Event &event) {
 			_vk->show();
 			forwardEvent = false;
 		}
-		break;
+#else
+		// TODO: Support switching between virtual keyboards at runtime
+		if (g_system->hasFeature(OSystem::kFeatureVirtualKeyboard)) {
+			if (g_system->getFeatureState(OSystem::kFeatureVirtualKeyboard))
+				g_system->setFeatureState(OSystem::kFeatureVirtualKeyboard, false);
+			else
+				g_system->setFeatureState(OSystem::kFeatureVirtualKeyboard, true);
+		}
 #endif
+		break;
+
 	case Common::EVENT_RETURN_TO_LAUNCHER:
 		if (ConfMan.getBool("confirm_exit")) {
 			if (_confirmExitDialogActive) {
@@ -296,6 +305,27 @@ void DefaultEventManager::purgeMouseEvents() {
 	_eventQueue = filteredQueue;
 }
 
+void DefaultEventManager::purgeKeyboardEvents() {
+	_dispatcher.dispatch();
+
+	Common::Queue<Common::Event> filteredQueue;
+	while (!_eventQueue.empty()) {
+		Common::Event event = _eventQueue.pop();
+		switch (event.type) {
+		// Update keyboard state even when purging events to avoid desynchronisation with real keyboard state
+		case Common::EVENT_KEYDOWN:
+		case Common::EVENT_KEYUP:
+			_modifierState = event.kbd.flags;
+			break;
+
+		default:
+			filteredQueue.push(event);
+			break;
+		}
+	}
+	_eventQueue = filteredQueue;
+}
+
 Common::Keymap *DefaultEventManager::getGlobalKeymap() {
 	using namespace Common;
 
@@ -309,13 +339,16 @@ Common::Keymap *DefaultEventManager::getGlobalKeymap() {
 	act->setEvent(EVENT_MAINMENU);
 	globalKeymap->addAction(act);
 
-#ifdef ENABLE_VKEYBD
-	act = new Action("VIRT", _("Display keyboard"));
-	act->addDefaultInputMapping("C+F7");
-	act->addDefaultInputMapping("JOY_BACK");
-	act->setEvent(EVENT_VIRTUAL_KEYBOARD);
-	globalKeymap->addAction(act);
+#ifndef ENABLE_VKEYBD
+	if (g_system->hasFeature(OSystem::kFeatureVirtualKeyboard))
 #endif
+	{
+		act = new Action("VIRT", _("Display keyboard"));
+		act->addDefaultInputMapping("C+F7");
+		act->addDefaultInputMapping("JOY_BACK");
+		act->setEvent(EVENT_VIRTUAL_KEYBOARD);
+		globalKeymap->addAction(act);
+	}
 
 	act = new Action("MUTE", _("Toggle mute"));
 	act->addDefaultInputMapping("C+u");

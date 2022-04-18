@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -50,6 +49,11 @@ public:
 	 * the window or not.
 	 */
 	void grabMouse(bool grab);
+
+	/**
+	 * Specify the area of the window to confine the mouse cursor.
+	 */
+	void setMouseRect(const Common::Rect &rect);
 
 	/**
 	 * Lock or unlock the mouse cursor within the window.
@@ -87,6 +91,23 @@ public:
 	 */
 	Common::Rect getDesktopResolution();
 
+	/*
+	 * Get the scaling between the SDL Window size and the SDL
+	 * drawable area size. On some system, when HiDPI support is
+	 * enabled, those two sizes are different.
+	 *
+	 * To convert from window coordinate to drawable area coordinate,
+	 * multiple the coordinate by this scaling factor. To convert
+	 * from drawable area coordinate to window coordinate, divide the
+	 * coordinate by this scaling factor.
+	 */
+	float getSdlDpiScalingFactor() const;
+
+	/**
+	 * Returns the scaling mode based on the display DPI
+	 */
+	virtual float getDpiScalingFactor() const;
+
 	bool mouseIsGrabbed() const {
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 		if (_window) {
@@ -107,6 +128,10 @@ public:
 private:
 	Common::Rect _desktopRes;
 	bool _inputGrabState, _inputLockState;
+	SDL_Rect grabRect;
+
+protected:
+	void getDisplayDpi(float *dpi, float *defaultDpi) const;
 
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 public:

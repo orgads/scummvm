@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,14 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "ultima/ultima8/world/actors/loiter_process.h"
 #include "ultima/ultima8/world/actors/actor.h"
 #include "ultima/ultima8/world/actors/pathfinder_process.h"
+#include "ultima/ultima8/world/actors/cru_pathfinder_process.h"
 #include "ultima/ultima8/kernel/kernel.h"
 #include "ultima/ultima8/kernel/delay_process.h"
 #include "ultima/ultima8/ultima8.h"
@@ -49,6 +49,9 @@ LoiterProcess::LoiterProcess(Actor *actor, int32 c) : _count(c) {
 	Process *previous = Kernel::get_instance()->findProcess(_itemNum, _type);
 	if (previous)
 		previous->terminate();
+	Process *prevpf = Kernel::get_instance()->findProcess(_itemNum, PathfinderProcess::PATHFINDER_PROC_TYPE);
+	if (prevpf)
+		prevpf->terminate();
 }
 
 void LoiterProcess::run() {
@@ -73,7 +76,12 @@ void LoiterProcess::run() {
 	x += 32 * ((getRandom() % 20) - 10);
 	y += 32 * ((getRandom() % 20) - 10);
 
-	PathfinderProcess *pfp = new PathfinderProcess(a, x, y, z);
+	Process *pfp;
+	if (GAME_IS_U8)
+		pfp = new PathfinderProcess(a, x, y, z);
+	else
+		pfp = new CruPathfinderProcess(a, x, y, z, 0xc, 0x80, false);
+
 	Kernel::get_instance()->addProcess(pfp);
 
 	bool hasidle1 = a->hasAnim(Animation::idle1);

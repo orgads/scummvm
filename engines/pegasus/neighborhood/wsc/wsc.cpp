@@ -7,10 +7,10 @@
  * Additional copyright for this file:
  * Copyright (C) 1995-1997 Presto Studios, Inc.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,8 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -526,8 +525,8 @@ void WSC::init() {
 
 	_extraMovieCallBack.setNotification(&_neighborhoodNotification);
 
-	_cachedZoomSpot = 0;
-	_argonSprite = 0;
+	_cachedZoomSpot = nullptr;
+	_argonSprite = nullptr;
 
 	// HACK: Fix the drag item for picking up the Sinclair Key Card
 	HotspotInfoTable::Entry *entry = findHotspotEntry(kWSC02SouthTakeArgonSpotID);
@@ -2003,7 +2002,7 @@ void WSC::receiveNotification(Notification *notification, const NotificationFlag
 			_privateFlags.setFlag(kWSCPrivateLabMessagesOpenFlag, false);
 			if (_cachedZoomSpot) {
 				zoomTo(_cachedZoomSpot);
-				_cachedZoomSpot = 0;
+				_cachedZoomSpot = nullptr;
 			}
 			break;
 		case kWSC02TurnOnMorphScreen:
@@ -2118,7 +2117,7 @@ void WSC::receiveNotification(Notification *notification, const NotificationFlag
 			setCurrentActivation(kActivationW61MessagesOff);
 			if (_cachedZoomSpot) {
 				zoomTo(_cachedZoomSpot);
-				_cachedZoomSpot = 0;
+				_cachedZoomSpot = nullptr;
 			}
 			break;
 		case kW61SouthScreenOnWithGun:
@@ -2134,7 +2133,7 @@ void WSC::receiveNotification(Notification *notification, const NotificationFlag
 			setCurrentActivation(kActivationW61SouthOff);
 			if (_cachedZoomSpot) {
 				zoomTo(_cachedZoomSpot);
-				_cachedZoomSpot = 0;
+				_cachedZoomSpot = nullptr;
 			}
 			break;
 		case kW62ZoomOutFromRobot:
@@ -2229,7 +2228,7 @@ void WSC::receiveNotification(Notification *notification, const NotificationFlag
 			break;
 		case kW98MorphsToRobot:
 			if (_argonSprite) {
-				delete _argonSprite; _argonSprite = 0;
+				delete _argonSprite; _argonSprite = nullptr;
 				startExtraSequence(kW98RobotGassed, kExtraCompletedFlag, kFilterNoInput);
 			} else if (_privateFlags.getFlag(kWSCPrivateClickedCatwalkCableFlag)) {
 				startExtraSequence(kW98RobotShocked, kExtraCompletedFlag, kFilterNoInput);

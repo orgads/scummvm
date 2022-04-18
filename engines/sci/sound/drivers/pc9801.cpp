@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -291,8 +290,8 @@ public:
 
 	void setTimerCallback(void *timer_param, Common::TimerManager::TimerProc timer_proc) override;
 	uint32 getBaseTempo() override;
-	MidiChannel *allocateChannel() override { return 0; }
-	MidiChannel *getPercussionChannel() override { return 0; }
+	MidiChannel *allocateChannel() override { return nullptr; }
+	MidiChannel *getPercussionChannel() override { return nullptr; }
 
 	void timerCallbackB() override;
 
@@ -745,9 +744,9 @@ void SoundChannel_PC9801_FM2OP::programChange(uint8 program) {
 }
 
 bool SoundChannel_PC9801_FM2OP::prepareFrequencyAndVolume(bool updateVolume) {
-	if (recalculateFrequency(_note, _opFreqOffset[_operatorFrqIndex[0]], 0, &_frequencyCourse, &_frequencyNoteModifier) == -1)
+	if (recalculateFrequency(_note, _opFreqOffset[_operatorFrqIndex[0]], nullptr, &_frequencyCourse, &_frequencyNoteModifier) == -1)
 		return false;
-	if (recalculateFrequency(_note, _opFreqOffset[_operatorFrqIndex[1]], 0, &_frequencyCourse2, &_frequencyNoteModifier2) == -1)
+	if (recalculateFrequency(_note, _opFreqOffset[_operatorFrqIndex[1]], nullptr, &_frequencyCourse2, &_frequencyNoteModifier2) == -1)
 		return false;
 
 	sendFrequency();
@@ -1315,11 +1314,11 @@ void MidiPart_PC9801::assignFreeChannels() {
 	MidiDriver_PC9801::assignFreeChannels(freeChan);
 }
 
-MidiPart_PC9801 **MidiDriver_PC9801::_parts = 0;
+MidiPart_PC9801 **MidiDriver_PC9801::_parts = nullptr;
 
 MidiDriver_PC9801::MidiDriver_PC9801(Audio::Mixer *mixer, SciVersion version)
-	: _mixer(mixer), _version(version), _pc98a(0), _chan(0), _numChan(6), _internalVersion(0xFF), _ssgPatchOffset(0xFF), _patchSize(0),
-	_timerProc(0), _timerProcPara(0), _baseTempo(10080), _ready(false), _isOpen(false), _masterVolume(0x0f) ,_soundOn(true), _playID(0),
+	: _mixer(mixer), _version(version), _pc98a(nullptr), _chan(nullptr), _numChan(6), _internalVersion(0xFF), _ssgPatchOffset(0xFF), _patchSize(0),
+	_timerProc(nullptr), _timerProcPara(nullptr), _baseTempo(10080), _ready(false), _isOpen(false), _masterVolume(0x0f) ,_soundOn(true), _playID(0),
 	_polyphony(9), _channelMask1(0x10), _channelMask2(0x02) {
 }
 
@@ -1395,7 +1394,7 @@ int MidiDriver_PC9801::open() {
 		else if (channelConfig[config][i] == 2)
 			_chan[i] = new SoundChannel_PC9801_SSG(numSSG++, _pc98a, _parts, _version, *_instrumentData, _ssgPatchOffset, _patchSize, _soundOn);
 		else
-			_chan[i] = 0;
+			_chan[i] = nullptr;
 	}
 
 	for (int i = 0; i < 16; ++i)
@@ -1416,24 +1415,24 @@ void MidiDriver_PC9801::close() {
 	_isOpen = _ready = false;
 
 	delete _pc98a;
-	_pc98a = 0;
+	_pc98a = nullptr;
 
 	if (_parts) {
 		for (int i = 0; i < 16; ++i) {
 			delete _parts[i];
-			_parts[i] = 0;
+			_parts[i] = nullptr;
 		}
 		delete[] _parts;
-		_parts = 0;
+		_parts = nullptr;
 	}
 
 	if (_chan) {
 		for (int i = 0; i < _numChan; ++i) {
 			delete _chan[i];
-			_chan[i] = 0;
+			_chan[i] = nullptr;
 		}
 		delete[] _chan;
-		_chan = 0;
+		_chan = nullptr;
 	}
 
 	_instrumentData.clear();

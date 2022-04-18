@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -540,12 +539,26 @@ static const GrimGameDescription gameDescriptions[] = {
 		GType_MONKEY4
 	},
 	{
-		// Escape from Monkey Island demo (English)
+		// Escape from Monkey Island CD demo (English)
 		{
 			"monkey4",
-			"Demo",
+			"CD Demo",
 			AD_ENTRY2s("magdemo.lab",	"9e7eaa1b9317ff47d5deeda0b2c42ce3", 19826116,
-					   "i9n.lab",		 "274f8579b01e0872fe6f1ba267266149", 26951),
+					   "monkey4.exe",	"119ee6b9380cc0e373287fabb25e0578", 884736),
+			Common::EN_ANY,
+			Common::kPlatformWindows,
+			ADGF_DEMO | ADGF_UNSTABLE,
+			GUI_OPTIONS_GRIME
+		},
+		GType_MONKEY4
+	},
+	{
+		// Escape from Monkey Island web demo (English)
+		{
+			"monkey4",
+			"Web Demo",
+			AD_ENTRY2s("magdemo.lab",	"9e7eaa1b9317ff47d5deeda0b2c42ce3", 19826116,
+					   "i9n.lab",		"274f8579b01e0872fe6f1ba267266149", 26951),
 			Common::EN_ANY,
 			Common::kPlatformWindows,
 			ADGF_DEMO | ADGF_UNSTABLE,

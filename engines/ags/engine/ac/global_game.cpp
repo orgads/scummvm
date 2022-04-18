@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -53,6 +52,7 @@
 #include "ags/engine/ac/system.h"
 #include "ags/engine/debugging/debugger.h"
 #include "ags/engine/debugging/debug_log.h"
+#include "ags/shared/font/fonts.h"
 #include "ags/engine/gui/gui_dialog.h"
 #include "ags/engine/main/engine.h"
 #include "ags/engine/main/game_run.h"
@@ -200,7 +200,7 @@ void FillSaveList(std::vector<SaveListItem> &saves, size_t max_count) {
 
 void SetGlobalInt(int index, int valu) {
 	if ((index < 0) | (index >= MAXGSVALUES))
-		quit("!SetGlobalInt: invalid index");
+		quitprintf("!SetGlobalInt: invalid index %d, supported range is %d - %d", index, 0, MAXGSVALUES - 1);
 
 	if (_GP(play).globalscriptvars[index] != valu) {
 		debug_script_log("GlobalInt %d set to %d", index, valu);
@@ -212,23 +212,21 @@ void SetGlobalInt(int index, int valu) {
 
 int GetGlobalInt(int index) {
 	if ((index < 0) | (index >= MAXGSVALUES))
-		quit("!GetGlobalInt: invalid index");
+		quitprintf("!GetGlobalInt: invalid index %d, supported range is %d - %d", index, 0, MAXGSVALUES - 1);
 	return _GP(play).globalscriptvars[index];
 }
 
 void SetGlobalString(int index, const char *newval) {
 	if ((index < 0) | (index >= MAXGLOBALSTRINGS))
-		quit("!SetGlobalString: invalid index");
+		quitprintf("!SetGlobalString: invalid index %d, supported range is %d - %d", index, 0, MAXGLOBALSTRINGS - 1);
 	debug_script_log("GlobalString %d set to '%s'", index, newval);
-	strncpy(_GP(play).globalstrings[index], newval, MAX_MAXSTRLEN);
-	// truncate it to 200 chars, to be sure
-	_GP(play).globalstrings[index][MAX_MAXSTRLEN - 1] = 0;
+	snprintf(_GP(play).globalstrings[index], MAX_MAXSTRLEN, "%s", newval);
 }
 
 void GetGlobalString(int index, char *strval) {
 	if ((index < 0) | (index >= MAXGLOBALSTRINGS))
-		quit("!GetGlobalString: invalid index");
-	strcpy(strval, _GP(play).globalstrings[index]);
+		quitprintf("!GetGlobalString: invalid index %d, supported range is %d - %d", index, 0, MAXGLOBALSTRINGS - 1);
+	snprintf(strval, MAX_MAXSTRLEN, "%s", _GP(play).globalstrings[index]);
 }
 
 // TODO: refactor this method, and use same shared procedure at both normal stop/startup and in RunAGSGame
@@ -287,7 +285,7 @@ int RunAGSGame(const String &newgame, unsigned int mode, int data) {
 		quitprintf("!RunAGSGame: error loading new game file:\n%s", err->FullMessage().GetCStr());
 
 	_GP(spriteset).Reset();
-	err = _GP(spriteset).InitFile(SpriteCache::DefaultSpriteFileName, SpriteCache::DefaultSpriteIndexName);
+	err = _GP(spriteset).InitFile(SpriteFile::DefaultSpriteFileName, SpriteFile::DefaultSpriteIndexName);
 	if (!err)
 		quitprintf("!RunAGSGame: error loading new sprites:\n%s", err->FullMessage().GetCStr());
 
@@ -326,14 +324,14 @@ int GetGameParameter(int parm, int data1, int data2, int data3) {
 		if ((data1 < 1) || (data1 > _GP(game).numviews)) {
 			quitprintf("!GetGameParameter: invalid view specified (v: %d, l: %d, f: %d)", data1, data2, data3);
 		}
-		if ((data2 < 0) || (data2 >= _G(views)[data1 - 1].numLoops)) {
+		if ((data2 < 0) || (data2 >= _GP(views)[data1 - 1].numLoops)) {
 			quitprintf("!GetGameParameter: invalid loop specified (v: %d, l: %d, f: %d)", data1, data2, data3);
 		}
-		if ((data3 < 0) || (data3 >= _G(views)[data1 - 1].loops[data2].numFrames)) {
+		if ((data3 < 0) || (data3 >= _GP(views)[data1 - 1].loops[data2].numFrames)) {
 			quitprintf("!GetGameParameter: invalid frame specified (v: %d, l: %d, f: %d)", data1, data2, data3);
 		}
 
-		ViewFrame *pvf = &_G(views)[data1 - 1].loops[data2].frames[data3];
+		ViewFrame *pvf = &_GP(views)[data1 - 1].loops[data2].frames[data3];
 
 		if (parm == GP_FRAMESPEED)
 			return pvf->speed;
@@ -420,7 +418,7 @@ int SetGameOption(int opt, int setting) {
 	if (opt == OPT_DUPLICATEINV)
 		update_invorder();
 	else if (opt == OPT_DISABLEOFF) {
-		_G(gui_disabled_style) = convert_gui_disabled_style(_GP(game).options[OPT_DISABLEOFF]);
+		GUI::Options.DisabledStyle = static_cast<GuiDisableStyle>(_GP(game).options[OPT_DISABLEOFF]);
 		// If GUI was disabled at this time then also update it, as visual style could've changed
 		if (_GP(play).disabled_user_interface > 0) {
 			GUI::MarkAllGUIForUpdate();
@@ -428,6 +426,8 @@ int SetGameOption(int opt, int setting) {
 	} else if (opt == OPT_PORTRAITSIDE) {
 		if (setting == 0)  // set back to Left
 			_GP(play).swap_portrait_side = 0;
+	} else if (opt == OPT_ANTIALIASFONTS) {
+		adjust_fonts_for_render_mode(setting != 0);
 	}
 
 	return oldval;
@@ -587,7 +587,7 @@ void GetLocationName(int xxx, int yyy, char *tempo) {
 	// on object
 	if (loctype == LOCTYPE_OBJ) {
 		aa = _G(getloctype_index);
-		strcpy(tempo, get_translation(_GP(thisroom).Objects[aa].Name.GetCStr()));
+		strcpy(tempo, get_translation(_G(croom)->obj[aa].name.GetCStr()));
 		// Compatibility: < 3.1.1 games returned space for nameless object
 		// (presumably was a bug, but fixing it affected certain games behavior)
 		if (_G(loaded_game_file_version) < kGameVersion_311 && tempo[0] == 0) {
@@ -600,7 +600,7 @@ void GetLocationName(int xxx, int yyy, char *tempo) {
 		return;
 	}
 	onhs = _G(getloctype_index);
-	if (onhs > 0) strcpy(tempo, get_translation(_GP(thisroom).Hotspots[onhs].Name.GetCStr()));
+	if (onhs > 0) strcpy(tempo, get_translation(_G(croom)->hotspot[onhs].Name.GetCStr()));
 	if (_GP(play).get_loc_name_last_time != onhs)
 		GUI::MarkSpecialLabelsForUpdate(kLabelMacro_Overhotspot);
 	_GP(play).get_loc_name_last_time = onhs;
@@ -771,17 +771,20 @@ void SetGraphicalVariable(const char *varName, int p_value) {
 }
 
 int WaitImpl(int skip_type, int nloops) {
-	if ((nloops < 1) && (_G(loaded_game_file_version) >= kGameVersion_262)) // 2.62+
-		quit("!Wait: must wait at least 1 loop");
-
 	_GP(play).wait_counter = nloops;
+	_GP(play).wait_skipped_by = SKIP_NONE;
+	_GP(play).wait_skipped_by = SKIP_AUTOTIMER; // we set timer flag by default to simplify that case
+	_GP(play).wait_skipped_by_data = 0;
 	_GP(play).key_skip_wait = skip_type;
 
-	GameLoopUntilValueIsZeroOrLess(&_GP(play).wait_counter);
+    GameLoopUntilValueIsZero(&_GP(play).wait_counter);
 
-	if (_GP(play).wait_counter < 0)
-		return 1;
-	return 0;
+	if (_GP(game).options[OPT_BASESCRIPTAPI] < kScriptAPI_v360) {
+		// < 3.6.0 return 1 is skipped by user input, otherwise 0
+		return ((_GP(play).wait_skipped_by & (SKIP_KEYPRESS | SKIP_MOUSECLICK)) != 0) ? 1 : 0;
+	}
+	// >= 3.6.0 return positive keycode, negative mouse button code, or 0 as time-out
+	return _GP(play).GetWaitSkipResult();
 }
 
 void scrWait(int nloops) {
@@ -792,8 +795,16 @@ int WaitKey(int nloops) {
 	return WaitImpl(SKIP_KEYPRESS | SKIP_AUTOTIMER, nloops);
 }
 
+int WaitMouse(int nloops) {
+	return WaitImpl(SKIP_MOUSECLICK | SKIP_AUTOTIMER, nloops);
+}
+
 int WaitMouseKey(int nloops) {
 	return WaitImpl(SKIP_KEYPRESS | SKIP_MOUSECLICK | SKIP_AUTOTIMER, nloops);
+}
+
+void SkipWait() {
+	_GP(play).wait_counter = 0;
 }
 
 } // namespace AGS3

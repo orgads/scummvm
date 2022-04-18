@@ -36,7 +36,6 @@
 #include "engines/grim/lua.h"
 #include "engines/grim/resource.h"
 #include "engines/grim/lua/lua.h"
-#include "graphics/pixelbuffer.h"
 #include "common/array.h"
 #include "common/system.h"
 

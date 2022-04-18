@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,22 +24,20 @@
 #include "backends/audiocd/audiocd.h"
 #include "backends/graphics/graphics.h"
 #include "backends/mixer/mixer.h"
-#include "backends/mutex/mutex.h"
 #include "gui/EventRecorder.h"
 
 #include "common/timer.h"
 #include "graphics/pixelformat.h"
-#include "graphics/pixelbuffer.h"
 
 ModularGraphicsBackend::ModularGraphicsBackend()
 	:
-	_graphicsManager(0) {
+	_graphicsManager(nullptr) {
 
 }
 
 ModularGraphicsBackend::~ModularGraphicsBackend() {
 	delete _graphicsManager;
-	_graphicsManager = 0;
+	_graphicsManager = nullptr;
 }
 
 bool ModularGraphicsBackend::hasFeature(Feature f) {
@@ -108,6 +105,26 @@ int ModularGraphicsBackend::getStretchMode() const {
 	return _graphicsManager->getStretchMode();
 }
 
+uint ModularGraphicsBackend::getDefaultScaler() const {
+	return _graphicsManager->getDefaultScaler();
+}
+
+uint ModularGraphicsBackend::getDefaultScaleFactor() const {
+	return _graphicsManager->getDefaultScaleFactor();
+}
+
+bool ModularGraphicsBackend::setScaler(uint mode, int factor) {
+	return _graphicsManager->setScaler(mode, factor);
+}
+
+uint ModularGraphicsBackend::getScaler() const {
+	return _graphicsManager->getScaler();
+}
+
+uint ModularGraphicsBackend::getScaleFactor() const {
+	return _graphicsManager->getScaleFactor();
+}
+
 #ifdef USE_RGB_COLOR
 
 Graphics::PixelFormat ModularGraphicsBackend::getScreenFormat() const {
@@ -170,6 +187,8 @@ void ModularGraphicsBackend::fillScreen(uint32 col) {
 
 void ModularGraphicsBackend::updateScreen() {
 #ifdef ENABLE_EVENTRECORDER
+	g_system->getMillis();		// force event recorder to update the tick count
+	g_eventRec.processScreenUpdate();
 	g_eventRec.preDrawOverlayGui();
 #endif
 
@@ -227,6 +246,10 @@ int16 ModularGraphicsBackend::getOverlayWidth() {
 	return _graphicsManager->getOverlayWidth();
 }
 
+float ModularGraphicsBackend::getHiDPIScreenFactor() const {
+	return _graphicsManager->getHiDPIScreenFactor();
+}
+
 bool ModularGraphicsBackend::showMouse(bool visible) {
 	return _graphicsManager->showMouse(visible);
 }
@@ -236,6 +259,15 @@ bool ModularGraphicsBackend::lockMouse(bool visible) {
 }
 
 void ModularGraphicsBackend::warpMouse(int x, int y) {
+#ifdef ENABLE_EVENTRECORDER
+	// short circuit for EventRecorder calling warpMouse inside an event poll
+	if ((g_eventRec.getRecordMode() == GUI::EventRecorder::kRecorderPlayback) ||
+		(g_eventRec.getRecordMode() == GUI::EventRecorder::kRecorderUpdate)) {
+		_graphicsManager->warpMouse(x, y);
+		return;
+	}
+#endif
+
 	_eventManager->purgeMouseEvents();
 	_graphicsManager->warpMouse(x, y);
 }
@@ -263,16 +295,16 @@ void ModularGraphicsBackend::saveScreenshot() {
 
 ModularMixerBackend::ModularMixerBackend()
 	:
-	_mixerManager(0) {
+	_mixerManager(nullptr) {
 
 }
 
 ModularMixerBackend::~ModularMixerBackend() {
 	// _audiocdManager needs to be deleted before _mixerManager to avoid a crash.
 	delete _audiocdManager;
-	_audiocdManager = 0;
+	_audiocdManager = nullptr;
 	delete _mixerManager;
-	_mixerManager = 0;
+	_mixerManager = nullptr;
 }
 
 MixerManager *ModularMixerBackend::getMixerManager() {
@@ -285,37 +317,3 @@ Audio::Mixer *ModularMixerBackend::getMixer() {
 	return getMixerManager()->getMixer();
 }
 
-
-ModularMutexBackend::ModularMutexBackend()
-	:
-	_mutexManager(0) {
-
-}
-
-ModularMutexBackend::~ModularMutexBackend() {
-	// _timerManager needs to be deleted before _mutexManager to avoid a crash.
-	delete _timerManager;
-	_timerManager = 0;
-	delete _mutexManager;
-	_mutexManager = 0;
-}
-
-OSystem::MutexRef ModularMutexBackend::createMutex() {
-	assert(_mutexManager);
-	return _mutexManager->createMutex();
-}
-
-void ModularMutexBackend::lockMutex(MutexRef mutex) {
-	assert(_mutexManager);
-	_mutexManager->lockMutex(mutex);
-}
-
-void ModularMutexBackend::unlockMutex(MutexRef mutex) {
-	assert(_mutexManager);
-	_mutexManager->unlockMutex(mutex);
-}
-
-void ModularMutexBackend::deleteMutex(MutexRef mutex) {
-	assert(_mutexManager);
-	_mutexManager->deleteMutex(mutex);
-}

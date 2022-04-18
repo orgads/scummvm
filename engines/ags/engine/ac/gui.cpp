@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,12 +15,10 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
-//include <cstdio>
 #include "ags/engine/ac/gui.h"
 #include "ags/shared/ac/common.h"
 #include "ags/engine/ac/draw.h"
@@ -127,8 +125,6 @@ void GUI_SetSize(ScriptGUI *sgui, int widd, int hitt) {
 	tehgui->Width = widd;
 	tehgui->Height = hitt;
 
-	recreate_guibg_image(tehgui);
-
 	tehgui->MarkChanged();
 }
 
@@ -196,12 +192,7 @@ void GUI_SetTransparency(ScriptGUI *tehgui, int trans) {
 }
 
 int GUI_GetTransparency(ScriptGUI *tehgui) {
-	if (_GP(guis)[tehgui->id].Transparency == 0)
-		return 0;
-	if (_GP(guis)[tehgui->id].Transparency == 255)
-		return 100;
-
-	return 100 - ((_GP(guis)[tehgui->id].Transparency * 10) / 25);
+	return GfxDef::LegacyTrans255ToTrans100(_GP(guis)[tehgui->id].Transparency);
 }
 
 void GUI_Centre(ScriptGUI *sgui) {
@@ -463,47 +454,30 @@ void unexport_gui_controls(int ee) {
 	}
 }
 
-int convert_gui_disabled_style(int oldStyle) {
-	int toret = GUIDIS_GREYOUT;
-
-	// if GUIs Turn Off is selected, don't grey out buttons for
-	// any Persistent GUIs which remain
-	// set to 0x80 so that it is still non-zero, but has no effect
-	if (oldStyle == 3)
-		toret = GUIDIS_GUIOFF;
-	// GUIs Go Black
-	else if (oldStyle == 1)
-		toret = GUIDIS_BLACKOUT;
-	// GUIs unchanged
-	else if (oldStyle == 2)
-		toret = GUIDIS_UNCHANGED;
-
-	return toret;
-}
-
 void update_gui_disabled_status() {
 	// update GUI display status (perhaps we've gone into
 	// an interface disabled state)
 	int all_buttons_was = _G(all_buttons_disabled);
-	_G(all_buttons_disabled) = 0;
+	_G(all_buttons_disabled) = -1;
 
 	if (!IsInterfaceEnabled()) {
-		_G(all_buttons_disabled) = _G(gui_disabled_style);
+		_G(all_buttons_disabled) = GUI::Options.DisabledStyle;
 	}
 
 	if (all_buttons_was != _G(all_buttons_disabled)) {
-		if (_G(gui_disabled_style) != GUIDIS_UNCHANGED) {
-			for (int aa = 0; aa < _GP(game).numgui; aa++) {
-				_GP(guis)[aa].OnControlPositionChanged(); // this marks GUI for update
-			}
+		// As controls become enabled we must notify parent GUIs
+		// to let them reset control-under-mouse detection
+		for (int aa = 0; aa < _GP(game).numgui; aa++) {
+			_GP(guis)[aa].OnControlPositionChanged(); // this marks GUI as changed too
+		}
+		if (GUI::Options.DisabledStyle != kGuiDis_Unchanged) {
 			invalidate_screen();
 		}
 	}
 }
 
-
 int adjust_x_for_guis(int xx, int yy) {
-	if ((_GP(game).options[OPT_DISABLEOFF] == 3) && (_G(all_buttons_disabled) > 0))
+	if ((_GP(game).options[OPT_DISABLEOFF] == kGuiDis_Off) && (_G(all_buttons_disabled) >= 0))
 		return xx;
 	// If it's covered by a GUI, move it right a bit
 	for (int aa = 0; aa < _GP(game).numgui; aa++) {
@@ -526,7 +500,7 @@ int adjust_x_for_guis(int xx, int yy) {
 }
 
 int adjust_y_for_guis(int yy) {
-	if ((_GP(game).options[OPT_DISABLEOFF] == 3) && (_G(all_buttons_disabled) > 0))
+	if ((_GP(game).options[OPT_DISABLEOFF] == kGuiDis_Off) && (_G(all_buttons_disabled) >= 0))
 		return yy;
 	// If it's covered by a GUI, move it down a bit
 	for (int aa = 0; aa < _GP(game).numgui; aa++) {
@@ -548,22 +522,8 @@ int adjust_y_for_guis(int yy) {
 	return yy;
 }
 
-void recreate_guibg_image(GUIMain *tehgui) {
-	int ifn = tehgui->ID;
-	delete _G(guibg)[ifn];
-	_G(guibg)[ifn] = BitmapHelper::CreateBitmap(tehgui->Width, tehgui->Height, _GP(game).GetColorDepth());
-	if (_G(guibg)[ifn] == nullptr)
-		quit("SetGUISize: internal error: unable to reallocate gui cache");
-	_G(guibg)[ifn] = ReplaceBitmapWithSupportedFormat(_G(guibg)[ifn]);
-
-	if (_G(guibgbmp)[ifn] != nullptr) {
-		_G(gfxDriver)->DestroyDDB(_G(guibgbmp)[ifn]);
-		_G(guibgbmp)[ifn] = nullptr;
-	}
-}
-
 int gui_get_interactable(int x, int y) {
-	if ((_GP(game).options[OPT_DISABLEOFF] == 3) && (_G(all_buttons_disabled) > 0))
+	if ((_GP(game).options[OPT_DISABLEOFF] == kGuiDis_Off) && (_G(all_buttons_disabled) >= 0))
 		return -1;
 	return GetGUIAt(x, y);
 }
@@ -571,7 +531,7 @@ int gui_get_interactable(int x, int y) {
 int gui_on_mouse_move() {
 	int mouse_over_gui = -1;
 	// If all GUIs are off, skip the loop
-	if ((_GP(game).options[OPT_DISABLEOFF] == 3) && (_G(all_buttons_disabled) > 0));
+	if ((_GP(game).options[OPT_DISABLEOFF] == kGuiDis_Off) && (_G(all_buttons_disabled) >= 0));
 	else {
 		// Scan for mouse-y-pos GUIs, and pop one up if appropriate
 		// Also work out the mouse-over GUI while we're at it
@@ -581,8 +541,7 @@ int gui_on_mouse_move() {
 			if (_GP(guis)[guin].IsInteractableAt(_G(mousex), _G(mousey))) mouse_over_gui = guin;
 
 			if (_GP(guis)[guin].PopupStyle != kGUIPopupMouseY) continue;
-			if (_G(is_complete_overlay) > 0) break;  // interfaces disabled
-			//    if (_GP(play).disabled_user_interface>0) break;
+			if (_GP(play).complete_overlay_on > 0) break;  // interfaces disabled			//    if (_GP(play).disabled_user_interface>0) break;
 			if (_G(ifacepopped) == guin) continue;
 			if (!_GP(guis)[guin].IsVisible()) continue;
 			// Don't allow it to be popped up while skipping cutscene
@@ -894,34 +853,6 @@ void RegisterGUIAPI() {
 	ccAddExternalObjectFunction("GUI::get_ZOrder", Sc_GUI_GetZOrder);
 	ccAddExternalObjectFunction("GUI::set_ZOrder", Sc_GUI_SetZOrder);
 	ccAddExternalObjectFunction("GUI::get_Shown", Sc_GUI_GetShown);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("GUI::Centre^0", (void *)GUI_Centre);
-	ccAddExternalFunctionForPlugin("GUI::GetAtScreenXY^2", (void *)GetGUIAtLocation);
-	ccAddExternalFunctionForPlugin("GUI::SetPosition^2", (void *)GUI_SetPosition);
-	ccAddExternalFunctionForPlugin("GUI::SetSize^2", (void *)GUI_SetSize);
-	ccAddExternalFunctionForPlugin("GUI::get_BackgroundGraphic", (void *)GUI_GetBackgroundGraphic);
-	ccAddExternalFunctionForPlugin("GUI::set_BackgroundGraphic", (void *)GUI_SetBackgroundGraphic);
-	ccAddExternalFunctionForPlugin("GUI::get_Clickable", (void *)GUI_GetClickable);
-	ccAddExternalFunctionForPlugin("GUI::set_Clickable", (void *)GUI_SetClickable);
-	ccAddExternalFunctionForPlugin("GUI::get_ControlCount", (void *)GUI_GetControlCount);
-	ccAddExternalFunctionForPlugin("GUI::geti_Controls", (void *)GUI_GetiControls);
-	ccAddExternalFunctionForPlugin("GUI::get_Height", (void *)GUI_GetHeight);
-	ccAddExternalFunctionForPlugin("GUI::set_Height", (void *)GUI_SetHeight);
-	ccAddExternalFunctionForPlugin("GUI::get_ID", (void *)GUI_GetID);
-	ccAddExternalFunctionForPlugin("GUI::get_Transparency", (void *)GUI_GetTransparency);
-	ccAddExternalFunctionForPlugin("GUI::set_Transparency", (void *)GUI_SetTransparency);
-	ccAddExternalFunctionForPlugin("GUI::get_Visible", (void *)GUI_GetVisible);
-	ccAddExternalFunctionForPlugin("GUI::set_Visible", (void *)GUI_SetVisible);
-	ccAddExternalFunctionForPlugin("GUI::get_Width", (void *)GUI_GetWidth);
-	ccAddExternalFunctionForPlugin("GUI::set_Width", (void *)GUI_SetWidth);
-	ccAddExternalFunctionForPlugin("GUI::get_X", (void *)GUI_GetX);
-	ccAddExternalFunctionForPlugin("GUI::set_X", (void *)GUI_SetX);
-	ccAddExternalFunctionForPlugin("GUI::get_Y", (void *)GUI_GetY);
-	ccAddExternalFunctionForPlugin("GUI::set_Y", (void *)GUI_SetY);
-	ccAddExternalFunctionForPlugin("GUI::get_ZOrder", (void *)GUI_GetZOrder);
-	ccAddExternalFunctionForPlugin("GUI::set_ZOrder", (void *)GUI_SetZOrder);
 }
 
 } // namespace AGS3

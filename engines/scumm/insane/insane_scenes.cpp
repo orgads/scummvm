@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -35,7 +34,6 @@ namespace Scumm {
 
 void Insane::runScene(int arraynum) {
 	_insaneIsRunning = true;
-	_player = _vm->_splayer;
 	_player->insanity(true);
 
 	_numberArray = arraynum;
@@ -279,17 +277,17 @@ void Insane::stopSceneSounds(int sceneId) {
 	default:
 		break;
 	}
-	if (!flag)
-		return;
 
-	smlayer_setActorCostume(0, 2, 0);
-	smlayer_setActorCostume(0, 0, 0);
-	smlayer_setActorCostume(0, 1, 0);
-	smlayer_setActorCostume(1, 2, 0);
-	smlayer_setActorCostume(1, 0, 0);
-	smlayer_setActorCostume(1, 1, 0);
+	_player->resetAudioTracks();
 
-	return;
+	if (flag) {
+		smlayer_setActorCostume(0, 2, 0);
+		smlayer_setActorCostume(0, 0, 0);
+		smlayer_setActorCostume(0, 1, 0);
+		smlayer_setActorCostume(1, 2, 0);
+		smlayer_setActorCostume(1, 0, 0);
+		smlayer_setActorCostume(1, 1, 0);
+	}
 }
 
 void Insane::shutCurrentScene() {
@@ -842,7 +840,7 @@ void Insane::procPostRendering(byte *renderBitmap, int32 codecparam, int32 setup
 			postCase0(renderBitmap, codecparam, setupsan12, setupsan13, curFrame, maxFrame);
 			if (!smlayer_isSoundRunning(88))
 				smlayer_startSfx(88);
-			smlayer_soundSetPan(88, ((_actor[0].x+160)>>2)+64);
+			smlayer_soundSetPan(88, ((_actor[0].x - 160) >> 2) + 64);
 			if (_tiresRustle) {
 				if (!smlayer_isSoundRunning(87))
 					smlayer_startSfx(87);
@@ -855,7 +853,6 @@ void Insane::procPostRendering(byte *renderBitmap, int32 codecparam, int32 setup
 			postCase17(renderBitmap, codecparam, setupsan12, setupsan13, curFrame, maxFrame);
 			smlayer_stopSound(95);
 			smlayer_stopSound(87);
-			smlayer_stopSound(88);
 			if (!smlayer_isSoundRunning(88))
 				smlayer_startSfx(88);
 			break;
@@ -879,8 +876,8 @@ void Insane::procPostRendering(byte *renderBitmap, int32 codecparam, int32 setup
 				smlayer_startSfx(tmpSnd);
 				smlayer_soundSetPriority(tmpSnd, 100);
 			}
-			smlayer_soundSetPan(89, ((_actor[0].x+160)>>2)+64);
-			smlayer_soundSetPan(tmpSnd, ((_actor[1].x+160)>>2)+64);
+			smlayer_soundSetPan(89, ((_actor[0].x - 160) >> 2) + 64);
+			smlayer_soundSetPan(tmpSnd, ((_actor[1].x - 160) >> 2) + 64);
 			if (!_tiresRustle) {
 				smlayer_stopSound(87);
 			} else {
@@ -900,21 +897,21 @@ void Insane::procPostRendering(byte *renderBitmap, int32 codecparam, int32 setup
 				smlayer_startSfx(tmpSnd);
 				smlayer_soundSetPriority(tmpSnd, 100);
 			}
-			smlayer_soundSetPan(89, ((_actor[0].x+160)>>2)+64);
-			smlayer_soundSetPan(tmpSnd, ((_actor[1].x+160)>>2)+64);
+			smlayer_soundSetPan(89, ((_actor[0].x - 160) >> 2) + 64);
+			smlayer_soundSetPan(tmpSnd, ((_actor[1].x - 160) >> 2) + 64);
 			break;
 		case 4:
 		case 5:
 			postCase3(renderBitmap, codecparam, setupsan12, setupsan13, curFrame, maxFrame);
 			if (!smlayer_isSoundRunning(88))
 				smlayer_startSfx(88);
-			smlayer_soundSetPan(88, ((_actor[0].x+160)>>2)+64);
+			smlayer_soundSetPan(88, ((_actor[0].x - 160) >> 2) + 64);
 			break;
 		case 6:
 			postCase5(renderBitmap, codecparam, setupsan12, setupsan13, curFrame, maxFrame);
 			if (!smlayer_isSoundRunning(88))
 				smlayer_startSfx(88);
-			smlayer_soundSetPan(88, ((_actor[0].x+160)>>2)+64);
+			smlayer_soundSetPan(88, ((_actor[0].x - 160) >> 2) + 64);
 			break;
 		case 7:
 		case 8:
@@ -947,8 +944,8 @@ void Insane::procPostRendering(byte *renderBitmap, int32 codecparam, int32 setup
 				smlayer_startSfx(tmpSnd);
 				smlayer_soundSetPriority(tmpSnd, 100);
 			}
-			smlayer_soundSetPan(89, ((_actor[0].x+160)>>2)+64);
-			smlayer_soundSetPan(tmpSnd, ((_actor[1].x+160)>>2)+64);
+			smlayer_soundSetPan(89, ((_actor[0].x - 160) >> 2) + 64);
+			smlayer_soundSetPan(tmpSnd, ((_actor[1].x - 160) >> 2) + 64);
 			break;
 		case 24:
 			if (!smlayer_isSoundRunning(90)) {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -2800,7 +2799,7 @@ static int gsc_startup_code(Common::SeekableReadStream *game_stream, int restore
 	assert(game_stream);
 
 	/* Open a temporary Glk main window. */
-	window = g_vm->glk_window_open(0, 0, 0, wintype_TextBuffer, 0);
+	window = g_vm->glk_window_open(nullptr, 0, 0, wintype_TextBuffer, 0);
 	if (window) {
 		/* Clear and initialize the temporary window. */
 		g_vm->glk_window_clear(window);
@@ -2907,7 +2906,7 @@ static void gsc_main() {
 	}
 
 	/* Create the Glk window, and set its stream as the current one. */
-	gsc_main_window = g_vm->glk_window_open(0, 0, 0, wintype_TextBuffer, 0);
+	gsc_main_window = g_vm->glk_window_open(nullptr, 0, 0, wintype_TextBuffer, 0);
 	if (!gsc_main_window) {
 		gsc_fatal("GLK: Can't open main window");
 		g_vm->glk_exit();

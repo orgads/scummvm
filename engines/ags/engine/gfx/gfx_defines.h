@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +23,7 @@
 #define AGS_ENGINE_GFX_GFX_DEFINES_H
 
 #include "ags/shared/core/types.h"
+#include "ags/shared/util/geometry.h"
 
 namespace AGS3 {
 namespace AGS {
@@ -38,21 +38,19 @@ enum GlobalFlipType {
 };
 
 // GraphicResolution struct determines image size and color depth
-struct GraphicResolution {
-	int32_t Width;
-	int32_t Height;
-	int32_t ColorDepth;
+struct GraphicResolution : Size {
+	int32_t ColorDepth; // color depth in bits per pixel
 
 	GraphicResolution()
-		: Width(0)
-		, Height(0)
-		, ColorDepth(0) {
+		: ColorDepth(0) {
 	}
 
-	GraphicResolution(int32_t width, int32_t height, int32_t color_depth) {
-		Width = width;
-		Height = height;
-		ColorDepth = color_depth;
+	GraphicResolution(int32_t width, int32_t height, int32_t color_depth)
+		: Size(width, height), ColorDepth(color_depth) {
+	}
+
+	GraphicResolution(Size size, int32_t color_depth)
+		: Size(size), ColorDepth(color_depth) {
 	}
 
 	inline bool IsValid() const {
@@ -60,23 +58,33 @@ struct GraphicResolution {
 	}
 };
 
+enum WindowMode {
+	kWnd_Windowed,      // regular resizable window with a border and a caption
+	kWnd_Fullscreen,    // real (aka exclusive) fullscreen mode
+	kWnd_FullDesktop    // borderless window filling whole desktop
+};
+
 // DisplayMode struct provides extended description of display mode
 struct DisplayMode : public GraphicResolution {
-	int32_t RefreshRate;
-	bool    Vsync;
-	bool    Windowed;
+	int32_t RefreshRate = 0;
+	bool Vsync = false;
+	WindowMode Mode = kWnd_Windowed;
 
-	DisplayMode()
-		: RefreshRate(0)
-		, Vsync(false)
-		, Windowed(false) {
+	// Tells if this is logically a normal windowed mode
+	inline bool IsWindowed() const {
+		return Mode == kWnd_Windowed;
+	}
+	// Tells if this mode defines a real fullscreen, which would require gfx driver to support it
+	inline bool IsRealFullscreen() const {
+		return Mode == kWnd_Fullscreen;
 	}
 
-	DisplayMode(const GraphicResolution &res, bool windowed = false, int32_t refresh = 0, bool vsync = false)
+	DisplayMode() = default;
+	DisplayMode(const GraphicResolution & res, WindowMode mode = kWnd_Windowed, int32_t refresh = 0, bool vsync = false)
 		: GraphicResolution(res)
 		, RefreshRate(refresh)
 		, Vsync(vsync)
-		, Windowed(windowed) {
+		, Mode(mode) {
 	}
 };
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,10 +23,9 @@
 #include "common/memstream.h"
 #include "common/textconsole.h"
 #include "common/util.h"
-#include "twine/scene/actor.h"
 #include "twine/scene/animations.h"
 #include "twine/audio/sound.h"
-#include "twine/flamovies.h"
+#include "twine/movies.h"
 #include "twine/scene/movements.h"
 #include "twine/renderer/redraw.h"
 #include "twine/renderer/renderer.h"
@@ -44,9 +42,9 @@ struct MoveScriptContext {
 
 	Common::MemorySeekableReadWriteStream stream;
 
-	MoveScriptContext(int32 _actorIdx, ActorStruct *_actor) : actorIdx(_actorIdx), actor(_actor), stream(actor->moveScript, actor->moveScriptSize) {
-		assert(actor->positionInMoveScript >= 0);
-		stream.skip(actor->positionInMoveScript);
+	MoveScriptContext(int32 _actorIdx, ActorStruct *_actor) : actorIdx(_actorIdx), actor(_actor), stream(actor->_moveScript, actor->_moveScriptSize) {
+		assert(actor->_positionInMoveScript >= 0);
+		stream.skip(actor->_positionInMoveScript);
 	}
 
 	void undo(int32 bytes) {
@@ -74,7 +72,8 @@ struct ScriptMoveFunction {
  * @note Opcode @c 0x00
  */
 static int32 mEND(TwinEEngine *engine, MoveScriptContext &ctx) {
-	ctx.actor->positionInMoveScript = -1;
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::END()");
+	ctx.actor->_positionInMoveScript = -1;
 	return 1;
 }
 
@@ -83,6 +82,7 @@ static int32 mEND(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x01
  */
 static int32 mNOP(TwinEEngine *engine, MoveScriptContext &ctx) {
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::NOP()");
 	return 0;
 }
 
@@ -93,6 +93,7 @@ static int32 mNOP(TwinEEngine *engine, MoveScriptContext &ctx) {
 static int32 mBODY(TwinEEngine *engine, MoveScriptContext &ctx) {
 	BodyType bodyIdx = (BodyType)ctx.stream.readByte();
 	engine->_actor->initModelActor(bodyIdx, ctx.actorIdx);
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::BODY(%i)", (int)bodyIdx);
 	return 0;
 }
 
@@ -102,6 +103,7 @@ static int32 mBODY(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mANIM(TwinEEngine *engine, MoveScriptContext &ctx) {
 	AnimationTypes animIdx = (AnimationTypes)ctx.stream.readByte();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::ANIM(%i)", (int)animIdx);
 	if (engine->_animations->initAnim(animIdx, AnimType::kAnimationTypeLoop, AnimationTypes::kStanding, ctx.actorIdx)) {
 		return 0;
 	}
@@ -114,22 +116,19 @@ static int32 mANIM(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x04
  */
 static int32 mGOTO_POINT(TwinEEngine *engine, MoveScriptContext &ctx) {
-	engine->_scene->currentScriptValue = ctx.stream.readByte();
+	engine->_scene->_currentScriptValue = ctx.stream.readByte();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::GOTO_POINT(%i)", (int)engine->_scene->_currentScriptValue);
 
-	const IVec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
-	engine->_renderer->destPos.x = sp.x;
-	engine->_renderer->destPos.y = sp.y;
-	engine->_renderer->destPos.z = sp.z;
+	const IVec3 &sp = engine->_scene->_sceneTracks[engine->_scene->_currentScriptValue];
+	const int32 newAngle = engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->_pos.x, ctx.actor->_pos.z, sp.x, sp.z);
 
-	const int32 newAngle = engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->pos.x, ctx.actor->pos.z, sp.x, sp.z);
-
-	if (ctx.actor->staticFlags.bIsSpriteActor) {
-		ctx.actor->angle = newAngle;
+	if (ctx.actor->_staticFlags.bIsSpriteActor) {
+		ctx.actor->_angle = newAngle;
 	} else {
-		engine->_movements->moveActor(ctx.actor->angle, newAngle, ctx.actor->speed, &ctx.actor->move);
+		engine->_movements->moveActor(ctx.actor->_angle, newAngle, ctx.actor->_speed, &ctx.actor->_move);
 	}
 
-	if (engine->_movements->targetActorDistance > 500) {
+	if (engine->_movements->_targetActorDistance > 500) {
 		ctx.undo(1);
 		return 1;
 	}
@@ -142,7 +141,8 @@ static int32 mGOTO_POINT(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x05
  */
 static int32 mWAIT_ANIM(TwinEEngine *engine, MoveScriptContext &ctx) {
-	if (!ctx.actor->dynamicFlags.bAnimEnded) {
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::WAIT_ANIM()");
+	if (!ctx.actor->_dynamicFlags.bAnimEnded) {
 		ctx.undo(0);
 	} else {
 		engine->_movements->clearRealAngle(ctx.actor);
@@ -155,8 +155,9 @@ static int32 mWAIT_ANIM(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x06
  */
 static int32 mLOOP(TwinEEngine *engine, MoveScriptContext &ctx) {
-	ctx.actor->positionInMoveScript = 0;
+	ctx.actor->_positionInMoveScript = 0;
 	ctx.stream.seek(0);
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::LOOP()");
 	return 0;
 }
 
@@ -166,14 +167,15 @@ static int32 mLOOP(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mANGLE(TwinEEngine *engine, MoveScriptContext &ctx) {
 	const int16 angle = ToAngle(ctx.stream.readSint16LE());
-	if (ctx.actor->staticFlags.bIsSpriteActor) {
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::ANGLE(%i)", (int)angle);
+	if (ctx.actor->_staticFlags.bIsSpriteActor) {
 		return 0;
 	}
-	engine->_scene->currentScriptValue = angle;
-	if (ctx.actor->move.numOfStep == 0) {
-		engine->_movements->moveActor(ctx.actor->angle, angle, ctx.actor->speed, &ctx.actor->move);
+	engine->_scene->_currentScriptValue = angle;
+	if (ctx.actor->_move.numOfStep == 0) {
+		engine->_movements->moveActor(ctx.actor->_angle, angle, ctx.actor->_speed, &ctx.actor->_move);
 	}
-	if (ctx.actor->angle == angle) {
+	if (ctx.actor->_angle == angle) {
 		engine->_movements->clearRealAngle(ctx.actor);
 		return 0;
 	}
@@ -186,20 +188,15 @@ static int32 mANGLE(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x08
  */
 static int32 mPOS_POINT(TwinEEngine *engine, MoveScriptContext &ctx) {
-	engine->_scene->currentScriptValue = ctx.stream.readByte();
+	engine->_scene->_currentScriptValue = ctx.stream.readByte();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::POS_POINT(%i)", (int)engine->_scene->_currentScriptValue);
 
-	const IVec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
-	engine->_renderer->destPos.x = sp.x;
-	engine->_renderer->destPos.y = sp.y;
-	engine->_renderer->destPos.z = sp.z;
-
-	if (ctx.actor->staticFlags.bIsSpriteActor) {
-		ctx.actor->speed = 0;
+	const IVec3 &sp = engine->_scene->_sceneTracks[engine->_scene->_currentScriptValue];
+	if (ctx.actor->_staticFlags.bIsSpriteActor) {
+		ctx.actor->_speed = 0;
 	}
 
-	ctx.actor->pos.x = sp.x;
-	ctx.actor->pos.y = sp.y;
-	ctx.actor->pos.z = sp.z;
+	ctx.actor->_pos = sp;
 
 	return 0;
 }
@@ -209,10 +206,11 @@ static int32 mPOS_POINT(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x09
  */
 static int32 mLABEL(TwinEEngine *engine, MoveScriptContext &ctx) {
-	ctx.actor->labelIdx = ctx.stream.readByte();
-	ctx.actor->currentLabelPtr = ctx.stream.pos() - 2;
-	if (engine->_scene->currentSceneIdx == LBA1SceneId::Proxima_Island_Museum && ctx.actor->actorIdx == 2 &&
-		(ctx.actor->labelIdx == 0 || ctx.actor->labelIdx == 1)) {
+	ctx.actor->_labelIdx = ctx.stream.readByte();
+	ctx.actor->_currentLabelPtr = ctx.stream.pos() - 2;
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::LABEL(%i)", (int)ctx.actor->_labelIdx);
+	if (engine->_scene->_currentSceneIdx == LBA1SceneId::Proxima_Island_Museum && ctx.actor->_actorIdx == 2 &&
+		(ctx.actor->_labelIdx == 0 || ctx.actor->_labelIdx == 1)) {
 		engine->unlockAchievement("LBA_ACH_004");
 	}
 	return 0;
@@ -224,8 +222,9 @@ static int32 mLABEL(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mGOTO(TwinEEngine *engine, MoveScriptContext &ctx) {
 	const int16 pos = ctx.stream.readSint16LE();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::GOTO(%i)", (int)pos);
 	if (pos == -1) {
-		ctx.actor->positionInMoveScript = -1;
+		ctx.actor->_positionInMoveScript = -1;
 		return 1;
 	}
 	ctx.stream.seek(pos);
@@ -237,7 +236,8 @@ static int32 mGOTO(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x0B
  */
 static int32 mSTOP(TwinEEngine *engine, MoveScriptContext &ctx) {
-	ctx.actor->positionInMoveScript = -1;
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::STOP()");
+	ctx.actor->_positionInMoveScript = -1;
 	return 1;
 }
 
@@ -246,22 +246,19 @@ static int32 mSTOP(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x0C
  */
 static int32 mGOTO_SYM_POINT(TwinEEngine *engine, MoveScriptContext &ctx) {
-	engine->_scene->currentScriptValue = ctx.stream.readByte();
+	engine->_scene->_currentScriptValue = ctx.stream.readByte();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::GOTO_SYM_POINT(%i)", (int)engine->_scene->_currentScriptValue);
 
-	const IVec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
-	engine->_renderer->destPos.x = sp.x;
-	engine->_renderer->destPos.y = sp.y;
-	engine->_renderer->destPos.z = sp.z;
+	const IVec3 &sp = engine->_scene->_sceneTracks[engine->_scene->_currentScriptValue];
+	const int32 newAngle = ANGLE_180 + engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->_pos, sp);
 
-	const int32 newAngle = ANGLE_180 + engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->pos.x, ctx.actor->pos.z, sp.x, sp.z);
-
-	if (ctx.actor->staticFlags.bIsSpriteActor) {
-		ctx.actor->angle = newAngle;
+	if (ctx.actor->_staticFlags.bIsSpriteActor) {
+		ctx.actor->_angle = newAngle;
 	} else {
-		engine->_movements->moveActor(ctx.actor->angle, newAngle, ctx.actor->speed, &ctx.actor->move);
+		engine->_movements->moveActor(ctx.actor->_angle, newAngle, ctx.actor->_speed, &ctx.actor->_move);
 	}
 
-	if (engine->_movements->targetActorDistance > 500) {
+	if (engine->_movements->_targetActorDistance > 500) {
 		ctx.undo(1);
 		return 1;
 	}
@@ -277,7 +274,8 @@ static int32 mWAIT_NUM_ANIM(TwinEEngine *engine, MoveScriptContext &ctx) {
 	bool abortMove = false;
 	const int32 animRepeats = ctx.stream.readByte();
 	int32 animPos = ctx.stream.readByte();
-	if (ctx.actor->dynamicFlags.bAnimEnded) {
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::WAIT_NUM_ANIM(%i, %i)", (int)animRepeats, animPos);
+	if (ctx.actor->_dynamicFlags.bAnimEnded) {
 		animPos++;
 
 		if (animPos == animRepeats) {
@@ -305,7 +303,8 @@ static int32 mWAIT_NUM_ANIM(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mSAMPLE(TwinEEngine *engine, MoveScriptContext &ctx) {
 	int32 sampleIdx = ctx.stream.readSint16LE();
-	engine->_sound->playSample(sampleIdx, 1, ctx.actor->pos, ctx.actorIdx);
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::SAMPLE(%i)", (int)sampleIdx);
+	engine->_sound->playSample(sampleIdx, 1, ctx.actor->pos(), ctx.actorIdx);
 	return 0;
 }
 
@@ -315,27 +314,22 @@ static int32 mSAMPLE(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mGOTO_POINT_3D(TwinEEngine *engine, MoveScriptContext &ctx) {
 	const int32 trackId = ctx.stream.readByte();
-	if (!ctx.actor->staticFlags.bIsSpriteActor) {
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::GOTO_POINT_3D(%i)", (int)trackId);
+	if (!ctx.actor->_staticFlags.bIsSpriteActor) {
 		return 0;
 	}
 
-	engine->_scene->currentScriptValue = trackId;
+	engine->_scene->_currentScriptValue = trackId;
 
-	const IVec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
-	engine->_renderer->destPos.x = sp.x;
-	engine->_renderer->destPos.y = sp.y;
-	engine->_renderer->destPos.z = sp.z;
+	const IVec3 &sp = engine->_scene->_sceneTracks[engine->_scene->_currentScriptValue];
+	ctx.actor->_angle = engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->_pos.x, ctx.actor->_pos.z, sp.x, sp.z);
+	ctx.actor->_spriteActorRotation = engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->_pos.y, 0, sp.y, engine->_movements->_targetActorDistance);
 
-	ctx.actor->angle = engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->pos.x, ctx.actor->pos.z, sp.x, sp.z);
-	ctx.actor->spriteActorRotation = engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->pos.y, 0, sp.y, engine->_movements->targetActorDistance);
-
-	if (engine->_movements->targetActorDistance > 100) {
+	if (engine->_movements->_targetActorDistance > 100) {
 		ctx.undo(1);
 		return 1;
 	}
-	ctx.actor->pos.x = sp.x;
-	ctx.actor->pos.y = sp.y;
-	ctx.actor->pos.z = sp.z;
+	ctx.actor->_pos = sp;
 
 	return 0;
 }
@@ -345,10 +339,11 @@ static int32 mGOTO_POINT_3D(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x10
  */
 static int32 mSPEED(TwinEEngine *engine, MoveScriptContext &ctx) {
-	ctx.actor->speed = ctx.stream.readSint16LE();
+	ctx.actor->_speed = ctx.stream.readSint16LE();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::SPEED(%i)", (int)ctx.actor->_speed);
 
-	if (ctx.actor->staticFlags.bIsSpriteActor) {
-		engine->_movements->setActorAngle(ANGLE_0, ctx.actor->speed, ANGLE_17, &ctx.actor->move);
+	if (ctx.actor->_staticFlags.bIsSpriteActor) {
+		engine->_movements->setActorAngle(ANGLE_0, ctx.actor->_speed, ANGLE_17, &ctx.actor->_move);
 	}
 
 	return 0;
@@ -359,18 +354,20 @@ static int32 mSPEED(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x11
  */
 static int32 mBACKGROUND(TwinEEngine *engine, MoveScriptContext &ctx) {
-	if (ctx.stream.readByte() != 0) {
-		if (!ctx.actor->staticFlags.bIsBackgrounded) {
-			ctx.actor->staticFlags.bIsBackgrounded = 1;
-			if (ctx.actor->dynamicFlags.bIsVisible) {
-				engine->_redraw->reqBgRedraw = true;
+	const uint8 val = ctx.stream.readByte();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::BACKGROUND(%i)", (int)val);
+	if (val != 0) {
+		if (!ctx.actor->_staticFlags.bIsBackgrounded) {
+			ctx.actor->_staticFlags.bIsBackgrounded = 1;
+			if (ctx.actor->_dynamicFlags.bIsVisible) {
+				engine->_redraw->_reqBgRedraw = true;
 			}
 		}
 	} else {
-		if (ctx.actor->staticFlags.bIsBackgrounded) {
-			ctx.actor->staticFlags.bIsBackgrounded = 0;
-			if (ctx.actor->dynamicFlags.bIsVisible) {
-				engine->_redraw->reqBgRedraw = true;
+		if (ctx.actor->_staticFlags.bIsBackgrounded) {
+			ctx.actor->_staticFlags.bIsBackgrounded = 0;
+			if (ctx.actor->_dynamicFlags.bIsVisible) {
+				engine->_redraw->_reqBgRedraw = true;
 			}
 		}
 	}
@@ -385,14 +382,15 @@ static int32 mBACKGROUND(TwinEEngine *engine, MoveScriptContext &ctx) {
 static int32 mWAIT_NUM_SECOND(TwinEEngine *engine, MoveScriptContext &ctx) {
 	const int32 numSeconds = ctx.stream.readByte();
 	int32 currentTime = ctx.stream.readSint32LE();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::WAIT_NUM_SECOND(%i, %i)", (int)numSeconds, currentTime);
 
 	if (currentTime == 0) {
-		currentTime = engine->lbaTime + numSeconds * 50;
+		currentTime = engine->_lbaTime + numSeconds * 50;
 		ctx.stream.rewind(4);
 		ctx.stream.writeSint32LE(currentTime);
 	}
 
-	if (engine->lbaTime < currentTime) {
+	if (engine->_lbaTime < currentTime) {
 		ctx.undo(5);
 		return 1;
 	}
@@ -408,6 +406,7 @@ static int32 mWAIT_NUM_SECOND(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x13
  */
 static int32 mNO_BODY(TwinEEngine *engine, MoveScriptContext &ctx) {
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::NO_BODY()");
 	engine->_actor->initModelActor(BodyType::btNone, ctx.actorIdx);
 	return 0;
 }
@@ -418,13 +417,30 @@ static int32 mNO_BODY(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mBETA(TwinEEngine *engine, MoveScriptContext &ctx) {
 	const int16 beta = ctx.stream.readSint16LE();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::BETA(%i)", (int)beta);
 
-	ctx.actor->angle = beta;
+	ctx.actor->_angle = beta;
 
-	if (ctx.actor->staticFlags.bIsSpriteActor) {
+	if (!ctx.actor->_staticFlags.bIsSpriteActor) {
 		engine->_movements->clearRealAngle(ctx.actor);
 	}
 
+	return 0;
+}
+
+static int32 mOPEN_GENERIC(TwinEEngine *engine, MoveScriptContext &ctx, int32 angle) {
+	const int16 doorStatus = ctx.stream.readSint16LE();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::OPEN(%i, %i)", (int)doorStatus, angle);
+	if (ctx.actor->_staticFlags.bIsSpriteActor && ctx.actor->_staticFlags.bUsesClipping) {
+		ctx.actor->_angle = angle;
+		ctx.actor->_doorStatus = doorStatus;
+		ctx.actor->_dynamicFlags.bIsSpriteMoving = 1;
+		ctx.actor->_speed = 1000;
+		engine->_movements->setActorAngle(ANGLE_0, ANGLE_351, ANGLE_17, &ctx.actor->_move);
+	}
+	if (engine->_scene->_currentSceneIdx == LBA1SceneId::Proxima_Island_Museum && ctx.actor->_actorIdx == 16) {
+		engine->unlockAchievement("LBA_ACH_009");
+	}
 	return 0;
 }
 
@@ -433,18 +449,7 @@ static int32 mBETA(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x15
  */
 static int32 mOPEN_LEFT(TwinEEngine *engine, MoveScriptContext &ctx) {
-	const int16 doorStatus = ctx.stream.readSint16LE();
-	if (ctx.actor->staticFlags.bIsSpriteActor && ctx.actor->staticFlags.bUsesClipping) {
-		ctx.actor->angle = ANGLE_270;
-		ctx.actor->doorStatus = doorStatus;
-		ctx.actor->dynamicFlags.bIsSpriteMoving = 1;
-		ctx.actor->speed = 1000;
-		engine->_movements->setActorAngle(ANGLE_0, ANGLE_351, ANGLE_17, &ctx.actor->move);
-	}
-	if (engine->_scene->currentSceneIdx == LBA1SceneId::Proxima_Island_Museum && ctx.actor->actorIdx == 16) {
-		engine->unlockAchievement("LBA_ACH_009");
-	}
-	return 0;
+	return mOPEN_GENERIC(engine, ctx, ANGLE_270);
 }
 
 /**
@@ -452,18 +457,8 @@ static int32 mOPEN_LEFT(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x16
  */
 static int32 mOPEN_RIGHT(TwinEEngine *engine, MoveScriptContext &ctx) {
-	const int16 doorStatus = ctx.stream.readSint16LE();
-	if (ctx.actor->staticFlags.bIsSpriteActor && ctx.actor->staticFlags.bUsesClipping) {
-		ctx.actor->angle = ANGLE_90;
-		ctx.actor->doorStatus = doorStatus;
-		ctx.actor->dynamicFlags.bIsSpriteMoving = 1;
-		ctx.actor->speed = 1000;
-		engine->_movements->setActorAngle(ANGLE_0, ANGLE_351, ANGLE_17, &ctx.actor->move);
-	}
-	if (engine->_scene->currentSceneIdx == LBA1SceneId::Proxima_Island_Museum && ctx.actor->actorIdx == 16) {
-		engine->unlockAchievement("LBA_ACH_009");
-	}
-	return 0;
+	return mOPEN_GENERIC(engine, ctx, ANGLE_90);
+
 }
 
 /**
@@ -471,18 +466,8 @@ static int32 mOPEN_RIGHT(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x17
  */
 static int32 mOPEN_UP(TwinEEngine *engine, MoveScriptContext &ctx) {
-	const int16 doorStatus = ctx.stream.readSint16LE();
-	if (ctx.actor->staticFlags.bIsSpriteActor && ctx.actor->staticFlags.bUsesClipping) {
-		ctx.actor->angle = ANGLE_180;
-		ctx.actor->doorStatus = doorStatus;
-		ctx.actor->dynamicFlags.bIsSpriteMoving = 1;
-		ctx.actor->speed = 1000;
-		engine->_movements->setActorAngle(ANGLE_0, ANGLE_351, ANGLE_17, &ctx.actor->move);
-	}
-	if (engine->_scene->currentSceneIdx == LBA1SceneId::Proxima_Island_Museum && ctx.actor->actorIdx == 16) {
-		engine->unlockAchievement("LBA_ACH_009");
-	}
-	return 0;
+	return mOPEN_GENERIC(engine, ctx, ANGLE_180);
+
 }
 
 /**
@@ -490,18 +475,7 @@ static int32 mOPEN_UP(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x18
  */
 static int32 mOPEN_DOWN(TwinEEngine *engine, MoveScriptContext &ctx) {
-	const int16 doorStatus = ctx.stream.readSint16LE();
-	if (ctx.actor->staticFlags.bIsSpriteActor && ctx.actor->staticFlags.bUsesClipping) {
-		ctx.actor->angle = ANGLE_0;
-		ctx.actor->doorStatus = doorStatus;
-		ctx.actor->dynamicFlags.bIsSpriteMoving = 1;
-		ctx.actor->speed = 1000;
-		engine->_movements->setActorAngle(ANGLE_0, ANGLE_351, ANGLE_17, &ctx.actor->move);
-	}
-	if (engine->_scene->currentSceneIdx == LBA1SceneId::Proxima_Island_Museum && ctx.actor->actorIdx == 16) {
-		engine->unlockAchievement("LBA_ACH_009");
-	}
-	return 0;
+	return mOPEN_GENERIC(engine, ctx, ANGLE_0);
 }
 
 /**
@@ -509,11 +483,12 @@ static int32 mOPEN_DOWN(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x19
  */
 static int32 mCLOSE(TwinEEngine *engine, MoveScriptContext &ctx) {
-	if (ctx.actor->staticFlags.bIsSpriteActor && ctx.actor->staticFlags.bUsesClipping) {
-		ctx.actor->doorStatus = 0;
-		ctx.actor->dynamicFlags.bIsSpriteMoving = 1;
-		ctx.actor->speed = -1000;
-		engine->_movements->setActorAngle(ANGLE_0, -ANGLE_351, ANGLE_17, &ctx.actor->move);
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::CLOSE()");
+	if (ctx.actor->_staticFlags.bIsSpriteActor && ctx.actor->_staticFlags.bUsesClipping) {
+		ctx.actor->_doorStatus = 0;
+		ctx.actor->_dynamicFlags.bIsSpriteMoving = 1;
+		ctx.actor->_speed = -1000;
+		engine->_movements->setActorAngle(ANGLE_0, -ANGLE_351, ANGLE_17, &ctx.actor->_move);
 	}
 	return 0;
 }
@@ -523,8 +498,9 @@ static int32 mCLOSE(TwinEEngine *engine, MoveScriptContext &ctx) {
  * @note Opcode @c 0x1A
  */
 static int32 mWAIT_DOOR(TwinEEngine *engine, MoveScriptContext &ctx) {
-	if (ctx.actor->staticFlags.bIsSpriteActor && ctx.actor->staticFlags.bUsesClipping) {
-		if (ctx.actor->speed) {
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::WAIT_DOOR()");
+	if (ctx.actor->_staticFlags.bIsSpriteActor && ctx.actor->_staticFlags.bUsesClipping) {
+		if (ctx.actor->_speed) {
 			ctx.undo(0);
 			return 1;
 		}
@@ -538,7 +514,8 @@ static int32 mWAIT_DOOR(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mSAMPLE_RND(TwinEEngine *engine, MoveScriptContext &ctx) {
 	int32 sampleIdx = ctx.stream.readSint16LE();
-	engine->_sound->playSample(sampleIdx, 1, ctx.actor->pos, ctx.actorIdx);
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::SAMPLE_RND(%i)", (int)sampleIdx);
+	engine->_sound->playSample(sampleIdx, 1, ctx.actor->pos(), ctx.actorIdx);
 	return 0;
 }
 
@@ -548,8 +525,9 @@ static int32 mSAMPLE_RND(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mSAMPLE_ALWAYS(TwinEEngine *engine, MoveScriptContext &ctx) {
 	int32 sampleIdx = ctx.stream.readSint16LE();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::SAMPLE_ALWAYS(%i)", (int)sampleIdx);
 	if (!engine->_sound->isSamplePlaying(sampleIdx)) { // if its not playing
-		engine->_sound->playSample(sampleIdx, -1, ctx.actor->pos, ctx.actorIdx);
+		engine->_sound->playSample(sampleIdx, -1, ctx.actor->pos(), ctx.actorIdx);
 	}
 	return 0;
 }
@@ -560,6 +538,7 @@ static int32 mSAMPLE_ALWAYS(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mSAMPLE_STOP(TwinEEngine *engine, MoveScriptContext &ctx) {
 	int32 sampleIdx = ctx.stream.readSint16LE();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::SAMPLE_STOP(%i)", (int)sampleIdx);
 	engine->_sound->stopSample(sampleIdx);
 	return 0;
 }
@@ -582,8 +561,9 @@ static int32 mPLAY_FLA(TwinEEngine *engine, MoveScriptContext &ctx) {
 		}
 	} while (true);
 
-	engine->_flaMovies->playFlaMovie(movie);
-	engine->setPalette(engine->_screens->paletteRGBA);
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::PLAY_FLA(%s)", movie);
+	engine->_movie->playMovie(movie);
+	engine->setPalette(engine->_screens->_paletteRGBA);
 	engine->_screens->clearScreen();
 	return 0;
 }
@@ -594,6 +574,7 @@ static int32 mPLAY_FLA(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mREPEAT_SAMPLE(TwinEEngine *engine, MoveScriptContext &ctx) {
 	ctx.numRepeatSample = ctx.stream.readSint16LE();
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::REPEAT_SAMPLE(%i)", (int)ctx.numRepeatSample);
 	return 0;
 }
 
@@ -603,7 +584,8 @@ static int32 mREPEAT_SAMPLE(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mSIMPLE_SAMPLE(TwinEEngine *engine, MoveScriptContext &ctx) {
 	int32 sampleIdx = ctx.stream.readSint16LE();
-	engine->_sound->playSample(sampleIdx, ctx.numRepeatSample, ctx.actor->pos, ctx.actorIdx);
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::SIMPLE_SAMPLE(%i)", (int)sampleIdx);
+	engine->_sound->playSample(sampleIdx, ctx.numRepeatSample, ctx.actor->pos(), ctx.actorIdx);
 	ctx.numRepeatSample = 1;
 	return 0;
 }
@@ -614,18 +596,19 @@ static int32 mSIMPLE_SAMPLE(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mFACE_HERO(TwinEEngine *engine, MoveScriptContext &ctx) {
 	const int16 angle = ToAngle(ctx.stream.readSint16LE());
-	if (ctx.actor->staticFlags.bIsSpriteActor) {
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::FACE_HERO(%i)", (int)angle);
+	if (ctx.actor->_staticFlags.bIsSpriteActor) {
 		return 0;
 	}
-	engine->_scene->currentScriptValue = angle;
-	if (engine->_scene->currentScriptValue == -1 && ctx.actor->move.numOfStep == 0) {
-		engine->_scene->currentScriptValue = engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->pos, engine->_scene->sceneHero->pos);
-		engine->_movements->moveActor(ctx.actor->angle, engine->_scene->currentScriptValue, ctx.actor->speed, &ctx.actor->move);
+	engine->_scene->_currentScriptValue = angle;
+	if (engine->_scene->_currentScriptValue == -1 && ctx.actor->_move.numOfStep == 0) {
+		engine->_scene->_currentScriptValue = engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->pos(), engine->_scene->_sceneHero->pos());
+		engine->_movements->moveActor(ctx.actor->_angle, engine->_scene->_currentScriptValue, ctx.actor->_speed, &ctx.actor->_move);
 		ctx.stream.rewind(2);
-		ctx.stream.writeSint16LE(engine->_scene->currentScriptValue);
+		ctx.stream.writeSint16LE(engine->_scene->_currentScriptValue);
 	}
 
-	if (ctx.actor->angle != engine->_scene->currentScriptValue) {
+	if (ctx.actor->_angle != engine->_scene->_currentScriptValue) {
 		ctx.undo(2);
 		return 1;
 	}
@@ -642,27 +625,28 @@ static int32 mFACE_HERO(TwinEEngine *engine, MoveScriptContext &ctx) {
 static int32 mANGLE_RND(TwinEEngine *engine, MoveScriptContext &ctx) {
 	const int16 val1 = ctx.stream.readSint16LE();
 	const int16 val2 = ctx.stream.readSint16LE();
-	if (ctx.actor->staticFlags.bIsSpriteActor) {
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::ANGLE_RND(%i, %i)", (int)val1, (int)val2);
+	if (ctx.actor->_staticFlags.bIsSpriteActor) {
 		return 0;
 	}
 
-	engine->_scene->currentScriptValue = val2;
+	engine->_scene->_currentScriptValue = val2;
 
-	if (engine->_scene->currentScriptValue == -1 && ctx.actor->move.numOfStep == 0) {
+	if (engine->_scene->_currentScriptValue == -1 && ctx.actor->_move.numOfStep == 0) {
 		if (engine->getRandomNumber() & 1) {
-			const int32 newAngle = ctx.actor->angle + ANGLE_90 + (ABS(val1) >> 1);
-			engine->_scene->currentScriptValue = ClampAngle(newAngle - engine->getRandomNumber(val1));
+			const int32 newAngle = ctx.actor->_angle + ANGLE_90 + (ABS(val1) >> 1);
+			engine->_scene->_currentScriptValue = ClampAngle(newAngle - engine->getRandomNumber(val1));
 		} else {
-			const int32 newAngle = ctx.actor->angle - ANGLE_90 + (ABS(val1) >> 1);
-			engine->_scene->currentScriptValue = ClampAngle(newAngle - engine->getRandomNumber(val1));
+			const int32 newAngle = ctx.actor->_angle - ANGLE_90 + (ABS(val1) >> 1);
+			engine->_scene->_currentScriptValue = ClampAngle(newAngle - engine->getRandomNumber(val1));
 		}
 
-		engine->_movements->moveActor(ctx.actor->angle, engine->_scene->currentScriptValue, ctx.actor->speed, &ctx.actor->move);
+		engine->_movements->moveActor(ctx.actor->_angle, engine->_scene->_currentScriptValue, ctx.actor->_speed, &ctx.actor->_move);
 		ctx.stream.rewind(2);
-		ctx.stream.writeSint16LE(engine->_scene->currentScriptValue);
+		ctx.stream.writeSint16LE(engine->_scene->_currentScriptValue);
 	}
 
-	if (ctx.actor->angle != engine->_scene->currentScriptValue) {
+	if (ctx.actor->_angle != engine->_scene->_currentScriptValue) {
 		ctx.undo(4);
 		return 1;
 	}
@@ -718,21 +702,27 @@ void ScriptMove::processMoveScript(int32 actorIdx) {
 	int32 end = -2;
 
 	MoveScriptContext ctx(actorIdx, actor);
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::BEGIN(%i)", actorIdx);
 	do {
 		const byte scriptOpcode = ctx.stream.readByte();
 		if (scriptOpcode < ARRAYSIZE(function_map)) {
+			debugC(3, kDebugLevels::kDebugScripts, "MOVE::EXEC(%s, %i)", function_map[scriptOpcode].name, actorIdx);
 			end = function_map[scriptOpcode].function(_engine, ctx);
 		} else {
-			error("Actor %d with wrong offset/opcode - Offset: %d (opcode: %u)", actorIdx, ctx.stream.pos() - 1, scriptOpcode);
+			error("Actor %d with wrong offset/opcode - Offset: %d/%d (opcode: %u)", actorIdx, (int)ctx.stream.pos() - 1, (int)ctx.stream.size(), scriptOpcode);
 		}
 
 		if (end < 0) {
 			warning("Actor %d Life script [%s] not implemented", actorIdx, function_map[scriptOpcode].name);
+		} else if (end == 1) {
+			debugC(3, kDebugLevels::kDebugScripts, "MOVE::BREAK(%i)", actorIdx);
 		}
-		if (ctx.actor->positionInMoveScript != -1) {
-			actor->positionInMoveScript = ctx.stream.pos();
+
+		if (ctx.actor->_positionInMoveScript != -1) {
+			actor->_positionInMoveScript = ctx.stream.pos();
 		}
 	} while (end != 1);
+	debugC(3, kDebugLevels::kDebugScripts, "MOVE::END(%i)", actorIdx);
 }
 
 } // namespace TwinE

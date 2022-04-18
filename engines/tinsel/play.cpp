@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Plays films within a scene, takes into account the actor in each 'column'.								|
  */
@@ -32,7 +31,7 @@
 #include "tinsel/pid.h"
 #include "tinsel/play.h"
 #include "tinsel/polygons.h"
-#include "tinsel/rince.h"
+#include "tinsel/movers.h"
 #include "tinsel/sched.h"
 #include "tinsel/scn.h"
 #include "tinsel/sound.h"
@@ -89,17 +88,10 @@ void ResetVarsPlay() {
  * Poke the background palette into an image.
  */
 static void PokeInPalette(SCNHANDLE hMulFrame) {
-	const FRAME *pFrame;		// Pointer to frame
-	IMAGE *pim;		// Pointer to image
-
 	// Could be an empty column
 	if (hMulFrame) {
-		pFrame = (const FRAME *)_vm->_handle->LockMem(hMulFrame);
-
-		// get pointer to image
-		pim = (IMAGE *)_vm->_handle->LockMem(READ_32(pFrame)); // handle to image
-
-		pim->hImgPal = TO_32(_vm->_bg->BgPal());
+		const FRAME *pFrame = (const FRAME *)_vm->_handle->LockMem(hMulFrame);
+		_vm->_handle->SetImagePalette(READ_32(pFrame), _vm->_bg->BgPal());
 	}
 }
 
@@ -107,22 +99,15 @@ static void PokeInPalette(SCNHANDLE hMulFrame) {
  * Poke the background palette into an image.
  */
 void PokeInPalette(const MULTI_INIT *pmi) {
-	FRAME	*pFrame;		// Pointer to frame
-	IMAGE	*pim;			// Pointer to image
-
 	// Could be an empty column
 	if (pmi->hMulFrame) {
-		pFrame = (FRAME *)_vm->_handle->LockMem(FROM_32(pmi->hMulFrame));
-
-		// get pointer to image
-		pim = (IMAGE *)_vm->_handle->LockMem(READ_32(pFrame)); // handle to image
-
-		pim->hImgPal = TO_32(_vm->_bg->BgPal());
+		const FRAME *pFrame = (const FRAME *)_vm->_handle->LockMem(FROM_32(pmi->hMulFrame));
+		_vm->_handle->SetImagePalette(READ_32(pFrame), _vm->_bg->BgPal());
 	}
 }
 
 int32 NoNameFunc(int actorID, bool bNewMover) {
-	PMOVER	pActor;
+	MOVER   *pActor;
 	int32	retval;
 
 	pActor = GetMover(actorID);
@@ -197,7 +182,7 @@ static void DeRegisterSoundReel(SCNHANDLE hFilm, int column) {
 	}
 }
 
-void SaveSoundReels(PSOUNDREELS psr) {
+void SaveSoundReels(SOUNDREELS *psr) {
 	for (int i = 0; i < MAX_SOUNDREELS; i++) {
 		if (_vm->_handle->IsCdPlayHandle(g_soundReels[i].hFilm))
 			g_soundReels[i].hFilm = 0;
@@ -206,11 +191,11 @@ void SaveSoundReels(PSOUNDREELS psr) {
 	memcpy(psr, g_soundReels, sizeof(g_soundReels));
 }
 
-void RestoreSoundReels(PSOUNDREELS psr) {
+void RestoreSoundReels(SOUNDREELS *psr) {
 	memcpy(g_soundReels, psr, sizeof(g_soundReels));
 }
 
-static uint32 GetZfactor(int actorID, PMOVER pMover, bool bNewMover) {
+static uint32 GetZfactor(int actorID, MOVER *pMover, bool bNewMover) {
 	if (pMover != NULL && bNewMover == false) {
 		// If no path, just use first path in the scene
 		if (pMover->hCpath == NOPOLY)
@@ -250,10 +235,10 @@ static void SoundReel(CORO_PARAM, SCNHANDLE hFilm, int column, int speed,
 	CORO_BEGIN_CODE(_ctx);
 
 	if (actorCol) {
-		PMULTI_INIT pmi;		// MULTI_INIT structure
+		MULTI_INIT *pmi;		// MULTI_INIT structure
 
 		pReel = GetReel(hFilm, actorCol - 1);
-		pmi = (PMULTI_INIT)_vm->_handle->LockMem(FROM_32(pReel->mobj));
+		pmi = (MULTI_INIT *)_vm->_handle->LockMem(FROM_32(pReel->mobj));
 		_ctx->reelActor = (int32)FROM_32(pmi->mulID);
 	} else
 		_ctx->reelActor = 0;
@@ -446,7 +431,7 @@ static void t1PlayReel(CORO_PARAM, const PPINIT *ppi) {
 		int		stepCount;
 		int		frameCount;
 		int		reelActor;
-		PMOVER	pActor;
+		MOVER   *pActor;
 		int tmpX, tmpY;
 	CORO_END_CONTEXT(_ctx);
 
@@ -698,11 +683,11 @@ static void t2PlayReel(CORO_PARAM, int x, int y, bool bRestore, int speed, SCNHA
 
 		FREEL		*pFreel;
 		MULTI_INIT	*pmi;	// MULTI_INIT structure
-		POBJECT		pPlayObj;	// Object
+		OBJECT		*pPlayObj;	// Object
 		ANIM		thisAnim;	// Animation structure
 
 		int	reelActor;			// Which actor this reel belongs to
-		PMOVER	pMover;			// set if it's a moving actor
+		MOVER   *pMover;		// set if it's a moving actor
 		bool	bNewMover;		// Gets set if a moving actor that isn't in scene yet
 
 		int	filmNumber;
@@ -1162,7 +1147,7 @@ void RestoreActorReels(SCNHANDLE hFilm, int actor, int x, int y) {
 
 	int i;
 	FREEL *pFreel;
-	PMULTI_INIT	pmi;		// MULTI_INIT structure
+	MULTI_INIT *pmi;		// MULTI_INIT structure
 
 	ppi.hFilm = hFilm;
 	ppi.x = (short)x;
@@ -1175,7 +1160,7 @@ void RestoreActorReels(SCNHANDLE hFilm, int actor, int x, int y) {
 	// Search backwards for now as later column will be the one
 	for (i = (int)FROM_32(pFilm->numreels) - 1; i >= 0; i--) {
 		pFreel = &pFilm->reels[i];
-		pmi = (PMULTI_INIT)_vm->_handle->LockMem(FROM_32(pFreel->mobj));
+		pmi = (MULTI_INIT *)_vm->_handle->LockMem(FROM_32(pFreel->mobj));
 		if ((int32)FROM_32(pmi->mulID) == actor) {
 			ppi.column = (short)i;
 			NewestFilm(hFilm, &pFilm->reels[i]);

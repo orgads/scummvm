@@ -33,7 +33,7 @@ The first step is to download the repository containing the code required to bui
 
 .. code-block:: bash
 
-    git clone --depth 1 -b branch-2-2-0 https://github.com/scummvm/scummvm.git
+    git clone https://github.com/scummvm/scummvm.git
 
 .. tip::
 
@@ -76,7 +76,7 @@ It's time to generate the Xcode project. Run the following on the command line:
 
 .. code::
 
-    ../scummvm/devtools/create_project/xcode/build/Release/create_project ../scummvm --xcode --enable-fluidsynth --disable-nasm --disable-opengl --disable-theora --disable-taskbar --disable-tts --disable-fribidi
+    ../scummvm/devtools/create_project/xcode/build/Release/create_project ../scummvm --xcode --enable-fluidsynth --disable-nasm --disable-opengl --disable-theoradec --disable-mpeg2 --disable-taskbar --disable-tts --disable-fribidi
 
 The resulting directory structure looks like this:
 
@@ -105,6 +105,10 @@ When Xcode is open, connect a device to install ScummVM onto. At the top of the 
 .. figure:: ../images/ios/choose_device.gif
 
 You may need to disable bitcode generation in the build settings. This should already be disabled by default when you make a build specifically for your device, but it is enabled by default when you build for a ''Generic iOS Device''.
+
+Unless you want to debug issues with ScummVM on iOS, you probably want to compile ScummVM in release mode to get better performances when playing games.
+
+.. figure:: ../images/ios/ios_xcode_release.gif
 
 The last step before building ScummVM is to change the bundle identifier and manage signing. Click on the **scummvm** project in the left pane, and then click on **ScummVM - iOS** under **TARGETS**. On the menu bar above, click on **General**. Under **Identity** there is a field labeled **Bundle Identifier**. Enter a unique identifier in reverse-DNS format. This can be as simple as com.\ *yournamehere*.
 

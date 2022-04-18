@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +23,7 @@
 #define ASYLUM_SYSTEM_SCREEN_H
 
 #include "common/array.h"
+#include "common/queue.h"
 #include "common/rect.h"
 
 #include "graphics/palette.h"
@@ -33,7 +33,7 @@
 
 namespace Asylum {
 
-#define PALETTE_SIZE 256 * 3
+#define PALETTE_SIZE (256 * 3)
 
 class AsylumEngine;
 class GraphicResource;
@@ -70,6 +70,14 @@ typedef struct GraphicQueueItem {
 	}
 } GraphicQueueItem;
 
+struct FadeParameters {
+	ResourceId resourceId;
+	int  ticksWait;
+	int  delta;
+	uint nextTick;
+	int  step;
+};
+
 class Screen {
 public:
 	Screen(AsylumEngine *_vm);
@@ -79,13 +87,14 @@ public:
 	void draw(ResourceId resourceId);
 	void draw(ResourceId resourceId, uint32 frameIndex, const Common::Point &source, DrawFlags flags = kDrawFlagNone, bool colorKey = true);
 	void draw(ResourceId resourceId, uint32 frameIndex, const int16 (*srcPtr)[2], DrawFlags flags = kDrawFlagNone, bool colorKey = true);
-	void draw(GraphicResource *resource, uint32 frameIndex, const Common::Point &source, DrawFlags flags= kDrawFlagNone, bool colorKey = true);
+	void draw(GraphicResource *resource, uint32 frameIndex, const Common::Point &source, DrawFlags flags = kDrawFlagNone, bool colorKey = true);
 	void drawTransparent(ResourceId resourceId, uint32 frameIndex, const Common::Point &source, DrawFlags flags, uint32 transTableNum);
 	void drawTransparent(GraphicResource *resource, uint32 frameIndex, const Common::Point &source, DrawFlags flags, uint32 transTableNum);
 	void draw(ResourceId resourceId, uint32 frameIndex, const Common::Point &source, DrawFlags flags, ResourceId resourceId2, const Common::Point &destination, bool colorKey = true);
 
 	// Misc
 	void clear();
+	void clearDefaultColor() { memset(_mainPalette, 0, 3); setupPalette(NULL, 0, 0); }
 	void drawWideScreenBars(int16 barSize) const;
 	void fillRect(int16 x, int16 y, int16 x2, int16 y2, uint32 color);
 	void copyBackBufferToScreen();
@@ -94,16 +103,19 @@ public:
 
 	// Palette
 	void setPalette(ResourceId id);
+	const byte *getPalette() { return _mainPalette; }
 	void setMainPalette(const byte *data);
 	void loadGrayPalette();
 	void updatePalette();
 	void updatePalette(int32 param);
 	void setupPalette(byte *buffer, int start, int count);
 
-	void startPaletteFade(ResourceId resourceId, int32 ticksWait, int32 delta);
+	bool isFading() { return _isFading; }
+	void queuePaletteFade(ResourceId resourceId, int32 ticksWait, int32 delta);
 	void paletteFade(uint32 start, int32 ticksWait, int32 delta);
 	void stopPaletteFade(char red, char green, char blue);
 	void stopPaletteFadeAndSet(ResourceId id, int32 ticksWait, int32 delta);
+	void processPaletteFadeQueue();
 
 	// Gamma
 	void setPaletteGamma(ResourceId id);
@@ -123,6 +135,7 @@ public:
 	void drawGraphicsInQueue();
 	void clearGraphicsInQueue();
 	void deleteGraphicFromQueue(ResourceId resourceId);
+	bool isGraphicQueueEmpty() { return _queueItems.empty(); }
 
 	// Used by Video
 	void copyToBackBuffer(const byte *buffer, int32 pitch, int16 x, int16 y, uint16 width, uint16 height, bool mirrored = false);
@@ -134,12 +147,7 @@ public:
 	void copyToBackBufferClipped(Graphics::Surface *surface, int16 x, int16 y);
 
 	// Used by Writings puzzle
-	const Graphics::Surface *getSurface() const { return &_backBuffer; };
-
-protected:
-	// Palette fading Timer
-	static void paletteFadeTimer(void *ptr);
-	void handlePaletteFadeTimer();
+	const Graphics::Surface &getSurface() const { return _backBuffer; };
 
 private:
 	AsylumEngine *_vm;
@@ -160,18 +168,18 @@ private:
 	// Palette
 	byte _currentPalette[PALETTE_SIZE];
 	byte _mainPalette[PALETTE_SIZE];
+	byte _fromPalette[PALETTE_SIZE];
+	byte _toPalette[PALETTE_SIZE];
 	bool _isFading;
 	bool _fadeStop;
-	ResourceId _fadeResourceId;
-	int32 _fadeTicksWait;
-	int32 _fadeDelta;
-
+	Common::Queue<FadeParameters> _fadeQueue;
 
 	byte *getPaletteData(ResourceId id);
 	void setPaletteGamma(byte *data, byte *target = NULL);
 
-	void paletteFadeWorker(ResourceId id, int32 ticksWait, int32 delta);
-	void stopPaletteFadeTimer();
+	void stopQueuedPaletteFade();
+	void initQueuedPaletteFade(ResourceId id, int32 delta);
+	void runQueuedPaletteFade(ResourceId id, int32 delta, int i);
 
 	// Graphic queue
 	static bool graphicQueueItemComparator(const GraphicQueueItem &item1, const GraphicQueueItem &item2);
@@ -194,8 +202,8 @@ private:
 	void bltMasked             (byte *srcBuffer, byte *maskBuffer, int16 height, int16 width, uint16 srcPitch, uint16 maskPitch, byte zoom, byte *dstBuffer, uint16 dstPitch) const;
 
 	// DirectDraw-equivalent functions
-	void blt(Common::Rect *dest, GraphicFrame* frame, Common::Rect *source, int32 flags);
-	void bltFast(int16 dX, int16 dY, GraphicFrame* frame, Common::Rect *source);
+	void blt(Common::Rect *dest, GraphicFrame *frame, Common::Rect *source, int32 flags);
+	void bltFast(int16 dX, int16 dY, GraphicFrame *frame, Common::Rect *source);
 
 	void copyToBackBufferWithTransparency(byte *buffer, int32 pitch, int16 x, int16 y, uint16 width, uint16 height, bool mirrored = false);
 

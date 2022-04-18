@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -501,6 +500,54 @@ void colorFillClip(PixelType *first, PixelType *last, PixelType color, int realX
 	}
 }
 
+/**
+ * Fills several pixels in a column with a given color.
+ *
+ * @param first Pointer to the first pixel to fill.
+ * @param last Pointer to the last pixel to fill.
+ * @param pitch Number of pixels in a line.
+ * @param color Color of the pixel
+ */
+template<typename PixelType>
+void colorVFill(PixelType *first, PixelType *last, int pitch, PixelType color) {
+	int count = (last - first) / pitch;
+	if (!count)
+		return;
+	for (PixelType *p = first; count; p+= pitch, count--) {
+		*p = color;
+	}
+}
+
+template<typename PixelType>
+void colorVFillClip(PixelType *first, PixelType *last, int pitch, PixelType color, int realX, int realY, Common::Rect &clippingArea) {
+	if (realX < clippingArea.left || realX >= clippingArea.right)
+		return;
+
+	int count = (last - first) / pitch;
+
+	if (realY > clippingArea.bottom || realY + count < clippingArea.top)
+		return;
+
+	if (realY < clippingArea.top) {
+		int diff = (clippingArea.top - realY);
+		realY += diff;
+		first += diff * pitch;
+		count -= diff;
+	}
+
+	if (clippingArea.bottom <= realY + count) {
+		int diff = (realY + count - clippingArea.bottom);
+		count -= diff;
+	}
+
+	if (!count)
+		return;
+
+	for (PixelType *p = first; count; p+= pitch, count--) {
+		*p = color;
+	}
+}
+
 
 VectorRenderer *createRenderer(int mode) {
 #ifdef DISABLE_FANCY_THEMES
@@ -762,16 +809,25 @@ void VectorRendererSpec<PixelType>::
 blitKeyBitmap(const Graphics::ManagedSurface *source, const Common::Point &p, bool themeTrans) {
 	Common::Rect drawRect(p.x, p.y, p.x + source->w, p.y + source->h);
 	drawRect.clip(_clippingArea);
-	drawRect.moveTo(0, 0);
+	drawRect.translate(-p.x, -p.y);
 
 	if (drawRect.isEmpty()) {
 		return;
 	}
 
+	Common::Point np;
+	if (!_clippingArea.contains(p)) {
+		int16 nx = CLIP(p.x, _clippingArea.left, _clippingArea.right);
+		int16 ny = CLIP(p.y, _clippingArea.top, _clippingArea.bottom);
+		np = Common::Point(nx, ny);
+	} else {
+		np = p;
+	}
+
 	if (themeTrans)
-		_activeSurface->transBlitFrom(*source, drawRect, p, _bitmapAlphaColor);
+		_activeSurface->transBlitFrom(*source, drawRect, np, _bitmapAlphaColor);
 	else
-		_activeSurface->blitFrom(*source, drawRect, p);
+		_activeSurface->blitFrom(*source, drawRect, np);
 }
 
 template<typename PixelType>
@@ -1315,58 +1371,37 @@ drawTriangle(int x, int y, int w, int h, TriangleOrientation orient) {
 
 	bool useClippingVersions = !_clippingArea.contains(Common::Rect(x, y, x + w, y + h));
 
-	if (w == h) {
-		int newW = w;
+	void (VectorRendererSpec<PixelType>::*drawFunc)(int x1, int y1, int w, int h, bool inverted, PixelType color, VectorRenderer::FillMode fill_m) = nullptr;
+	bool inverted = false;
 
-		switch (orient) {
-		case kTriangleUp:
-		case kTriangleDown:
-			if (useClippingVersions)
-				drawTriangleVertAlgClip(x, y, newW, newW, (orient == kTriangleDown), color, Base::_fillMode);
-			else
-				drawTriangleVertAlg(x, y, newW, newW, (orient == kTriangleDown), color, Base::_fillMode);
-			break;
+	switch (orient) {
+	case kTriangleUp:
+	case kTriangleDown:
+		if (useClippingVersions)
+			drawFunc = &VectorRendererSpec<PixelType>::drawTriangleVertAlgClip;
+		else
+			drawFunc = &VectorRendererSpec<PixelType>::drawTriangleVertAlg;
+		inverted = (orient == kTriangleDown);
+		break;
 
-		case kTriangleLeft:
-		case kTriangleRight:
-		case kTriangleAuto:
-		default:
-			break;
-		}
+	case kTriangleLeft:
+	case kTriangleRight:
+		if (useClippingVersions)
+			drawFunc = &VectorRendererSpec<PixelType>::drawTriangleHorzAlgClip;
+		else
+			drawFunc = &VectorRendererSpec<PixelType>::drawTriangleHorzAlg;
+		inverted = (orient == kTriangleRight);
+		break;
+	case kTriangleAuto:
+	default:
+		break;
+	}
 
-		if (Base::_strokeWidth > 0)
-			if (Base::_fillMode == kFillBackground || Base::_fillMode == kFillGradient) {
-				if (useClippingVersions)
-					drawTriangleVertAlgClip(x, y, newW, newW, (orient == kTriangleDown), color, Base::_fillMode);
-				else
-					drawTriangleVertAlg(x, y, newW, newW, (orient == kTriangleDown), color, Base::_fillMode);
-			}
-	} else {
-		int newW = w;
-		int newH = h;
-
-		switch (orient) {
-		case kTriangleUp:
-		case kTriangleDown:
-			if (useClippingVersions)
-				drawTriangleVertAlgClip(x, y, newW, newH, (orient == kTriangleDown), color, Base::_fillMode);
-			else
-				drawTriangleVertAlg(x, y, newW, newH, (orient == kTriangleDown), color, Base::_fillMode);
-			break;
-
-		case kTriangleLeft:
-		case kTriangleRight:
-		case kTriangleAuto:
-		default:
-			break;
-		}
-
+	if (drawFunc) {
+		(this->*drawFunc)(x, y, w, h, inverted, color, Base::_fillMode);
 		if (Base::_strokeWidth > 0) {
 			if (Base::_fillMode == kFillBackground || Base::_fillMode == kFillGradient) {
-				if (useClippingVersions)
-					drawTriangleVertAlgClip(x, y, newW, newH, (orient == kTriangleDown), _fgColor, kFillDisabled);
-				else
-					drawTriangleVertAlg(x, y, newW, newH, (orient == kTriangleDown), _fgColor, kFillDisabled);
+				(this->*drawFunc)(x, y, w, h, inverted, _fgColor, kFillDisabled);
 			}
 		}
 	}
@@ -2150,6 +2185,482 @@ drawLineAlgClip(int x1, int y1, int x2, int y2, uint dx, uint dy, PixelType colo
 
 template<typename PixelType>
 void VectorRendererSpec<PixelType>::
+drawTriangleHorzAlg(int x1, int y1, int w, int h, bool inverted, PixelType color, VectorRenderer::FillMode fill_m) {
+	// Don't draw anything for empty rects. This assures dy is always different
+	// from zero.
+	if (w <= 0 || h <= 0) {
+		return;
+	}
+
+	int pitch = _activeSurface->pitch / _activeSurface->format.bytesPerPixel;
+	int gradient_w = 0;
+	int x_pitch_sign = 1;
+	if (!inverted) {
+		x1 += w;
+		x_pitch_sign = -1;
+	}
+
+	PixelType *ptr_bottom = (PixelType *)_activeSurface->getBasePtr(x1, y1);
+	PixelType *floor = ptr_bottom - pitch;
+	PixelType *ptr_top = (PixelType *)_activeSurface->getBasePtr(x1, y1 + h);
+
+	int x2 = x1 + w;
+	int y2 = y1 + h / 2;
+
+#if FIXED_POINT
+	int dx = (x2 - x1) << 8;
+	int dy = (y2 - y1) << 8;
+
+	if (abs(dy) > abs(dx)) {
+#else
+	double dx = (double)x2 - (double)x1;
+	double dy = (double)y2 - (double)y1;
+
+	if (fabs(dy) > fabs(dx)) {
+#endif
+		while (floor != ptr_top) {
+			floor += pitch;
+			blendPixelPtr(floor, color, 50);
+		}
+
+#if FIXED_POINT
+		// In this branch dx is always different from zero. This is because
+		// abs(dx) is strictly greater than abs(dy), and abs returns zero
+		// as minimal value.
+		int gradient = (dx << 8) / dy;
+		int interx = (x1 << 8) + gradient;
+#else
+		double gradient = dx / dy;
+		double interx = x1 + gradient;
+#endif
+
+		for (int y = y1 + 1; y < y2; y++) {
+#if FIXED_POINT
+			if (interx + gradient >= ipart(interx) + 0x100) {
+#else
+			if (interx + gradient >= ipart(interx) + 1) {
+#endif
+				ptr_bottom += pitch;
+				ptr_top -= pitch;
+			}
+
+			ptr_top += x_pitch_sign;
+			ptr_bottom += x_pitch_sign;
+
+			interx += gradient;
+
+			switch (fill_m) {
+			case kFillDisabled:
+				*ptr_top = *ptr_bottom = color;
+				break;
+			case kFillForeground:
+			case kFillBackground:
+				colorVFill<PixelType>(ptr_bottom + pitch, ptr_top, pitch, color);
+				blendPixelPtr(ptr_bottom, color, rfpart(interx));
+				blendPixelPtr(ptr_top, color, rfpart(interx));
+				break;
+			case kFillGradient:
+				colorVFill<PixelType>(ptr_bottom, ptr_top, pitch, calcGradient(gradient_w++, w));
+				blendPixelPtr(ptr_bottom, color, rfpart(interx));
+				blendPixelPtr(ptr_top, color, rfpart(interx));
+				break;
+			default:
+				break;
+			}
+		}
+
+		return;
+	}
+
+#if FIXED_POINT
+	if (abs(dy) < abs(dx)) {
+#else
+	if (fabs(dy) < fabs(dx)) {
+#endif
+		ptr_top -= pitch;
+		while (floor != ptr_top) {
+			floor += pitch;
+			blendPixelPtr(floor, color, 50);
+		}
+
+#if FIXED_POINT
+		int gradient = (dy << 8) / (dx + 0x100);
+		int intery = (y1 << 8) + gradient;
+#else
+		double gradient = dy / (dx + 1);
+		double intery = y1 + gradient;
+#endif
+
+		for (int x = x1 + 1; x < x2; x++) {
+#if FIXED_POINT
+			if (intery + gradient >= ipart(intery) + 0x100) {
+#else
+			if (intery + gradient >= ipart(intery) + 1) {
+#endif
+				ptr_bottom += pitch;
+				ptr_top -= pitch;
+			}
+
+			ptr_top += x_pitch_sign;
+			ptr_bottom += x_pitch_sign;
+
+			intery += gradient;
+
+			switch (fill_m) {
+			case kFillDisabled:
+				*ptr_top = *ptr_bottom = color;
+				break;
+			case kFillForeground:
+			case kFillBackground:
+				colorVFill<PixelType>(ptr_bottom + pitch, ptr_top, pitch, color);
+				blendPixelPtr(ptr_bottom, color, rfpart(intery));
+				blendPixelPtr(ptr_top, color, rfpart(intery));
+				break;
+			case kFillGradient:
+				colorVFill<PixelType>(ptr_bottom, ptr_top, pitch, calcGradient(gradient_w++, w));
+				blendPixelPtr(ptr_bottom, color, rfpart(intery));
+				blendPixelPtr(ptr_top, color, rfpart(intery));
+				break;
+			default:
+				break;
+			}
+		}
+
+		return;
+	}
+
+	ptr_top -= pitch;
+
+	while (floor != ptr_top) {
+		floor += pitch;
+		blendPixelPtr(floor, color, 50);
+	}
+
+#if FIXED_POINT
+	int gradient = (dy / dx) << 8;
+	int intery = (y1 << 8) + gradient;
+#else
+	double gradient = dy / dx;
+	double intery = y1 + gradient;
+#endif
+
+	for (int x = x1 + 1; x < x2; x++) {
+		ptr_bottom += pitch;
+		ptr_top -= pitch;
+
+		ptr_top += x_pitch_sign;
+		ptr_bottom += x_pitch_sign;
+
+		intery += gradient;
+
+		switch (fill_m) {
+		case kFillDisabled:
+			*ptr_top = *ptr_bottom = color;
+			break;
+		case kFillForeground:
+		case kFillBackground:
+			colorVFill<PixelType>(ptr_bottom + pitch, ptr_top, pitch, color);
+			blendPixelPtr(ptr_bottom, color, rfpart(intery));
+			blendPixelPtr(ptr_top, color, rfpart(intery));
+			break;
+		case kFillGradient:
+			colorVFill<PixelType>(ptr_bottom, ptr_top, pitch, calcGradient(gradient_w++, w));
+			blendPixelPtr(ptr_bottom, color, rfpart(intery));
+			blendPixelPtr(ptr_top, color, rfpart(intery));
+			break;
+		default:
+			break;
+		}
+	}
+
+}
+
+/////////////
+
+template<typename PixelType>
+void VectorRendererSpec<PixelType>::
+drawTriangleHorzAlgClip(int x1, int y1, int w, int h, bool inverted, PixelType color, VectorRenderer::FillMode fill_m) {
+	// Don't draw anything for empty rects. This assures dy is always different
+	// from zero.
+	if (w <= 0 || h <= 0) {
+		return;
+	}
+
+	int pitch = _activeSurface->pitch / _activeSurface->format.bytesPerPixel;
+	int gradient_w = 0;
+	int x_pitch_sign = 1;
+	if (!inverted) {
+		x1 += w;
+		x_pitch_sign = -1;
+	}
+
+	PixelType *ptr_bottom = (PixelType *)_activeSurface->getBasePtr(x1, y1);
+	PixelType *floor = ptr_bottom - pitch;
+	PixelType *ptr_top = (PixelType *)_activeSurface->getBasePtr(x1, y1 + h);
+
+	int x2 = x1 + w;
+	int y2 = y1 + h / 2;
+	int x_bottom = x1;
+	int y_bottom = y1;
+	int x_top = x1;
+	int y_top = y1 + h;
+	int x_floor = x_bottom;
+	int y_floor = y_bottom - 1;
+
+#if FIXED_POINT
+	int dx = (x2 - x1) << 8;
+	int dy = (y2 - y1) << 8;
+
+	if (abs(dy) > abs(dx)) {
+#else
+	double dx = (double)x2 - (double)x1;
+	double dy = (double)y2 - (double)y1;
+
+	if (fabs(dy) > fabs(dx)) {
+#endif
+		while (floor != ptr_top) {
+			floor += pitch;
+			blendPixelPtrClip(floor, color, 50, x_floor, ++y_floor);
+		}
+
+#if FIXED_POINT
+		// In this branch dx is always different from zero. This is because
+		// abs(dx) is strictly greater than abs(dy), and abs returns zero
+		// as minimal value.
+		int gradient = (dx << 8) / dy;
+		int interx = (x1 << 8) + gradient;
+#else
+		double gradient = dx / dy;
+		double interx = x1 + gradient;
+#endif
+
+		for (int y = y1 + 1; y < y2; y++) {
+#if FIXED_POINT
+			if (interx + gradient >= ipart(interx) + 0x100) {
+#else
+			if (interx + gradient >= ipart(interx) + 1) {
+#endif
+				ptr_bottom += pitch;
+				ptr_top -= pitch;
+				++y_bottom;
+				--y_top;
+			}
+
+			ptr_top += x_pitch_sign;
+			ptr_bottom += x_pitch_sign;
+			x_top += x_pitch_sign;
+			x_bottom += x_pitch_sign;
+
+			interx += gradient;
+
+			switch (fill_m) {
+			case kFillDisabled:
+				if (IS_IN_CLIP(x_top, y_top)) *ptr_top = color;
+				if (IS_IN_CLIP(x_bottom, y_bottom)) *ptr_bottom = color;
+				break;
+			case kFillForeground:
+			case kFillBackground:
+				colorVFillClip<PixelType>(ptr_bottom + pitch, ptr_top, pitch, color, x_bottom, y_bottom + 1, _clippingArea);
+				blendPixelPtrClip(ptr_bottom, color, rfpart(interx), x_bottom, y_bottom);
+				blendPixelPtrClip(ptr_top, color, rfpart(interx), x_top, y_top);
+				break;
+			case kFillGradient:
+				colorVFillClip<PixelType>(ptr_bottom, ptr_top, pitch, calcGradient(gradient_w++, w), x_bottom, y_bottom, _clippingArea);
+				blendPixelPtrClip(ptr_bottom, color, rfpart(interx), x_bottom, y_bottom);
+				blendPixelPtrClip(ptr_top, color, rfpart(interx), x_top, y_top);
+				break;
+			default:
+				break;
+			}
+			}
+
+		return;
+		}
+
+#if FIXED_POINT
+	if (abs(dy) < abs(dx)) {
+#else
+	if (fabs(dy) < fabs(dx)) {
+#endif
+		ptr_top -= pitch;
+		--y_top;
+		while (floor != ptr_top) {
+			floor += pitch;
+			blendPixelPtrClip(floor, color, 50, x_floor, ++y_floor);
+		}
+
+#if FIXED_POINT
+		int gradient = (dy << 8) / (dx + 0x100);
+		int intery = (y1 << 8) + gradient;
+#else
+		double gradient = dy / (dx + 1);
+		double intery = y1 + gradient;
+#endif
+
+		for (int x = x1 + 1; x < x2; x++) {
+#if FIXED_POINT
+			if (intery + gradient >= ipart(intery) + 0x100) {
+#else
+			if (intery + gradient >= ipart(intery) + 1) {
+#endif
+				ptr_bottom += pitch;
+				ptr_top -= pitch;
+				++y_bottom;
+				--y_top;
+			}
+
+			ptr_top += x_pitch_sign;
+			ptr_bottom += x_pitch_sign;
+			x_bottom += x_pitch_sign;
+			x_top += x_pitch_sign;
+
+			intery += gradient;
+
+			switch (fill_m) {
+			case kFillDisabled:
+				if (IS_IN_CLIP(x_top, y_top)) *ptr_top = color;
+				if (IS_IN_CLIP(x_bottom, y_bottom)) *ptr_bottom = color;
+				break;
+			case kFillForeground:
+			case kFillBackground:
+				colorVFillClip<PixelType>(ptr_bottom + pitch, ptr_top, pitch, color, x_bottom, y_bottom + 1, _clippingArea);
+				blendPixelPtrClip(ptr_bottom, color, rfpart(intery), x_bottom, y_bottom);
+				blendPixelPtrClip(ptr_top, color, rfpart(intery), x_top, y_top);
+				break;
+			case kFillGradient:
+				colorVFillClip<PixelType>(ptr_bottom, ptr_top, pitch, calcGradient(gradient_w++, w), x_bottom, y_bottom, _clippingArea);
+				blendPixelPtrClip(ptr_bottom, color, rfpart(intery), x_bottom, y_bottom);
+				blendPixelPtrClip(ptr_top, color, rfpart(intery), x_top, y_top);
+				break;
+			default:
+				break;
+			}
+			}
+
+		return;
+		}
+
+	ptr_top -= pitch;
+	--y_top;
+	while (floor != ptr_top) {
+		floor += pitch;
+		blendPixelPtrClip(floor, color, 50, x_floor, ++y_floor);
+	}
+
+#if FIXED_POINT
+	int gradient = (dy / dx) << 8;
+	int intery = (y1 << 8) + gradient;
+#else
+	double gradient = dy / dx;
+	double intery = y1 + gradient;
+#endif
+
+	for (int x = x1 + 1; x < x2; x++) {
+		ptr_bottom += pitch;
+		ptr_top -= pitch;
+		++y_bottom;
+		--y_top;
+
+		ptr_top += x_pitch_sign;
+		ptr_bottom += x_pitch_sign;
+		x_bottom += x_pitch_sign;
+		x_top += x_pitch_sign;
+
+		intery += gradient;
+
+		switch (fill_m) {
+		case kFillDisabled:
+			if (IS_IN_CLIP(x_top, y_top)) *ptr_top = color;
+			if (IS_IN_CLIP(x_bottom, y_bottom)) *ptr_bottom = color;
+			break;
+		case kFillForeground:
+		case kFillBackground:
+			colorVFillClip<PixelType>(ptr_bottom + pitch, ptr_top, pitch, color, x_bottom, y_bottom + 1, _clippingArea);
+			blendPixelPtrClip(ptr_bottom, color, rfpart(intery), x_bottom, y_bottom);
+			blendPixelPtrClip(ptr_top, color, rfpart(intery), x_top, y_top);
+			break;
+		case kFillGradient:
+			colorVFillClip<PixelType>(ptr_bottom, ptr_top, pitch, calcGradient(gradient_w++, w), x_bottom, y_bottom, _clippingArea);
+			blendPixelPtrClip(ptr_bottom, color, rfpart(intery), x_bottom, y_bottom);
+			blendPixelPtrClip(ptr_top, color, rfpart(intery), x_top, y_top);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+/////////////
+
+/** HORIZONTAL TRIANGLE DRAWING - FAST VERSION FOR SQUARED TRIANGLES */
+template<typename PixelType>
+void VectorRendererSpec<PixelType>::
+drawTriangleFastH(int x1, int y1, int size, bool inverted, PixelType color, VectorRenderer::FillMode fill_m) {
+	// Do not draw anything for empty rects.
+	if (size <= 0) {
+		return;
+	}
+
+	int pitch = _activeSurface->pitch / _activeSurface->format.bytesPerPixel;
+	int x_pitch_sign = 1;
+
+	if (!inverted) {
+		y1 += size;
+		x_pitch_sign = -1;
+	}
+
+	int gradient_w = 0;
+	PixelType *ptr_bottom = (PixelType *)_activeSurface->getBasePtr(x1, y1);
+	PixelType *ptr_top = (PixelType *)_activeSurface->getBasePtr(x1, y1 + size);
+	int x2 = x1 + size;
+	int y2 = y1 + size / 2;
+	int deltaX = abs(x2 - x1);
+	int deltaY = abs(y2 - y1);
+	int signX = x1 < x2 ? 1 : -1;
+	int signY = y1 < y2 ? 1 : -1;
+	int error = deltaX - deltaY;
+
+	colorVFill<PixelType>(ptr_bottom, ptr_top, pitch, color);
+
+	while (1) {
+		switch (fill_m) {
+		case kFillDisabled:
+			*ptr_top = *ptr_bottom = color;
+			break;
+		case kFillForeground:
+		case kFillBackground:
+			colorVFill<PixelType>(ptr_bottom, ptr_top, pitch, color);
+			break;
+		case kFillGradient:
+			colorVFill<PixelType>(ptr_bottom, ptr_top, pitch, calcGradient(gradient_w++, size));
+			break;
+		default:
+			break;
+		}
+
+		if (x1 == x2 && y1 == y2)
+			break;
+
+		int error2 = error * 2;
+
+		if (error2 > -deltaX) {
+			error -= deltaX;
+			y1 += signY;
+			ptr_bottom += signY * pitch;
+			ptr_top += -signY * pitch;
+		}
+
+		if (error2 < deltaY) {
+			error += deltaY;
+			x1 += signX;
+			ptr_bottom += x_pitch_sign;
+			ptr_top += x_pitch_sign;
+		}
+	}
+}
+
+template<typename PixelType>
+void VectorRendererSpec<PixelType>::
 drawTriangleVertAlg(int x1, int y1, int w, int h, bool inverted, PixelType color, VectorRenderer::FillMode fill_m) {
 	// Don't draw anything for empty rects. This assures dy is always different
 	// from zero.
@@ -2548,7 +3059,7 @@ drawTriangleVertAlgClip(int x1, int y1, int w, int h, bool inverted, PixelType c
 /** VERTICAL TRIANGLE DRAWING - FAST VERSION FOR SQUARED TRIANGLES */
 template<typename PixelType>
 void VectorRendererSpec<PixelType>::
-drawTriangleFast(int x1, int y1, int size, bool inverted, PixelType color, VectorRenderer::FillMode fill_m) {
+drawTriangleFastV(int x1, int y1, int size, bool inverted, PixelType color, VectorRenderer::FillMode fill_m) {
 	// Do not draw anything for empty rects.
 	if (size <= 0) {
 		return;
@@ -3568,30 +4079,30 @@ drawBorderRoundedSquareAlg(int x1, int y1, int r, int w, int h, PixelType color,
 			if (sw != strokeWidth || fill_m != Base::kFillDisabled)
 				a2 = 255;
 
-				// inner arc
-				WU_DRAWCIRCLE_BCOLOR_TR_CW(ptr_tr, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_t - (alphaStep_tr * y)) << 8) * a2) >> 16));
-				WU_DRAWCIRCLE_BCOLOR_BR_CW(ptr_br, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_r - (alphaStep_br * y)) << 8) * a2) >> 16));
-				WU_DRAWCIRCLE_BCOLOR_BL_CW(ptr_bl, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_b - (alphaStep_bl * y)) << 8) * a2) >> 16));
-				WU_DRAWCIRCLE_BCOLOR_TL_CW(ptr_tl, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_l - (alphaStep_tl * y)) << 8) * a2) >> 16));
+			// inner arc
+			WU_DRAWCIRCLE_BCOLOR_TR_CW(ptr_tr, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_t - (alphaStep_tr * y)) << 8) * a2) >> 16));
+			WU_DRAWCIRCLE_BCOLOR_BR_CW(ptr_br, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_r - (alphaStep_br * y)) << 8) * a2) >> 16));
+			WU_DRAWCIRCLE_BCOLOR_BL_CW(ptr_bl, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_b - (alphaStep_bl * y)) << 8) * a2) >> 16));
+			WU_DRAWCIRCLE_BCOLOR_TL_CW(ptr_tl, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_l - (alphaStep_tl * y)) << 8) * a2) >> 16));
 
-				WU_DRAWCIRCLE_BCOLOR_TR_CCW(ptr_tr, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_r + (alphaStep_tr * y)) << 8) * a2) >> 16));
-				WU_DRAWCIRCLE_BCOLOR_BR_CCW(ptr_br, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_b + (alphaStep_br * y)) << 8) * a2) >> 16));
-				WU_DRAWCIRCLE_BCOLOR_BL_CCW(ptr_bl, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_l + (alphaStep_bl * y)) << 8) * a2) >> 16));
-				WU_DRAWCIRCLE_BCOLOR_TL_CCW(ptr_tl, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_t + (alphaStep_tl * y)) << 8) * a2) >> 16));
+			WU_DRAWCIRCLE_BCOLOR_TR_CCW(ptr_tr, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_r + (alphaStep_tr * y)) << 8) * a2) >> 16));
+			WU_DRAWCIRCLE_BCOLOR_BR_CCW(ptr_br, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_b + (alphaStep_br * y)) << 8) * a2) >> 16));
+			WU_DRAWCIRCLE_BCOLOR_BL_CCW(ptr_bl, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_l + (alphaStep_bl * y)) << 8) * a2) >> 16));
+			WU_DRAWCIRCLE_BCOLOR_TL_CCW(ptr_tl, (x - 1), y, (px - pitch), py, (uint8)((uint32)(((alpha_t + (alphaStep_tl * y)) << 8) * a2) >> 16));
 
-				// outer arc
-				if (sw == 1) {
-					WU_DRAWCIRCLE_BCOLOR_TR_CW(ptr_tr, x, y, px, py, (uint8)((uint32)(((alpha_t - (alphaStep_tr * y)) << 8) * a1) >> 16));
-					WU_DRAWCIRCLE_BCOLOR_BR_CW(ptr_br, x, y, px, py, (uint8)((uint32)(((alpha_r - (alphaStep_br * y)) << 8) * a1) >> 16));
-					WU_DRAWCIRCLE_BCOLOR_BL_CW(ptr_bl, x, y, px, py, (uint8)((uint32)(((alpha_b - (alphaStep_bl * y)) << 8) * a1) >> 16));
-					WU_DRAWCIRCLE_BCOLOR_TL_CW(ptr_tl, x, y, px, py, (uint8)((uint32)(((alpha_l - (alphaStep_tl * y)) << 8) * a1) >> 16));
+			// outer arc
+			if (sw == 1) {
+				WU_DRAWCIRCLE_BCOLOR_TR_CW(ptr_tr, x, y, px, py, (uint8)((uint32)(((alpha_t - (alphaStep_tr * y)) << 8) * a1) >> 16));
+				WU_DRAWCIRCLE_BCOLOR_BR_CW(ptr_br, x, y, px, py, (uint8)((uint32)(((alpha_r - (alphaStep_br * y)) << 8) * a1) >> 16));
+				WU_DRAWCIRCLE_BCOLOR_BL_CW(ptr_bl, x, y, px, py, (uint8)((uint32)(((alpha_b - (alphaStep_bl * y)) << 8) * a1) >> 16));
+				WU_DRAWCIRCLE_BCOLOR_TL_CW(ptr_tl, x, y, px, py, (uint8)((uint32)(((alpha_l - (alphaStep_tl * y)) << 8) * a1) >> 16));
 
-					WU_DRAWCIRCLE_BCOLOR_TR_CCW(ptr_tr, x, y, px, py, (uint8)((uint32)(((alpha_r + (alphaStep_tr * y)) << 8) * a1) >> 16));
-					WU_DRAWCIRCLE_BCOLOR_BR_CCW(ptr_br, x, y, px, py, (uint8)((uint32)(((alpha_b + (alphaStep_br * y)) << 8) * a1) >> 16));
-					WU_DRAWCIRCLE_BCOLOR_BL_CCW(ptr_bl, x, y, px, py, (uint8)((uint32)(((alpha_l + (alphaStep_bl * y)) << 8) * a1) >> 16));
-					WU_DRAWCIRCLE_BCOLOR_TL_CCW(ptr_tl, x, y, px, py, (uint8)((uint32)(((alpha_t + (alphaStep_tl * y)) << 8) * a1) >> 16));
-				}
+				WU_DRAWCIRCLE_BCOLOR_TR_CCW(ptr_tr, x, y, px, py, (uint8)((uint32)(((alpha_r + (alphaStep_tr * y)) << 8) * a1) >> 16));
+				WU_DRAWCIRCLE_BCOLOR_BR_CCW(ptr_br, x, y, px, py, (uint8)((uint32)(((alpha_b + (alphaStep_br * y)) << 8) * a1) >> 16));
+				WU_DRAWCIRCLE_BCOLOR_BL_CCW(ptr_bl, x, y, px, py, (uint8)((uint32)(((alpha_l + (alphaStep_bl * y)) << 8) * a1) >> 16));
+				WU_DRAWCIRCLE_BCOLOR_TL_CCW(ptr_tl, x, y, px, py, (uint8)((uint32)(((alpha_t + (alphaStep_tl * y)) << 8) * a1) >> 16));
 			}
+		}
 
 		ptr_fill += pitch * r;
 

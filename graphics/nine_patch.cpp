@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /* This code is based on Nine Patch code by Matthew Leverton
@@ -290,8 +289,8 @@ void NinePatchBitmap::blit(Graphics::Surface &target, int dx, int dy, int dw, in
 		_cached_colors.clear();
 
 		if (palette) {
-			for (uint i = 0; i < srf->w; ++i) {
-				for (uint j = 0; j < srf->h; ++j) {
+			for (int i = 0; i < srf->w; ++i) {
+				for (int j = 0; j < srf->h; ++j) {
 					uint32 color = *(uint32*)srf->getBasePtr(i, j);
 					if (color != transColor) {
 						*((byte *)target.getBasePtr(i, j)) = closestGrayscale(color, palette, numColors);
@@ -299,8 +298,8 @@ void NinePatchBitmap::blit(Graphics::Surface &target, int dx, int dy, int dw, in
 				}
 			}
 		} else {
-			for (uint i = 0; i < srf->w; ++i) {
-				for (uint j = 0; j < srf->h; ++j) {
+			for (int i = 0; i < srf->w; ++i) {
+				for (int j = 0; j < srf->h; ++j) {
 					uint32 color = *(uint32*)srf->getBasePtr(i, j);
 					byte a, r, g, b;
 					_bmp->format.colorToARGB(color, a, r, g, b);

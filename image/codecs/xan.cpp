@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -59,16 +58,11 @@ XanDecoder::XanDecoder(int width, int height, int bitsPerPixel) : Codec(),
 	if (width % 2)
 		error("XanDecoder: width must be even, not %d", width);
 	_surface.create(_width, _height, getPixelFormat());
-	_scratchbuf = new uint8[_width * _height + SCRATCH_SPARE];
-	_lumabuf = new uint8[_width * _height];
-	_ybuf = new uint8[_width * _height];
-	_ubuf = new uint8[_width * _height / 2];
-	_vbuf = new uint8[_width * _height / 2];
-	memset(_scratchbuf, 0, _width * _height + SCRATCH_SPARE);
-	memset(_lumabuf, 0, _width * _height);
-	memset(_ybuf, 0, _width * _height);
-	memset(_ubuf, 127, _width * _height / 2);
-	memset(_vbuf, 127, _width * _height / 2);
+	_scratchbuf = new uint8[_width * _height + SCRATCH_SPARE]();
+	_lumabuf = new uint8[_width * _height]();
+	_ybuf = new uint8[_width * _height]();
+	_ubuf = new uint8[_width * _height / 2]();
+	_vbuf = new uint8[_width * _height / 2]();
 }
 
 XanDecoder::~XanDecoder() {

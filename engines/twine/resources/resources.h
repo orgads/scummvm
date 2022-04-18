@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,6 +24,7 @@
 
 #include "common/hashmap.h"
 #include "common/scummsys.h"
+#include "twine/parser/body.h"
 #include "twine/parser/holomap.h"
 #include "twine/parser/sprite.h"
 #include "twine/parser/text.h"
@@ -47,33 +47,17 @@ namespace TwinE {
 #define RESSHQR_HOLOTWINMDL 9
 #define RESSHQR_HOLOARROWMDL 10
 #define RESSHQR_HOLOTWINARROWMDL 11
-#define RESSHQR_RELLENTIMG 12
-#define RESSHQR_RELLENTPAL 13
-#define RESSHQR_MENUIMG 14
-#define RESSHQR_INTROSCREEN1IMG 15
-#define RESSHQR_INTROSCREEN1PAL 16
-#define RESSHQR_INTROSCREEN2IMG 17
-#define RESSHQR_INTROSCREEN2PAL 18
-#define RESSHQR_INTROSCREEN3IMG 19
-#define RESSHQR_INTROSCREEN3PAL 20
+
 #define RESSHQR_GAMEOVERMDL 21
 
 #define RESSHQR_ALARMREDPAL 22
 #define RESSHQR_FLAINFO 23
 #define RESSHQR_DARKPAL 24
-#define RESSHQR_TWINSEN_ZOE_SENDELLIMG 25
-#define RESSHQR_TWINSEN_ZOE_SENDELLPAL 26
-#define RESSHQR_ADELINEIMG 27
-#define RESSHQR_ADELINEPAL 28
 
 #define RESSHQR_HOLOPOINTMDL 29
 #define RESSHQR_HOLOPOINTANIM 30
 
-#define RESSHQR_LBAIMG 49
-#define RESSHQR_LBAPAL 50
 #define RESSHQR_PLASMAEFFECT 51
-#define RESSHQR_EAIMG 52
-#define RESSHQR_EAPAL 53
 
 #define FLA_DRAGON3 "dragon3"
 #define FLA_INTROD "introd"
@@ -147,10 +131,10 @@ private:
 	/** Preload all animations */
 	void preloadAnimations();
 	void preloadSamples();
-	void loadFlaInfo();
+	void loadMovieInfo();
 
 	using MovieInfoMap = Common::HashMap<Common::String, Common::Array<int32> >;
-	MovieInfoMap _flaMovieFrames;
+	MovieInfoMap _movieInfo;
 
 	TrajectoryData _trajectories;
 
@@ -160,44 +144,42 @@ public:
 	Resources(TwinEEngine *engine) : _engine(engine) {}
 	~Resources();
 
-	const Common::Array<int32> &getFlaMovieInfo(const Common::String &name) const;
+	/**
+	 * For lba1 this is returning the gif images that are used as a placeholder for the fla movies
+	 * For lba2 this is the list of videos that are mapped by their entry index
+	 */
+	const Common::Array<int32> &getMovieInfo(const Common::String &name) const;
 
 	/** Table with all loaded samples */
-	BodyData inventoryTable[NUM_INVENTORY_ITEMS];
+	BodyData _inventoryTable[NUM_INVENTORY_ITEMS];
 
 	/** Table with all loaded sprites */
-	uint8 *spriteTable[NUM_SPRITES]{nullptr};
+	uint8 *_spriteTable[NUM_SPRITES]{nullptr};
 	/** Table with all loaded sprite sizes */
-	uint32 spriteSizeTable[NUM_SPRITES]{0};
-	SpriteData spriteData[NUM_SPRITES];
+	uint32 _spriteSizeTable[NUM_SPRITES]{0};
+	SpriteData _spriteData[NUM_SPRITES];
 
-	AnimData animData[NUM_ANIMS];
+	AnimData _animData[NUM_ANIMS];
 
 	/** Actors 3D body table - size of NUM_BODIES */
-	BodyData bodyData[NUM_BODIES];
+	BodyData _bodyData[NUM_BODIES];
 
 	/** Table with all loaded samples */
-	uint8 *samplesTable[NUM_SAMPLES]{nullptr};
+	uint8 *_samplesTable[NUM_SAMPLES]{nullptr};
 	/** Table with all loaded samples sizes */
-	uint32 samplesSizeTable[NUM_SAMPLES]{0};
+	uint32 _samplesSizeTable[NUM_SAMPLES]{0};
 
 	/** Font buffer pointer */
-	int32 fontBufSize = 0;
-	uint8 *fontPtr = nullptr;
+	int32 _fontBufSize = 0;
+	uint8 *_fontPtr = nullptr;
 
-	uint32 spriteShadowSize = 0;
-	uint8 *spriteShadowPtr = nullptr;
-	SpriteBoundingBoxData spriteBoundingBox;
+	SpriteData _spriteShadowPtr;
+	SpriteBoundingBoxData _spriteBoundingBox;
 
-	uint32 holomapSurfaceSize = 0;
-	uint8 *holomapSurfacePtr = nullptr;
-	uint32 holomapImageSize = 0;
-	uint8 *holomapImagePtr = nullptr;
-
-	BodyData holomapPointModelPtr;
-	BodyData holomapTwinsenModelPtr;
-	BodyData holomapTwinsenArrowPtr;
-	BodyData holomapArrowPtr;
+	BodyData _holomapPointModelPtr;
+	BodyData _holomapTwinsenModelPtr;
+	BodyData _holomapTwinsenArrowPtr;
+	BodyData _holomapArrowPtr;
 
 	/** Initialize resource pointers */
 	void initResources();
@@ -205,6 +187,8 @@ public:
 	const Trajectory *getTrajectory(int index) const;
 
 	const TextEntry *getText(TextBankId textBankId, TextId index) const;
+
+	int findSmkMovieIndex(const char *name) const;
 
 	// main palette
 	static constexpr const char *HQR_RESS_FILE = "ress.hqr";
@@ -229,6 +213,8 @@ public:
 	static constexpr const char *HQR_LBA_BRK_FILE = "lba_brk.hqr";
 	// scenes (active area content (actors, scripts, etc.))
 	static constexpr const char *HQR_SCENE_FILE = "scene.hqr";
+	// full screen images (lba2)
+	static constexpr const char *HQR_SCREEN_FILE = "screen.hqr";
 	// sprites
 	static constexpr const char *HQR_SPRITES_FILE = "sprites.hqr";
 	/**
@@ -250,6 +236,51 @@ public:
 	static constexpr const char *HQR_FLASAMP_FILE = "flasamp.hqr";
 	static constexpr const char *HQR_MIDI_MI_DOS_FILE = "midi_mi.hqr";
 	static constexpr const char *HQR_MIDI_MI_WIN_FILE = "midi_mi_win.hqr";
+
+	static constexpr const char *HQR_VIDEO_FILE = "video.hqr"; // lba2 - smk files
+
+	TwineImage adelineLogo() const {
+		if (_engine->isLBA1()) {
+			return TwineImage(Resources::HQR_RESS_FILE, 27, 28);
+		}
+		return TwineImage(Resources::HQR_SCREEN_FILE, 0, 1);
+	}
+
+	TwineImage lbaLogo() const {
+		if (_engine->isLBA1()) {
+			return TwineImage(Resources::HQR_RESS_FILE, 49, 50);
+		}
+		return TwineImage(Resources::HQR_SCREEN_FILE, 60, 61);
+	}
+
+	TwineImage eaLogo() const {
+		if (_engine->isLBA1()) {
+			return TwineImage(Resources::HQR_RESS_FILE, 52, 53);
+		}
+		return TwineImage(Resources::HQR_SCREEN_FILE, 74, 75);
+	}
+
+	TwineImage activisionLogo() const {
+		assert(_engine->isLBA2());
+		return TwineImage(Resources::HQR_SCREEN_FILE, 72, 73);
+	}
+
+	TwineImage virginLogo() const {
+		assert(_engine->isLBA2());
+		return TwineImage(Resources::HQR_SCREEN_FILE, 76, 77);
+	}
+
+	TwineImage relentLogo() const {
+		assert(_engine->isLBA1());
+		return TwineImage(Resources::HQR_RESS_FILE, 12, 13);
+	}
+
+	TwineImage menuBackground() const {
+		if (_engine->isLBA1()) {
+			return TwineImage(Resources::HQR_RESS_FILE, 14, -1);
+		}
+		return TwineImage(Resources::HQR_SCREEN_FILE, 4, 5);
+	}
 };
 
 } // namespace TwinE

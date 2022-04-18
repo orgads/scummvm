@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -55,6 +54,11 @@ ScummVMRendererGraphicsDriver::ScummVMRendererGraphicsDriver() {
 
 	// Initialize default sprite batch, it will be used when no other batch was activated
 	ScummVMRendererGraphicsDriver::InitSpriteBatch(0, _spriteBatchDesc[0]);
+}
+
+ScummVMRendererGraphicsDriver::~ScummVMRendererGraphicsDriver() {
+	delete _screen;
+	ScummVMRendererGraphicsDriver::UnInit();
 }
 
 bool ScummVMRendererGraphicsDriver::IsModeSupported(const DisplayMode &mode) {
@@ -110,7 +114,7 @@ bool ScummVMRendererGraphicsDriver::SetDisplayMode(const DisplayMode &mode) {
 	if (!IsModeSupported(mode))
 		return false;
 
-	const int driver = mode.Windowed ? GFX_SCUMMVM : GFX_SCUMMVM_FULLSCREEN;
+	const int driver = GFX_SCUMMVM;
 	if (set_gfx_mode(driver, mode.Width, mode.Height, mode.ColorDepth) != 0)
 		return false;
 
@@ -134,34 +138,11 @@ void ScummVMRendererGraphicsDriver::CreateVirtualScreen() {
 	// Initialize virtual screen; size is equal to native resolution
 	const int vscreen_w = _srcRect.GetWidth();
 	const int vscreen_h = _srcRect.GetHeight();
-	_origVirtualScreen.reset(new Bitmap(vscreen_w, vscreen_h));
+	_origVirtualScreen.reset(new Bitmap(vscreen_w, vscreen_h, _srcColorDepth));
 	virtualScreen = _origVirtualScreen.get();
 	_stageVirtualScreen = virtualScreen;
 
-#ifdef TODO
-	_screenTex = SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, vscreen_w, vscreen_h);
 
-	// Fake bitmap that will wrap over texture pixels for simplier conversion
-	_fakeTexBitmap = reinterpret_cast<BITMAP *>(new char[sizeof(BITMAP) + (sizeof(char *) * vscreen_h)]);
-	_fakeTexBitmap->w = vscreen_w;
-	_fakeTexBitmap->cr = vscreen_w;
-	_fakeTexBitmap->h = vscreen_h;
-	_fakeTexBitmap->cb = vscreen_h;
-	_fakeTexBitmap->clip = true;
-	_fakeTexBitmap->cl = 0;
-	_fakeTexBitmap->ct = 0;
-	_fakeTexBitmap->id = 0;
-	_fakeTexBitmap->extra = nullptr;
-	_fakeTexBitmap->x_ofs = 0;
-	_fakeTexBitmap->y_ofs = 0;
-	_fakeTexBitmap->dat = nullptr;
-
-	auto tmpbitmap = create_bitmap_ex(32, 1, 1);
-	_fakeTexBitmap->vtable = tmpbitmap->vtable;
-	_fakeTexBitmap->write_bank = tmpbitmap->write_bank;
-	_fakeTexBitmap->read_bank = tmpbitmap->read_bank;
-	destroy_bitmap(tmpbitmap);
-#endif
 	_lastTexPixels = nullptr;
 	_lastTexPitch = -1;
 }
@@ -169,13 +150,7 @@ void ScummVMRendererGraphicsDriver::CreateVirtualScreen() {
 void ScummVMRendererGraphicsDriver::DestroyVirtualScreen() {
 	delete[] _fakeTexBitmap; // don't use destroy_bitmap(), because it's a fake structure
 	_fakeTexBitmap = nullptr;
-#ifdef TODO
-	if (_screenTex != nullptr) {
-		SDL_DestroyTexture(_screenTex);
-	}
 
-	_screenTex = nullptr;
-#endif
 	_origVirtualScreen.reset();
 	virtualScreen = nullptr;
 	_stageVirtualScreen = nullptr;
@@ -186,8 +161,8 @@ void ScummVMRendererGraphicsDriver::ReleaseDisplayMode() {
 	ClearDrawLists();
 }
 
-bool ScummVMRendererGraphicsDriver::SetNativeSize(const Size &src_size) {
-	OnSetNativeSize(src_size);
+bool ScummVMRendererGraphicsDriver::SetNativeResolution(const GraphicResolution &native_res) {
+	OnSetNativeRes(native_res);
 	CreateVirtualScreen();
 	return !_srcRect.IsEmpty();
 }
@@ -202,20 +177,10 @@ void ScummVMRendererGraphicsDriver::ClearRectangle(int x1, int y1, int x2, int y
 	// See SDL_RenderDrawRect
 }
 
-ScummVMRendererGraphicsDriver::~ScummVMRendererGraphicsDriver() {
-	ScummVMRendererGraphicsDriver::UnInit();
-}
-
 void ScummVMRendererGraphicsDriver::UnInit() {
 	OnUnInit();
 	ReleaseDisplayMode();
 	DestroyVirtualScreen();
-#ifdef TODO
-	if (_renderer) {
-		SDL_DestroyRenderer(_renderer);
-		_renderer = nullptr;
-	}
-#endif
 
 	sys_window_destroy();
 }
@@ -247,29 +212,22 @@ int ScummVMRendererGraphicsDriver::GetCompatibleBitmapFormat(int color_depth) {
 	return color_depth;
 }
 
+IDriverDependantBitmap *ScummVMRendererGraphicsDriver::CreateDDB(int width, int height, int color_depth, bool opaque) {
+	return new ALSoftwareBitmap(width, height, color_depth, opaque);
+}
+
 IDriverDependantBitmap *ScummVMRendererGraphicsDriver::CreateDDBFromBitmap(Bitmap *bitmap, bool hasAlpha, bool opaque) {
-	ALSoftwareBitmap *newBitmap = new ALSoftwareBitmap(bitmap, opaque, hasAlpha);
-	UpdateDDBFromBitmap(newBitmap, bitmap, hasAlpha);
-	return newBitmap;
+	return new ALSoftwareBitmap(bitmap, opaque, hasAlpha);
 }
 
 void ScummVMRendererGraphicsDriver::UpdateDDBFromBitmap(IDriverDependantBitmap *bitmapToUpdate, Bitmap *bitmap, bool hasAlpha) {
-	ALSoftwareBitmap *target = (ALSoftwareBitmap *)bitmapToUpdate;
-	if (target->GetWidth() != bitmap->GetWidth() || target->GetHeight() != bitmap->GetHeight())
-		error("UpdateDDBFromBitmap: mismatched bitmap size");
-	const int color_depth = bitmap->GetColorDepth();
-	if (color_depth != target->GetColorDepth())
-		error("UpdateDDBFromBitmap: mismatched colour depths");
-
-	if (color_depth == 8) {
-		select_palette(_G(palette));
-
-		unselect_palette();
-	}
+	ALSoftwareBitmap *alSwBmp = (ALSoftwareBitmap *)bitmapToUpdate;
+	alSwBmp->_bmp = bitmap;
+	alSwBmp->_hasAlpha = hasAlpha;
 }
 
 void ScummVMRendererGraphicsDriver::DestroyDDB(IDriverDependantBitmap *bitmap) {
-	delete bitmap;
+	delete (ALSoftwareBitmap *)bitmap;
 }
 
 void ScummVMRendererGraphicsDriver::InitSpriteBatch(size_t index, const SpriteBatchDesc &desc) {
@@ -306,7 +264,7 @@ void ScummVMRendererGraphicsDriver::InitSpriteBatch(size_t index, const SpriteBa
 	}
 	// No surface prepared and has transformation other than offset
 	else if (!batch.Surface || batch.IsVirtualScreen || batch.Surface->GetWidth() != src_w || batch.Surface->GetHeight() != src_h) {
-		batch.Surface.reset(new Bitmap(src_w, src_h));
+		batch.Surface.reset(new Bitmap(src_w, src_h, _srcColorDepth));
 		batch.Opaque = false;
 		batch.IsVirtualScreen = false;
 	}
@@ -330,7 +288,7 @@ void ScummVMRendererGraphicsDriver::SetScreenTint(int red, int green, int blue) 
 	_tint_red = red;
 	_tint_green = green;
 	_tint_blue = blue;
-	if (((_tint_red > 0) || (_tint_green > 0) || (_tint_blue > 0)) && (_mode.ColorDepth > 8)) {
+	if (((_tint_red > 0) || (_tint_green > 0) || (_tint_blue > 0)) && (_srcColorDepth > 8)) {
 		_spriteBatches[_actSpriteBatch].List.push_back(ALDrawListEntry((ALSoftwareBitmap *)0x1, 0, 0));
 	}
 }
@@ -417,36 +375,103 @@ void ScummVMRendererGraphicsDriver::RenderSpriteBatch(const ALSpriteBatch &batch
 	}
 }
 
-void ScummVMRendererGraphicsDriver::BlitToTexture() {
+void ScummVMRendererGraphicsDriver::copySurface(const Graphics::Surface &src, bool mode) {
+	assert(src.w == _screen->w && src.h == _screen->h && src.pitch == _screen->pitch);
+	const uint32 *srcP = (const uint32 *)src.getPixels();
+	uint32 *destP = (uint32 *)_screen->getPixels();
+	uint32 pixel;
+	int x1 = 9999, y1 = 9999, x2 = -1, y2 = -1;
+
+	for (int y = 0; y < src.h; ++y) {
+		for (int x = 0; x < src.w; ++x, ++srcP, ++destP) {
+			if (!mode) {
+				pixel = (*srcP & 0xff00ff00) |
+					((*srcP & 0xff) << 16) |
+					((*srcP >> 16) & 0xff);
+			} else {
+				pixel = ((*srcP & 0xffffff) << 8) |
+					((*srcP >> 24) & 0xff);
+			}
+
+			if (*destP != pixel) {
+				*destP = pixel;
+				x1 = MIN(x1, x);
+				y1 = MIN(y1, y);
+				x2 = MAX(x2, x);
+				y2 = MAX(y2, y);
+			}
+		}
+	}
+
+	if (x2 != -1)
+		_screen->addDirtyRect(Common::Rect(x1, y1, x2 + 1, y2 + 1));
+}
+
+void ScummVMRendererGraphicsDriver::BlitToScreen() {
 	const Graphics::Surface &src =
 		virtualScreen->GetAllegroBitmap()->getSurface();
 
-	// Blit the entire surface to the screen, ignoring the alphas
-	Graphics::Surface srcCopy = src;
-	srcCopy.format.aLoss = 8;
+	enum {
+		kRenderInitial, kRenderDirect, kRenderToABGR, kRenderToRGBA,
+		kRenderOther
+	} renderMode;
 
-	::AGS::g_vm->_screen->getSurface().blitFrom(srcCopy);
-}
+	// Check for rendering to use. The virtual screen can change, so I'm
+	// playing it safe and checking the render mode for each frame
+	const Graphics::PixelFormat screenFormat = g_system->getScreenFormat();
 
-void ScummVMRendererGraphicsDriver::Present() {
-	BlitToTexture();
+	if (src.format == screenFormat) {
+		// The virtual surface can be directly blitted to the screen
+		renderMode = kRenderDirect;
+	} else if (src.format != Graphics::PixelFormat(4, 8, 8, 8, 8, 16, 8, 0, 24)) {
+		// Not a 32-bit surface, so will have to use an intermediate
+		// surface to correct the virtual screen to the correct format
+		renderMode = kRenderOther;
+	} else if (screenFormat == Graphics::PixelFormat(4, 8, 8, 8, 8, 24, 16, 8, 0)) {
+		renderMode = kRenderToRGBA;
+	} else if (screenFormat == Graphics::PixelFormat(4, 8, 8, 8, 8, 0, 8, 16, 24)) {
+		renderMode = kRenderToABGR;
+	} else {
+		renderMode = kRenderOther;
+	}
 
-	::AGS::g_vm->_rawScreen->update();
+	if (renderMode != kRenderDirect && !_screen)
+		_screen = new Graphics::Screen();
 
-#if DEPRECATED
-	SDL_SetRenderDrawBlendMode(_renderer, SDL_BLENDMODE_NONE);
-	SDL_SetRenderDrawColor(_renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-	SDL_RenderFillRect(_renderer, nullptr);
+	switch (renderMode) {
+	case kRenderToABGR:
+		// ARGB to ABGR
+		copySurface(src, false);
+		break;
 
-	SDL_Rect dst;
-	dst.x = _dstRect.Left;
-	dst.y = _dstRect.Top;
-	dst.w = _dstRect.GetWidth();
-	dst.h = _dstRect.GetHeight();
-	SDL_RenderCopyEx(_renderer, _screenTex, nullptr, &dst, 0.0, nullptr, _renderFlip);
+	case kRenderToRGBA:
+		// ARGB to RGBA
+		copySurface(src, true);
+		break;
 
-	SDL_RenderPresent(_renderer);
-#endif
+	case kRenderOther: {
+		// Blit the surface to the temporary screen, ignoring the alphas.
+		// This takes care of converting to the screen format
+		Graphics::Surface srcCopy = src;
+		srcCopy.format.aLoss = 8;
+
+		_screen->blitFrom(srcCopy);
+		break;
+	}
+
+	case kRenderDirect:
+		// Blit the virtual surface directly to the screen
+		g_system->copyRectToScreen(src.getPixels(), src.pitch,
+			0, 0, src.w, src.h);
+		g_system->updateScreen();
+		return;
+
+	default:
+		break;
+	}
+
+	if (_screen)
+		_screen->update();
 }
 
 void ScummVMRendererGraphicsDriver::Render(int /*xoff*/, int /*yoff*/, GlobalFlipType flip) {
@@ -502,9 +527,9 @@ Bitmap *ScummVMRendererGraphicsDriver::GetStageBackBuffer(bool /*mark_dirty*/) {
 bool ScummVMRendererGraphicsDriver::GetCopyOfScreenIntoBitmap(Bitmap *destination, bool at_native_res, GraphicResolution *want_fmt) {
 	(void)at_native_res; // software driver always renders at native resolution at the moment
 	// software filter is taught to copy to any size
-	if (destination->GetColorDepth() != _mode.ColorDepth) {
+	if (destination->GetColorDepth() != _srcColorDepth) {
 		if (want_fmt)
-			*want_fmt = GraphicResolution(destination->GetWidth(), destination->GetHeight(), _mode.ColorDepth);
+			*want_fmt = GraphicResolution(destination->GetWidth(), destination->GetHeight(), _srcColorDepth);
 		return false;
 	}
 
@@ -618,6 +643,7 @@ void ScummVMRendererGraphicsDriver::__fade_from_range(PALETTE source, PALETTE de
 		RenderToBackBuffer();
 		Present();
 
+		g_system->delayMillis(5);
 		sys_evt_process_pending();
 		if (_pollingCallback)
 			_pollingCallback();
@@ -635,7 +661,7 @@ void ScummVMRendererGraphicsDriver::__fade_out_range(int speed, int from, int to
 }
 
 void ScummVMRendererGraphicsDriver::FadeOut(int speed, int targetColourRed, int targetColourGreen, int targetColourBlue) {
-	if (_mode.ColorDepth > 8) {
+	if (_srcColorDepth > 8) {
 		highcolor_fade_out(virtualScreen, _drawPostScreenCallback, 0, 0, speed * 4, targetColourRed, targetColourGreen, targetColourBlue);
 	} else {
 		__fade_out_range(speed, 0, 255, targetColourRed, targetColourGreen, targetColourBlue);
@@ -647,7 +673,7 @@ void ScummVMRendererGraphicsDriver::FadeIn(int speed, PALETTE p, int targetColou
 		_drawScreenCallback();
 		RenderToBackBuffer();
 	}
-	if (_mode.ColorDepth > 8) {
+	if (_srcColorDepth > 8) {
 		highcolor_fade_in(virtualScreen, _drawPostScreenCallback, 0, 0, speed * 4, targetColourRed, targetColourGreen, targetColourBlue);
 	} else {
 		initialize_fade_256(targetColourRed, targetColourGreen, targetColourBlue);

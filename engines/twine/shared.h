@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -26,6 +25,12 @@
 #include "common/scummsys.h"
 
 #define NUM_GAME_FLAGS 255
+
+/** Number of colors used in the game */
+#define NUMOFCOLORS 256
+
+#define NUM_LOCATIONS 150
+
 #define NUM_INVENTORY_ITEMS 28
 /**
  * This gameflag indicates that the inventory items are taken from Twinson because he went to jail
@@ -64,13 +69,16 @@
 // Hit, reject
 #define GAMEFLAG_VIDEO_BAFFE5 215
 // Twinsun explosion (on top of the well)
-#define GAMEFLAG_VIDEO_EXPLOD 216
+#define GAMEFLAG_VIDEO_EXPLODE 216
 // Clear water lake
 #define GAMEFLAG_VIDEO_GLASS2 217
 // Twinsen in Well of Sendell
 #define GAMEFLAG_VIDEO_SENDEL 218
 // Twinsun explosion
-#define GAMEFLAG_VIDEO_EXPLOD2 219
+#define GAMEFLAG_VIDEO_EXPLODE2 219
+
+#define OWN_ACTOR_SCENE_INDEX 0
+#define IS_HERO(x) ((x) == OWN_ACTOR_SCENE_INDEX)
 
 namespace TwinE {
 
@@ -81,7 +89,7 @@ struct I16Vec3 {
 	int16 z = 0;
 };
 #include "common/pack-end.h"
-static_assert(sizeof(I16Vec3) == 6, "Unexpected pointTab size");
+STATIC_ASSERT(sizeof(I16Vec3) == 6, "Unexpected pointTab size");
 
 struct IVec3 {
 	constexpr IVec3() : x(0), y(0), z(0) {}
@@ -120,6 +128,32 @@ inline constexpr IVec3 operator-(const IVec3 &lhs, const IVec3 &rhs) {
 	return IVec3{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
 }
 
+inline constexpr IVec3 operator-(const IVec3 &v) {
+	return IVec3{-v.x, -v.y, -v.z};
+}
+
+/**
+ * Get distance value in 2D
+ * @param x1 Actor 1 X coordinate
+ * @param z1 Actor 1 Z coordinate
+ * @param x2 Actor 2 X coordinate
+ * @param z2 Actor 2 Z coordinate
+ */
+int32 getDistance2D(int32 x1, int32 z1, int32 x2, int32 z2);
+int32 getDistance2D(const IVec3 &v1, const IVec3 &v2);
+
+/**
+ * Get distance value in 3D
+ * @param x1 Actor 1 X coordinate
+ * @param y1 Actor 1 Y coordinate
+ * @param z1 Actor 1 Z coordinate
+ * @param x2 Actor 2 X coordinate
+ * @param y2 Actor 2 Y coordinate
+ * @param z2 Actor 2 Z coordinate
+ */
+int32 getDistance3D(int32 x1, int32 y1, int32 z1, int32 x2, int32 y2, int32 z2);
+int32 getDistance3D(const IVec3 &v1, const IVec3 &v2);
+
 /**
  * @brief Axis aligned bounding box
  */
@@ -133,7 +167,7 @@ struct ActorBoundingBox {
 	bool hasBoundingBox = false;
 };
 
-enum ActionType {
+enum class ActionType : uint8 {
 	ACTION_NOP = 0,
 	ACTION_BODY = 1,
 	ACTION_BODP = 2,
@@ -155,7 +189,7 @@ enum ActionType {
 	ACTION_THROW_3D = 18,
 	ACTION_THROW_3D_ALPHA = 19,
 	ACTION_THROW_3D_SEARCH = 20,
-	ACTION_UNKNOWN_21 = 21,
+	ACTION_THROW_3D_MAGIC = 21,
 	ACTION_LAST
 };
 
@@ -225,6 +259,19 @@ enum class AnimationTypes {
 	kAnimInvalid = 255
 };
 
+enum class AnimType {
+	kAnimationTypeLoop = 0,
+	kAnimationThen = 1,
+	// play animation and let animExtra follow as next animation
+	// if there is already a next animation set - replace the value
+	kAnimationAllThen = 2,
+	// replace animation and let the current animation follow
+	kAnimationInsert = 3,
+	// play animation and let animExtra follow as next animation
+	// but don't take the current state in account
+	kAnimationSet = 4
+};
+
 /** Hero behaviour
  * <li> NORMAL: Talk / Read / Search / Use
  * <li> ATHLETIC: Jump
@@ -279,6 +326,9 @@ enum class ZoneType {
 	kText = 5,     // Displays text message
 	kLadder = 6    // Hero can climb on it
 };
+
+#define SCENE_CEILING_GRID_FADE_1 (-1)
+#define SCENE_CEILING_GRID_FADE_2 (-2)
 
 enum LBA1SceneId {
 	Citadel_Island_Prison = 0,
@@ -473,6 +523,7 @@ enum class TextId : int16 {
 	kIntroText3 = 152,
 	kBookOfBu = 161,
 	kBonusList = 162,
+	kStarWarsFanBoy = 226,
 	kDetailsPolygonsLow = 231,
 	kShadowsDisabled = 232,
 	kNoSceneryZoom = 233,
@@ -481,7 +532,16 @@ enum class TextId : int16 {
 	kCustomHighResOptionOn = -2,
 	kCustomHighResOptionOff = -3,
 	kCustomWallCollisionOn = -4,
-	kCustomWallCollisionOff = -5
+	kCustomWallCollisionOff = -5,
+
+	// ------ lba2
+
+	toContinueGame = 70,
+	toNewGame = 71,
+	toLoadGame = 72,
+	toSauver = 73,
+	toOptions = 74,
+	toQuit = 75
 };
 
 enum InventoryItems {
@@ -499,7 +559,7 @@ enum InventoryItems {
 	kMrMiesPass = 11,
 	kiProtoPack = 12,
 	kSnowboard = 13,
-	kiPinguin = 14,
+	kiPenguin = 14,
 	kGasItem = 15,
 	kPirateFlag = 16,
 	kMagicFlute = 17,
@@ -514,6 +574,22 @@ enum InventoryItems {
 	kiBonusList = 26,
 	kiCloverLeaf = 27,
 	MaxInventoryItems = 28
+};
+
+struct TwineResource {
+	const char *hqr;
+	const int32 index;
+
+	constexpr TwineResource(const char *_hqr, int32 _index) : hqr(_hqr), index(_index) {
+	}
+};
+
+struct TwineImage {
+	TwineResource image;
+	TwineResource palette;
+
+	constexpr TwineImage(const char *hqr, int32 index, int32 paletteIndex = -1) : image(hqr, index), palette(hqr, paletteIndex) {
+	}
 };
 
 // lba2 does from 0 to 0x1000
@@ -577,6 +653,36 @@ template<typename T>
 inline constexpr T bits(T value, uint8 offset, uint8 bits) {
 	return (((1 << bits) - 1) & (value >> offset));
 }
+
+#define COLOR_BLACK 0
+#define COLOR_BRIGHT_BLUE 4
+#define COLOR_9 9
+#define COLOR_14 14
+// color 1 = yellow
+// color 2 - 15 = white
+// color 16 - 19 = brown
+// color 20 - 24 = orange to yellow
+// color 25 orange
+// color 26 - 30 = bright gray or white
+#define COlOR_31 31 // green dark
+#define COlOR_47 47 // green bright
+#define COLOR_48 48 // brown dark
+#define COLOR_63 63 // brown bright
+#define COLOR_64 64 // blue dark
+#define COLOR_68 68 // blue
+#define COLOR_73 73 // blue
+#define COLOR_75 75
+#define COLOR_79 79 // blue bright
+#define COLOR_80 80
+#define COLOR_91 91
+#define COLOR_BRIGHT_BLUE2 69
+#define COLOR_WHITE 15
+#define COLOR_GOLD 155
+#define COLOR_158 158
+
+enum kDebugLevels {
+	kDebugScripts =   1 << 0
+};
 
 }
 

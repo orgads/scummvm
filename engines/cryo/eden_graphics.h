@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,6 +32,7 @@ class HnmPlayer;
 class EdenGraphics {
 public:
 	EdenGraphics(EdenGame *game);
+	~EdenGraphics();
 
 	// Original name: noclipax
 	void drawSprite(int16 index, int16 x, int16 y, bool withBlack = false, bool onSubtitle = false);
@@ -201,6 +201,8 @@ private:
 
 	bool _needToFade;
 
+	int _eff2pat;
+
 	color3_t _newColor;
 	color_t  _oldPalette[256];    // TODO palette_t ?
 	color_t  _newPalette[256];
@@ -225,7 +227,7 @@ private:
 	// Original name: effet4
 	void displayEffect4();
 
-	void colimacon(int16 pattern[]);
+	void colimacon(const int16 pattern[]);
 
 	// Original name: rectanglenoir32
 	void blackRect32();

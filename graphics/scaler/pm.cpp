@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "graphics/scaler/pm.h"
@@ -186,13 +185,7 @@ void scaleIntern(const uint8 *srcPtr, uint32 srcPitch, uint8 *dstPtr, uint32 dst
 
 }
 
-
-PMPlugin::PMPlugin() {
-	_factor = 2;
-	_factors.push_back(2);
-}
-
-void PMPlugin::scaleIntern(const uint8 *srcPtr, uint32 srcPitch,
+void PMScaler::scaleIntern(const uint8 *srcPtr, uint32 srcPitch,
 							uint8 *dstPtr, uint32 dstPitch, int width, int height, int x, int y) {
 	if (_format.bytesPerPixel == 2) {
 		if (_format.gLoss == 2)
@@ -207,12 +200,34 @@ void PMPlugin::scaleIntern(const uint8 *srcPtr, uint32 srcPitch,
 	}
 }
 
-uint PMPlugin::increaseFactor() {
+uint PMScaler::increaseFactor() {
 	return _factor;
 }
 
-uint PMPlugin::decreaseFactor() {
+uint PMScaler::decreaseFactor() {
 	return _factor;
+}
+
+
+class PMPlugin final : public ScalerPluginObject {
+public:
+	PMPlugin();
+
+	Scaler *createInstance(const Graphics::PixelFormat &format) const override;
+
+	bool canDrawCursor() const override { return false; }
+	uint extraPixels() const override { return 1; }
+	const char *getName() const override;
+	const char *getPrettyName() const override;
+};
+
+
+PMPlugin::PMPlugin() {
+	_factors.push_back(2);
+}
+
+Scaler *PMPlugin::createInstance(const Graphics::PixelFormat &format) const {
+	return new PMScaler(format);
 }
 
 const char *PMPlugin::getName() const {

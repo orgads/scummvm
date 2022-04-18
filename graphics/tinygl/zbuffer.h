@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,23 +15,24 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 /*
- * This file is based on, or a modified version of code from TinyGL (C) 1997-1998 Fabrice Bellard,
- * which is licensed under the zlib-license (see LICENSE).
+ * This file is based on, or a modified version of code from TinyGL (C) 1997-2022 Fabrice Bellard,
+ * which is licensed under the MIT license (see LICENSE).
  * It also has modifications by the ResidualVM-team, which are covered under the GPLv2 (or later).
  */
 
 #ifndef GRAPHICS_TINYGL_ZBUFFER_H_
 #define GRAPHICS_TINYGL_ZBUFFER_H_
 
-#include "graphics/pixelbuffer.h"
+#include "graphics/surface.h"
+#include "graphics/tinygl/pixelbuffer.h"
 #include "graphics/tinygl/texelbuffer.h"
 #include "graphics/tinygl/gl.h"
+
 #include "common/rect.h"
 
 namespace TinyGL {
@@ -44,7 +45,7 @@ namespace TinyGL {
 
 #define ZB_POINT_ST_FRAC_BITS 14
 #define ZB_POINT_ST_FRAC_SHIFT     (ZB_POINT_ST_FRAC_BITS - 1)
-#define ZB_POINT_ST_MAX            ( (c->_textureSize << ZB_POINT_ST_FRAC_BITS) - 1 )
+#define ZB_POINT_ST_MAX            ( (_textureSize << ZB_POINT_ST_FRAC_BITS) - 1 )
 
 #define ZB_POINT_RED_BITS         16
 #define ZB_POINT_RED_FRAC_BITS    8
@@ -66,17 +67,15 @@ namespace TinyGL {
 #define ZB_POINT_ALPHA_FRAC_SHIFT (ZB_POINT_ALPHA_FRAC_BITS - 1)
 #define ZB_POINT_ALPHA_MAX        ( (1 << ZB_POINT_ALPHA_BITS) - 1 )
 
-#define RGB_TO_PIXEL(r, g, b) cmode.ARGBToColor(255, r, g, b) // Default to 255 alpha aka solid colour.
+#define RGB_TO_PIXEL(r, g, b)     _pbufFormat.ARGBToColor(255, r, g, b) // Default to 255 alpha aka solid colour.
 
 static const int DRAW_DEPTH_ONLY = 0;
 static const int DRAW_FLAT = 1;
 static const int DRAW_SMOOTH = 2;
-static const int DRAW_SHADOW_MASK = 3;
-static const int DRAW_SHADOW = 4;
 
 struct Buffer {
 	byte *pbuf;
-	unsigned int *zbuf;
+	uint *zbuf;
 	bool used;
 };
 
@@ -88,41 +87,56 @@ struct ZBufferPoint {
 	float sz, tz;  // temporary coordinates for mapping
 
 	bool operator==(const ZBufferPoint &other) const {
-		return	x == other.x &&
-				y == other.y &&
-				z == other.z &&
-				s == other.s &&
-				t == other.t &&
-				r == other.r &&
-				g == other.g &&
-				b == other.b &&
-				a == other.a;
+		return
+			x == other.x &&
+			y == other.y &&
+			z == other.z &&
+			s == other.s &&
+			t == other.t &&
+			r == other.r &&
+			g == other.g &&
+			b == other.b &&
+			a == other.a;
 	}
 };
 
 struct FrameBuffer {
-	FrameBuffer(int xsize, int ysize, const Graphics::PixelBuffer &frame_buffer);
-	FrameBuffer(int xsize, int ysize, const Graphics::PixelFormat &format);
+	FrameBuffer(int width, int height, const Graphics::PixelFormat &format, bool enableStencilBuffer);
 	~FrameBuffer();
 
-	Buffer *genOffscreenBuffer();
-	void delOffscreenBuffer(Buffer *buffer);
-	void clear(int clear_z, int z, int clear_color, int r, int g, int b);
-	void clearRegion(int x, int y, int w, int h,int clear_z, int z, int clear_color, int r, int g, int b);
-
-	byte *getPixelBuffer() {
-		return pbuf.getRawBuffer(0);
+	Graphics::PixelFormat getPixelFormat() {
+		return _pbufFormat;
 	}
 
-	unsigned int *getZBuffer() {
+	byte *getPixelBuffer() {
+		return _pbuf.getRawBuffer();
+	}
+
+	int getPixelBufferWidth() {
+		return _pbufWidth;
+	}
+
+	int getPixelBufferHeight() {
+		return _pbufHeight;
+	}
+
+	const uint *getZBuffer() {
 		return _zbuf;
 	}
 
-	FORCEINLINE void readPixelRGB(int pixel, byte &r, byte &g, byte &b) {
-		pbuf.getRGBAt(pixel, r, g, b);
+	Graphics::Surface *copyToBuffer(const Graphics::PixelFormat &dstFormat) {
+		Graphics::Surface tmp;
+		tmp.init(_pbufWidth, _pbufHeight, _pbufPitch, _pbuf.getRawBuffer(), _pbufFormat);
+		return tmp.convertTo(dstFormat);
 	}
 
-	FORCEINLINE bool compareDepth(unsigned int &zSrc, unsigned int &zDst) {
+	void getSurfaceRef(Graphics::Surface &surface) {
+		surface.init(_pbufWidth, _pbufHeight, _pbufPitch, _pbuf.getRawBuffer(), _pbufFormat);
+	}
+
+private:
+
+	FORCEINLINE bool compareDepth(uint &zSrc, uint &zDst) {
 		if (!_depthTestEnabled)
 			return true;
 
@@ -196,21 +210,87 @@ struct FrameBuffer {
 		return false;
 	}
 
+	FORCEINLINE bool stencilTest(byte sSrc) {
+		switch (_stencilTestFunc) {
+		case TGL_NEVER:
+			break;
+		case TGL_LESS:
+			if ((_stencilRefVal & _stencilMask) < (sSrc & _stencilMask))
+				return true;
+			break;
+		case TGL_LEQUAL:
+			if ((_stencilRefVal & _stencilMask) <= (sSrc & _stencilMask))
+				return true;
+			break;
+		case TGL_GREATER:
+			if ((_stencilRefVal & _stencilMask) > (sSrc & _stencilMask))
+				return true;
+			break;
+		case TGL_GEQUAL:
+			if ((_stencilRefVal & _stencilMask) >= (sSrc & _stencilMask))
+				return true;
+			break;
+		case TGL_EQUAL:
+			if ((_stencilRefVal & _stencilMask) == (sSrc & _stencilMask))
+				return true;
+			break;
+		case TGL_NOTEQUAL:
+			if ((_stencilRefVal & _stencilMask) != (sSrc & _stencilMask))
+				return true;
+			break;
+		case TGL_ALWAYS:
+			return true;
+		}
+		return false;
+	}
+
+	FORCEINLINE void stencilOp(bool stencilTestResult, bool depthTestResult, byte *sDst) {
+		int op = !stencilTestResult ? _stencilSfail : !depthTestResult ? _stencilDpfail : _stencilDppass;
+		byte value = *sDst;
+		switch (op) {
+		case TGL_KEEP:
+			return;
+		case TGL_ZERO:
+			value = 0;
+			break;
+		case TGL_REPLACE:
+			value = _stencilRefVal;
+			break;
+		case TGL_INCR:
+			if (value < 255)
+				value++;
+			break;
+		case TGL_INCR_WRAP:
+			value++;
+			break;
+		case TGL_DECR:
+			if (value > 0)
+				value--;
+			break;
+		case TGL_DECR_WRAP:
+			value--;
+			break;
+		case TGL_INVERT:
+			value = ~value;
+		}
+		*sDst = value & _stencilWriteMask;
+	}
+
 	template <bool kEnableAlphaTest, bool kBlendingEnabled>
 	FORCEINLINE void writePixel(int pixel, int value) {
 		writePixel<kEnableAlphaTest, kBlendingEnabled, false>(pixel, value, 0);
 	}
 
 	template <bool kEnableAlphaTest, bool kBlendingEnabled, bool kDepthWrite>
-	FORCEINLINE void writePixel(int pixel, int value, unsigned int z) {
+	FORCEINLINE void writePixel(int pixel, int value, uint z) {
 		if (kBlendingEnabled == false) {
-			this->pbuf.setPixelAt(pixel, value);
+			_pbuf.setPixelAt(pixel, value);
 			if (kDepthWrite) {
 				_zbuf[pixel] = z;
 			}
 		} else {
 			byte rSrc, gSrc, bSrc, aSrc;
-			this->pbuf.getFormat().colorToARGB(value, aSrc, rSrc, gSrc, bSrc);
+			_pbuf.getFormat().colorToARGB(value, aSrc, rSrc, gSrc, bSrc);
 
 			writePixel<kEnableAlphaTest, kBlendingEnabled, kDepthWrite>(pixel, aSrc, rSrc, gSrc, bSrc, z);
 		}
@@ -223,6 +303,22 @@ struct FrameBuffer {
 			writePixel<false>(pixel, value);
 		}
 	}
+
+	template <bool kDepthWrite, bool kSmoothMode, bool kEnableAlphaTest, bool kEnableScissor, bool kEnableBlending, bool kStencilEnabled, bool kDepthTestEnabled>
+	FORCEINLINE void putPixelNoTexture(int fbOffset, uint *pz, byte *ps, int _a,
+	                                   int x, int y, uint &z, uint &r, uint &g, uint &b, uint &a,
+	                                   int &dzdx, int &drdx, int &dgdx, int &dbdx, uint dadx);
+
+	template <bool kDepthWrite, bool kLightsMode, bool kSmoothMode, bool kEnableAlphaTest, bool kEnableScissor, bool kEnableBlending, bool kStencilEnabled, bool kDepthTestEnabled>
+	FORCEINLINE void putPixelTexture(int fbOffset, const TexelBuffer *texture,
+	                                 uint wrap_s, uint wrap_t, uint *pz, byte *ps, int _a,
+	                                 int x, int y, uint &z, int &t, int &s,
+	                                 uint &r, uint &g, uint &b, uint &a,
+	                                 int &dzdx, int &dsdx, int &dtdx, int &drdx, int &dgdx, int &dbdx, uint dadx);
+
+	template <bool kDepthWrite, bool kEnableScissor, bool kStencilEnabled, bool kDepthTestEnabled>
+	FORCEINLINE void putPixelDepth(uint *pz, byte *ps, int _a, int x, int y, uint &z, int &dzdx);
+
 
 	template <bool kEnableAlphaTest>
 	FORCEINLINE void writePixel(int pixel, int value) {
@@ -241,6 +337,8 @@ struct FrameBuffer {
 		return !_clipRectangle.contains(x, y);
 	}
 
+public:
+
 	FORCEINLINE void writePixel(int pixel, byte aSrc, byte rSrc, byte gSrc, byte bSrc) {
 		if (_alphaTestEnabled) {
 			writePixel<true>(pixel, aSrc, rSrc, gSrc, bSrc);
@@ -248,6 +346,8 @@ struct FrameBuffer {
 			writePixel<false>(pixel, aSrc, rSrc, gSrc, bSrc);
 		}
 	}
+
+private:
 
 	template <bool kEnableAlphaTest>
 	FORCEINLINE void writePixel(int pixel, byte aSrc, byte rSrc, byte gSrc, byte bSrc) {
@@ -264,7 +364,7 @@ struct FrameBuffer {
 	}
 
 	template <bool kEnableAlphaTest, bool kBlendingEnabled, bool kDepthWrite>
-	FORCEINLINE void writePixel(int pixel, byte aSrc, byte rSrc, byte gSrc, byte bSrc, unsigned int z) {
+	FORCEINLINE void writePixel(int pixel, byte aSrc, byte rSrc, byte gSrc, byte bSrc, uint z) {
 		if (kEnableAlphaTest) {
 			if (!checkAlphaTest(aSrc))
 				return;
@@ -274,10 +374,10 @@ struct FrameBuffer {
 		}
 
 		if (kBlendingEnabled == false) {
-			this->pbuf.setPixelAt(pixel, aSrc, rSrc, gSrc, bSrc);
+			_pbuf.setPixelAt(pixel, aSrc, rSrc, gSrc, bSrc);
 		} else {
 			byte rDst, gDst, bDst, aDst;
-			this->pbuf.getARGBAt(pixel, aDst, rDst, gDst, bDst);
+			_pbuf.getARGBAt(pixel, aDst, rDst, gDst, bDst);
 			switch (_sourceBlendingFactor) {
 			case TGL_ZERO:
 				rSrc = gSrc = bSrc = 0;
@@ -364,70 +464,135 @@ struct FrameBuffer {
 			default:
 				break;
 			}
-			int finalR, finalG, finalB;
-			finalR = rDst + rSrc;
-			finalG = gDst + gSrc;
-			finalB = bDst + bSrc;
-			if (finalR > 255) { finalR = 255; }
-			if (finalG > 255) { finalG = 255; }
-			if (finalB > 255) { finalB = 255; }
-			this->pbuf.setPixelAt(pixel, 255, finalR, finalG, finalB);
+			int finalR = rDst + rSrc;
+			int finalG = gDst + gSrc;
+			int finalB = bDst + bSrc;
+			if (finalR > 255) {
+				finalR = 255;
+			}
+			if (finalG > 255) {
+				finalG = 255;
+			}
+			if (finalB > 255) {
+				finalB = 255;
+			}
+			_pbuf.setPixelAt(pixel, 255, finalR, finalG, finalB);
 		}
 	}
 
-	void copyToBuffer(Graphics::PixelBuffer &buf) {
-		buf.copyBuffer(0, xsize * ysize, pbuf);
+public:
+
+	void clear(int clear_z, int z, int clear_color, int r, int g, int b,
+	           bool clearStencil, int stencilValue);
+	void clearRegion(int x, int y, int w, int h, bool clearZ, int z,
+					 bool clearColor, int r, int g, int b, bool clearStencil, int stencilValue);
+
+	FORCEINLINE void setScissorRectangle(const Common::Rect &rect) {
+		_clipRectangle = rect;
+		_enableScissor = true;
 	}
 
-	void copyFromBuffer(Graphics::PixelBuffer buf) {
-		pbuf.copyBuffer(0, xsize * ysize, buf);
+	FORCEINLINE void resetScissorRectangle() {
+		_enableScissor = false;
 	}
 
-	void enableBlending(bool enable) {
+	FORCEINLINE void enableBlending(bool enable) {
 		_blendingEnabled = enable;
 	}
 
-	void enableDepthTest(bool enable) {
-		_depthTestEnabled = enable;
-	}
-
-	void setBlendingFactors(int sFactor, int dFactor) {
+	FORCEINLINE void setBlendingFactors(int sFactor, int dFactor) {
 		_sourceBlendingFactor = sFactor;
 		_destinationBlendingFactor = dFactor;
 	}
 
-	void enableAlphaTest(bool enable) {
+	FORCEINLINE void enableAlphaTest(bool enable) {
 		_alphaTestEnabled = enable;
 	}
 
-	void setAlphaTestFunc(int func, int ref) {
+	FORCEINLINE void setAlphaTestFunc(int func, int ref) {
 		_alphaTestFunc = func;
 		_alphaTestRefVal = ref;
 	}
 
-	void setDepthFunc(int func) {
+	FORCEINLINE void enableDepthTest(bool enable) {
+		_depthTestEnabled = enable;
+	}
+
+	FORCEINLINE void setDepthFunc(int func) {
 		_depthFunc = func;
 	}
 
-	void enableDepthWrite(bool enable) {
-		this->_depthWrite = enable;
+	FORCEINLINE void enableDepthWrite(bool enable) {
+		_depthWrite = enable;
 	}
 
-	bool isAlphaBlendingEnabled() const {
-		return _sourceBlendingFactor == TGL_SRC_ALPHA && _destinationBlendingFactor == TGL_ONE_MINUS_SRC_ALPHA;
+	FORCEINLINE void enableStencilTest(bool enable) {
+		_stencilTestEnabled = enable;
 	}
+
+	FORCEINLINE void setStencilWriteMask(uint stencilWriteMask) {
+		_stencilWriteMask = stencilWriteMask;
+	}
+
+	FORCEINLINE void setStencilTestFunc(int stencilFunc, int stencilValue, uint stencilMask) {
+		_stencilTestFunc = stencilFunc;
+		_stencilRefVal = stencilValue;
+		_stencilMask = stencilMask;
+	}
+
+	FORCEINLINE void setStencilOp(int stencilSfail, int stencilDpfail, int stencilDppass) {
+		_stencilSfail = stencilSfail;
+		_stencilDpfail = stencilDpfail;
+		_stencilDppass = stencilDppass;
+	}
+	
+	FORCEINLINE void setOffsetStates(int offsetStates) {
+		_offsetStates = offsetStates;
+	}
+
+	FORCEINLINE void setOffsetFactor(float offsetFactor) {
+		_offsetFactor = offsetFactor;
+	}
+
+	FORCEINLINE void setOffsetUnits(float offsetUnits) {
+		_offsetUnits = offsetUnits;
+	}
+
+	FORCEINLINE void setTexture(const TexelBuffer *texture, uint wraps, uint wrapt) {
+		_currentTexture = texture;
+		_wrapS = wraps;
+		_wrapT = wrapt;
+	}
+
+	FORCEINLINE void setTextureSizeAndMask(int textureSize, int textureSizeMask) {
+		_textureSize = textureSize;
+		_textureSizeMask = textureSizeMask;
+	}
+
+private:
 
 	/**
 	* Blit the buffer to the screen buffer, checking the depth of the pixels.
 	* Eack pixel is copied if and only if its depth value is bigger than the
 	* depth value of the screen pixel, so if it is 'above'.
 	*/
+	Buffer *genOffscreenBuffer();
+	void delOffscreenBuffer(Buffer *buffer);
 	void blitOffscreenBuffer(Buffer *buffer);
 	void selectOffscreenBuffer(Buffer *buffer);
 	void clearOffscreenBuffer(Buffer *buffer);
-	void setTexture(const Graphics::TexelBuffer *texture, unsigned int wraps, unsigned int wrapt);
 
-	template <bool kInterpRGB, bool kInterpZ, bool kInterpST, bool kInterpSTZ, int kDrawLogic, bool kDepthWrite, bool enableAlphaTest, bool kEnableScissor, bool enableBlending>
+	template <bool kInterpRGB, bool kInterpZ, bool kInterpST, bool kInterpSTZ, int kSmoothMode,
+	          bool kDepthWrite, bool kAlphaTestEnabled, bool kEnableScissor, bool kBlendingEnabled,
+	          bool kStencilEnabled, bool kDepthTestEnabled>
+	void fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
+
+	template <bool kInterpRGB, bool kInterpZ, bool kInterpST, bool kInterpSTZ, int kSmoothMode,
+	          bool kDepthWrite, bool kAlphaTestEnabled, bool kEnableScissor, bool kBlendingEnabled,
+	          bool kStencilEnabled>
+	void fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
+
+	template <bool kInterpRGB, bool kInterpZ, bool kInterpST, bool kInterpSTZ, int kDrawLogic, bool kDepthWrite, bool enableAlphaTest, bool kEnableScissor, bool kBlendingEnabled>
 	void fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
 
 	template <bool kInterpRGB, bool kInterpZ, bool kInterpST, bool kInterpSTZ, int kDrawMode, bool kDepthWrite, bool enableAlphaTest, bool kEnableScissor>
@@ -442,90 +607,80 @@ struct FrameBuffer {
 	template <bool kInterpRGB, bool kInterpZ, bool kInterpST, bool kInterpSTZ, int kDrawMode>
 	void fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
 
+public:
+
 	void fillTriangleTextureMappingPerspectiveSmooth(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
 	void fillTriangleTextureMappingPerspectiveFlat(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
 	void fillTriangleDepthOnly(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
 	void fillTriangleFlat(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
 	void fillTriangleSmooth(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
-	void fillTriangleFlatShadowMask(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
-	void fillTriangleFlatShadow(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
 
 	void plot(ZBufferPoint *p);
 	void fillLine(ZBufferPoint *p1, ZBufferPoint *p2);
 	void fillLineZ(ZBufferPoint *p1, ZBufferPoint *p2);
+
+private:
+
 	void fillLineFlatZ(ZBufferPoint *p1, ZBufferPoint *p2);
 	void fillLineInterpZ(ZBufferPoint *p1, ZBufferPoint *p2);
 	void fillLineFlat(ZBufferPoint *p1, ZBufferPoint *p2);
 	void fillLineInterp(ZBufferPoint *p1, ZBufferPoint *p2);
 
-	void setScissorRectangle(const Common::Rect &rect) {
-		_clipRectangle = rect;
-		_enableScissor = true;
-	}
-	void resetScissorRectangle() {
-		_enableScissor = false;
-	}
+	template <bool kDepthWrite>
+	FORCEINLINE void putPixel(uint pixelOffset, int color, int x, int y, uint z);
+
+	template <bool kDepthWrite, bool kEnableScissor>
+	FORCEINLINE void putPixel(uint pixelOffset, int color, int x, int y, uint z);
+
+	template <bool kEnableScissor>
+	FORCEINLINE void putPixel(uint pixelOffset, int color, int x, int y);
+
+	template <bool kInterpRGB, bool kInterpZ, bool kDepthWrite>
+	FORCEINLINE void drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2);
+
+	template <bool kInterpRGB, bool kInterpZ, bool kDepthWrite, bool kEnableScissor>
+	FORCEINLINE void drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2);
+
+	Buffer _offscreenBuffer;
+	Graphics::PixelBuffer _pbuf;
+	int _pbufWidth;
+	int _pbufHeight;
+	int _pbufPitch;
+	Graphics::PixelFormat _pbufFormat;
+	int _pbufBpp;
+
+	uint *_zbuf;
+	byte *_sbuf;
+
+	bool _enableStencil;
+	int _textureSize;
+	int _textureSizeMask;
 
 	Common::Rect _clipRectangle;
 	bool _enableScissor;
-	int xsize, ysize;
-	int linesize; // line size, in bytes
-	Graphics::PixelFormat cmode;
-	int pixelbytes;
 
-	Buffer buffer;
-
-	unsigned char *shadow_mask_buf;
-	int shadow_color_r;
-	int shadow_color_g;
-	int shadow_color_b;
-	int frame_buffer_allocated;
-
-	unsigned char *dctable;
-	int *ctable;
-	const Graphics::TexelBuffer *current_texture;
-	int _textureSize;
-	int _textureSizeMask;
-	unsigned int wrapS, wrapT;
-
-	FORCEINLINE bool isBlendingEnabled() const { return _blendingEnabled; }
-	FORCEINLINE void getBlendingFactors(int &sourceFactor, int &destinationFactor) const { sourceFactor = _sourceBlendingFactor; destinationFactor = _destinationBlendingFactor; }
-	FORCEINLINE bool isAlphaTestEnabled() const { return _alphaTestEnabled; }
-	FORCEINLINE bool isDepthWriteEnabled() const { return _depthWrite; }
-	FORCEINLINE int getDepthFunc() const { return _depthFunc; }
-	FORCEINLINE int getDepthWrite() const { return _depthWrite; }
-	FORCEINLINE int getAlphaTestFunc() const { return _alphaTestFunc; }
-	FORCEINLINE int getAlphaTestRefVal() const { return _alphaTestRefVal; }
-	FORCEINLINE int getDepthTestEnabled() const { return _depthTestEnabled; }
-
-private:
-
-	template <bool kDepthWrite>
-	FORCEINLINE void putPixel(unsigned int pixelOffset, int color, int x, int y, unsigned int z);
-
-	template <bool kDepthWrite, bool kEnableScissor>
-	FORCEINLINE void putPixel(unsigned int pixelOffset, int color, int x, int y, unsigned int z);
-
-	template <bool kEnableScissor>
-	FORCEINLINE void putPixel(unsigned int pixelOffset, int color, int x, int y);
-
-	template <bool kInterpRGB, bool kInterpZ, bool kDepthWrite>
-	void drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2);
-
-	template <bool kInterpRGB, bool kInterpZ, bool kDepthWrite, bool kEnableScissor>
-	void drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2);
-
-	unsigned int *_zbuf;
-	bool _depthWrite;
-	Graphics::PixelBuffer pbuf;
+	const TexelBuffer *_currentTexture;
+	uint _wrapS, _wrapT;
 	bool _blendingEnabled;
 	int _sourceBlendingFactor;
 	int _destinationBlendingFactor;
 	bool _alphaTestEnabled;
-	bool _depthTestEnabled;
 	int _alphaTestFunc;
 	int _alphaTestRefVal;
+	bool _depthTestEnabled;
+	bool _depthWrite;
+	bool _stencilTestEnabled;
+	int _stencilTestFunc;
+	int _stencilRefVal;
+	uint _stencilMask;
+	uint _stencilWriteMask;
+	int _stencilSfail;
+	int _stencilDpfail;
+	int _stencilDppass;
 	int _depthFunc;
+	int _offsetStates;
+	float _offsetFactor;
+	float _offsetUnits;
 };
 
 // memory.c

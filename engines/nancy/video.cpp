@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -212,20 +211,20 @@ bool AVFDecoder::AVFVideoTrack::decode(byte *outBuf, uint32 frameSize, Common::R
 const Graphics::Surface *AVFDecoder::AVFVideoTrack::decodeFrame(uint frameNr) {
 	if (frameNr >= _chunkInfo.size()) {
 		warning("Frame %d doesn't exist", frameNr);
-		return 0;
+		return nullptr;
 	}
 
 	const ChunkInfo &info = _chunkInfo[frameNr];
 
 	if (info.type == 2 && (_refFrame == -1 || _refFrame != (int)frameNr - 1)) {
 		warning("Cannot decode frame %d, reference frame is invalid", frameNr);
-		return 0;
+		return nullptr;
 	}
 
 	if (!info.size && !info.compressedSize) {
 		if (info.type != 2) {
 			warning("Found empty frame %d of type %d", frameNr, info.type);
-			return 0;
+			return nullptr;
 		}
 		// Return previous frame
 		_refFrame = frameNr;
@@ -237,7 +236,7 @@ const Graphics::Surface *AVFDecoder::AVFVideoTrack::decodeFrame(uint frameNr) {
 		// For type 0 we decompress straight to the surface, make sure we don't go out of bounds
 		if (info.size > _frameSize) {
 			warning("Decompressed size %d exceeds frame size %d", info.size, _frameSize);
-			return 0;
+			return nullptr;
 		}
 	} else {
 		// For types 1 and 2, we decompress to a temp buffer for decoding
@@ -250,7 +249,7 @@ const Graphics::Surface *AVFDecoder::AVFVideoTrack::decodeFrame(uint frameNr) {
 	if (!_dec->decompress(input, output)) {
 		warning("Failed to decompress frame %d", frameNr);
 		delete[] decompBuf;
-		return 0;
+		return nullptr;
 	}
 
 	if (info.type != 0) {

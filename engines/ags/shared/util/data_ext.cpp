@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -36,71 +35,90 @@ String GetDataExtErrorText(DataExtErrorType err) {
 		return "Unexpected end of file.";
 	case kDataExtErr_BlockDataOverlapping:
 		return "Block data overlapping.";
+	case kDataExtErr_BlockNotFound:
+		return "Block not found.";
 	}
 	return "Unknown error.";
 }
 
-HError OpenExtBlock(Stream *in, int flags, int &block_id, String &ext_id, soff_t &block_len) {
+HError DataExtParser::OpenBlock() {
 	//    - 1 or 4 bytes - an old-style unsigned numeric ID:
 	//               where 0 would indicate following string ID,
 	//               and -1 indicates end of the block list.
 	//    - 16 bytes - string ID of an extension (if numeric ID is 0).
 	//    - 4 or 8 bytes - length of extension data, in bytes.
-	block_id = ((flags & kDataExt_NumID32) != 0) ?
-		in->ReadInt32() :
-		in->ReadInt8();
+	_blockID = ((_flags & kDataExt_NumID32) != 0) ?
+		_in->ReadInt32() :
+		_in->ReadInt8();
 
-	if (block_id < 0)
+	if (_blockID < 0)
 		return HError::None(); // end of list
-	if (in->EOS())
+	if (_in->EOS())
 		return new DataExtError(kDataExtErr_UnexpectedEOF);
 
-	if (block_id > 0) { // old-style block identified by a numeric id
-		block_len = ((flags & kDataExt_File64) != 0) ? in->ReadInt64() : in->ReadInt32();
+	if (_blockID > 0) { // old-style block identified by a numeric id
+		_blockLen = ((_flags & kDataExt_File64) != 0) ? _in->ReadInt64() : _in->ReadInt32();
+		_extID = GetOldBlockName(_blockID);
 	} else { // new style block identified by a string id
-		ext_id = String::FromStreamCount(in, 16);
-		block_len = in->ReadInt64();
+		_extID = String::FromStreamCount(_in, 16);
+		_blockLen = _in->ReadInt64();
+	}
+	_blockStart = _in->GetPosition();
+	return HError::None();
+}
+
+void DataExtParser::SkipBlock() {
+	if (_blockID >= 0)
+		_in->Seek(_blockLen);
+}
+
+HError DataExtParser::PostAssert() {
+	const soff_t cur_pos = _in->GetPosition();
+	const soff_t block_end = _blockStart + _blockLen;
+	if (cur_pos > block_end) {
+		String err = String::FromFormat("Block: '%s', expected to end at offset: %llu, finished reading at %llu.",
+			_extID.GetCStr(), static_cast<int64>(block_end), static_cast<int64>(cur_pos));
+		if (cur_pos <= block_end + GetOverLeeway(_blockID))
+			Debug::Printf(kDbgMsg_Warn, err);
+		else
+			return new DataExtError(kDataExtErr_BlockDataOverlapping, err);
+	} else if (cur_pos < block_end) {
+		Debug::Printf(kDbgMsg_Warn, "WARNING: data blocks nonsequential, block '%s' expected to end at %llu, finished reading at %llu",
+			_extID.GetCStr(), static_cast<int64>(block_end), static_cast<int64>(cur_pos));
+		_in->Seek(block_end, Shared::kSeekBegin);
 	}
 	return HError::None();
 }
 
-HError ReadExtData(PfnReadExtBlock reader, int flags, Stream *in) {
-	while (!in->EOS()) {
-		// First try open the next block
-		int block_id;
-		String ext_id;
-		soff_t block_len;
-		HError err = OpenExtBlock(in, flags, block_id, ext_id, block_len);
-		if (!err)
-			return err;
-		if (block_id < 0)
-			break; // end of list
-		if (ext_id.IsEmpty()) // we may need some name for the messages
-			ext_id.Format("id:%d", block_id);
+HError DataExtParser::FindOne(int id) {
+	if (id <= 0) return new DataExtError(kDataExtErr_BlockNotFound);
 
-		// Now call the reader function to read current block's data
-		soff_t block_end = in->GetPosition() + block_len;
-		bool read_next = true;
-		err = reader(in, block_id, ext_id, block_len, read_next);
-		if (!err)
-			return err;
-
-		// Finally test that we did not read too much or too little
-		soff_t cur_pos = in->GetPosition();
-		if (cur_pos > block_end) {
-			return new DataExtError(kDataExtErr_BlockDataOverlapping,
-				String::FromFormat("Block: '%s', expected to end at offset: %lld, finished reading at %lld.",
-					ext_id.GetCStr(), block_end, cur_pos));
-		} else if (cur_pos < block_end) {
-			Debug::Printf(kDbgMsg_Warn, "WARNING: room data blocks nonsequential, block '%s' expected to end at %lld, finished reading at %lld",
-				ext_id.GetCStr(), block_end, cur_pos);
-			in->Seek(block_end, Shared::kSeekBegin);
-		}
-
-		if (!read_next)
-			break; // reader requested a stop, do so
+	HError err = HError::None();
+	for (err = OpenBlock(); err && !AtEnd(); err = OpenBlock()) {
+		if (id == _blockID)
+			return HError::None();
+		_in->Seek(_blockLen); // skip it
 	}
-	return HError::None();
+	if (!err)
+		return err;
+	return new DataExtError(kDataExtErr_BlockNotFound);
+}
+
+HError DataExtReader::Read() {
+	HError err = HError::None();
+	bool read_next = true;
+	for (err = OpenBlock(); err && !AtEnd() && read_next; err = OpenBlock()) {
+		// Call the reader function to read current block's data
+		read_next = true;
+		err = ReadBlock(_blockID, _extID, _blockLen, read_next);
+		if (!err)
+			return err;
+		// Test that we did not read too much or too little
+		err = PostAssert();
+		if (!err)
+			return err;
+	}
+	return err;
 }
 
 // Generic function that saves a block and automatically adds its size into header
@@ -132,6 +150,6 @@ void WriteExtBlock(int block, const String &ext_id, PfnWriteExtBlock writer, int
 	out->Seek(0, Shared::kSeekEnd);
 }
 
-} // namespace Common
+} // namespace Shared
 } // namespace AGS
 } // namespace AGS3

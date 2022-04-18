@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -177,7 +176,7 @@ uint safeControlAccessMinMs() {
 }
 
 void runObjectScript(int16 entryIdx) {
-	ScriptPtr tmp(scriptInfo->create(*g_cine->_relTable[entryIdx], entryIdx));
+	ScriptPtr tmp(g_cine->_scriptInfo->create(*g_cine->_relTable[entryIdx], entryIdx));
 	assert(tmp);
 	g_cine->_objectScripts.push_back(tmp);
 }
@@ -594,7 +593,7 @@ void processInventory(int16 x, int16 y) {
 	renderer->drawFrame();
 	renderer->popMenu();
 	delete menu;
-	menu = 0;
+	menu = nullptr;
 
 	manageEvents(PROCESS_INVENTORY, UNTIL_MOUSE_BUTTON_DOWN_UP);
 
@@ -1074,6 +1073,7 @@ void playerCommandMouseLeft(uint16 &mouseButton, uint16 &mouseX, uint16 &mouseY)
 			g_cine->_commandBuffer = "";
 		} else if (g_cine->getGameType() == Cine::GType_OS) {
 			isDrawCommandEnabled = 1;
+			g_cine->_commandBuffer += " ";
 			g_cine->_commandBuffer += commandPrepositionTable[playerCommand];
 		}
 
@@ -1398,7 +1398,7 @@ uint16 executePlayerInput() {
 }
 
 void drawSprite(Common::List<overlay>::iterator it, const byte *spritePtr, const byte *maskPtr, uint16 width, uint16 height, byte *page, int16 x, int16 y) {
-	byte *msk = NULL;
+	byte *msk = nullptr;
 	int16 maskX, maskY, maskWidth, maskHeight;
 	uint16 maskSpriteIdx;
 

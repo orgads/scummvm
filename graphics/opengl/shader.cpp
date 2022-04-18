@@ -1,28 +1,28 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
+ * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "common/scummsys.h"
+#include "common/config-manager.h"
 
-#if defined(USE_GLES2) || defined(USE_OPENGL_SHADERS)
+#if defined(USE_OPENGL_SHADERS)
 
 #include "graphics/opengl/shader.h"
 
@@ -30,23 +30,80 @@
 
 namespace OpenGL {
 
+static const char *compatVertex =
+	"#if defined(GL_ES)\n"
+		"#define ROUND(x) (sign(x) * floor(abs(x) + .5))\n"
+		"#define in attribute\n"
+		"#define out varying\n"
+	"#elif __VERSION__ < 130\n"
+		"#define ROUND(x) (sign(x) * floor(abs(x) + .5))\n"
+		"#define highp\n"
+		"#define in attribute\n"
+		"#define out varying\n"
+	"#else\n"
+		"#define ROUND(x) round(x)\n"
+	"#endif\n";
+
+static const char *compatFragment =
+	"#if defined(GL_ES)\n"
+		"#define in varying\n"
+		"#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
+			"precision highp float;\n"
+		"#else\n"
+			"precision mediump float;\n"
+		"#endif\n"
+		"#define OUTPUT\n"
+		"#define outColor gl_FragColor\n"
+		"#define texture texture2D\n"
+	"#elif __VERSION__ < 130\n"
+		"#define in varying\n"
+		"#define OUTPUT\n"
+		"#define outColor gl_FragColor\n"
+		"#define texture texture2D\n"
+	"#else\n"
+		"#define OUTPUT out vec4 outColor;\n"
+	"#endif\n";
+
+// OGLES2 on AmigaOS doesn't support uniform booleans, let's introduce some shim
+#if defined(AMIGAOS)
+static const char *compatUniformBool =
+	"#define UBOOL mediump int\n"
+	"#define UBOOL_TEST(v) (v != 0)\n";
+#else
+static const char *compatUniformBool =
+	"#define UBOOL bool\n"
+	"#define UBOOL_TEST(v) v\n";
+#endif
+
+
 static const GLchar *readFile(const Common::String &filename) {
 	Common::File file;
+	Common::String shaderDir;
 
-	// Allow load shaders from source code directory without install them
-	// It's used for development purpose
-	// FIXME: it's doesn't work with just search subdirs in 'engines'
+	// Allow load shaders from source code directory without install them.
+	// It's used for development purpose.
+	// Additionally allow load shaders outside distribution data path,
+	// 'extrapath' is used temporary in SearchMan.
 	SearchMan.addDirectory("GRIM_SHADERS", "engines/grim", 0, 2);
 	SearchMan.addDirectory("MYST3_SHADERS", "engines/myst3", 0, 2);
 	SearchMan.addDirectory("STARK_SHADERS", "engines/stark", 0, 2);
-	SearchMan.addDirectory("WINTERMUTE_SHADERS", "engines/wintermute/base/gfx/opengl", 0, 5);
-	file.open(Common::String("shaders/") + filename);
+	SearchMan.addDirectory("WINTERMUTE_SHADERS", "engines/wintermute/base/gfx/opengl", 0, 2);
+	SearchMan.addDirectory("PLAYGROUND3D_SHADERS", "engines/playground3d", 0, 2);
+	if (ConfMan.hasKey("extrapath")) {
+		SearchMan.addDirectory("EXTRA_PATH", Common::FSNode(ConfMan.get("extrapath")), 0, 2);
+	}
+#if !defined(IPHONE)
+	shaderDir = "shaders/";
+#endif
+	file.open(shaderDir + filename);
 	if (!file.isOpen())
 		error("Could not open shader %s!", filename.c_str());
 	SearchMan.remove("GRIM_SHADERS");
 	SearchMan.remove("MYST3_SHADERS");
 	SearchMan.remove("STARK_SHADERS");
 	SearchMan.remove("WINTERMUTE_SHADERS");
+	SearchMan.remove("PLAYGROUND3D_SHADERS");
+	SearchMan.remove("EXTRA_PATH");
 
 	const int32 size = file.size();
 	GLchar *shaderSource = new GLchar[size + 1];
@@ -65,9 +122,11 @@ static GLuint createDirectShader(const char *shaderSource, GLenum shaderType, co
 	GLint status;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
 	if (status != GL_TRUE) {
-		char buffer[512];
-		glGetShaderInfoLog(shader, 512, NULL, buffer);
-		error("Could not compile shader %s: %s", name.c_str(), buffer);
+		GLint logSize;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);
+		GLchar *log = new GLchar[logSize];
+		glGetShaderInfoLog(shader, logSize, nullptr, log);
+		error("Could not compile shader %s: %s", name.c_str(), log);
 	}
 
 	return shader;
@@ -76,23 +135,26 @@ static GLuint createDirectShader(const char *shaderSource, GLenum shaderType, co
 static GLuint createCompatShader(const char *shaderSource, GLenum shaderType, const Common::String &name) {
 	const GLchar *versionSource = OpenGLContext.type == kOGLContextGLES2 ? "#version 100\n" : "#version 120\n";
 	const GLchar *compatSource =
-			shaderType == GL_VERTEX_SHADER ? OpenGL::BuiltinShaders::compatVertex : OpenGL::BuiltinShaders::compatFragment;
+			shaderType == GL_VERTEX_SHADER ? compatVertex : compatFragment;
 	const GLchar *shaderSources[] = {
 		versionSource,
 		compatSource,
+		compatUniformBool,
 		shaderSource
 	};
 
 	GLuint shader = glCreateShader(shaderType);
-	glShaderSource(shader, 3, shaderSources, NULL);
+	glShaderSource(shader, 4, shaderSources, NULL);
 	glCompileShader(shader);
 
 	GLint status;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
 	if (status != GL_TRUE) {
-		char buffer[512];
-		glGetShaderInfoLog(shader, 512, NULL, buffer);
-		error("Could not compile shader %s: %s", name.c_str(), buffer);
+		GLint logSize;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);
+		GLchar *log = new GLchar[logSize];
+		glGetShaderInfoLog(shader, logSize, nullptr, log);
+		error("Could not compile shader %s: %s", name.c_str(), log);
 	}
 
 	return shader;
@@ -139,9 +201,11 @@ ShaderGL::ShaderGL(const Common::String &name, GLuint vertexShader, GLuint fragm
 	GLint status;
 	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &status);
 	if (status != GL_TRUE) {
-		char buffer[512];
-		glGetProgramInfoLog(shaderProgram, 512, NULL, buffer);
-		error("Could not link shader %s: %s", name.c_str(), buffer);
+		GLint logSize;
+		glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &logSize);
+		GLchar *log = new GLchar[logSize];
+		glGetProgramInfoLog(shaderProgram, logSize, nullptr, log);
+		error("Could not link shader %s: %s", name.c_str(), log);
 	}
 
 	glDetachShader(shaderProgram, vertexShader);
@@ -159,7 +223,6 @@ ShaderGL *ShaderGL::fromStrings(const Common::String &name, const char *vertex, 
 	GLuint fragmentShader = createDirectShader(fragment, GL_FRAGMENT_SHADER, name + ".fragment");
 	return new ShaderGL(name, vertexShader, fragmentShader, attributes);
 }
-
 
 ShaderGL *ShaderGL::fromFiles(const char *vertex, const char *fragment, const char **attributes) {
 	GLuint vertexShader = loadShaderFromFile(vertex, "vertex", GL_VERTEX_SHADER);
@@ -206,6 +269,7 @@ void ShaderGL::use(bool forceReload) {
 			}
 		}
 	}
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 GLuint ShaderGL::createBuffer(GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage) {
@@ -213,6 +277,7 @@ GLuint ShaderGL::createBuffer(GLenum target, GLsizeiptr size, const GLvoid *data
 	glGenBuffers(1, &vbo);
 	glBindBuffer(target, vbo);
 	glBufferData(target, size, data, usage);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	return vbo;
 }
 

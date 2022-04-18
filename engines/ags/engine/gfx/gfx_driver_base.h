@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -132,7 +131,7 @@ protected:
 	// Called after new mode was successfully initialized
 	virtual void OnModeSet(const DisplayMode &mode);
 	// Called when the new native size is set
-	virtual void OnSetNativeSize(const Size &src_size);
+	virtual void OnSetNativeRes(const GraphicResolution &native_res);
 	// Called before display mode is going to be released
 	virtual void OnModeReleased();
 	// Called when new render frame is set
@@ -148,6 +147,7 @@ protected:
 
 	DisplayMode         _mode;          // display mode settings
 	Rect                _srcRect;       // rendering source rect
+	int                 _srcColorDepth; // rendering source color depth (in bits per pixel)
 	Rect                _dstRect;       // rendering destination rect
 	Rect                _filterRect;    // filter scaling destination rect (before final scaling)
 	PlaneScaling        _scaling;       // native -> render dest coordinate transformation
@@ -173,21 +173,26 @@ struct TextureTile {
 };
 
 // Parent class for the video memory DDBs
-class VideoMemDDB : public IDriverDependantBitmap {
+class BaseDDB : public IDriverDependantBitmap {
 public:
-	int GetWidth() override {
+	int GetWidth() const override {
 		return _width;
 	}
-	int GetHeight() override {
+	int GetHeight() const override {
 		return _height;
 	}
-	int GetColorDepth() override {
+	int GetColorDepth() const override {
 		return _colDepth;
 	}
 
-	int _width, _height;
-	int _colDepth;
-	bool _opaque; // no mask color
+	int _width = 0, _height = 0;
+	int _colDepth = 0;
+	bool _hasAlpha = false; // has meaningful alpha channel
+	bool _opaque = false;   // no mask color
+
+protected:
+	BaseDDB() {}
+	virtual ~BaseDDB() {}
 };
 
 // VideoMemoryGraphicsDriver - is the parent class for the graphic drivers
@@ -206,9 +211,6 @@ public:
 	IDriverDependantBitmap *CreateDDBFromBitmap(Bitmap *bitmap, bool hasAlpha, bool opaque = false) override;
 
 protected:
-	// Creates a "raw" DDB, without pixel initialization
-	virtual IDriverDependantBitmap *CreateDDB(int width, int height, int color_depth, bool opaque = false) = 0;
-
 	// Stage screens are raw bitmap buffers meant to be sent to plugins on demand
 	// at certain drawing stages. If used at least once these buffers are then
 	// rendered as additional sprites in their respected order.
@@ -228,11 +230,11 @@ protected:
 	void DestroyFxPool();
 
 	// Prepares bitmap to be applied to the texture, copies pixels to the provided buffer
-	void BitmapToVideoMem(const Bitmap *bitmap, const bool has_alpha, const TextureTile *tile, const VideoMemDDB *target,
-	                      char *dst_ptr, const int dst_pitch, const bool usingLinearFiltering);
+	void BitmapToVideoMem(const Bitmap *bitmap, const bool has_alpha, const TextureTile *tile,
+		char *dst_ptr, const int dst_pitch, const bool usingLinearFiltering);
 	// Same but optimized for opaque source bitmaps which ignore transparent "mask color"
-	void BitmapToVideoMemOpaque(const Bitmap *bitmap, const bool has_alpha, const TextureTile *tile, const VideoMemDDB *target,
-	                            char *dst_ptr, const int dst_pitch);
+	void BitmapToVideoMemOpaque(const Bitmap *bitmap, const bool has_alpha, const TextureTile *tile,
+		char *dst_ptr, const int dst_pitch);
 
 	// Stage virtual screen is used to let plugins draw custom graphics
 	// in between render stages (between room and GUI, after GUI, and so on)

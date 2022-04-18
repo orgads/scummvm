@@ -1,11 +1,12 @@
-/*
- * This file is part of the Scale2x project.
+/* ScummVM - Graphic Adventure Engine
  *
- * Copyright (C) 2003 Andrea Mazzoleni
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or modify
+ * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -14,8 +15,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 /*
@@ -352,14 +353,7 @@ void scale(unsigned scale, void* void_dst, unsigned dst_slice, const void* void_
 	}
 }
 
-AdvMamePlugin::AdvMamePlugin() {
-	_factor = 2;
-	_factors.push_back(2);
-	_factors.push_back(3);
-	_factors.push_back(4);
-}
-
-void AdvMamePlugin::scaleIntern(const uint8 *srcPtr, uint32 srcPitch,
+void AdvMameScaler::scaleIntern(const uint8 *srcPtr, uint32 srcPitch,
 							uint8 *dstPtr, uint32 dstPitch, int width, int height, int x, int y) {
 	if (_factor != 4)
 		::scale(_factor, dstPtr, dstPitch, srcPtr - srcPitch, srcPitch, _format.bytesPerPixel, width, height);
@@ -367,16 +361,39 @@ void AdvMamePlugin::scaleIntern(const uint8 *srcPtr, uint32 srcPitch,
 		::scale(_factor, dstPtr, dstPitch, srcPtr - srcPitch * 2, srcPitch, _format.bytesPerPixel, width, height);
 }
 
-uint AdvMamePlugin::increaseFactor() {
+uint AdvMameScaler::increaseFactor() {
 	if (_factor < 4)
 		setFactor(_factor + 1);
 	return _factor;
 }
 
-uint AdvMamePlugin::decreaseFactor() {
+uint AdvMameScaler::decreaseFactor() {
 	if (_factor > 2)
 		setFactor(_factor - 1);
 	return _factor;
+}
+
+
+class AdvMamePlugin final : public ScalerPluginObject {
+public:
+	AdvMamePlugin();
+
+	Scaler *createInstance(const Graphics::PixelFormat &format) const override;
+
+	bool canDrawCursor() const override { return true; }
+	uint extraPixels() const override { return 4; }
+	const char *getName() const override;
+	const char *getPrettyName() const override;
+};
+
+AdvMamePlugin::AdvMamePlugin() {
+	_factors.push_back(2);
+	_factors.push_back(3);
+	_factors.push_back(4);
+}
+
+Scaler *AdvMamePlugin::createInstance(const Graphics::PixelFormat &format) const {
+	return new AdvMameScaler(format);
 }
 
 const char *AdvMamePlugin::getName() const {

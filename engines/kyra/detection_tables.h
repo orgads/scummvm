@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -83,6 +82,7 @@ namespace {
 static const char msg_missingLangResources[]			= _s("Missing language specific game code and/or resources.");
 static const char msg_fanTrans_missingLangResources[]	= _s("Missing language specific game code and/or resources for this fan translation.");
 static const char msg_fanTrans_unsupportiveTranslator[]	= _s("The fan translator does not wish his translation to be incorporated into ScummVM.");
+static const char msg_nonEngineDemo[]					= _s("Demo plays simple animations without using Westwood's Engine.");
 
 const KYRAGameDescription adGameDescs[] = {
 	/* disable these targets until they get supported
@@ -235,7 +235,7 @@ const KYRAGameDescription adGameDescs[] = {
 			"kyra1",
 			msg_fanTrans_missingLangResources, // Reason for being unsupported
 			AD_ENTRY1s("GEMCUT.EMC", "20f876423f4caa20f5de6b4fc5dfafeb", 6686),
-			Common::CZ_CZE,
+			Common::CS_CZE,
 			Common::kPlatformDOS,
 			ADGF_UNSUPPORTED,
 			GUIO5(GUIO_NOSPEECH, GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIPCSPK, GUIO_RENDERVGA)
@@ -246,11 +246,11 @@ const KYRAGameDescription adGameDescs[] = {
 	{ // from trembyle
 		{
 			"kyra1",
-			msg_missingLangResources, // Reason for being unsupported
+			"Extracted",
 			AD_ENTRY1("GEMCUT.EMC", "3f319d6908830a46ff42229a39a2c7ec"),
 			Common::ZH_TWN,
 			Common::kPlatformDOS,
-			ADGF_UNSUPPORTED,
+			ADGF_NO_FLAGS,
 			GUIO5(GUIO_NOSPEECH, GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIPCSPK, GUIO_RENDERVGA)
 		},
 		KYRA1_FLOPPY_FLAGS
@@ -322,6 +322,19 @@ const KYRAGameDescription adGameDescs[] = {
 			GUIO3(GUIO_NOSPEECH, GUIO_MIDIGM, GUIO_RENDERVGA)
 		},
 		KYRA1_FLOPPY_FLAGS
+	},
+
+	{
+		{
+			"kyra1",
+			"StuffIt",
+			AD_ENTRY1s("xn--Install Legend of Kyrandia-jf8p", "1d763e991c787431cac3786afbbdae72", 53899),
+			Common::EN_ANY,
+			Common::kPlatformMacintosh,
+			ADGF_MACRESFORK,
+			GUIO3(GUIO_NOSPEECH, GUIO_MIDIGM, GUIO_RENDERVGA)
+		},
+		KYRA1_FLOPPY_CMP_FLAGS
 	},
 
 	{ // FM-TOWNS version
@@ -634,11 +647,11 @@ const KYRAGameDescription adGameDescs[] = {
 	{ // Floppy version extracted
 		{
 			"kyra2",
-			msg_missingLangResources, // Reason for being unsupported
+			"Extracted",
 			AD_ENTRY1("FATE.PAK", "5bfc4dd48778ca1f3a9e001e345a9774"),
 			Common::ZH_TWN,
 			Common::kPlatformDOS,
-			ADGF_UNSUPPORTED,
+			ADGF_NO_FLAGS,
 			GUIO6(GUIO_NOSPEECH, GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIGM, GUIO_MIDIPCSPK, GUIO_RENDERVGA)
 		},
 		KYRA2_FLOPPY_FLAGS
@@ -829,6 +842,20 @@ const KYRAGameDescription adGameDescs[] = {
 		KYRA2_CD_FAN_FLAGS(Common::ES_ESP, Common::EN_ANY)
 	},
 
+	{ // Hebrew Fan Translation
+		{
+			"kyra2",
+			"CD",
+			AD_ENTRY2s("FATE.PAK", "28cbad1c5bf06b2d3825ae57d760d032", -1,
+					   "8FAT.FNT", "12424362a537e1335b10323c4013bb1d", -1),
+			Common::HE_ISR,
+			Common::kPlatformDOS,
+			ADGF_DROPLANGUAGE | ADGF_CD,
+			GUIO5(GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIGM, GUIO_MIDIPCSPK, GUIO_RENDERVGA)
+		},
+		KYRA2_CD_FAN_FLAGS(Common::HE_ISR, Common::EN_ANY)
+	},
+
 	{ // Interactive Demo
 		{
 			"kyra2",
@@ -972,20 +999,6 @@ const KYRAGameDescription adGameDescs[] = {
 			Common::FR_FRA,
 			Common::kPlatformDOS,
 			ADGF_DROPLANGUAGE,
-			GUIO5(GUIO_NOMIDI, GUIO_RENDERVGA, GAMEOPTION_KYRA3_AUDIENCE, GAMEOPTION_KYRA3_SKIP, GAMEOPTION_KYRA3_HELIUM)
-		},
-		KYRA3_CD_FLAGS
-	},
-
-	{ // Provided by AquariumTroop. Bugreport #11935
-		{
-			"kyra3",
-			_s("Missing game code"), // Reason for being unsupported
-			AD_ENTRY2s("ONETIME.PAK", "4fe8ff05002f3a4d645f11cd326fcef2", 485328,
-					   "WESTWOOD.001", "99d4b13576ced18a072a7590eac3cc37", 10419012),
-			Common::ZH_TWN,
-			Common::kPlatformDOS,
-			ADGF_DROPLANGUAGE | ADGF_UNSUPPORTED,
 			GUIO5(GUIO_NOMIDI, GUIO_RENDERVGA, GAMEOPTION_KYRA3_AUDIENCE, GAMEOPTION_KYRA3_SKIP, GAMEOPTION_KYRA3_HELIUM)
 		},
 		KYRA3_CD_FLAGS
@@ -1187,7 +1200,21 @@ const KYRAGameDescription adGameDescs[] = {
 			0,
 			AD_ENTRY2s("ONETIME.PAK", "93b4ca2847ab7cfe52188cbde2ffe561", -1,
 					   "WESTWOOD.001", "c782e09a3b80510962af1426acf5a130", -1),
-			Common::ZH_CNA,
+			Common::ZH_CHN,
+			Common::kPlatformDOS,
+			ADGF_DROPLANGUAGE,
+			GUIO5(GUIO_NOMIDI, GUIO_RENDERVGA, GAMEOPTION_KYRA3_AUDIENCE, GAMEOPTION_KYRA3_SKIP, GAMEOPTION_KYRA3_HELIUM)
+		},
+		KYRA3_CD_4LANG_FLAGS
+	},
+
+	{ // non installed version
+		{
+			"kyra3",
+			0,
+			AD_ENTRY2s("ONETIME.PAK", "4fe8ff05002f3a4d645f11cd326fcef2", -1,
+					   "WESTWOOD.001", "99d4b13576ced18a072a7590eac3cc37", -1),
+			Common::ZH_TWN,
 			Common::kPlatformDOS,
 			ADGF_DROPLANGUAGE,
 			GUIO5(GUIO_NOMIDI, GUIO_RENDERVGA, GAMEOPTION_KYRA3_AUDIENCE, GAMEOPTION_KYRA3_SKIP, GAMEOPTION_KYRA3_HELIUM)
@@ -1247,7 +1274,25 @@ const KYRAGameDescription adGameDescs[] = {
 				{ "AUD.PAK", 0, 0, -1 },
 				AD_LISTEND
 			},
-			Common::ZH_CNA,
+			Common::ZH_CHN,
+			Common::kPlatformDOS,
+			ADGF_DROPLANGUAGE,
+			GUIO5(GUIO_NOMIDI, GUIO_RENDERVGA, GAMEOPTION_KYRA3_AUDIENCE, GAMEOPTION_KYRA3_SKIP, GAMEOPTION_KYRA3_HELIUM)
+		},
+		KYRA3_CD_INS_4LANG_FLAGS
+	},
+
+	{ // installed version
+		{
+			"kyra3",
+			0,
+			{
+				{ "ONETIME.PAK", 0, "4fe8ff05002f3a4d645f11cd326fcef2", -1 },
+				{ "MALCOLM.PAK", 0, "c01eaf3b5568b207b22ea1c0637fe193", -1 },
+				{ "AUD.PAK", 0, 0, -1 },
+				AD_LISTEND
+			},
+			Common::ZH_TWN,
 			Common::kPlatformDOS,
 			ADGF_DROPLANGUAGE,
 			GUIO5(GUIO_NOMIDI, GUIO_RENDERVGA, GAMEOPTION_KYRA3_AUDIENCE, GAMEOPTION_KYRA3_SKIP, GAMEOPTION_KYRA3_HELIUM)
@@ -1754,7 +1799,7 @@ const KYRAGameDescription adGameDescs[] = {
 			"Extracted",
 			AD_ENTRY2s("GENERAL.PAK",  "f2c305bfb10c08371e947ab4d0a2f5f5", -1,
 					   "CHAPTER7.PAK", "f3cbab6d945ceda35149a5c9a324a8fe", -1),
-			Common::ZH_CNA,
+			Common::ZH_CHN,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
 			GUIO9(GUIO_NOSPEECH, GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIGM, GUIO_MIDIPCSPK, GUIO_RENDERVGA, GAMEOPTION_LOL_SCROLLING, GAMEOPTION_LOL_CURSORS, GAMEOPTION_LOL_SAVENAMES)
@@ -1867,7 +1912,7 @@ const KYRAGameDescription adGameDescs[] = {
 					   "L01.PAK",		"759a0ac26808d77ea968bd392355ba1d", -1),
 			Common::EN_ANY,
 			Common::kPlatformDOS,
-			ADGF_DROPLANGUAGE | ADGF_CD,
+			ADGF_DROPLANGUAGE | ADGF_CD | ADGF_DEMO,
 			GUIO8(GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIGM, GUIO_MIDIPCSPK, GUIO_RENDERVGA, GAMEOPTION_LOL_SCROLLING, GAMEOPTION_LOL_CURSORS, GAMEOPTION_LOL_SAVENAMES)
 		},
 		LOL_CD_DEMO_FLAGS
@@ -1881,7 +1926,7 @@ const KYRAGameDescription adGameDescs[] = {
 					   "L01.PAK",		"759a0ac26808d77ea968bd392355ba1d", -1),
 			Common::FR_FRA,
 			Common::kPlatformDOS,
-			ADGF_DROPLANGUAGE | ADGF_CD,
+			ADGF_DROPLANGUAGE | ADGF_CD | ADGF_DEMO,
 			GUIO8(GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIGM, GUIO_MIDIPCSPK, GUIO_RENDERVGA, GAMEOPTION_LOL_SCROLLING, GAMEOPTION_LOL_CURSORS, GAMEOPTION_LOL_SAVENAMES)
 		},
 		LOL_CD_DEMO_FLAGS
@@ -1895,7 +1940,7 @@ const KYRAGameDescription adGameDescs[] = {
 					   "L01.PAK",		"759a0ac26808d77ea968bd392355ba1d", -1),
 			Common::DE_DEU,
 			Common::kPlatformDOS,
-			ADGF_DROPLANGUAGE | ADGF_CD,
+			ADGF_DROPLANGUAGE | ADGF_CD | ADGF_DEMO,
 			GUIO8(GUIO_MIDIADLIB, GUIO_MIDIMT32, GUIO_MIDIGM, GUIO_MIDIPCSPK, GUIO_RENDERVGA, GAMEOPTION_LOL_SCROLLING, GAMEOPTION_LOL_CURSORS, GAMEOPTION_LOL_SAVENAMES)
 		},
 		LOL_CD_DEMO_FLAGS
@@ -2059,6 +2104,18 @@ const KYRAGameDescription adGameDescs[] = {
 		EOB2_FLAGS
 	},
 
+	{ // Autodesk (Flic) demo
+		{
+			"eob2",
+			msg_nonEngineDemo, // Reason for being unsupported
+			AD_ENTRY1s("DARKMOON", "46b94e1308764864746db07df64ddcc0", -1),
+			Common::EN_ANY,
+			Common::kPlatformDOS,
+			ADGF_DEMO | ADGF_UNSUPPORTED,
+			0
+		},
+		EOB2_FLAGS
+	},
 
 	{
 		{

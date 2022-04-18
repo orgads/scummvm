@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,18 +15,21 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "common/config-manager.h"
 #include "common/debug-channels.h"
 #include "common/error.h"
+#include "common/punycode.h"
+#include "common/tokenizer.h"
 
 #include "graphics/macgui/macwindowmanager.h"
+#include "graphics/wincursor.h"
 
 #include "director/director.h"
+#include "director/debugger.h"
 #include "director/archive.h"
 #include "director/cast.h"
 #include "director/movie.h"
@@ -55,6 +58,12 @@ DirectorEngine *g_director;
 
 DirectorEngine::DirectorEngine(OSystem *syst, const DirectorGameDescription *gameDesc) : Engine(syst), _gameDescription(gameDesc) {
 	g_director = this;
+	g_debugger = new Debugger();
+	setDebugger(g_debugger);
+	
+	_dirSeparator = ':';
+
+	parseOptions();
 
 	// Setup mixer
 	syncSoundSettings();
@@ -68,14 +77,14 @@ DirectorEngine::DirectorEngine(OSystem *syst, const DirectorGameDescription *gam
 	// Load key codes
 	loadKeyCodes();
 
-	_soundManager = nullptr;
 	_currentPalette = nullptr;
 	_currentPaletteLength = 0;
 	_stage = nullptr;
 	_windowList = new Datum;
 	_windowList->type = ARRAY;
-	_windowList->u.farr = new DatumArray;
+	_windowList->u.farr = new FArray;
 	_currentWindow = nullptr;
+	_cursorWindow = nullptr;
 	_lingo = nullptr;
 	_version = getDescriptionVersion();
 
@@ -86,13 +95,30 @@ DirectorEngine::DirectorEngine(OSystem *syst, const DirectorGameDescription *gam
 	// Meet Mediaband could have up to 5 levels of directories
 	SearchMan.addDirectory(_gameDataDir.getPath(), _gameDataDir, 0, 5);
 
+	SearchMan.addSubDirectoryMatching(_gameDataDir, "win_data", 0, 2);
+
 	for (uint i = 0; Director::directoryGlobs[i]; i++) {
 		Common::String directoryGlob = directoryGlobs[i];
 		SearchMan.addSubDirectoryMatching(_gameDataDir, directoryGlob);
 	}
 
-	_colorDepth = 8;	// 256-color
-	_machineType = 9;	// Macintosh IIci
+	if (debugChannelSet(-1, kDebug32bpp))
+		_colorDepth = 32;
+	else
+		_colorDepth = 8;	// 256-color
+
+	switch (getPlatform()) {
+	case Common::kPlatformMacintoshII:
+		_machineType = 4;
+		break;
+	case Common::kPlatformWindows:
+		_machineType = 256;
+		break;
+	case Common::kPlatformMacintosh:
+	default:
+		_machineType = 9;	// Macintosh IIci
+	}
+
 	_playbackPaused = false;
 	_skipFrameAdvance = false;
 	_centerStage = true;
@@ -102,7 +128,6 @@ DirectorEngine::DirectorEngine(OSystem *syst, const DirectorGameDescription *gam
 
 DirectorEngine::~DirectorEngine() {
 	delete _windowList;
-	delete _soundManager;
 	delete _lingo;
 	delete _wm;
 	delete _surface;
@@ -111,6 +136,9 @@ DirectorEngine::~DirectorEngine() {
 		delete it->_value;
 	}
 
+	for (uint i = 0; i < _winCursor.size(); i++)
+		delete _winCursor[i];
+
 	clearPalettes();
 }
 
@@ -118,7 +146,7 @@ Archive *DirectorEngine::getMainArchive() const { return _currentWindow->getMain
 Movie *DirectorEngine::getCurrentMovie() const { return _currentWindow->getCurrentMovie(); }
 Common::String DirectorEngine::getCurrentPath() const { return _currentWindow->getCurrentPath(); }
 
-static void buildbotErrorHandler(const char *msg) { }
+static bool buildbotErrorHandler(const char *msg) { return true; }
 
 void DirectorEngine::setCurrentMovie(Movie *movie) {
 	_currentWindow = movie->getWindow();
@@ -146,14 +174,12 @@ Common::Error DirectorEngine::run() {
 
 	_currentPalette = nullptr;
 
-	_soundManager = nullptr;
-
 	wmMode = debugChannelSet(-1, kDebugDesktop) ? wmModeDesktop : wmModeFullscreen;
 
 	if (debugChannelSet(-1, kDebug32bpp))
 		wmMode |= Graphics::kWMMode32bpp;
 
-	_wm = new Graphics::MacWindowManager(wmMode, &_director3QuickDrawPatterns);
+	_wm = new Graphics::MacWindowManager(wmMode, &_director3QuickDrawPatterns, getLanguage());
 	_wm->setEngine(this);
 
 	_pixelformat = _wm->_pixelformat;
@@ -173,7 +199,6 @@ Common::Error DirectorEngine::run() {
 	_currentWindow = _stage;
 
 	_lingo = new Lingo(this);
-	_soundManager = new DirectorSound(this);
 
 	if (getGameGID() == GID_TEST) {
 		_currentWindow->runTests();
@@ -184,20 +209,6 @@ Common::Error DirectorEngine::run() {
 
 	if (getPlatform() == Common::kPlatformWindows)
 		_machineType = 256; // IBM PC-type machine
-
-	if (getVersion() < 400) {
-		if (getPlatform() == Common::kPlatformWindows) {
-			_sharedCastFile = "SHARDCST.MMM";
-		} else {
-			_sharedCastFile = "Shared Cast";
-		}
-	} else if (getVersion() == 500) {
-		if (getPlatform() == Common::kPlatformWindows) {
-			_sharedCastFile = "SHARED.Cxt";
-		}
-	} else {
-		_sharedCastFile = "Shared.dir";
-	}
 
 	Common::Error err = _currentWindow->loadInitialMovie();
 	if (err.getCode() != Common::kNoError)
@@ -210,16 +221,20 @@ Common::Error DirectorEngine::run() {
 			processEvents();
 
 		_currentWindow = _stage;
+		g_lingo->loadStateFromWindow();
 		loop = _currentWindow->step();
+		g_lingo->saveStateToWindow();
 
 		if (loop) {
-			DatumArray *windowList = g_lingo->_windowList.u.farr;
-			for (uint i = 0; i < windowList->size(); i++) {
-				if ((*windowList)[i].type != OBJECT || (*windowList)[i].u.obj->getObjType() != kWindowObj)
+			FArray *windowList = g_lingo->_windowList.u.farr;
+			for (uint i = 0; i < windowList->arr.size(); i++) {
+				if (windowList->arr[i].type != OBJECT || windowList->arr[i].u.obj->getObjType() != kWindowObj)
 					continue;
 
-				_currentWindow = static_cast<Window *>((*windowList)[i].u.obj);
+				_currentWindow = static_cast<Window *>(windowList->arr[i].u.obj);
+				g_lingo->loadStateFromWindow();
 				_currentWindow->step();
+				g_lingo->saveStateToWindow();
 			}
 		}
 
@@ -227,6 +242,80 @@ Common::Error DirectorEngine::run() {
 	}
 
 	return Common::kNoError;
+}
+
+Common::CodePage DirectorEngine::getPlatformEncoding() {
+	// Returns the default encoding for the platform we're pretending to be.
+	// (English Mac OS, Japanese Mac OS, English Windows, etc.)
+	return getEncoding(getPlatform(), getLanguage());
+}
+
+Common::String DirectorEngine::getEXEName() const {
+	StartMovie startMovie = getStartMovie();
+	if (startMovie.startMovie.size() > 0)
+		return startMovie.startMovie;
+
+	return Common::punycode_decodefilename(Common::lastPathComponent(_gameDescription->desc.filesDescriptions[0].fileName, '/'));
+}
+
+void DirectorEngine::parseOptions() {
+	_options.startMovie.startFrame = -1;
+
+	if (!ConfMan.hasKey("start_movie"))
+		return;
+
+	Common::StringTokenizer tok(ConfMan.get("start_movie"), ",");
+
+	while (!tok.empty()) {
+		Common::String part = tok.nextToken();
+
+		int eqPos = part.findLastOf("=");
+		Common::String key;
+		Common::String value;
+
+		if ((uint)eqPos != Common::String::npos) {
+			key = part.substr(0, eqPos);
+			value = part.substr(eqPos + 1, part.size());
+		} else {
+			value = part;
+		}
+
+		if (key == "movie" || key.empty()) { // Format is movie[@startFrame]
+			if (!_options.startMovie.startMovie.empty()) {
+				warning("parseOptions(): Duplicate startup movie: %s", value.c_str());
+			}
+
+			int atPos = value.findLastOf("@");
+
+			if ((uint)atPos == Common::String::npos) {
+				_options.startMovie.startMovie = value;
+			} else {
+				_options.startMovie.startMovie = value.substr(0, atPos);
+				Common::String tail = value.substr(atPos + 1, value.size());
+				if (tail.size() > 0)
+					_options.startMovie.startFrame = atoi(tail.c_str());
+			}
+
+			_options.startMovie.startMovie = Common::punycode_decodepath(_options.startMovie.startMovie).toString(_dirSeparator);
+
+			debug(2, "parseOptions(): Movie is: %s, frame is: %d", _options.startMovie.startMovie.c_str(), _options.startMovie.startFrame);
+		} else if (key == "startup") {
+			_options.startupPath = value;
+
+			debug(2, "parseOptions(): Startup is: %s", value.c_str());
+		} else {
+			warning("parseOptions(): unknown option %s", part.c_str());
+		}
+
+	}
+}
+
+StartMovie DirectorEngine::getStartMovie() const {
+	return _options.startMovie;
+}
+
+Common::String DirectorEngine::getStartupPath() const {
+	return _options.startupPath;
 }
 
 } // End of namespace Director

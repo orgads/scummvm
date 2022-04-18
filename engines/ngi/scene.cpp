@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -36,7 +35,7 @@
 namespace NGI {
 
 Scene *NGIEngine::accessScene(int sceneId) {
-	SceneTag *t = 0;
+	SceneTag *t = nullptr;
 
 	for (SceneTagList::iterator s = _gameProject->_sceneTagList->begin(); s != _gameProject->_sceneTagList->end(); ++s) {
 		if (s->_sceneId == sceneId) {
@@ -46,7 +45,7 @@ Scene *NGIEngine::accessScene(int sceneId) {
 	}
 
 	if (!t)
-		return 0;
+		return nullptr;
 
 	if (!t->_scene) {
 		t->loadScene();
@@ -230,14 +229,14 @@ bool Scene::load(MfcArchive &file) {
 
 			_soundList->loadFile(slsname, nlname);
 		} else {
-			_soundList->loadFile(slsname, 0);
+			_soundList->loadFile(slsname, nullptr);
 		}
 	}
 
 	initStaticANIObjects();
 
 	if (file.size() - file.pos() > 0)
-		error("Scene::load  (%d bytes left)", file.size() - file.pos());
+		error("Scene::load  (%d bytes left)", (int)(file.size() - file.pos()));
 
 	return true;
 }
@@ -281,7 +280,7 @@ StaticANIObject *Scene::getStaticANIObject1ById(int obj, int a3) {
 			return _staticANIObjectList1[i];
 	}
 
-	return 0;
+	return nullptr;
 }
 
 StaticANIObject *Scene::getStaticANIObject1ByName(const Common::String &name, int a3) {
@@ -290,7 +289,7 @@ StaticANIObject *Scene::getStaticANIObject1ByName(const Common::String &name, in
 			return _staticANIObjectList1[i];
 	}
 
-	return 0;
+	return nullptr;
 }
 
 void Scene::deleteStaticANIObject(StaticANIObject *obj) {
@@ -342,7 +341,7 @@ PictureObject *Scene::getPictureObjectById(int objId, int flags) {
 			return _picObjList[i];
 	}
 
-	return 0;
+	return nullptr;
 }
 
 PictureObject *Scene::getPictureObjectByName(const Common::String &objName, int flags) {
@@ -351,7 +350,7 @@ PictureObject *Scene::getPictureObjectByName(const Common::String &objName, int 
 			return _picObjList[i];
 	}
 
-	return 0;
+	return nullptr;
 }
 
 void Scene::deletePictureObject(PictureObject *obj) {
@@ -370,7 +369,7 @@ MessageQueue *Scene::getMessageQueueById(int messageId) {
 		if (_messageQueueList[i]->_dataId == messageId)
 			return _messageQueueList[i];
 
-	return 0;
+	return nullptr;
 }
 
 MessageQueue *Scene::getMessageQueueByName(const Common::String &name) {
@@ -378,7 +377,7 @@ MessageQueue *Scene::getMessageQueueByName(const Common::String &name) {
 		if (_messageQueueList[i]->_queueName == name)
 			return _messageQueueList[i];
 
-	return 0;
+	return nullptr;
 }
 
 void Scene::preloadMovements(GameVar *var) {
@@ -418,7 +417,7 @@ void Scene::initObjectCursors(const char *varname) {
 	for (GameVar *sub = cursorsVar->_subVars; sub; sub = sub->_nextVarObj) {
 		GameObject *obj = getPictureObjectByName(sub->_varName, -1);
 
-		if (obj || (obj = getStaticANIObject1ByName(sub->_varName, -1)) != 0) {
+		if (obj || (obj = getStaticANIObject1ByName(sub->_varName, -1)) != nullptr) {
 			if (obj->_id < minId)
 				minId = obj->_id;
 			if (obj->_id > maxId)
@@ -605,7 +604,7 @@ void Scene::updateScrolling2() {
 }
 
 StaticANIObject *Scene::getStaticANIObjectAtPos(int x, int y) {
-	StaticANIObject *res = 0;
+	StaticANIObject *res = nullptr;
 
 	for (uint i = 0; i < _staticANIObjectList1.size(); i++) {
 		StaticANIObject *p = _staticANIObjectList1[i];
@@ -620,7 +619,7 @@ StaticANIObject *Scene::getStaticANIObjectAtPos(int x, int y) {
 }
 
 PictureObject *Scene::getPictureObjectAtPos(int x, int y) {
-	PictureObject *res = 0;
+	PictureObject *res = nullptr;
 
 	for (uint i = 0; i < _picObjList.size(); i++) {
 		PictureObject *p = _picObjList[i];
@@ -634,7 +633,7 @@ PictureObject *Scene::getPictureObjectAtPos(int x, int y) {
 }
 
 int Scene::getPictureObjectIdAtPos(int x, int y) {
-	PictureObject *resp = 0;
+	PictureObject *resp = nullptr;
 	int res = 0;
 
 	for (uint i = 0; i < _picObjList.size(); i++) {

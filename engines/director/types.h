@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +23,8 @@
 #define DIRECTOR_TYPES_H
 
 namespace Director {
+
+#define CONTINUATION (0xAC)
 
 enum MovieFlag {
 	kMovieFlagAllowOutdatedLingo	= (1 << 8)
@@ -51,7 +52,8 @@ enum ScriptType {
 	kCastScript = 1,
 	kMovieScript = 2,
 	kEventScript = 3,
-	kMaxScriptType = 3	// Sync with score-loading.cpp:45, array scriptTypes[]
+	kTestScript = 4,
+	kMaxScriptType = 4	// Sync with cast.cpp:46, array scriptTypes[]
 };
 
 enum ScriptFlag {
@@ -285,8 +287,7 @@ enum PaletteType {
 	kClutSystemWin = -101
 };
 
-enum {
-	kCursorDefault,
+enum DirectorCursor {
 	kCursorMouseDown,
 	kCursorMouseUp
 };
@@ -314,7 +315,7 @@ enum ChunkType {
 	kChunkLine
 };
 
-enum FileVersion {
+enum {
 	kFileVer300 = 0x404,
 	kFileVer310 = 0x405,
 	kFileVer400 = 0x45B,
@@ -329,6 +330,62 @@ enum FileVersion {
 	kFileVer1150 = 0x782,
 	kFileVer1200 = 0x783,
 	kFileVer1201 = 0x79F
+};
+
+enum DatumType {
+	ARRAY,
+	ARGC,
+	ARGCNORET,
+	CASTREF,
+	CHUNKREF,
+	FIELDREF,
+	FLOAT,
+	INT,
+	OBJECT,
+	PARRAY,
+	POINT,
+	STRING,
+	SYMBOL,
+	VARREF,
+	GLOBALREF,
+	LOCALREF,
+	PROPREF,
+	VOID,
+	RECT
+};
+
+enum VarType {
+	kVarGeneric,
+	kVarArgument,
+	kVarProperty,
+	kVarInstance,
+	kVarGlobal,
+	kVarLocal
+};
+
+struct CastMemberID {
+	int member;
+	int castLib;
+
+	CastMemberID() : member(0), castLib(0) {}
+	CastMemberID(int memberID, int castLibID)
+		: member(memberID), castLib(castLibID) {}
+	
+	bool operator==(const CastMemberID &c) {
+		return member == c.member && castLib == c.castLib;
+	}
+	bool operator!=(const CastMemberID &c) {
+		return member != c.member || castLib != c.castLib;
+	}
+
+	Common::String asString() const;
+};
+
+enum CompareResult {
+	kCompareLess,
+	kCompareEqual,
+	kCompareGreater,
+	kCompareError
 };
 
 struct Datum;

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -833,6 +832,7 @@ static SciKernelMapEntry s_kernelMap[] = {
 #endif
 	{ MAP_CALL(Show),              SIG_EVERYWHERE,           "i",                     NULL,            NULL },
 	{ MAP_CALL(SinDiv),            SIG_EVERYWHERE,           "ii",                    NULL,            NULL },
+	{ MAP_CALL(ScummVMSleep),      SIG_EVERYWHERE,           "i",                     NULL,            NULL },
 	{ MAP_CALL(Sort),              SIG_EVERYWHERE,           "ooo",                   NULL,            NULL },
 	{ MAP_CALL(Sqrt),              SIG_EVERYWHERE,           "i",                     NULL,            NULL },
 	{ MAP_CALL(StrAt),             SIG_EVERYWHERE,           "ri(i)",                 NULL,            kStrAt_workarounds },
@@ -855,7 +855,7 @@ static SciKernelMapEntry s_kernelMap[] = {
 	{ MAP_CALL(UnLoad),            SIG_EVERYWHERE,           "i[ir!]",                NULL,            kUnLoad_workarounds },
 	// ^ We allow invalid references here (e.g. bug #6600), since they will be invalidated anyway by the call itself
 	{ MAP_CALL(ValidPath),         SIG_EVERYWHERE,           "r",                     NULL,            NULL },
-	{ MAP_CALL(Wait),              SIG_EVERYWHERE,           "i",                     NULL,            NULL },
+	{ MAP_CALL(Wait),              SIG_SCI16, SIGFOR_ALL,    "i",                     NULL,            NULL },
 
 	// Unimplemented SCI0-SCI1.1 unused functions, always mapped to kDummy
 	{ MAP_DUMMY(InspectObj),      SIG_EVERYWHERE,           "(.*)",                  NULL,            NULL },
@@ -1445,7 +1445,7 @@ static const char *const sci21_default_knames[] = {
 	/*0x4c*/ "ScrollWindow",	// Dummy in SCI3
 	/*0x4d*/ "Dummy",
 	/*0x4e*/ "Dummy",
-	/*0x4f*/ "Dummy",           // Replaced with kWait for Hoyle5 in ScummVM
+	/*0x4f*/ "Dummy",
 	/*0x50*/ "GetEvent",
 	/*0x51*/ "GlobalToLocal",
 	/*0x52*/ "LocalToGlobal",

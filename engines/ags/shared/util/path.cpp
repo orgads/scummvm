@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,14 +27,9 @@
 #include "ags/lib/allegro/file.h"
 #include "ags/shared/util/path.h"
 #include "ags/shared/util/stdio_compat.h"
+#include "ags/shared/util/file.h"
 
 namespace AGS3 {
-
-// TODO: implement proper portable path length
-#ifndef MAX_PATH
-#define MAX_PATH 512
-#endif
-
 namespace AGS {
 namespace Shared {
 
@@ -54,20 +48,14 @@ String get_extension(const String &path) {
 	       filename : Common::String(filename.c_str() + i + 1);
 }
 
-bool IsDirectory(const String &filename) {
-	// stat() does not like trailing slashes, remove them
-	String fixed_path = MakePathNoSlash(filename);
-	return ags_directory_exists(fixed_path.GetCStr()) != 0;
-}
-
-bool IsFile(const String &filename) {
-	return ags_file_exists(filename.GetCStr()) != 0;
-}
-
-bool IsFileOrDir(const String &filename) {
-	// stat() does not like trailing slashes, remove them
-	String fixed_path = MakePathNoSlash(filename);
-	return ags_path_exists(fixed_path.GetCStr()) != 0;
+String GetParent(const String &path) {
+	const char *cstr = path.GetCStr();
+	const char *ptr_end = cstr + path.GetLength();
+	for (const char *ptr = ptr_end; ptr > cstr; --ptr) {
+		if (*ptr == '/' || *ptr == PATH_ALT_SEPARATOR)
+			return String(cstr, ptr - cstr);
+	}
+	return ".";
 }
 
 String GetFilename(const String &path) {
@@ -102,7 +90,7 @@ int ComparePaths(const String &path1, const String &path2) {
 }
 
 String GetDirectoryPath(const String &path) {
-	if (IsDirectory(path))
+	if (File::IsDirectory(path))
 		return path;
 
 	String dir = path;
@@ -116,15 +104,15 @@ String GetDirectoryPath(const String &path) {
 }
 
 bool IsSameOrSubDir(const String &parent, const String &path) {
-	char can_parent[MAX_PATH];
-	char can_path[MAX_PATH];
-	char relative[MAX_PATH];
+	char can_parent[MAX_PATH_SZ];
+	char can_path[MAX_PATH_SZ];
+	char relative[MAX_PATH_SZ];
 	// canonicalize_filename treats "." as "./." (file in working dir)
 	const char *use_parent = parent == "." ? "./" : parent.GetCStr();
 	const char *use_path = path == "." ? "./" : path.GetCStr();
-	canonicalize_filename(can_parent, use_parent, MAX_PATH);
-	canonicalize_filename(can_path, use_path, MAX_PATH);
-	const char *pstr = make_relative_filename(relative, can_parent, can_path, MAX_PATH);
+	canonicalize_filename(can_parent, use_parent, sizeof(can_parent));
+	canonicalize_filename(can_path, use_path, sizeof(can_path));
+	const char *pstr = make_relative_filename(relative, can_parent, can_path, sizeof(relative));
 	if (!pstr)
 		return false;
 	for (pstr = strstr(pstr, ".."); pstr && *pstr; pstr = strstr(pstr, "..")) {
@@ -140,9 +128,9 @@ bool IsRelativePath(const String &path) {
 }
 
 void FixupPath(String &path) {
-#if AGS_PLATFORM_OS_WINDOWS
+//#if AGS_PLATFORM_OS_WINDOWS
 	path.Replace('\\', '/'); // bring Windows path separators to uniform style
-#endif
+//#endif
 	path.MergeSequences('/');
 }
 
@@ -178,29 +166,29 @@ String MakeAbsolutePath(const String &path) {
 #if AGS_PLATFORM_OS_WINDOWS
 	// NOTE: cannot use long path names in the engine, because it does not have unicode strings support
 	//
-	//char long_path_buffer[MAX_PATH];
-	//if (GetLongPathNameA(path, long_path_buffer, MAX_PATH) > 0)
+	//char long_path_buffer[MAX_PATH_SZ];
+	//if (GetLongPathNameA(path, long_path_buffer, MAX_PATH_SZ) > 0)
 	//{
 	//    abs_path = long_path_buffer;
 	//}
 #endif
-	char buf[MAX_PATH];
-	canonicalize_filename(buf, abs_path.GetCStr(), MAX_PATH);
+	char buf[MAX_PATH_SZ];
+	canonicalize_filename(buf, abs_path.GetCStr(), sizeof(buf));
 	abs_path = buf;
 	FixupPath(abs_path);
 	return abs_path;
 }
 
 String MakeRelativePath(const String &base, const String &path) {
-	char can_parent[MAX_PATH];
-	char can_path[MAX_PATH];
-	char relative[MAX_PATH];
+	char can_parent[MAX_PATH_SZ];
+	char can_path[MAX_PATH_SZ];
+	char relative[MAX_PATH_SZ];
 	// canonicalize_filename treats "." as "./." (file in working dir)
 	const char *use_parent = base == "." ? "./" : base.GetCStr();
 	const char *use_path = path == "." ? "./" : path.GetCStr(); // FIXME?
-	canonicalize_filename(can_parent, use_parent, MAX_PATH);
-	canonicalize_filename(can_path, use_path, MAX_PATH);
-	String rel_path = make_relative_filename(relative, can_parent, can_path, MAX_PATH);
+	canonicalize_filename(can_parent, use_parent, sizeof(can_parent));
+	canonicalize_filename(can_path, use_path, sizeof(can_path));
+	String rel_path = make_relative_filename(relative, can_parent, can_path, sizeof(relative));
 	FixupPath(rel_path);
 	return rel_path;
 }
@@ -213,6 +201,17 @@ String ConcatPaths(const String &parent, const String &child) {
 	String path = String::FromFormat("%s/%s", parent.GetCStr(), child.GetCStr());
 	FixupPath(path);
 	return path;
+}
+
+String ConcatPaths(String &buf, const String &parent, const String &child) {
+	if (parent.IsEmpty())
+		buf = child;
+	else if (child.IsEmpty())
+		buf = parent;
+	else
+		buf.Format("%s/%s", parent.GetCStr(), child.GetCStr());
+	FixupPath(buf);
+	return buf;
 }
 
 String MakePath(const String &parent, const String &filename) {
@@ -248,8 +247,8 @@ String FixupSharedFilename(const String &filename) {
 
 String GetPathInASCII(const String &path) {
 #if AGS_PLATFORM_OS_WINDOWS
-	char ascii_buffer[MAX_PATH];
-	if (GetShortPathNameA(path.GetCStr(), ascii_buffer, MAX_PATH) == 0)
+	char ascii_buffer[MAX_PATH_SZ];
+	if (GetShortPathNameA(path.GetCStr(), ascii_buffer, MAX_PATH_SZ) == 0)
 		return "";
 	return ascii_buffer;
 #else
@@ -260,12 +259,12 @@ String GetPathInASCII(const String &path) {
 
 #if AGS_PLATFORM_OS_WINDOWS
 String WidePathNameToAnsi(LPCWSTR pathw) {
-	WCHAR short_path[MAX_PATH];
-	char ascii_buffer[MAX_PATH];
+	WCHAR short_path[MAX_PATH_SZ];
+	char ascii_buffer[MAX_PATH_SZ];
 	LPCWSTR arg_path = pathw;
-	if (GetShortPathNameW(arg_path, short_path, MAX_PATH) == 0)
+	if (GetShortPathNameW(arg_path, short_path, MAX_PATH_SZ) == 0)
 		return "";
-	WideCharToMultiByte(CP_ACP, 0, short_path, -1, ascii_buffer, MAX_PATH, NULL, NULL);
+	WideCharToMultiByte(CP_ACP, 0, short_path, -1, ascii_buffer, MAX_PATH_SZ, NULL, NULL);
 	return ascii_buffer;
 }
 #endif

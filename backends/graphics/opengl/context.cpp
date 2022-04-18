@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,10 +15,11 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
+#define GLAD_GL_IMPLEMENTATION
 
 #include "backends/graphics/opengl/opengl-sys.h"
 #include "backends/graphics/opengl/opengl-graphics.h"
@@ -44,9 +45,7 @@ void Context::reset() {
 	packedPixelsSupported = false;
 	textureEdgeClampSupported = false;
 
-#define GL_FUNC_DEF(ret, name, param) name = nullptr;
-#include "backends/graphics/opengl/opengl-func.h"
-#undef GL_FUNC_DEF
+	isInitialized = false;
 
 	activePipeline = nullptr;
 }
@@ -79,60 +78,77 @@ void OpenGLGraphicsManager::setContextType(ContextType type) {
 	g_context.type = type;
 }
 
+#ifdef USE_GLAD
+static GLADapiproc loadFunc(void *userptr, const char *name) {
+	OpenGLGraphicsManager *openglGraphicsManager = (OpenGLGraphicsManager *)userptr;
+	return (GLADapiproc)openglGraphicsManager->getProcAddress(name);
+}
+#endif
+
 void OpenGLGraphicsManager::initializeGLContext() {
 	// Initialize default state.
 	g_context.reset();
 
-	// Load all functions.
-	// We use horrible trickery to silence C++ compilers.
-	// See backends/plugins/sdl/sdl-provider.cpp for more information.
-	assert(sizeof(void (*)()) == sizeof(void *));
+#ifdef USE_GLAD
+	switch (g_context.type) {
+	case kContextGL:
+		gladLoadGLUserPtr(loadFunc, this);
+		break;
 
-#define LOAD_FUNC(name, loadName) { \
-	void *fn = getProcAddress(#loadName); \
-	memcpy(&g_context.name, &fn, sizeof(fn)); \
-}
+	case kContextGLES:
+		gladLoadGLES1UserPtr(loadFunc, this);
+		break;
 
-#define GL_EXT_FUNC_DEF(ret, name, param) LOAD_FUNC(name, name)
+	case kContextGLES2:
+		gladLoadGLES2UserPtr(loadFunc, this);
+		break;
 
-#ifdef USE_BUILTIN_OPENGL
-#define GL_FUNC_DEF(ret, name, param) g_context.name = &name
-#define GL_FUNC_2_DEF GL_FUNC_DEF
-#else
-#define GL_FUNC_DEF GL_EXT_FUNC_DEF
-#define GL_FUNC_2_DEF(ret, name, extName, param) \
-	if (g_context.type == kContextGL) { \
-		LOAD_FUNC(name, extName); \
-	} else { \
-		LOAD_FUNC(name, name); \
+	default:
+		break;
 	}
 #endif
-#include "backends/graphics/opengl/opengl-func.h"
-#undef GL_FUNC_2_DEF
-#undef GL_FUNC_DEF
-#undef GL_EXT_FUNC_DEF
-#undef LOAD_FUNC
+
+	g_context.isInitialized = true;
 
 	// Obtain maximum texture size.
 	GL_CALL(glGetIntegerv(GL_MAX_TEXTURE_SIZE, &g_context.maxTextureSize));
 	debug(5, "OpenGL maximum texture size: %d", g_context.maxTextureSize);
 
-	const char *verString = (const char *)g_context.glGetString(GL_VERSION);
+	const char *verString = (const char *)glGetString(GL_VERSION);
 	debug(5, "OpenGL version: %s", verString);
 
-	const char *glVersionFormat;
 	if (g_context.type == kContextGL) {
-		glVersionFormat = "%d.%d";
-	} else {
-		glVersionFormat = "OpenGL ES %d.%d";
+		// OpenGL version number is either of the form major.minor or major.minor.release,
+		// where the numbers all have one or more digits
+		if (sscanf(verString, "%d.%d", &g_context.majorVersion, &g_context.minorVersion) != 2) {
+			g_context.majorVersion = g_context.minorVersion = 0;
+			warning("Could not parse GL version '%s'", verString);
+		}
+	} else if (g_context.type == kContextGLES) {
+		// The form of the string is "OpenGL ES-<profile> <major>.<minor>",
+		// where <profile> is either "CM" (Common) or "CL" (Common-Lite),
+		// and <major> and <minor> are integers.
+		char profile[3];
+		if (sscanf(verString, "OpenGL ES-%2s %d.%d", profile,
+					&g_context.majorVersion, &g_context.minorVersion) != 3) {
+			g_context.majorVersion = g_context.minorVersion = 0;
+			warning("Could not parse GL ES version '%s'", verString);
+		}
+	} else if (g_context.type == kContextGLES2) {
+		// The version is of the form
+		// OpenGL<space>ES<space><version number><space><vendor-specific information>
+		// version number format is not defined
+		// There is only OpenGL ES 2.0 anyway
+		if (sscanf(verString, "OpenGL ES %d.%d", &g_context.majorVersion, &g_context.minorVersion) != 2) {
+			g_context.minorVersion = 0;
+			if (sscanf(verString, "OpenGL ES %d ", &g_context.majorVersion) != 1) {
+				g_context.majorVersion = 0;
+				warning("Could not parse GL ES 2 version '%s'", verString);
+			}
+		}
 	}
 
-	if (sscanf(verString, glVersionFormat, &g_context.majorVersion, &g_context.minorVersion) != 2) {
-		g_context.majorVersion = g_context.minorVersion = 0;
-		warning("Could not parse GL version '%s'", verString);
-	}
-
-	const char *extString = (const char *)g_context.glGetString(GL_EXTENSIONS);
+	const char *extString = (const char *)glGetString(GL_EXTENSIONS);
 	debug(5, "OpenGL extensions: %s", extString);
 
 	bool ARBShaderObjects = false;
@@ -207,6 +223,12 @@ void OpenGLGraphicsManager::initializeGLContext() {
 	}
 
 	// Log features supported by GL context.
+#if !USE_FORCED_GLES
+	if (g_context.shadersSupported)
+		debug(5, "GLSL version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
+#endif
+	debug(5, "OpenGL vendor: %s", glGetString(GL_VENDOR));
+	debug(5, "OpenGL renderer: %s", glGetString(GL_RENDERER));
 	debug(5, "OpenGL: NPOT texture support: %d", g_context.NPOTSupported);
 	debug(5, "OpenGL: Shader support: %d", g_context.shadersSupported);
 	debug(5, "OpenGL: Multitexture support: %d", g_context.multitextureSupported);

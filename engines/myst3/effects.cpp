@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -173,7 +172,7 @@ WaterEffect *WaterEffect::create(Myst3Engine *vm, uint32 id) {
 
 	if (!s->loadMasks("", id, Archive::kWaterEffectMask)) {
 		delete s;
-		return 0;
+		return nullptr;
 	}
 
 	return s;
@@ -281,7 +280,7 @@ void WaterEffect::apply(Graphics::Surface *src, Graphics::Surface *dst, Graphics
 	uint32 *dstPtr = (uint32 *)dst->getPixels();
 	byte *maskPtr = (byte *)mask->getPixels();
 
-	for (uint y = 0; y < dst->h; y++) {
+	for (int y = 0; y < dst->h; y++) {
 		if (!bottomFace) {
 			uint32 strength = (320 * (9 - y / 64)) / waterEffectAttenuation;
 			if (strength > 4)
@@ -289,7 +288,7 @@ void WaterEffect::apply(Graphics::Surface *src, Graphics::Surface *dst, Graphics
 			hDisplacement = _horizontalDisplacements[strength];
 		}
 
-		for (uint x = 0; x < dst->w; x++) {
+		for (int x = 0; x < dst->w; x++) {
 			int8 maskValue = *maskPtr;
 
 			if (maskValue != 0) {
@@ -349,7 +348,7 @@ LavaEffect *LavaEffect::create(Myst3Engine *vm, uint32 id) {
 
 	if (!s->loadMasks("", id, Archive::kLavaEffectMask)) {
 		delete s;
-		return 0;
+		return nullptr;
 	}
 
 	return s;
@@ -395,8 +394,8 @@ void LavaEffect::applyForFace(uint face, Graphics::Surface *src, Graphics::Surfa
 	uint32 *dstPtr = (uint32 *)dst->getPixels();
 	byte *maskPtr = (byte *)mask->surface->getPixels();
 
-	for (uint y = 0; y < dst->h; y++) {
-		for (uint x = 0; x < dst->w; x++) {
+	for (int y = 0; y < dst->h; y++) {
+		for (int x = 0; x < dst->w; x++) {
 			uint8 maskValue = *maskPtr;
 
 			if (maskValue != 0) {
@@ -524,8 +523,8 @@ void MagnetEffect::apply(Graphics::Surface *src, Graphics::Surface *dst, Graphic
 	uint32 *dstPtr = (uint32 *)dst->getPixels();
 	byte *maskPtr = (byte *)mask->getPixels();
 
-	for (uint y = 0; y < dst->h; y++) {
-		for (uint x = 0; x < dst->w; x++) {
+	for (int y = 0; y < dst->h; y++) {
+		for (int x = 0; x < dst->w; x++) {
 			uint8 maskValue = *maskPtr;
 
 			if (maskValue != 0) {
@@ -665,7 +664,7 @@ bool ShieldEffect::loadPattern() {
 
 	Common::SeekableReadStream *stream = desc.getData();
 	if (stream->size() != 4096) {
-		error("Incorrect shield effect support file size %d", stream->size());
+		error("Incorrect shield effect support file size %d", (int)stream->size());
 	}
 
 	stream->read(_pattern, 4096);
@@ -778,8 +777,8 @@ void ShieldEffect::applyForFace(uint face, Graphics::Surface *src, Graphics::Sur
 	uint32 *dstPtr = (uint32 *)dst->getPixels();
 	byte *maskPtr = (byte *)mask->surface->getPixels();
 
-	for (uint y = 0; y < dst->h; y++) {
-		for (uint x = 0; x < dst->w; x++) {
+	for (int y = 0; y < dst->h; y++) {
+		for (int x = 0; x < dst->w; x++) {
 			uint8 maskValue = *maskPtr;
 
 			if (maskValue != 0) {

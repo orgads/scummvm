@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 #include "common/system.h"
@@ -94,8 +93,8 @@ void EngineState::reset(bool isRestoring) {
 
 	executionStackBase = 0;
 	_executionStackPosChanged = false;
-	stack_base = 0;
-	stack_top = 0;
+	stack_base = nullptr;
+	stack_top = nullptr;
 
 	r_acc = NULL_REG;
 	r_prev = NULL_REG;
@@ -221,6 +220,9 @@ static kLanguage charToLanguage(const char c) {
 Common::String SciEngine::getSciLanguageString(const Common::String &str, kLanguage requestedLanguage, kLanguage *secondaryLanguage, uint16 *languageSplitter) const {
 	kLanguage foundLanguage = K_LANG_NONE;
 	const byte *textPtr = (const byte *)str.c_str();
+	if (secondaryLanguage) {
+		*secondaryLanguage = K_LANG_NONE;
+	}
 	byte curChar = 0;
 	byte curChar2 = 0;
 
@@ -261,24 +263,6 @@ Common::String SciEngine::getSciLanguageString(const Common::String &str, kLangu
 				switch (curChar) {
 				case 0: // Terminator NUL
 					return fullWidth;
-				case '\\':
-					// "\n", "\N", "\r" and "\R" were overwritten with SPACE + 0x0D in PC-9801 SSCI
-					//  inside GetLongest() (text16). We do it here, because it's much cleaner and
-					//  we have to process the text here anyway.
-					//  Occurs for example in Police Quest 2 intro
-					curChar2 = *(textPtr + 1);
-					switch (curChar2) {
-					case 'n':
-					case 'N':
-					case 'r':
-					case 'R':
-						fullWidth += ' ';
-						fullWidth += 0x0D; // CR
-						textPtr += 2;
-						continue;
-					default:
-						break;
-					}
 				default:
 					break;
 				}
@@ -387,7 +371,7 @@ Common::String SciEngine::strSplitLanguage(const char *str, uint16 *languageSpli
 
 	// Don't add subtitle when separator is not set, subtitle language is not set, or
 	// string contains only one language
-	if ((sep == NULL) || (subtitleLanguage == K_LANG_NONE) || (foundLanguage == K_LANG_NONE))
+	if ((sep == nullptr) || (subtitleLanguage == K_LANG_NONE) || (foundLanguage == K_LANG_NONE))
 		return retval;
 
 	// Add subtitle, unless the subtitle language doesn't match the languages in the string

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -43,6 +42,17 @@ struct GameInfo {
 		GAME_REGRET,
 		GAME_PENTAGRAM_MENU
 	} _type;
+
+	// Usecode coff variant
+	enum GameUsecodeOffsetVariant {
+		GAME_UC_DEFAULT, // Most versions of most games
+		GAME_UC_ORIG,	 // Original (pre-patch) CD versions of Crusader games
+		GAME_UC_DEMO,    // Crusader: No Remorse or No Regret Demos
+		GAME_UC_REM_ES,  // Crusader: No Remorse Spanish
+		GAME_UC_REM_FR,	 // Crusader: No Remorse French
+		GAME_UC_REM_JA,  // Crusader: No Remorse Japanese
+		GAME_UC_REG_DE   // Crusader: No Regret German
+	} _ucOffVariant;
 
 	//! version number, encoded as 100*major + minor
 	//! so, 2.12 becomes 212

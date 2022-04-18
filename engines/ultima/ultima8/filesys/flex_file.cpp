@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -26,12 +25,28 @@
 namespace Ultima {
 namespace Ultima8 {
 
+static const int FLEX_TABLE_OFFSET = 0x80;
+static const int FLEX_HDR_SIZE = 0x52;
+static const char FLEX_HDR_PAD = 0x1A;
+
 FlexFile::FlexFile(Common::SeekableReadStream *rs) : _rs(rs), _count(0) {
 	_valid = isFlexFile(_rs);
 
 	if (_valid) {
-		_rs->seek(0x54);
+		_rs->seek(FLEX_HDR_SIZE + 2);
 		_count = _rs->readUint32LE();
+	}
+	if (_count > 4095) {
+		// In practice the largest flex in either Crusader or U8 games has
+		// 3074 entries, so this seems invalid.
+		warning("Flex invalid: improbable number of entries %d", _count);
+		_valid = false;
+		_count = 0;
+	}
+	if (rs->size() < FLEX_TABLE_OFFSET + 8 * _count) {
+		warning("Flex invalid: stream not long enough for offset table");
+		_valid = false;
+		_count = 0;
 	}
 }
 
@@ -43,16 +58,16 @@ FlexFile::~FlexFile() {
 bool FlexFile::isFlexFile(Common::SeekableReadStream *_rs) {
 	_rs->seek(0);
 	int i;
-	char buf[0x52];
-	_rs->read(buf, 0x52);
+	char buf[FLEX_HDR_SIZE];
+	_rs->read(buf, FLEX_HDR_SIZE);
 
-	for (i = 0; i < 0x52; ++i) {
-		if (buf[i] == 0x1A) break;
+	for (i = 0; i < FLEX_HDR_SIZE; ++i) {
+		if (buf[i] == FLEX_HDR_PAD) break;
 	}
 
-	if (i < 0x52) {
-		for (++i; i < 0x52; ++i) {
-			if (buf[i] != 0x1A) return false;
+	if (i < FLEX_HDR_SIZE) {
+		for (++i; i < FLEX_HDR_SIZE; ++i) {
+			if (buf[i] != FLEX_HDR_PAD) return false;
 		}
 		return true;
 	}
@@ -60,7 +75,7 @@ bool FlexFile::isFlexFile(Common::SeekableReadStream *_rs) {
 }
 
 uint32 FlexFile::getOffset(uint32 index) {
-	_rs->seek(0x80 + 8 * index);
+	_rs->seek(FLEX_TABLE_OFFSET + 8 * index);
 	return _rs->readUint32LE();
 }
 
@@ -86,7 +101,7 @@ uint8 *FlexFile::getObject(uint32 index, uint32 *sizep) {
 uint32 FlexFile::getSize(uint32 index) const {
 	if (index >= _count) return 0;
 
-	_rs->seek(0x84 + 8 * index);
+	_rs->seek(FLEX_TABLE_OFFSET + 4 + 8 * index);
 	uint32 length = _rs->readUint32LE();
 
 	return length;

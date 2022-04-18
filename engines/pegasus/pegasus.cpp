@@ -7,10 +7,10 @@
  * Additional copyright for this file:
  * Copyright (C) 1995-1997 Presto Studios, Inc.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,8 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -79,28 +78,28 @@
 
 namespace Pegasus {
 
-PegasusEngine::PegasusEngine(OSystem *syst, const PegasusGameDescription *gamedesc) : Engine(syst), InputHandler(0), _gameDescription(gamedesc),
+PegasusEngine::PegasusEngine(OSystem *syst, const PegasusGameDescription *gamedesc) : Engine(syst), InputHandler(nullptr), _gameDescription(gamedesc),
 		_shellNotification(kJMPDCShellNotificationID, this), _returnHotspot(kInfoReturnSpotID), _itemDragger(this), _bigInfoMovie(kNoDisplayElement),
 		_smallInfoMovie(kNoDisplayElement) {
-	_continuePoint = 0;
+	_continuePoint = nullptr;
 	_saveAllowed = _loadAllowed = true;
 	_saveRequested = _loadRequested = false;
-	_gameMenu = 0;
+	_gameMenu = nullptr;
 	_deathReason = kDeathStranded;
-	_neighborhood = 0;
+	_neighborhood = nullptr;
 	_FXLevel = 0x80;
 	_ambientLevel = 0x80;
 	_gameMode = kNoMode;
 	_switchModesSync = false;
-	_draggingItem = 0;
+	_draggingItem = nullptr;
 	_dragType = kDragNoDrag;
-	_idlerHead = 0;
+	_idlerHead = nullptr;
 	_currentCD = 1;
-	_introTimer = 0;
+	_introTimer = nullptr;
 	_toggleRequested = false;
 	_chattyAI = true;
 	_chattyArthur = true;
-	_aiSaveStream = 0;
+	_aiSaveStream = nullptr;
 	_heardOverviewVoice = false;
 }
 
@@ -153,7 +152,7 @@ Common::Error PegasusEngine::run() {
 	if (!isDemo() && !detectOpeningClosingDirectory()) {
 		Common::String message = "Missing intro directory. ";
 
-		// Give Mac OS X a more specific message because we can
+		// Give macOS a more specific message because we can
 #ifdef MACOSX
 		message += "Make sure \"Opening/Closing\" is present.";
 #else
@@ -219,7 +218,7 @@ bool PegasusEngine::canSaveGameStateCurrently() {
 bool PegasusEngine::detectOpeningClosingDirectory() {
 	// We need to detect what our Opening/Closing directory is listed as
 	// On the original disc, it was 'Opening/Closing' but only HFS(+) supports the slash
-	// Mac OS X will display this as 'Opening:Closing' and we can use that directly
+	// macOS will display this as 'Opening:Closing' and we can use that directly
 	// On other systems, users will need to rename to "Opening_Closing"
 
 	Common::FSNode gameDataDir(ConfMan.get("path"));
@@ -422,7 +421,7 @@ void PegasusEngine::addIdler(Idler *idler) {
 	idler->_nextIdler = _idlerHead;
 	if (_idlerHead)
 		_idlerHead->_prevIdler = idler;
-	idler->_prevIdler = 0;
+	idler->_prevIdler = nullptr;
 	_idlerHead = idler;
 }
 
@@ -433,12 +432,12 @@ void PegasusEngine::removeIdler(Idler *idler) {
 		idler->_nextIdler->_prevIdler = idler->_prevIdler;
 	if (idler == _idlerHead)
 		_idlerHead = idler->_nextIdler;
-	idler->_nextIdler = 0;
-	idler->_prevIdler = 0;
+	idler->_nextIdler = nullptr;
+	idler->_prevIdler = nullptr;
 }
 
 void PegasusEngine::giveIdleTime() {
-	for (Idler *idler = _idlerHead; idler != 0; idler = idler->_nextIdler)
+	for (Idler *idler = _idlerHead; idler != nullptr; idler = idler->_nextIdler)
 		idler->useIdleTime();
 }
 
@@ -454,8 +453,8 @@ bool PegasusEngine::loadFromStream(Common::SeekableReadStream *stream) {
 	// Dispose currently running stuff
 	lowerInventoryDrawerSync();
 	lowerBiochipDrawerSync();
-	useMenu(0);
-	useNeighborhood(0);
+	useMenu(nullptr);
+	useNeighborhood(nullptr);
 	removeAllItemsFromInventory();
 	removeAllItemsFromBiochips();
 	_currentItemID = kNoItemID;
@@ -702,8 +701,15 @@ void PegasusEngine::writeContinueStream(Common::WriteStream *stream) {
 }
 
 Common::StringArray PegasusEngine::listSaveFiles() {
+	const Common::String autoSaveName("pegasus-AutoSave.sav");
 	Common::StringArray fileNames = g_system->getSavefileManager()->listSavefiles("pegasus-*.sav");
+	// Autosave must be at slot 0, so remove it, then prepend (even if it doesn't exist,
+	// it will be prepended)
+	Common::StringArray::iterator it = Common::find(fileNames.begin(), fileNames.end(), autoSaveName);
+	if (it != fileNames.end())
+		fileNames.erase(it);
 	Common::sort(fileNames.begin(), fileNames.end());
+	fileNames.insert_at(0, autoSaveName);
 	return fileNames;
 }
 
@@ -733,10 +739,11 @@ static bool isValidSaveFileName(const Common::String &desc) {
 }
 
 Common::Error PegasusEngine::saveGameState(int slot, const Common::String &desc, bool isAutosave) {
-	if (!isValidSaveFileName(desc))
+	Common::String saveName = isAutosave ? Common::String("AutoSave") : desc;
+	if (!isValidSaveFileName(saveName))
 		return Common::Error(Common::kCreatingFileFailed, _("Invalid file name for saving"));
 
-	Common::String output = Common::String::format("pegasus-%s.sav", desc.c_str());
+	Common::String output = Common::String::format("pegasus-%s.sav", saveName.c_str());
 	Common::OutSaveFile *saveFile = _saveFileMan->openForSaving(output, false);
 	if (!saveFile)
 		return Common::kUnknownError;
@@ -761,7 +768,7 @@ void PegasusEngine::receiveNotification(Notification *notification, const Notifi
 				showTempScreen("Images/Demo/NGsplashScrn.pict");
 
 				if (shouldQuit()) {
-					useMenu(0);
+					useMenu(nullptr);
 					return;
 				}
 
@@ -816,7 +823,7 @@ void PegasusEngine::introTimerExpired() {
 
 		bool skipped = false;
 
-		Video::VideoDecoder *video = 0;
+		Video::VideoDecoder *video = nullptr;
 
 #ifdef USE_THEORADEC
 		if (isDVD()) {
@@ -824,7 +831,7 @@ void PegasusEngine::introTimerExpired() {
 
 			if (!video->loadFile(_introDirectory + "/LilMovie_hq.ogg")) {
 				delete video;
-				video = 0;
+				video = nullptr;
 			}
 		}
 #endif
@@ -986,18 +993,18 @@ void PegasusEngine::doGameMenuCommand(const GameMenuCommand command) {
 				}
 
 				_gfx->doFadeOutSync();
-				useMenu(0);
+				useMenu(nullptr);
 				_gfx->enableErase();
 				_gfx->updateDisplay();
 				_gfx->disableErase();
 
-				Video::VideoDecoder *video = 0;
+				Video::VideoDecoder *video = nullptr;
 				if (GameState.getEasterEgg()) {
 #ifdef USE_THEORADEC
 					video = new Video::TheoraDecoder();
 					if (!video->loadFile(_introDirectory + "/Closing_hq2.ogg")) {
 						delete video;
-						video = 0;
+						video = nullptr;
 					}
 #endif
 					if (!video) {
@@ -1010,7 +1017,7 @@ void PegasusEngine::doGameMenuCommand(const GameMenuCommand command) {
 					video = new Video::TheoraDecoder();
 					if (!video->loadFile(_introDirectory + "/Closing_hq1.ogg")) {
 						delete video;
-						video = 0;
+						video = nullptr;
 					}
 #endif
 					if (!video) {
@@ -1037,7 +1044,7 @@ void PegasusEngine::doGameMenuCommand(const GameMenuCommand command) {
 					video = new Video::TheoraDecoder();
 					if (!video->loadFile(_introDirectory + "/Closing_hq3.ogg")) {
 						delete video;
-						video = 0;
+						video = nullptr;
 					}
 #endif
 					if (!video) {
@@ -1206,7 +1213,7 @@ void PegasusEngine::doInterfaceOverview() {
 	static const Common::Rect hiddenSpot = Common::Rect(595, 417, 595 + 4, 417 + 5);
 
 	_gfx->doFadeOutSync();
-	useMenu(0);
+	useMenu(nullptr);
 
 	Picture leftBackground(kNoDisplayElement);
 	leftBackground.initFromPICTFile("Images/Interface/OVLeft.mac");
@@ -1478,7 +1485,7 @@ InventoryItem *PegasusEngine::getCurrentInventoryItem() {
 	if (g_interface)
 		return g_interface->getCurrentInventoryItem();
 
-	return 0;
+	return nullptr;
 }
 
 bool PegasusEngine::itemInInventory(InventoryItem *item) {
@@ -1493,7 +1500,7 @@ BiochipItem *PegasusEngine::getCurrentBiochip() {
 	if (g_interface)
 		return g_interface->getCurrentBiochip();
 
-	return 0;
+	return nullptr;
 }
 
 bool PegasusEngine::itemInBiochips(BiochipItem *item) {
@@ -1669,11 +1676,11 @@ void PegasusEngine::throwAwayEverything() {
 	else
 		_currentBiochipID = kNoItemID;
 
-	useMenu(0);
-	useNeighborhood(0);
+	useMenu(nullptr);
+	useNeighborhood(nullptr);
 
 	delete g_interface;
-	g_interface = 0;
+	g_interface = nullptr;
 }
 
 InputBits PegasusEngine::getInputFilter() {
@@ -1802,7 +1809,7 @@ void PegasusEngine::useNeighborhood(Neighborhood *neighborhood) {
 
 void PegasusEngine::performJump(NeighborhoodID neighborhoodID) {
 	if (_neighborhood)
-		useNeighborhood(0);
+		useNeighborhood(nullptr);
 
 	// Sub chase is special
 	if (neighborhoodID == kNoradSubChaseID) {
@@ -1853,7 +1860,7 @@ void PegasusEngine::startNewGame() {
 		Arthur.resetArthurState();
 
 	_gfx->doFadeOutSync();
-	useMenu(0);
+	useMenu(nullptr);
 
 	_gfx->enableErase();
 	_gfx->updateDisplay();
@@ -1957,7 +1964,7 @@ void PegasusEngine::makeNeighborhood(NeighborhoodID neighborhoodID, Neighborhood
 }
 
 bool PegasusEngine::wantsCursor() {
-	return _gameMenu == 0;
+	return _gameMenu == nullptr;
 }
 
 void PegasusEngine::updateCursor(const Common::Point, const Hotspot *cursorSpot) {
@@ -2351,7 +2358,7 @@ void PegasusEngine::pauseMenu(bool menuUp) {
 		_menuPauseToken.clear();
 		_screenDimmer.hide();
 		_screenDimmer.stopDisplaying();
-		useMenu(0);
+		useMenu(nullptr);
 		g_AIArea->checkMiddleArea();
 	}
 }

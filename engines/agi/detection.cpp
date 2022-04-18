@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -69,13 +68,13 @@ static const PlainGameDescriptor agiGames[] = {
 	{"sq0", "Space Quest 0: Replicated"},
 	{"sq1", "Space Quest I: The Sarien Encounter"},
 	{"sq2", "Space Quest II: Vohaul's Revenge"},
-	{"sqx", "Space Quest X: The Lost Chapter"},
+	{"sqx", "Space Quest: The Lost Chapter"},
 	{"tetris", "AGI Tetris"},
 	{"troll", "Troll\'s Tale"},
 	{"winnie", "Winnie the Pooh in the Hundred Acre Wood"},
 	{"xmascard", "Xmas Card"},
 
-	{0, 0}
+	{nullptr, nullptr}
 };
 
 #include "agi/detection_tables.h"
@@ -268,7 +267,7 @@ ADDetectedGame AgiMetaEngineDetection::fallbackDetect(const FileMap &allFilesXXX
 		const WagProperty *wagGameLastEdit = wagFileParser.getProperty(WagProperty::PC_GAMELAST);
 
 		// If there is an AGI version number in the *.wag file then let's use it
-		if (wagAgiVer != NULL && wagFileParser.checkAgiVersionProperty(*wagAgiVer)) {
+		if (wagAgiVer != nullptr && wagFileParser.checkAgiVersionProperty(*wagAgiVer)) {
 			// TODO/FIXME: Check that version number is something we support before trying to use it.
 			//     If the version number is unsupported then it'll get switched to 0x2917 later.
 			//     But there's the possibility that file based detection has detected something else
@@ -276,25 +275,25 @@ ADDetectedGame AgiMetaEngineDetection::fallbackDetect(const FileMap &allFilesXXX
 			g_fallbackDesc.version = wagFileParser.convertToAgiVersionNumber(*wagAgiVer);
 		}
 
-		// Set gameid according to *.wag file information if it's present and it doesn't contain whitespace.
-		if (wagGameID != NULL && !Common::String(wagGameID->getData()).contains(" ")) {
+		// Set gameid according to *.wag file information if it's present and it's a known value
+		if (wagGameID != nullptr && findPlainGameDescriptor(wagGameID->getData(), agiGames)) {
 			_gameid = wagGameID->getData();
 			debug(3, "Agi::fallbackDetector: Using game id (%s) from WAG file", _gameid.c_str());
 		}
 
 		// Set game description and extra according to *.wag file information if they're present
-		if (wagGameDesc != NULL) {
+		if (wagGameDesc != nullptr && Common::String(wagGameDesc->getData()) != "\"\"") {
 			description = wagGameDesc->getData();
 			debug(3, "Agi::fallbackDetector: Game description (%s) from WAG file", wagGameDesc->getData());
 
 			// If there's game version in the *.wag file, set extra to it
-			if (wagGameVer != NULL) {
+			if (wagGameVer != nullptr && Common::String(wagGameVer->getData()) != "\"\"") {
 				_extra = wagGameVer->getData();
 				debug(3, "Agi::fallbackDetector: Game version (%s) from WAG file", wagGameVer->getData());
 			}
 
 			// If there's game last edit date in the *.wag file, add it to extra
-			if (wagGameLastEdit != NULL) {
+			if (wagGameLastEdit != nullptr) {
 				if (!_extra.empty())
 					_extra += " ";
 				_extra += wagGameLastEdit->getData();
@@ -332,7 +331,7 @@ ADDetectedGame AgiMetaEngineDetection::fallbackDetect(const FileMap &allFilesXXX
 		fallbackWarning = "Your game version has been detected using fallback matching as a\n";
 		fallbackWarning += Common::String::format("variant of %s (%s).\n", g_fallbackDesc.desc.gameId, g_fallbackDesc.desc.extra);
 		fallbackWarning += "If this is an original and unmodified version or new made Fanmade game,\n";
-		fallbackWarning += "please report any, information previously printed by ScummVM to the team.\n";
+		fallbackWarning += "please report any information previously printed by ScummVM to the team.\n";
 
 		g_system->logMessage(LogMessageType::kWarning, fallbackWarning.c_str());
 

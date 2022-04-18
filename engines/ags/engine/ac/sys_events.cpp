@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,14 +15,12 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "common/events.h"
 #include "ags/engine/ac/sys_events.h"
-//include <deque>
 #include "ags/shared/core/platform.h"
 #include "ags/shared/ac/common.h"
 #include "ags/shared/ac/game_setup_struct.h"
@@ -63,6 +61,14 @@ static void(*_on_switchout_callback)(void) = nullptr;
 // ----------------------------------------------------------------------------
 // KEYBOARD INPUT
 // ----------------------------------------------------------------------------
+
+KeyInput ags_keycode_from_scummvm(const Common::Event &event) {
+	KeyInput ki;
+
+	ki.Key = ::AGS::g_events->scummvm_key_to_ags_key(event);
+
+	return ki;
+}
 
 bool ags_keyevent_ready() {
 	return ::AGS::g_events->keyEventPending();
@@ -227,15 +233,28 @@ int ags_check_mouse_wheel() {
 	return result;
 }
 
-
-
-void ags_clear_input_buffer() {
+void ags_clear_input_state() {
+	// Clear everything related to the input field
 	::AGS::g_events->clearEvents();
 	_G(mouse_accum_relx) = 0;
 	_G(mouse_accum_rely) = 0;
 	_G(mouse_button_state) = 0;
 	_G(mouse_accum_button_state) = 0;
-	_G(mouse_clear_at_time) = AGS_Clock::now() + std::chrono::milliseconds(50);
+	_G(mouse_clear_at_time) = AGS_Clock::now();
+}
+
+void ags_clear_input_buffer() {
+	::AGS::g_events->clearEvents();
+	// accumulated state only helps to not miss clicks
+	_G(mouse_accum_button_state) = 0;
+	// forget about recent mouse relative movement too
+	_G(mouse_accum_relx) = 0;
+	_G(mouse_accum_rely) = 0;
+}
+
+void ags_clear_mouse_movement() {
+	_G(mouse_accum_relx) = 0;
+	_G(mouse_accum_rely) = 0;
 }
 
 // TODO: this is an awful function that should be removed eventually.
@@ -290,6 +309,11 @@ void sys_evt_process_pending(void) {
 
 	while ((e = ::AGS::g_events->readEvent()).type != Common::EVENT_INVALID)
 		sys_process_event(e);
+}
+
+void sys_flush_events(void) {
+	::AGS::g_events->clearEvents();
+	ags_clear_input_state();
 }
 
 } // namespace AGS3

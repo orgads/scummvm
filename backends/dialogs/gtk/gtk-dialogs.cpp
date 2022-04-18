@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -30,9 +29,27 @@
 #include "backends/dialogs/gtk/gtk-dialogs.h"
 
 #include "common/config-manager.h"
+#include "common/events.h"
 #include "common/translation.h"
 
 #include <gtk/gtk.h>
+
+// TODO: Move this into the class? Probably possible, but I've been told that
+//       this might not necessarily work properly with all compilers.
+
+static gboolean _inDialog;
+static uint32 _lastUpdateTick = 0;
+
+static gboolean idleCallback(gpointer data) {
+	uint32 currentTick = g_system->getMillis();
+	if (g_system->getMillis() - _lastUpdateTick > 10) {
+		Common::Event dummy;
+		while (g_system->getEventManager()->pollEvent(dummy)) {}
+		g_system->updateScreen();
+		_lastUpdateTick = currentTick;
+	}
+	return _inDialog;
+}
 
 Common::DialogManager::DialogResult GtkDialogManager::showFileBrowser(const Common::U32String &title, Common::FSNode &choice, bool isDirBrowser) {
 	if (!gtk_init_check(NULL, NULL))
@@ -65,6 +82,10 @@ Common::DialogManager::DialogResult GtkDialogManager::showFileBrowser(const Comm
 
 	// Show dialog
 	beginDialog();
+
+	_inDialog = TRUE;
+	g_idle_add(idleCallback, NULL);
+
 #if GTK_CHECK_VERSION(3,20,0)
 	int res = gtk_native_dialog_run(GTK_NATIVE_DIALOG(native));
 #else
@@ -78,6 +99,8 @@ Common::DialogManager::DialogResult GtkDialogManager::showFileBrowser(const Comm
 		result = kDialogOk;
 		g_free(path);
 	}
+
+	_inDialog = FALSE;
 
 #if GTK_CHECK_VERSION(3,20,0)
 	g_object_unref(native);

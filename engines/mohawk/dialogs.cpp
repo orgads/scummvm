@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -100,6 +99,7 @@ MystOptionsWidget::MystOptionsWidget(GuiObject *boss, const Common::String &name
 		_transitionsCheckbox(nullptr),
 		_mystFlyByCheckbox(nullptr),
 		_spaceshipFuzzyLogicCheckbox(nullptr),
+		_addCdromDelayCheckbox(nullptr),
 		_languagePopUp(nullptr),
 		_dropPageButton(nullptr),
 		_showMapButton(nullptr),
@@ -111,7 +111,7 @@ MystOptionsWidget::MystOptionsWidget(GuiObject *boss, const Common::String &name
 	if (!isDemo) {
 		// I18N: Option for fast scene switching
 		_zipModeCheckbox = new GUI::CheckboxWidget(widgetsBoss(), "MystGameOptionsDialog.ZipMode", _("~Z~ip Mode Activated"),
-																_("When activated, clicking on an item or area with the lightning bolt cursor takes you directly there, skipping intermediate screens. You can only 'Zip' to a precise area you’ve already been."));
+																_("When activated, clicking on an item or area with the lightning bolt cursor takes you directly there, skipping intermediate screens. You can only 'Zip' to a precise area you've already been."));
 	}
 
 	_transitionsCheckbox = new GUI::CheckboxWidget(widgetsBoss(), "MystGameOptionsDialog.Transistions", _("~T~ransitions Enabled"),
@@ -131,8 +131,12 @@ MystOptionsWidget::MystOptionsWidget(GuiObject *boss, const Common::String &name
 		 * We change it to use fuzzy logic.
 		 * By default the option is off.
 		 */
-		_spaceshipFuzzyLogicCheckbox = new GUI::CheckboxWidget(widgetsBoss(), "MystGameOptionsDialog.FuzzyMode", _("~F~uzzy Logic in SpaceShip Active"));
+		_spaceshipFuzzyLogicCheckbox = new GUI::CheckboxWidget(widgetsBoss(), "MystGameOptionsDialog.FuzzyMode", _("Improve Selenitic Age puzzle ~a~ccessibility"),
+																			_("Allow solving Selenitic Age audio puzzles with more error margin."));
 	}
+
+	_addCdromDelayCheckbox = new GUI::CheckboxWidget(widgetsBoss(), "MystGameOptionsDialog.CdromDelay", _("Simulate loading times of old CD drives"),
+																	_("Simulate loading times of old CD-ROM drives by adding a random delay during scene transitions."));
 
 	if (isInGame()) {
 		MohawkEngine_Myst *vm = static_cast<MohawkEngine_Myst *>(g_engine);
@@ -177,6 +181,7 @@ void MystOptionsWidget::defineLayout(GUI::ThemeEval &layouts, const Common::Stri
 	                .addWidget("Transistions", "Checkbox")
 	                .addWidget("PlayMystFlyBy", "Checkbox")
 	                .addWidget("FuzzyMode", "Checkbox")
+					.addWidget("CdromDelay", "Checkbox")
 	                .addLayout(GUI::ThemeLayout::kLayoutHorizontal)
 	                    .addPadding(0, 0, 0, 0)
 	                    .addWidget("LanguageDesc", "OptionsLabel")
@@ -211,6 +216,10 @@ void MystOptionsWidget::load() {
 
 	if (_spaceshipFuzzyLogicCheckbox) {
 		_spaceshipFuzzyLogicCheckbox->setState(ConfMan.getBool("fuzzy_logic", _domain));
+	}
+
+	if (_addCdromDelayCheckbox) {
+		_addCdromDelayCheckbox->setState(ConfMan.getBool("cdromdelay", _domain));
 	}
 
 	if (_languagePopUp) {
@@ -251,6 +260,10 @@ bool MystOptionsWidget::save() {
 
 	if (_spaceshipFuzzyLogicCheckbox) {
 		ConfMan.setBool("fuzzy_logic", _spaceshipFuzzyLogicCheckbox->getState(), _domain);
+	}
+
+	if (_addCdromDelayCheckbox) {
+		ConfMan.setBool("cdromdelay", _addCdromDelayCheckbox->getState(), _domain);
 	}
 
 	if (_languagePopUp) {
@@ -342,10 +355,10 @@ RivenOptionsWidget::RivenOptionsWidget(GuiObject *boss, const Common::String &na
 	Common::String guiOptions = ConfMan.get("guioptions", domain);
 	bool is25th = checkGameGUIOption(GAMEOPTION_25TH, guiOptions);
 
-	_zipModeCheckbox = new GUI::CheckboxWidget(widgetsBoss(), "RivenOptionsDialog.ZipMode", _("~Z~ip Mode Activated"));
-	_waterEffectCheckbox = new GUI::CheckboxWidget(widgetsBoss(), "RivenOptionsDialog.WaterEffect", _("~W~ater Effect Enabled"));
+	_zipModeCheckbox = new GUI::CheckboxWidget(widgetsBoss(), "RivenOptionsDialog.ZipMode", _("~Z~ip Mode Activated"), _("When activated, clicking on an item or area with the lightning bolt cursor takes you directly there, skipping intermediate screens. You can only 'Zip' to a precise area you've already been."));
+	_waterEffectCheckbox = new GUI::CheckboxWidget(widgetsBoss(), "RivenOptionsDialog.WaterEffect", _("~W~ater Effect Enabled"), _("Toggles the use of QuickTime videos for visual effects related to water surfaces (ripples, waves, etc.)."));
 
-	GUI::StaticTextWidget *transitionModeCaption = new GUI::StaticTextWidget(widgetsBoss(), "RivenOptionsDialog.TransistionsDesc", _("Transitions:"));
+	GUI::StaticTextWidget *transitionModeCaption = new GUI::StaticTextWidget(widgetsBoss(), "RivenOptionsDialog.TransistionsDesc", _("Transitions:"), _("Adjusts the speed of screen transitions. Disabling screen transitions will enable you to navigate more quickly through the game."));
 	transitionModeCaption->setAlign(Graphics::kTextAlignRight);
 
 	_transitionModePopUp = new GUI::PopUpWidget(widgetsBoss(), "RivenOptionsDialog.Transistions");

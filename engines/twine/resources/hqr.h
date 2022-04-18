@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,6 +24,7 @@
 
 #include "common/scummsys.h"
 #include "common/stream.h"
+#include "twine/shared.h"
 
 namespace TwinE {
 
@@ -37,6 +37,7 @@ class TwinEEngine;
  */
 namespace HQR {
 
+
 /**
  * Get a HQR entry pointer
  * @param ptr pointer to save the entry
@@ -45,6 +46,9 @@ namespace HQR {
  * @return entry real size
  */
 int32 getEntry(uint8 *ptr, const char *filename, int32 index);
+inline int32 getEntry(uint8 *ptr, const TwineResource &resource) {
+	return getEntry(ptr, resource.hqr, resource.index);
+}
 
 /**
  * Get a HQR entry pointer
@@ -53,6 +57,9 @@ int32 getEntry(uint8 *ptr, const char *filename, int32 index);
  * @return entry real size
  */
 int32 entrySize(const char *filename, int32 index);
+inline int32 entrySize(const TwineResource &resource) {
+	return entrySize(resource.hqr, resource.index);
+}
 
 /**
  * Get a HQR total number of entries
@@ -70,11 +77,17 @@ int32 numEntries(const char *filename);
  * @return entry real size
  */
 int32 getAllocEntry(uint8 **ptr, const char *filename, int32 index);
+inline int32 getAllocEntry(uint8 **ptr, const TwineResource &resource) {
+	return getAllocEntry(ptr, resource.hqr, resource.index);
+}
 
 /**
  * @brief Helper method to dump the content of the given hqr index to a file
  */
 bool dumpEntry(const char *filename, int32 index, const char *targetFileName);
+inline bool dumpEntry(const TwineResource &resource, const char *targetFileName) {
+	return dumpEntry(resource.hqr, resource.index, targetFileName);
+}
 
 /**
  * Get a HQR entry pointer
@@ -95,7 +108,9 @@ int32 getVoxEntry(uint8 *ptr, const char *filename, int32 index, int32 hiddenInd
 int32 getAllocVoxEntry(uint8 **ptr, const char *filename, int32 index, int32 hiddenIndex);
 
 Common::SeekableReadStream *makeReadStream(const char *filename, int index);
-
+inline Common::SeekableReadStream *makeReadStream(const TwineResource &resource) {
+	return makeReadStream(resource.hqr, resource.index);
+}
 } // namespace HQR
 
 } // namespace TwinE

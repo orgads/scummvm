@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -898,8 +897,10 @@ uint16 Control::saveRestorePanel(bool allowSave) {
 		textSprites[cnt] = NULL;
 	_firstText = 0;
 
+	Common::String dirtyBufStr;
 	loadDescriptions(saveGameTexts);
 	_selectedGame = 0;
+	dirtyBufStr = saveGameTexts[_selectedGame];
 
 	bool quitPanel = false;
 	bool refreshNames = true;
@@ -919,7 +920,7 @@ uint16 Control::saveRestorePanel(bool allowSave) {
 			for (cnt = 0; cnt < MAX_ON_SCREEN; cnt++)
 				if (textSprites[cnt])
 					free(textSprites[cnt]);
-			setUpGameSprites(saveGameTexts, textSprites, _firstText, _selectedGame);
+			setUpGameSprites(saveGameTexts, textSprites, _firstText, _selectedGame, dirtyBufStr);
 			showSprites(textSprites, allowSave);
 			refreshNames = false;
 		}
@@ -935,18 +936,23 @@ uint16 Control::saveRestorePanel(bool allowSave) {
 			clickRes = CANCEL_PRESSED;
 			quitPanel = true;
 		} else if (_action == kSkyActionConfirm) { // enter pressed
-			clickRes = handleClick(lookList[0]);
-			if (!_controlPanel) //game state was destroyed
-				return clickRes;
-			if (clickRes == GAME_SAVED)
-				saveDescriptions(saveGameTexts);
-			else if (clickRes == NO_DISK_SPACE)
-				displayMessage(0, "Could not save the game. (%s)", _saveFileMan->popErrorDesc().c_str());
-			quitPanel = true;
+			// Note: The original engine code does not allow an empty string for a save name
+			// but it does allow a series of blank spaces as a name.
+			if (dirtyBufStr != "") {
+				clickRes = handleClick(lookList[0]);
+				if (!_controlPanel) //game state was destroyed
+					return clickRes;
+				if (clickRes == GAME_SAVED) {
+					saveGameTexts[_selectedGame] = dirtyBufStr;
+					saveDescriptions(saveGameTexts);
+				} else if (clickRes == NO_DISK_SPACE)
+					displayMessage(0, "Could not save the game. (%s)", _saveFileMan->popErrorDesc().c_str());
+				quitPanel = true;
+			}
 			_mouseClicked = false;
 			_action = kSkyActionNone;
 		} if (allowSave && _keyPressed.keycode) {
-			handleKeyPress(_keyPressed, saveGameTexts[_selectedGame]);
+			handleKeyPress(_keyPressed, dirtyBufStr);
 			refreshNames = true;
 			_keyPressed.reset();
 		}
@@ -959,6 +965,7 @@ uint16 Control::saveRestorePanel(bool allowSave) {
 			_mouseWheel = 0;
 			if (clickRes == SHIFTED) {
 				_selectedGame = _firstText;
+				dirtyBufStr = saveGameTexts[_selectedGame];
 				refreshNames = true;
 			}
 		}
@@ -973,27 +980,34 @@ uint16 Control::saveRestorePanel(bool allowSave) {
 				if (_mouseClicked && lookList[cnt]->_onClick) {
 					_mouseClicked = false;
 
-					clickRes = handleClick(lookList[cnt]);
-					if (!_controlPanel) //game state was destroyed
-						return clickRes;
+					if (lookList[cnt]->_onClick != SAVE_A_GAME
+					    || (lookList[cnt]->_onClick == SAVE_A_GAME && dirtyBufStr != "")) {
+						// The save button will not animate for an empty string save name
+						// and the save action will be ignored
+						clickRes = handleClick(lookList[cnt]);
+						if (!_controlPanel) //game state was destroyed
+							return clickRes;
 
-					if (clickRes == SHIFTED) {
-						_selectedGame = _firstText;
-						refreshNames = true;
-					}
-					if (clickRes == NO_DISK_SPACE) {
-						displayMessage(0, "Could not save the game. (%s)", _saveFileMan->popErrorDesc().c_str());
-						quitPanel = true;
-					}
-					if ((clickRes == CANCEL_PRESSED) || (clickRes == GAME_RESTORED))
-						quitPanel = true;
+						if (clickRes == SHIFTED) {
+							_selectedGame = _firstText;
+							dirtyBufStr = saveGameTexts[_selectedGame];
+							refreshNames = true;
+						}
+						if (clickRes == NO_DISK_SPACE) {
+							displayMessage(0, "Could not save the game. (%s)", _saveFileMan->popErrorDesc().c_str());
+							quitPanel = true;
+						}
+						if ((clickRes == CANCEL_PRESSED) || (clickRes == GAME_RESTORED))
+							quitPanel = true;
 
-					if (clickRes == GAME_SAVED) {
-						saveDescriptions(saveGameTexts);
-						quitPanel = true;
+						if (clickRes == GAME_SAVED) {
+							saveGameTexts[_selectedGame] = dirtyBufStr;
+							saveDescriptions(saveGameTexts);
+							quitPanel = true;
+						}
+						if (clickRes == RESTORE_FAILED)
+							refreshAll = true;
 					}
-					if (clickRes == RESTORE_FAILED)
-						refreshAll = true;
 				}
 			}
 
@@ -1001,8 +1015,12 @@ uint16 Control::saveRestorePanel(bool allowSave) {
 			if ((mouse.x >= GAME_NAME_X) && (mouse.x <= GAME_NAME_X + PAN_LINE_WIDTH) &&
 				(mouse.y >= GAME_NAME_Y) && (mouse.y <= GAME_NAME_Y + PAN_CHAR_HEIGHT * MAX_ON_SCREEN)) {
 
-					_selectedGame = (mouse.y - GAME_NAME_Y) / PAN_CHAR_HEIGHT + _firstText;
-					refreshNames = true;
+				uint16 newSelectedGame = (mouse.y - GAME_NAME_Y) / PAN_CHAR_HEIGHT + _firstText;
+				if (_selectedGame != newSelectedGame) {
+					_selectedGame = newSelectedGame;
+					dirtyBufStr = saveGameTexts[_selectedGame];
+				}
+				refreshNames = true;
 			}
 		}
 		if (!haveButton)
@@ -1045,7 +1063,7 @@ void Control::handleKeyPress(Common::KeyState kbd, Common::String &textBuf) {
 	}
 }
 
-void Control::setUpGameSprites(const Common::StringArray &saveGameNames, DataFileHeader **nameSprites, uint16 firstNum, uint16 selectedGame) {
+void Control::setUpGameSprites(const Common::StringArray &saveGameNames, DataFileHeader **nameSprites, uint16 firstNum, uint16 selectedGame, const Common::String &dirtyString) {
 	char cursorChar[2] = "-";
 	DisplayedText textSpr;
 	if (!nameSprites[MAX_ON_SCREEN]) {
@@ -1054,12 +1072,14 @@ void Control::setUpGameSprites(const Common::StringArray &saveGameNames, DataFil
 	}
 	for (uint16 cnt = 0; cnt < MAX_ON_SCREEN; cnt++) {
 		char nameBuf[MAX_TEXT_LEN + 10];
-		sprintf(nameBuf, "%3d: %s", firstNum + cnt + 1, saveGameNames[firstNum + cnt].c_str());
 
-		if (firstNum + cnt == selectedGame)
+		if (firstNum + cnt == selectedGame) {
+			sprintf(nameBuf, "%3d: %s", firstNum + cnt + 1, dirtyString.c_str());
 			textSpr = _skyText->displayText(nameBuf, NULL, false, PAN_LINE_WIDTH, 0);
-		else
+		} else {
+			sprintf(nameBuf, "%3d: %s", firstNum + cnt + 1, saveGameNames[firstNum + cnt].c_str());
 			textSpr = _skyText->displayText(nameBuf, NULL, false, PAN_LINE_WIDTH, 37);
+		}
 		nameSprites[cnt] = (DataFileHeader *)textSpr.textData;
 		if (firstNum + cnt == selectedGame) {
 			nameSprites[cnt]->flag = 1;
@@ -1119,6 +1139,10 @@ bool Control::loadSaveAllowed() {
 		return false; // don't allow saving in final rooms
 
 	return true;
+}
+
+bool Control::isControlPanelOpen() {
+	return _controlPanel;
 }
 
 int Control::displayMessage(const char *altButton, const char *message, ...) {

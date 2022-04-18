@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -155,7 +154,7 @@ void ScummEngine::towns_clearStrip(int strip) {
 }
 
 void ScummEngine::requestScroll(int dir) {
-	if (_game.platform == Common::kPlatformFMTowns) {
+	if (_enableSmoothScrolling && !_fastMode) {
 		int lw = _townsScreen->getLayerWidth(0);
 		// Wait for opposite direction scroll to finish.
 		towns_waitForScroll(-dir);
@@ -197,17 +196,19 @@ void ScummEngine::towns_updateGfx() {
 			dur += _refreshDuration[i];
 		_refreshNeedCatchUp = (dur / ARRAYSIZE(_refreshDuration)) > (1000 / 60);
 	}
-	
-	while (_scrollTimer <= cur) {
-		if (!_scrollTimer)
-			_scrollTimer = cur;
-		_scrollTimer += 1000 / 60;
-		_townsScreen->scrollLayers(1, _scrollRequest);
-		if (_townsScreen->isScrolling(0))
-			_scrollDeltaAdjust++;
-		_scrollRequest = 0;
-		if (!_refreshNeedCatchUp)
-			break;
+
+	if (_enableSmoothScrolling) {
+		while (_scrollTimer <= cur) {
+			if (!_scrollTimer)
+				_scrollTimer = cur;
+			_scrollTimer += 1000 / 60;
+			_townsScreen->scrollLayers(1, _scrollRequest);
+			if (_scrollNeedDeltaAdjust && _townsScreen->isScrolling(0))
+				_scrollDeltaAdjust++;
+			_scrollRequest = 0;
+			if (!_refreshNeedCatchUp)
+				break;
+		}
 	}
 
 	_townsScreen->update();
@@ -376,12 +377,11 @@ void TownsScreen::setupLayer(int layer, int width, int height, int scaleW, int s
 		warning("TownsScreen::setupLayer(): Layer palette usage requires 16 bit graphics setting.\nLayer palette will be ignored.");
 
 	delete[] l->pixels;
-	l->pixels = new uint8[l->pitch * l->height];
+	l->pixels = new uint8[l->pitch * l->height]();
 	assert(l->pixels);
-	memset(l->pixels, 0, l->pitch * l->height);
 
 	delete[] l->bltTmpPal;
-	l->bltTmpPal = (l->bpp == 1 && _pixelFormat.bytesPerPixel == 2) ? new uint16[l->numCol] : 0;
+	l->bltTmpPal = (l->bpp == 1 && _pixelFormat.bytesPerPixel == 2) ? new uint16[l->numCol] : nullptr;
 
 	l->enabled = true;
 	_layers[0].onBottom = true;
@@ -432,11 +432,11 @@ void TownsScreen::fillLayerRect(int layer, int x, int y, int w, int h, int col) 
 
 uint8 *TownsScreen::getLayerPixels(int layer, int x, int y) const {
 	if (layer < 0 || layer > 1)
-		return 0;
+		return nullptr;
 
 	const TownsScreenLayer *l = &_layers[layer];
 	if (!l->ready)
-		return 0;
+		return nullptr;
 
 	return l->pixels + y * l->pitch + (x % l->width) * l->bpp;
 }
@@ -578,7 +578,7 @@ uint16 TownsScreen::calc16BitColor(const uint8 *palEntry) {
 
 template<typename dstPixelType, typename srcPixelType, int scaleW, int scaleH, bool srcCol4bit> void TownsScreen::transferRect(uint8 *dst, TownsScreenLayer *l, int x, int y, int w, int h) {
 	uint8 *dst10 = dst + y * _pitch * scaleH + x * sizeof(dstPixelType) * scaleW;
-	uint8 *dst20 = (scaleH == 2) ? dst10 + _pitch : 0;
+	uint8 *dst20 = (scaleH == 2) ? dst10 + _pitch : nullptr;
 	int pitch = _pitch * scaleH;
 
 	int x0 = (x + l->hScroll) % l->width;

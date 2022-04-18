@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -144,7 +143,7 @@ public:
 	    _stream(stream), _disposeAfterUse(disposeAfterUse), _bitContainer(0), _bitsLeft(0), _pos(0) {
 
 		if ((valueBits != 8) && (valueBits != 16) && (valueBits != 32))
-			error("BitStreamImpl: Invalid memory layout %d, %d, %d", valueBits, isLE, MSB2LSB);
+			error("BitStreamImpl: Invalid memory layout %d, %d, %d", valueBits, int(isLE), int(MSB2LSB));
 
 		_size = (_stream->size() & ~((uint32) ((valueBits >> 3) - 1))) * 8;
 	}
@@ -154,7 +153,7 @@ public:
 	    _stream(&stream), _disposeAfterUse(DisposeAfterUse::NO), _bitContainer(0), _bitsLeft(0), _pos(0) {
 
 		if ((valueBits != 8) && (valueBits != 16) && (valueBits != 32))
-			error("BitStreamImpl: Invalid memory layout %d, %d, %d", valueBits, isLE, MSB2LSB);
+			error("BitStreamImpl: Invalid memory layout %d, %d, %d", valueBits, int(isLE), int(MSB2LSB));
 
 		_size = (_stream->size() & ~((uint32) ((valueBits >> 3) - 1))) * 8;
 	}
@@ -265,12 +264,12 @@ public:
 	}
 
 	/** Return the stream position in bits. */
-	uint32 pos() const {
+	uint64 pos() const {
 		return _pos;
 	}
 
 	/** Return the stream size in bits. */
-	uint32 size() const {
+	uint64 size() const {
 		return _size;
 	}
 
@@ -325,11 +324,11 @@ public:
 		return false;
 	}
 
-	int32 pos() const {
+	int64 pos() const {
 		return _pos;
 	}
 
-	int32 size() const {
+	int64 size() const {
 		return _size;
 	}
 

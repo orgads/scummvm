@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,10 +30,7 @@
 
 namespace AGS3 {
 
-#define GUIDIS_GREYOUT   1
-#define GUIDIS_BLACKOUT  2
-#define GUIDIS_UNCHANGED 4
-#define GUIDIS_GUIOFF  0x80
+struct KeyInput;
 
 namespace AGS {
 namespace Shared {
@@ -49,6 +45,8 @@ class GUIObject {
 public:
 	GUIObject();
 	virtual ~GUIObject() {}
+
+	String          GetScriptName() const;
 
 	String          GetEventArgs(int event) const;
 	int             GetEventCount() const;
@@ -73,8 +71,7 @@ public:
 
 	// Events
 	// Key pressed for control
-	virtual void    OnKeyPress(int keycode) {
-	}
+	virtual void    OnKeyPress(const KeyInput &ki) {}
 	// Mouse button down - return 'True' to lock focus
 	virtual bool    OnMouseDown() {
 		return false;
@@ -138,7 +135,7 @@ HorAlignment ConvertLegacyGUIAlignment(LegacyGUIAlignment align);
 
 // Tells if the given control is considered enabled, taking global flag into account
 inline bool IsGUIEnabled(AGS::Shared::GUIObject *g) {
-	return !_G(all_buttons_disabled) && g->IsEnabled();
+	return (_G(all_buttons_disabled) < 0) && g->IsEnabled();
 }
 
 } // namespace AGS3

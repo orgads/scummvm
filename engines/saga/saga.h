@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,24 +37,11 @@ struct ADGameFileDescription;
 /**
  * This is the namespace of the SAGA engine.
  *
- * Status of this engine:
- *
- * This engine contains 2 main engine generations, SAGA and SAGA2
- *
- * SAGA status: complete
- *
- * SAGA2 status: in early stages of development, no recent activity. Contact sev
- *  if you want to work on it, since we have some original source codes.
+ * Status of this engine: complete
  *
  * Games using this engine:
- *
- * SAGA:
  * - Inherit the Earth
  * - I Have No Mouth And I Must Scream
- *
- * SAGA2:
- * - Dinotopia
- * - Faery Tale Adventure II: Halls of the Dead
  *
  */
 namespace Saga {
@@ -418,7 +404,7 @@ public:
 	}
 	void fillSaveList();
 	char *calcSaveFileName(uint slotNumber);
-	virtual Common::String getSaveStateName(int slot) const override {
+	Common::String getSaveStateName(int slot) const override {
 		return Common::String::format("%s.s%02u", _targetName.c_str(), slot);
 	}
 
@@ -441,7 +427,6 @@ public:
 	int _spiritualBarometer;
 
 	int _soundVolume;
-	int _musicVolume;
 	int _speechVolume;
 	bool _subtitlesEnabled;
 	bool _voicesEnabled;
@@ -549,7 +534,6 @@ public:
 
 	bool isBigEndian() const;
 	bool isMacResources() const;
-	bool isSaga2() const { return getGameId() == GID_DINO || getGameId() == GID_FTA2; }
 	const GameResourceDescription *getResourceDescription() const;
 
 	const GameFontDescription *getFontDescription(int index) const;
@@ -573,6 +557,7 @@ public:
 	bool canSaveGameStateCurrently() override;
 	const GameDisplayInfo &getDisplayInfo();
 
+	int getLanguageIndex();
 	const char *getTextString(int textStringId);
 	void getExcuseInfo(int verb, const char *&textString, int &soundResourceId);
 

@@ -3,7 +3,6 @@ MODULE := engines/stark
 MODULE_OBJS := \
 	console.o \
 	gfx/driver.o \
-	gfx/framelimiter.o \
 	gfx/opengls.o \
 	gfx/openglsactor.o \
 	gfx/openglsfade.o \
@@ -124,6 +123,17 @@ MODULE_OBJS := \
 	visual/prop.o \
 	visual/smacker.o \
 	visual/text.o
+
+ifdef USE_TINYGL
+MODULE_OBJS += \
+	gfx/tinygl.o \
+	gfx/tinyglactor.o \
+	gfx/tinyglbitmap.o \
+	gfx/tinyglfade.o \
+	gfx/tinyglprop.o \
+	gfx/tinyglsurface.o \
+	gfx/tinygltexture.o
+endif
 
 # This module can be built as a plugin
 ifeq ($(ENABLE_STARK), DYNAMIC_PLUGIN)

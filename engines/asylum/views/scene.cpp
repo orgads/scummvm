@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -53,11 +52,12 @@ namespace Asylum {
 int g_debugActors;
 int g_debugObjects;
 int g_debugPolygons;
+int g_debugPolygonIndex;
 int g_debugSceneRects;
 int g_debugScrolling;
 
 Scene::Scene(AsylumEngine *engine): _vm(engine),
-	_polygons(NULL), _ws(NULL) {
+	_polygons(nullptr), _ws(nullptr) {
 
 	// Initialize data
 	_packId = kResourcePackInvalid;
@@ -69,9 +69,12 @@ Scene::Scene(AsylumEngine *engine): _vm(engine),
 	_musicVolume = 0;
 	_frameCounter = 0;
 
+	_savedScreen.create(640, 480, Graphics::PixelFormat::createFormatCLUT8());
+
 	g_debugActors = 0;
 	g_debugObjects  = 0;
 	g_debugPolygons  = 0;
+	g_debugPolygonIndex = 0;
 	g_debugSceneRects = 0;
 	g_debugScrolling = 0;
 }
@@ -82,6 +85,8 @@ Scene::~Scene() {
 
 	// Clear script queue
 	getScript()->reset();
+
+	_savedScreen.free();
 
 	delete _polygons;
 	delete _ws;
@@ -253,7 +258,7 @@ void Scene::load(ResourcePackId packId) {
 	snprintf(filename, 10, SCENE_FILE_MASK, _packId);
 
 	char sceneTag[6];
-	Common::File* fd = new Common::File;
+	Common::File *fd = new Common::File;
 
 	if (!Common::File::exists(filename))
 		error("Scene file doesn't exist %s", filename);
@@ -271,7 +276,13 @@ void Scene::load(ResourcePackId packId) {
 	_ws = new WorldStats(_vm);
 	_ws->load(fd);
 
+	if (_vm->checkGameVersion("Demo"))
+		fd->seek(0x1D72E, SEEK_SET);
+
 	_polygons = new Polygons(fd);
+
+	if (_vm->checkGameVersion("Demo"))
+		fd->seek(3 * 4, SEEK_CUR);
 
 	ScriptManager *script = getScript();
 	script->resetAll();
@@ -326,7 +337,7 @@ bool Scene::handleEvent(const AsylumEvent &evt) {
 	case Common::EVENT_LBUTTONDOWN:
 	case Common::EVENT_RBUTTONDOWN:
 	case Common::EVENT_MBUTTONDOWN:
-		return clickDown(evt);
+		return getCursor()->isHidden() ? false : clickDown(evt);
 	}
 
 	return false;
@@ -416,11 +427,13 @@ bool Scene::action(AsylumAction a) {
 		break;
 
 	case kAsylumActionQuickLoad:
-		getSaveLoad()->quickLoad();
+		if (!_vm->checkGameVersion("Demo"))
+			getSaveLoad()->quickLoad();
 		break;
 
 	case kAsylumActionQuickSave:
-		getSaveLoad()->quickSave();
+		if (!_vm->checkGameVersion("Demo"))
+			getSaveLoad()->quickSave();
 		break;
 
 	case kAsylumActionSwitchToSarah:
@@ -464,7 +477,11 @@ bool Scene::key(const AsylumEvent &evt) {
 			if (getCursor()->isHidden())
 				break;
 
-			_vm->switchEventHandler(_vm->menu());
+			if (!_vm->checkGameVersion("Demo")) {
+				_savedScreen.copyFrom(getScreen()->getSurface());
+				memcpy(_savedPalette, getScreen()->getPalette(), sizeof(_savedPalette));
+				_vm->switchEventHandler(_vm->menu());
+			}
 		}
 		break;
 
@@ -489,12 +506,22 @@ bool Scene::key(const AsylumEvent &evt) {
 			getActor()->setLastScreenUpdate(_vm->screenUpdateCount);
 		}
 		break;
+
+	case Common::KEYCODE_m:
+		g_debugScrolling = !g_debugScrolling;
+		break;
 	}
 
 	return true;
 }
 
 bool Scene::clickDown(const AsylumEvent &evt) {
+	if (g_debugScrolling) {
+		g_debugScrolling = 0;
+		getActor()->setPosition(_ws->xLeft + evt.mouse.x, _ws->yTop + evt.mouse.y, getActor()->getDirection(), getActor()->getFrameIndex());
+		return true;
+	}
+
 	_vm->lastScreenUpdate = 0;
 
 	if (getSharedData()->getFlag(kFlag2)) {
@@ -504,6 +531,8 @@ bool Scene::clickDown(const AsylumEvent &evt) {
 	}
 
 	Actor *player = getActor();
+	player->setLastScreenUpdate(_vm->screenUpdateCount);
+
 	switch (evt.type) {
 	default:
 		break;
@@ -590,16 +619,14 @@ bool Scene::updateScreen() {
 	if (updateScene())
 		return true;
 
+#if 0
 	if (Config.performance <= 4) {
-		// TODO when Config.performance <= 4, we need to skip drawing frames to screen
-
-		if (drawScene())
-			return true;
-
+		// TODO: implement skip drawing frames to screen
 	} else {
+#endif
 		if (drawScene())
 			return true;
-	}
+	//}
 
 	getActor()->drawNumber();
 
@@ -824,8 +851,9 @@ void Scene::updateAmbientSounds() {
 
 		for (int32 f = 0; f < 6; f++) {
 			int32 gameFlag = snd->flagNum[f];
-			if (gameFlag == 99999)
-				continue;
+
+			if (!gameFlag)
+				break;
 
 			if (gameFlag >= 0) {
 				if (_vm->isGameFlagNotSet((GameFlag)gameFlag)) {
@@ -839,6 +867,7 @@ void Scene::updateAmbientSounds() {
 				}
 			}
 		}
+
 		if (processSound) {
 			if (_vm->sound()->isPlaying(snd->resourceId)) {
 
@@ -878,9 +907,6 @@ void Scene::updateAmbientSounds() {
 						} else {
 							int32 tmpVol = volume + (int32)_vm->getRandom(500) * ((_vm->getRandom(100) >= 50) ? -1 : 1);
 
-							if (tmpVol <= -10000)
-								tmpVol = -10000;
-
 							if (tmpVol >= 0)
 								tmpVol = 0;
 							else if (tmpVol <= -10000)
@@ -890,7 +916,7 @@ void Scene::updateAmbientSounds() {
 						}
 					}
 				} else if (LOBYTE(snd->flags) & 4) {
-					if (ambientTick > _vm->getTick()) {
+					if (ambientTick < _vm->getTick()) {
 						if (snd->nextTick >= 0)
 							getSharedData()->setAmbientTick(i, (uint32)((int32)_vm->getTick() + snd->nextTick * 60000));
 						else
@@ -1133,10 +1159,12 @@ void Scene::updateCursor(ActorDirection direction, const Common::Rect &rect) {
 	if (getCursor()->getState() & kCursorStateRight) {
 		if (player->getStatus() == kActorStatusWalking || player->getStatus() == kActorStatusWalking2) {
 
-			ResourceId resourceId =_ws->cursorResources[direction];
+			if (direction >= kDirectionN) {
+				ResourceId resourceId =_ws->cursorResources[direction];
 
-			if (direction >= kDirectionN && getCursor()->getResourceId() != resourceId)
-				getCursor()->set(resourceId);
+				if (getCursor()->getResourceId() != resourceId)
+					getCursor()->set(resourceId);
+			}
 		}
 
 		return;
@@ -2065,7 +2093,7 @@ void Scene::adjustCoordinates(Common::Point *point) {
 	point->y = _ws->yTop  + getCursor()->position().y;
 }
 
-Actor* Scene::getActor(ActorIndex index) {
+Actor *Scene::getActor(ActorIndex index) {
 	if (!_ws)
 		error("[Scene::getActor] WorldStats not initialized properly!");
 
@@ -2127,7 +2155,7 @@ bool Scene::updateSceneCoordinates(int32 tX, int32 tY, int32 A0, bool checkScene
 		if (diffY)
 			getSharedData()->setSceneOffsetAdd((int16)Common::Rational(*coord3 * diffX, diffY).toInt());
 
-		if (param != NULL && abs(diffY) <= abs(*coord3)) {
+		if (param != nullptr && abs(diffY) <= abs(*coord3)) {
 			*targetX = -1;
 			*param = 0;
 			return true;
@@ -2138,7 +2166,7 @@ bool Scene::updateSceneCoordinates(int32 tX, int32 tY, int32 A0, bool checkScene
 
 		getSharedData()->setSceneOffsetAdd((int16)Common::Rational(*coord3 * diffY, diffX).toInt());
 
-		if (param != NULL && abs(diffX) <= abs(*coord3)) {
+		if (param != nullptr && abs(diffX) <= abs(*coord3)) {
 			*targetX = -1;
 			return true;
 		}
@@ -2306,7 +2334,7 @@ void Scene::changePlayer(ActorIndex index) {
 		// Save scene data
 		getSharedData()->saveCursorResources((ResourceId *)&_ws->cursorResources, sizeof(_ws->cursorResources));
 		getSharedData()->saveSceneFonts(_ws->font1, _ws->font2, _ws->font3);
-		getSharedData()->saveSmallCursor(_ws->smallCurDown, _ws->smallCurUp);
+		getSharedData()->saveSmallCursor(_ws->smallCurUp, _ws->smallCurDown);
 		getSharedData()->saveEncounterFrameBackground(_ws->encounterFrameBg);
 
 		// Setup new values
@@ -2328,7 +2356,7 @@ void Scene::changePlayer(ActorIndex index) {
 		// Load scene data
 		getSharedData()->loadCursorResources((ResourceId *)&_ws->cursorResources, sizeof(_ws->cursorResources));
 		getSharedData()->loadSceneFonts(&_ws->font1, &_ws->font2, &_ws->font3);
-		getSharedData()->loadSmallCursor(&_ws->smallCurDown, &_ws->smallCurUp);
+		getSharedData()->loadSmallCursor(&_ws->smallCurUp, &_ws->smallCurDown);
 		getSharedData()->loadEncounterFrameBackground(&_ws->encounterFrameBg);
 
 		// Reset cursor
@@ -2357,25 +2385,22 @@ void Scene::changePlayerUpdate(ActorIndex index) {
 // Scene drawing
 //////////////////////////////////////////////////////////////////////////
 void Scene::preload() {
-	if (!Config.showSceneLoading)
+	if (!Config.showSceneLoading || _vm->checkGameVersion("Demo"))
 		return;
 
 	SceneTitle *title = new SceneTitle(_vm);
-	title->load();
 	getCursor()->hide();
+	title->load();
 
 	do {
 		title->update(_vm->getTick());
 
-		getScreen()->copyBackBufferToScreen();
 		g_system->updateScreen();
-
 		g_system->delayMillis(10);
 
 		// Poll events (this ensure we don't freeze the screen)
 		Common::Event ev;
 		_vm->getEventManager()->pollEvent(ev);
-
 	} while (!title->loadingComplete());
 
 	delete title;
@@ -2426,6 +2451,8 @@ bool Scene::drawScene() {
 		debugShowActors();
 	if (g_debugPolygons)
 		debugShowPolygons();
+	if (g_debugPolygonIndex)
+		debugHighlightPolygon(g_debugPolygonIndex);
 	if (g_debugObjects)
 		debugShowObjects();
 	if (g_debugSceneRects)

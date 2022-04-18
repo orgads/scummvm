@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -61,16 +60,16 @@ bool GameLoader::writeSavegame(Scene *sc, const char *fname, const Common::Strin
 
 	v = _gameVar->getSubVarByName("OBJSTATES");
 
-	GameVar *nxt = 0;
-	GameVar *prv = 0;
-	GameVar *par = 0;
+	GameVar *nxt = nullptr;
+	GameVar *prv = nullptr;
+	GameVar *par = nullptr;
 	if (v) {
 		nxt = v->_nextVarObj;
 		prv = v->_prevVarObj;
 		par = v->_parentVarObj;
-		v->_parentVarObj = 0;
-		v->_nextVarObj = 0;
-		v->_prevVarObj = 0;
+		v->_parentVarObj = nullptr;
+		v->_nextVarObj = nullptr;
+		v->_prevVarObj = nullptr;
 	}
 
 	archive->writeObject(v);
@@ -122,7 +121,7 @@ bool GameLoader::writeSavegame(Scene *sc, const char *fname, const Common::Strin
 	saveFile->writeUint32LE(header.encSize);
 
 	debugC(3, kDebugLoading, "version: %d magic: %s updateCounter: %d unkField: %d encSize: %d, pos: %d",
-			header.version, header.magic, header.updateCounter, header.unkField, header.encSize, saveFile->pos());
+			header.version, header.magic, header.updateCounter, header.unkField, header.encSize, (int)saveFile->pos());
 
 	saveFile->write(stream.getData(), stream.size());
 

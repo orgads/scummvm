@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,12 +15,12 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "ags/lib/std/algorithm.h"
+#include "ags/shared/gui/gui_main.h"
 #include "ags/shared/ac/game_version.h"
 #include "ags/shared/ac/sprite_cache.h"
 #include "ags/shared/debugging/out.h"
@@ -29,7 +29,6 @@
 #include "ags/shared/gui/gui_inv.h"
 #include "ags/shared/gui/gui_label.h"
 #include "ags/shared/gui/gui_listbox.h"
-#include "ags/shared/gui/gui_main.h"
 #include "ags/shared/gui/gui_slider.h"
 #include "ags/shared/gui/gui_textbox.h"
 #include "ags/shared/util/stream.h"
@@ -39,12 +38,16 @@
 
 namespace AGS3 {
 
+extern void wouttext_outline(Shared::Bitmap *ds, int xxp, int yyp, int usingfont, color_t text_color, const char *texx);
+
 using namespace AGS::Shared;
 
 #define MOVER_MOUSEDOWNLOCKED -4000
 
 namespace AGS {
 namespace Shared {
+
+GuiOptions GUI::Options;
 
 /* static */ String GUIMain::FixupGUIName(const String &name) {
 	if (name.GetLength() > 0 && name[0u] != 'g')
@@ -158,6 +161,11 @@ bool GUIMain::IsDisplayed() const {
 bool GUIMain::IsInteractableAt(int x, int y) const {
 	if (!IsDisplayed())
 		return false;
+	// The Transparency test was unintentionally added in 3.5.0 as a side effect,
+	// and unfortunately there are already games which require it to work.
+	if ((_G(game_compiled_version).AsNumber() == 30500) && (Transparency == 255)) {
+		return false;
+	}
 	if (!IsClickable())
 		return false;
 	if ((x >= X) & (y >= Y) & (x < X + Width) & (y < Y + Height))
@@ -237,25 +245,27 @@ void GUIMain::DrawAt(Bitmap *ds, int x, int y) {
 
 	SET_EIP(379)
 
-	if (_G(all_buttons_disabled) && _G(gui_disabled_style) == GUIDIS_BLACKOUT)
-		return; // don't draw GUI controls
+	if ((_G(all_buttons_disabled) >= 0) && (GUI::Options.DisabledStyle == kGuiDis_Blackout))
+        return; // don't draw GUI controls
 
 	for (size_t ctrl_index = 0; ctrl_index < _controls.size(); ++ctrl_index) {
 		set_eip_guiobj(_ctrlDrawOrder[ctrl_index]);
 
 		GUIObject *objToDraw = _controls[_ctrlDrawOrder[ctrl_index]];
 
-		if (!objToDraw->IsEnabled() && _G(gui_disabled_style) == GUIDIS_BLACKOUT)
+		if (!objToDraw->IsEnabled() && (GUI::Options.DisabledStyle == kGuiDis_Blackout))
 			continue;
 		if (!objToDraw->IsVisible())
 			continue;
 
+		if (GUI::Options.ClipControls)
+			subbmp.SetClip(RectWH(objToDraw->X, objToDraw->Y, objToDraw->Width, objToDraw->Height));
 		objToDraw->Draw(&subbmp);
 
 		int selectedColour = 14;
 
 		if (HighlightCtrl == _ctrlDrawOrder[ctrl_index]) {
-			if (outlineGuiObjects)
+			if (GUI::Options.OutlineControls)
 				selectedColour = 13;
 			draw_color = subbmp.GetCompatibleColor(selectedColour);
 			DrawBlob(&subbmp, objToDraw->X + objToDraw->Width - get_fixed_pixel_size(1) - 1, objToDraw->Y, draw_color);
@@ -264,7 +274,7 @@ void GUIMain::DrawAt(Bitmap *ds, int x, int y) {
 			DrawBlob(&subbmp, objToDraw->X + objToDraw->Width - get_fixed_pixel_size(1) - 1,
 			         objToDraw->Y + objToDraw->Height - get_fixed_pixel_size(1) - 1, draw_color);
 		}
-		if (outlineGuiObjects) {
+		if (GUI::Options.OutlineControls) {
 			// draw a dotted outline round all objects
 			draw_color = subbmp.GetCompatibleColor(selectedColour);
 			for (int i = 0; i < objToDraw->Width; i += 2) {
@@ -313,7 +323,7 @@ void GUIMain::Poll() {
 					_controls[MouseOverCtrl]->OnMouseMove(_G(mousex), _G(mousey));
 				}
 			}
-			MarkChanged(); // TODO: only do if anything really changed
+			//MarkChanged(); // TODO: only do if anything really changed
 		} else if (MouseOverCtrl >= 0)
 			_controls[MouseOverCtrl]->OnMouseMove(_G(mousex), _G(mousey));
 	}
@@ -460,7 +470,7 @@ void GUIMain::OnMouseButtonDown() {
 	if (_controls[MouseOverCtrl]->OnMouseDown())
 		MouseOverCtrl = MOVER_MOUSEDOWNLOCKED;
 	_controls[MouseDownCtrl]->OnMouseMove(_G(mousex) - X, _G(mousey) - Y);
-	MarkChanged(); // TODO: only do if anything really changed
+	//MarkChanged(); // TODO: only do if anything really changed
 }
 
 void GUIMain::OnMouseButtonUp() {
@@ -476,7 +486,7 @@ void GUIMain::OnMouseButtonUp() {
 
 	_controls[MouseDownCtrl]->OnMouseUp();
 	MouseDownCtrl = -1;
-	MarkChanged(); // TODO: only do if anything really changed
+	//MarkChanged(); // TODO: only do if anything really changed
 }
 
 void GUIMain::ReadFromFile(Stream *in, GuiVersion gui_version) {
@@ -639,21 +649,40 @@ void DrawDisabledEffect(Bitmap *ds, const Rect &rc) {
 }
 
 void DrawTextAligned(Bitmap *ds, const char *text, int font, color_t text_color, const Rect &frame, FrameAlignment align) {
-	int text_height = wgettextheight(text, font);
+	int text_height = get_font_height(font);
 	if (align & kMAlignVCenter)
 		text_height++; // CHECKME
-	Rect item = AlignInRect(frame, RectWH(0, 0, wgettextwidth(text, font), text_height), align);
+	Rect item = AlignInRect(frame, RectWH(0, 0, get_text_width(text, font), text_height), align);
 	wouttext_outline(ds, item.Left, item.Top, font, text_color, text);
 }
 
 void DrawTextAlignedHor(Bitmap *ds, const char *text, int font, color_t text_color, int x1, int x2, int y, FrameAlignment align) {
-	int x = AlignInHRange(x1, x2, 0, wgettextwidth(text, font), align);
+	int x = AlignInHRange(x1, x2, 0, get_text_width(text, font), align);
 	wouttext_outline(ds, x, y, font, text_color, text);
 }
 
 void MarkAllGUIForUpdate() {
 	for (auto &gui : _GP(guis)) {
 		gui.MarkChanged();
+	}
+}
+
+void MarkForFontUpdate(int font) {
+	for (auto &btn : _GP(guibuts)) {
+		if (btn.Font == font)
+			btn.NotifyParentChanged();
+	}
+	for (auto &lbl : _GP(guilabels)) {
+		if (lbl.Font == font)
+			lbl.NotifyParentChanged();
+	}
+	for (auto &list : _GP(guilist)) {
+		if (list.Font == font)
+			list.NotifyParentChanged();
+	}
+	for (auto &tb : _GP(guitext)) {
+		if (tb.Font == font)
+			tb.NotifyParentChanged();
 	}
 }
 
@@ -727,7 +756,7 @@ HError ResortGUI(std::vector<GUIMain> &theGuis, bool bwcompat_ctrl_zorder = fals
 	return HError::None();
 }
 
-HError ReadGUI(std::vector<GUIMain> &guis, Stream *in, bool is_savegame) {
+HError ReadGUI(Stream *in, bool is_savegame) {
 	if (in->ReadInt32() != (int)GUIMAGIC)
 		return new Error("ReadGUI: unknown format or file is corrupt");
 
@@ -742,7 +771,7 @@ HError ReadGUI(std::vector<GUIMain> &guis, Stream *in, bool is_savegame) {
 		                                    GameGuiVersion, kGuiVersion_Initial, kGuiVersion_Current));
 	else
 		gui_count = in->ReadInt32();
-	guis.resize(gui_count);
+	_GP(guis).resize(gui_count);
 
 	// import the main GUI elements
 	for (size_t i = 0; i < gui_count; ++i) {
@@ -828,17 +857,17 @@ HError ReadGUI(std::vector<GUIMain> &guis, Stream *in, bool is_savegame) {
 			_GP(guilist)[i].ReadFromFile(in, GameGuiVersion);
 		}
 	}
-	return ResortGUI(guis, GameGuiVersion < kGuiVersion_272e);
+	return ResortGUI(_GP(guis), GameGuiVersion < kGuiVersion_272e);
 }
 
-void WriteGUI(const std::vector<GUIMain> &guis, Stream *out) {
+void WriteGUI(Stream *out) {
 	out->WriteInt32(GUIMAGIC);
 	out->WriteInt32(kGuiVersion_Current);
-	out->WriteInt32(guis.size());
+	out->WriteInt32(_GP(guis).size());
 
-	for (size_t i = 0; i < guis.size(); ++i) {
+	for (size_t i = 0; i < _GP(guis).size(); ++i) {
 		_GP(guis)[i].WriteToFile(out);
-	}
+	} 
 	out->WriteInt32(_G(numguibuts));
 	for (int i = 0; i < _G(numguibuts); ++i) {
 		_GP(guibuts)[i].WriteToFile(out);

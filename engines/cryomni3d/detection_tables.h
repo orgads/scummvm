@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,14 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 namespace CryOmni3D {
 
 #define GUI_OPTIONS_VERSAILLES                   GUIO3(GUIO_NOMIDI, GUIO_NOSFX, GUIO_NOASPECT)
+#define GUI_OPTIONS_HNM_PLAYER                   GUIO4(GUIO_NOMIDI, GUIO_NOSFX, GUIO_NOSPEECH, GUIO_NOASPECT)
 
 // To correctly detect root we need files from various places: CD1, CD2, HDD, on-CD install files
 // We use files common to all installations except the documentation links and the binary
@@ -533,6 +533,38 @@ static const CryOmni3DGameDescription gameDescriptions[] = {
 		},
 		GType_VERSAILLES,
 		/* GF_VERSAILLES_FONTS_ | */ GF_VERSAILLES_AUDIOPADDING_YES,
+	},
+
+	// Versailles 1685
+	// English DOS Non-interactive Demo (US)
+	{
+		{
+			"versailles",
+			"Demo",
+			AD_ENTRY1s("DEMO_US.HNS", "3a65a984353fec354dd26a62ca2cd3fb", 68462303),
+			Common::EN_ANY,
+			Common::kPlatformDOS,
+			ADGF_DEMO,
+			GUI_OPTIONS_HNM_PLAYER
+		},
+		GType_HNM_PLAYER,
+		0,
+	},
+
+	// Atlantis: The Lost Tales
+	// English DOS Non-interactive Demo
+	{
+		{
+			"atlantis",
+			"Demo",
+			AD_ENTRY1s("ATLANTIS.UBB", "f5b41b857678a61d7f9bd6eb41916ce5", 106611456),
+			Common::EN_ANY,
+			Common::kPlatformDOS,
+			ADGF_DEMO,
+			GUI_OPTIONS_HNM_PLAYER
+		},
+		GType_HNM_PLAYER,
+		0,
 	},
 
 	{ AD_TABLE_END_MARKER, 0, 0 }

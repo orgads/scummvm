@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -105,9 +104,12 @@ struct SciWorkaroundEntry;	// from workarounds.h
 
 // ---- Kernel signatures -----------------------------------------------------
 
+// Kernel functions that have been added for ScummVM script patches to call
 enum {
-	kScummVMWaitId     = 0xe0,
-	kScummVMSaveLoadId = 0xe1
+	kScummVMSleepId    = 0xe0, // sleeps for a delay while remaining responsive
+#ifdef ENABLE_SCI32
+	kScummVMSaveLoadId = 0xe1  // launches ScummVM's save/load dialog
+#endif
 };
 
 // internal kernel signature data
@@ -496,7 +498,6 @@ reg_t kGetSaveFiles32(EngineState *s, int argc, reg_t *argv);
 reg_t kCheckSaveGame32(EngineState *s, int argc, reg_t *argv);
 reg_t kMakeSaveCatName(EngineState *s, int argc, reg_t *argv);
 reg_t kMakeSaveFileName(EngineState *s, int argc, reg_t *argv);
-reg_t kScummVMSaveLoad(EngineState *s, int argc, reg_t *argv);
 
 reg_t kSetHotRectangles(EngineState *s, int argc, reg_t *argv);
 reg_t kIsHiRes(EngineState *s, int argc, reg_t *argv);
@@ -741,6 +742,12 @@ reg_t kFileIOReadWord(EngineState *s, int argc, reg_t *argv);
 reg_t kFileIOWriteWord(EngineState *s, int argc, reg_t *argv);
 reg_t kFileIOGetCWD(EngineState *s, int argc, reg_t *argv);
 reg_t kFileIOIsValidDirectory(EngineState *s, int argc, reg_t *argv);
+#endif
+
+// Custom ScummVM kernel functions
+reg_t kScummVMSleep(EngineState *s, int argc, reg_t *argv);
+#ifdef ENABLE_SCI32
+reg_t kScummVMSaveLoad(EngineState *s, int argc, reg_t *argv);
 #endif
 
 /** @} */

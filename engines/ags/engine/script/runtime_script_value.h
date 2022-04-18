@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -32,6 +31,7 @@
 #include "ags/engine/script/script_api.h"
 #include "ags/shared/util/memory.h"
 #include "ags/engine/ac/dynobj/cc_dynamic_object.h"
+#include "ags/plugins/plugin_base.h"
 
 namespace AGS3 {
 
@@ -81,6 +81,7 @@ public:
 	}
 
 	ScriptValueType Type;
+	Common::String methodName;
 	// The 32-bit value used for integer/float math and for storing
 	// variable/element offset relative to object (and array) address
 	union {
@@ -128,6 +129,7 @@ public:
 
 	inline RuntimeScriptValue &Invalidate() {
 		Type = kScValUndefined;
+		methodName.clear();
 		IValue = 0;
 		Ptr = nullptr;
 		MgrPtr = nullptr;
@@ -136,6 +138,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetUInt8(uint8_t val) {
 		Type = kScValInteger;
+		methodName.clear();
 		IValue = val;
 		Ptr = nullptr;
 		MgrPtr = nullptr;
@@ -144,6 +147,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetInt16(int16_t val) {
 		Type = kScValInteger;
+		methodName.clear();
 		IValue = val;
 		Ptr = nullptr;
 		MgrPtr = nullptr;
@@ -152,6 +156,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetInt32(int32_t val) {
 		Type = kScValInteger;
+		methodName.clear();
 		IValue = val;
 		Ptr = nullptr;
 		MgrPtr = nullptr;
@@ -160,6 +165,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetFloat(float val) {
 		Type = kScValFloat;
+		methodName.clear();
 		FValue = val;
 		Ptr = nullptr;
 		MgrPtr = nullptr;
@@ -174,6 +180,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetPluginArgument(int32_t val) {
 		Type = kScValPluginArg;
+		methodName.clear();
 		IValue = val;
 		Ptr = nullptr;
 		MgrPtr = nullptr;
@@ -182,6 +189,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetStackPtr(RuntimeScriptValue *stack_entry) {
 		Type = kScValStackPtr;
+		methodName.clear();
 		IValue = 0;
 		RValue = stack_entry;
 		MgrPtr = nullptr;
@@ -190,6 +198,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetData(char *data, int size) {
 		Type = kScValData;
+		methodName.clear();
 		IValue = 0;
 		Ptr = data;
 		MgrPtr = nullptr;
@@ -198,6 +207,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetGlobalVar(RuntimeScriptValue *glvar_value) {
 		Type = kScValGlobalVar;
+		methodName.clear();
 		IValue = 0;
 		RValue = glvar_value;
 		MgrPtr = nullptr;
@@ -207,6 +217,7 @@ public:
 	// TODO: size?
 	inline RuntimeScriptValue &SetStringLiteral(const char *str) {
 		Type = kScValStringLiteral;
+		methodName.clear();
 		IValue = 0;
 		Ptr = const_cast<char *>(str);
 		MgrPtr = nullptr;
@@ -215,6 +226,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetStaticObject(void *object, ICCStaticObject *manager) {
 		Type = kScValStaticObject;
+		methodName.clear();
 		IValue = 0;
 		Ptr = (char *)object;
 		StcMgr = manager;
@@ -223,6 +235,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetStaticArray(void *object, StaticArray *manager) {
 		Type = kScValStaticArray;
+		methodName.clear();
 		IValue = 0;
 		Ptr = (char *)object;
 		StcArr = manager;
@@ -231,6 +244,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetDynamicObject(void *object, ICCDynamicObject *manager) {
 		Type = kScValDynamicObject;
+		methodName.clear();
 		IValue = 0;
 		Ptr = (char *)object;
 		DynMgr = manager;
@@ -239,6 +253,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetPluginObject(void *object, ICCDynamicObject *manager) {
 		Type = kScValPluginObject;
+		methodName.clear();
 		IValue = 0;
 		Ptr = (char *)object;
 		DynMgr = manager;
@@ -247,22 +262,25 @@ public:
 	}
 	inline RuntimeScriptValue &SetStaticFunction(ScriptAPIFunction *pfn) {
 		Type = kScValStaticFunction;
+		methodName.clear();
 		IValue = 0;
 		SPfn = pfn;
 		MgrPtr = nullptr;
 		Size = 4;
 		return *this;
 	}
-	inline RuntimeScriptValue &SetPluginFunction(void *pfn) {
+	inline RuntimeScriptValue &SetPluginMethod(Plugins::ScriptContainer *sc, const Common::String &method) {
 		Type = kScValPluginFunction;
-		IValue = 0;
-		Ptr = (char *)pfn;
+		methodName = method;
+		Ptr = (char *)sc;
 		MgrPtr = nullptr;
+		IValue = 0;
 		Size = 4;
 		return *this;
 	}
 	inline RuntimeScriptValue &SetObjectFunction(ScriptAPIObjectFunction *pfn) {
 		Type = kScValObjectFunction;
+		methodName.clear();
 		IValue = 0;
 		ObjPfn = pfn;
 		MgrPtr = nullptr;
@@ -271,6 +289,7 @@ public:
 	}
 	inline RuntimeScriptValue &SetCodePtr(char *ptr) {
 		Type = kScValCodePtr;
+		methodName.clear();
 		IValue = 0;
 		Ptr = ptr;
 		MgrPtr = nullptr;
@@ -283,6 +302,11 @@ public:
 	}
 
 	inline bool operator ==(const RuntimeScriptValue &rval) {
+		if (rval.Type == kScValPluginFunction) {
+			assert(!rval.methodName.empty());
+			return (Type == kScValPluginFunction) && (rval.methodName == methodName);
+		}
+
 		return ((intptr_t)Ptr + (intptr_t)IValue) == ((intptr_t)rval.Ptr + (intptr_t)rval.IValue);
 	}
 	inline bool operator !=(const RuntimeScriptValue &rval) {
@@ -328,6 +352,9 @@ public:
 		return rval;
 	}
 
+	Plugins::PluginMethod pluginMethod() const {
+		return Plugins::PluginMethod((Plugins::PluginBase *)Ptr, methodName);
+	}
 
 	// Helper functions for reading or writing values from/to
 	// object, referenced by this Runtime Value.

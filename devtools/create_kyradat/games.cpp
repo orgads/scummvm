@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -44,6 +43,7 @@ const Game kyra1Games[] = {
 	{ kKyra1, kPlatformDOS, kNoSpecial, IT_ITA },
 	{ kKyra1, kPlatformDOS, kNoSpecial, ES_ESP },
 	{ kKyra1, kPlatformDOS, kOldFloppy, RU_RUS },
+	{ kKyra1, kPlatformDOS, kNoSpecial, ZH_TWN },
 
 	{ kKyra1, kPlatformDOS, kTalkieVersion, EN_ANY },
 	{ kKyra1, kPlatformDOS, kTalkieVersion, DE_DEU },
@@ -57,6 +57,8 @@ const Game kyra1Games[] = {
 	{ kKyra1, kPlatformFMTowns, kNoSpecial, JA_JPN },
 
 	{ kKyra1, kPlatformPC98, kNoSpecial, JA_JPN },
+
+	{ kKyra1, kPlatformMacintosh, kNoSpecial, EN_ANY },
 
 	GAME_DUMMY_ENTRY
 };
@@ -74,6 +76,7 @@ const Game kyra2Games[] = {
 	{ kKyra2, kPlatformDOS, kNoSpecial, IT_ITA },
 	{ kKyra2, kPlatformDOS, kNoSpecial, RU_RUS },
 	{ kKyra2, kPlatformDOS, kNoSpecial, ES_ESP },
+	{ kKyra2, kPlatformDOS, kNoSpecial, ZH_TWN },
 
 	{ kKyra2, kPlatformDOS, kTalkieVersion, EN_ANY },
 	{ kKyra2, kPlatformDOS, kTalkieVersion, FR_FRA },
@@ -81,6 +84,7 @@ const Game kyra2Games[] = {
 	{ kKyra2, kPlatformDOS, kTalkieVersion, IT_ITA },
 	//{ kKyra2, kPlatformDOS, kTalkieVersion, RU_RUS },
 	{ kKyra2, kPlatformDOS, kTalkieVersion, ES_ESP },
+	{ kKyra2, kPlatformDOS, kTalkieVersion, HE_ISR },
 
 	{ kKyra2, kPlatformFMTowns, kNoSpecial, EN_ANY },
 	{ kKyra2, kPlatformFMTowns, kNoSpecial, JA_JPN },
@@ -98,7 +102,8 @@ const Game kyra3Games[] = {
 	{ kKyra3, kPlatformDOS, kTalkieVersion, IT_ITA },
 	{ kKyra3, kPlatformDOS, kTalkieVersion, ES_ESP },
 	{ kKyra3, kPlatformDOS, kTalkieVersion, RU_RUS },
-	{ kKyra3, kPlatformDOS, kTalkieVersion, ZH_CNA },
+	{ kKyra3, kPlatformDOS, kTalkieVersion, ZH_CHN },
+	{ kKyra3, kPlatformDOS, kTalkieVersion, ZH_TWN },
 
 	GAME_DUMMY_ENTRY
 };
@@ -171,7 +176,7 @@ const Game * const gameDescs[] = {
 	lolGames,
 	eob1Games,
 	eob2Games,
-	0
+	nullptr
 };
 
 // Need tables
@@ -262,6 +267,8 @@ const int kyra1FloppyNeed[] = {
 	k1ConfigStrings,
 	k1AudioTracks,
 	k1AudioTracksIntro,
+	k1CreditsStrings,
+	k1TwoByteFontLookupTable,
 	-1
 };
 
@@ -704,6 +711,93 @@ const int kyra1AmigaNeed[] = {
 	-1
 };
 
+const int kyra1MacNeed[] = {
+	k1KallakWritingSeq,
+	k1MalcolmTreeSeq,
+	k1WestwoodLogoSeq,
+	k1KyrandiaLogoSeq,
+	k1KallakMalcolmSeq,
+	k1ForestSeq,
+	k1IntroCPSStrings,
+	k1IntroCOLStrings,
+	k1IntroWSAStrings,
+	k1IntroStrings,
+	k1RoomList,
+	k1RoomFilenames,
+	k1CharacterImageFilenames,
+	k1DefaultShapes,
+	k1ItemNames,
+	k1TakenStrings,
+	k1PlacedStrings,
+	k1DroppedStrings,
+	k1NoDropStrings,
+	k1AmuleteAnimSeq,
+	k1SpecialPalette1,
+	k1SpecialPalette2,
+	k1SpecialPalette3,
+	k1SpecialPalette4,
+	k1SpecialPalette5,
+	k1SpecialPalette6,
+	k1SpecialPalette7,
+	k1SpecialPalette8,
+	k1SpecialPalette9,
+	k1SpecialPalette10,
+	k1SpecialPalette11,
+	k1SpecialPalette12,
+	k1SpecialPalette13,
+	k1SpecialPalette14,
+	k1SpecialPalette15,
+	k1SpecialPalette16,
+	k1SpecialPalette17,
+	k1SpecialPalette18,
+	k1SpecialPalette19,
+	k1SpecialPalette20,
+	k1SpecialPalette21,
+	k1SpecialPalette22,
+	k1SpecialPalette23,
+	k1SpecialPalette24,
+	k1SpecialPalette25,
+	k1SpecialPalette26,
+	k1SpecialPalette27,
+	k1SpecialPalette28,
+	k1SpecialPalette29,
+	k1SpecialPalette30,
+	k1SpecialPalette31,
+	k1SpecialPalette32,
+	k1SpecialPalette33,
+	k1PutDownString,
+	k1WaitAmuletString,
+	k1BlackJewelString,
+	k1HealingTipString,
+	k1PoisonGoneString,
+	k1Healing1Shapes,
+	k1Healing2Shapes,
+	k1ThePoisonStrings,
+	k1FluteStrings,
+	k1PoisonDeathShapes,
+	k1FluteShapes,
+	k1Winter1Shapes,
+	k1Winter2Shapes,
+	k1Winter3Shapes,
+	k1DrinkShapes,
+	k1WispShapes,
+	k1MagicAnimShapes,
+	k1BranStoneShapes,
+	k1WispJewelStrings,
+	k1MagicJewelStrings,
+	k1FlaskFullString,
+	k1FullFlaskString,
+	k1OutroReunionSeq,
+	k1OutroHomeString,
+	k1VeryCleverString,
+	k1GUIStrings,
+	k1NewGameString,
+	k1ConfigStrings,
+	k1ConfigStrings2,
+	k1CreditsStrings,
+	-1
+};
+
 const int kyra2CDNeed[] = {
 	k2SeqplayPakFiles,
 	k2SeqplayCredits,
@@ -754,6 +848,7 @@ const int kyra2FloppyNeed[] = {
 	k2IngameTracks,
 	k2IngameTalkObjIndex,
 	k2IngameShapeAnimData,
+	k2FontData,
 	-1
 };
 
@@ -806,7 +901,7 @@ const int kyra3Need[] = {
 	k3ItemAnimData,
 	k3ItemMagicTable,
 	k3ItemStringMap,
-	k3FontData,
+	k2FontData,
 	k3VqaSubtitlesIntro,
 	k3VqaSubtitlesBoat,
 	-1
@@ -4395,6 +4490,8 @@ const GameNeed gameNeedTable[] = {
 
 	{ kKyra1, kPlatformPC98, kNoSpecial, kyra1PC98Need },
 
+	{ kKyra1, kPlatformMacintosh, kNoSpecial, kyra1MacNeed },
+
 	{ kKyra1, kPlatformDOS, kDemoVersion, kyra1DemoNeed },
 
 	{ kKyra1, kPlatformDOS, kTalkieDemoVersion, kyra1DemoCDNeed },
@@ -4433,7 +4530,7 @@ const GameNeed gameNeedTable[] = {
 	//{ kEoB2, kPlatformPC98, kNoSpecial, eob2PC98Need },
 	{ kEoB2, kPlatformFMTowns, kNoSpecial, eob2FMTownsNeed },
 
-	{ -1, -1, -1, 0 }
+	{ -1, -1, -1, nullptr }
 };
 
 } // end of anonymous namespace
@@ -4444,5 +4541,5 @@ const int *getNeedList(const Game *g) {
 			return need->entries;
 	}
 
-	return 0;
+	return nullptr;
 }

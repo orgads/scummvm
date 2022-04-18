@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,8 +24,10 @@
 #include "ags/shared/ac/game_setup_struct.h"
 #include "ags/engine/ac/game_state.h"
 #include "ags/engine/ac/global_region.h"
+#include "ags/engine/ac/room.h"
 #include "ags/engine/ac/room_status.h"
 #include "ags/engine/ac/dynobj/cc_region.h"
+#include "ags/engine/ac/dynobj/script_drawing_surface.h"
 #include "ags/shared/game/room_struct.h"
 #include "ags/engine/script/runtime_script_value.h"
 #include "ags/shared/debugging/out.h"
@@ -39,10 +40,7 @@ namespace AGS3 {
 using namespace AGS::Shared;
 
 ScriptRegion *GetRegionAtRoom(int xx, int yy) {
-	int hsnum = GetRegionIDAtRoom(xx, yy);
-	if (hsnum < 0)
-		hsnum = 0;
-	return &_G(scrRegion)[hsnum];
+	return &_G(scrRegion)[GetRegionIDAtRoom(xx, yy)];
 }
 
 ScriptRegion *GetRegionAtScreen(int x, int y) {
@@ -141,6 +139,11 @@ RuntimeScriptValue Sc_GetRegionAtScreen(const RuntimeScriptValue *params, int32_
 	API_SCALL_OBJ_PINT2(ScriptRegion, _GP(ccDynamicRegion), GetRegionAtScreen);
 }
 
+RuntimeScriptValue Sc_Region_GetDrawingSurface(const RuntimeScriptValue *params, int32_t param_count) {
+	ScriptDrawingSurface *ret_obj = Room_GetDrawingSurfaceForMask(kRoomAreaRegion);
+	return RuntimeScriptValue().SetDynamicObject(ret_obj, ret_obj);
+}
+
 RuntimeScriptValue Sc_Region_Tint(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_VOID_PINT5(ScriptRegion, Region_Tint);
 }
@@ -210,10 +213,10 @@ RuntimeScriptValue Sc_Region_GetTintLuminance(void *self, const RuntimeScriptVal
 }
 
 
-
 void RegisterRegionAPI() {
 	ccAddExternalStaticFunction("Region::GetAtRoomXY^2", Sc_GetRegionAtRoom);
 	ccAddExternalStaticFunction("Region::GetAtScreenXY^2", Sc_GetRegionAtScreen);
+	ccAddExternalStaticFunction("Region::GetDrawingSurface", Sc_Region_GetDrawingSurface);
 	ccAddExternalObjectFunction("Region::Tint^4", Sc_Region_TintNoLum);
 	ccAddExternalObjectFunction("Region::Tint^5", Sc_Region_Tint);
 	ccAddExternalObjectFunction("Region::RunInteraction^1", Sc_Region_RunInteraction);
@@ -228,23 +231,6 @@ void RegisterRegionAPI() {
 	ccAddExternalObjectFunction("Region::get_TintRed", Sc_Region_GetTintRed);
 	ccAddExternalObjectFunction("Region::get_TintSaturation", Sc_Region_GetTintSaturation);
 	ccAddExternalObjectFunction("Region::get_TintLuminance", Sc_Region_GetTintLuminance);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("Region::GetAtRoomXY^2", (void *)GetRegionAtRoom);
-	ccAddExternalFunctionForPlugin("Region::GetAtScreenXY^2", (void *)GetRegionAtScreen);
-	ccAddExternalFunctionForPlugin("Region::Tint^4", (void *)Region_TintNoLum);
-	ccAddExternalFunctionForPlugin("Region::RunInteraction^1", (void *)Region_RunInteraction);
-	ccAddExternalFunctionForPlugin("Region::get_Enabled", (void *)Region_GetEnabled);
-	ccAddExternalFunctionForPlugin("Region::set_Enabled", (void *)Region_SetEnabled);
-	ccAddExternalFunctionForPlugin("Region::get_ID", (void *)Region_GetID);
-	ccAddExternalFunctionForPlugin("Region::get_LightLevel", (void *)Region_GetLightLevel);
-	ccAddExternalFunctionForPlugin("Region::set_LightLevel", (void *)Region_SetLightLevel);
-	ccAddExternalFunctionForPlugin("Region::get_TintEnabled", (void *)Region_GetTintEnabled);
-	ccAddExternalFunctionForPlugin("Region::get_TintBlue", (void *)Region_GetTintBlue);
-	ccAddExternalFunctionForPlugin("Region::get_TintGreen", (void *)Region_GetTintGreen);
-	ccAddExternalFunctionForPlugin("Region::get_TintRed", (void *)Region_GetTintRed);
-	ccAddExternalFunctionForPlugin("Region::get_TintSaturation", (void *)Region_GetTintSaturation);
 }
 
 } // namespace AGS3

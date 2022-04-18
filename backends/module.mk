@@ -75,8 +75,9 @@ MODULE_OBJS += \
 	networking/curl/curlrequest.o \
 	networking/curl/curljsonrequest.o \
 	networking/curl/postrequest.o \
-	networking/curl/sessionrequest.o \
-	networking/curl/request.o
+	networking/curl/request.o \
+	networking/curl/session.o \
+	networking/curl/sessionrequest.o
 endif
 
 ifdef USE_SDL_NET
@@ -143,7 +144,6 @@ MODULE_OBJS += \
 	events/sdl/sdl-events.o \
 	graphics/sdl/sdl-graphics.o \
 	graphics/surfacesdl/surfacesdl-graphics.o \
-	graphics3d/openglsdl/openglsdl-graphics3d.o \
 	mixer/sdl/sdl-mixer.o \
 	mutex/sdl/sdl-mutex.o \
 	plugins/sdl/sdl-provider.o \
@@ -157,7 +157,15 @@ endif
 
 ifdef USE_OPENGL
 MODULE_OBJS += \
-	graphics/openglsdl/openglsdl-graphics.o
+	graphics3d/opengl/framebuffer.o \
+	graphics3d/opengl/surfacerenderer.o \
+	graphics3d/opengl/texture.o \
+	graphics3d/opengl/tiledsurface.o
+ifdef SDL_BACKEND
+MODULE_OBJS += \
+	graphics/openglsdl/openglsdl-graphics.o \
+	graphics3d/openglsdl/openglsdl-graphics3d.o
+endif
 endif
 
 ifdef USE_DISCORD
@@ -224,19 +232,21 @@ endif
 
 endif
 
+ifeq ($(BACKEND),3ds)
+MODULE_OBJS += \
+	mutex/3ds/3ds-mutex.o
+endif
+
 ifeq ($(BACKEND),android)
 MODULE_OBJS += \
+	graphics/android/android-graphics.o \
+	graphics3d/android/android-graphics3d.o \
+	graphics3d/android/texture.o \
+	graphics3d/opengl/framebuffer.o \
+	graphics3d/opengl/surfacerenderer.o \
+	graphics3d/opengl/texture.o \
+	graphics3d/opengl/tiledsurface.o \
 	mutex/pthread/pthread-mutex.o
-endif
-
-ifeq ($(BACKEND),android3d)
-MODULE_OBJS += \
-	mutex/pthread/pthread-mutex.o
-endif
-
-ifeq ($(BACKEND),androidsdl)
-MODULE_OBJS += \
-	events/androidsdl/androidsdl-events.o
 endif
 
 ifdef AMIGAOS
@@ -329,6 +339,15 @@ MODULE_OBJS += \
 	mixer/null/null-mixer.o
 endif
 
+ifeq ($(BACKEND),opendingux)
+MODULE_OBJS += \
+	fs/posix/posix-fs.o \
+	fs/posix/posix-fs-factory.o \
+	fs/posix/posix-iostream.o \
+	fs/posix-drives/posix-drives-fs.o \
+	fs/posix-drives/posix-drives-fs-factory.o
+endif
+
 ifeq ($(BACKEND),openpandora)
 MODULE_OBJS += \
 	events/openpandora/op-events.o \
@@ -362,6 +381,7 @@ ifeq ($(BACKEND),wii)
 MODULE_OBJS += \
 	fs/wii/wii-fs.o \
 	fs/wii/wii-fs-factory.o \
+	mutex/wii/wii-mutex.o \
 	plugins/wii/wii-provider.o
 endif
 

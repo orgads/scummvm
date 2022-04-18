@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -103,7 +102,7 @@ reg_t kDeviceInfo(EngineState *s, int argc, reg_t *argv) {
 		Common::String path2_s = s->_segMan->getString(argv[2]);
 		debug(3, "K_DEVICE_INFO_PATHS_EQUAL(%s,%s)", path1_s.c_str(), path2_s.c_str());
 
-		return make_reg(0, Common::matchString(path2_s.c_str(), path1_s.c_str(), false, true));
+		return make_reg(0, Common::matchString(path2_s.c_str(), path1_s.c_str(), false, "/"));
 		}
 		break;
 
@@ -721,11 +720,6 @@ reg_t kFileIOReadString(EngineState *s, int argc, reg_t *argv) {
 	} else if ((int)bytesRead > dest_r.maxSize) {
 		error("kFileIO(readString) attempting to read %u bytes into buffer of size %u", bytesRead, dest_r.maxSize);
 	} else if (maxsize > dest_r.maxSize) {
-		// This happens at least in the QfG4 character import.
-		// CHECKME: We zero the remainder of the dest buffer, while
-		// at least several (and maybe all) SSCI interpreters didn't do this.
-		// Therefore this warning is presumably no problem.
-		warning("kFileIO(readString) attempting to copy %u bytes into buffer of size %u (%u/%u bytes actually read)", maxsize, dest_r.maxSize, bytesRead, maxsize);
 		maxsize = dest_r.maxSize;
 	}
 
@@ -773,6 +767,7 @@ reg_t kFileIOSeek(EngineState *s, int argc, reg_t *argv) {
 	FileHandle *f = getFileFromHandle(s, handle);
 
 	if (f && f->_in) {
+		offset = MIN<int16>(offset, f->_in->size());
 		const bool success = f->_in->seek(offset, whence);
 		if (getSciVersion() >= SCI_VERSION_2) {
 			if (success) {
@@ -1171,6 +1166,16 @@ reg_t kSaveGame(EngineState *s, int argc, reg_t *argv) {
 						error("kSavegame: no more savegame slots available");
 				}
 			}
+
+			// WORKAROUND: Mothergoose256 has a unique scheme for calculating the current save id
+			// and storing it in a global. The SCI1.1 floppy version uses this to auto-save and
+			// auto-delete at the end of the game. This is incompatible with our virtual id system
+			// so we work around this by setting the game's save global to the virtual id here and
+			// also when restoring so that it's always correct. See gamestate_afterRestoreFixUp().
+			// Fixes bug #5294
+			if (g_sci->getGameId() == GID_MOTHERGOOSE256) {
+				s->variables[VAR_GLOBAL][0xB3].setOffset(SAVEGAMEID_OFFICIALRANGE_START + savegameId);
+			}
 		} else {
 			error("kSaveGame: invalid savegameId used");
 		}
@@ -1316,7 +1321,7 @@ reg_t kGetSaveFiles(EngineState *s, int argc, reg_t *argv) {
 
 	for (uint i = 0; i < totalSaves; i++) {
 		*slot++ = make_reg(0, saves[i].id + SAVEGAMEID_OFFICIALRANGE_START); // Store the virtual savegame ID (see above)
-		strcpy(saveNamePtr, saves[i].name);
+		Common::strlcpy(saveNamePtr, saves[i].name, kMaxSaveNameLength);
 		saveNamePtr += kMaxSaveNameLength;
 	}
 
@@ -1394,7 +1399,7 @@ reg_t kSaveGame32(EngineState *s, int argc, reg_t *argv) {
 reg_t kRestoreGame32(EngineState *s, int argc, reg_t *argv) {
 	const Common::String gameName = s->_segMan->getString(argv[0]);
 	int16 saveNo = argv[1].toSint16();
-	const Common::String gameVersion = argv[2].isNull() ? "" : s->_segMan->getString(argv[2]);
+	//const Common::String gameVersion = argv[2].isNull() ? "" : s->_segMan->getString(argv[2]);
 
 	// Display the restore prompt for Mac games with native dialogs. Passing
 	//  zero for the save number would trigger these, but we can't act solely
@@ -1427,7 +1432,13 @@ reg_t kRestoreGame32(EngineState *s, int argc, reg_t *argv) {
 reg_t kCheckSaveGame32(EngineState *s, int argc, reg_t *argv) {
 	const Common::String gameName = s->_segMan->getString(argv[0]);
 	int16 saveNo = argv[1].toSint16();
-	const Common::String gameVersion = argv[2].isNull() ? "" : s->_segMan->getString(argv[2]);
+	Common::String gameVersion = argv[2].isNull() ? "" : s->_segMan->getString(argv[2]);
+
+	// If the game version is empty, fall back to loading it from the VERSION file
+	if (gameVersion == "") {
+		Common::ScopedPtr<Common::SeekableReadStream> versionFile(SearchMan.createReadStreamForMember("VERSION"));
+		gameVersion = versionFile ? versionFile->readLine() : "";
+	}
 
 	if (gameName == "Autosave" || gameName == "Autosv") {
 		if (saveNo == 1) {
@@ -1452,7 +1463,7 @@ reg_t kCheckSaveGame32(EngineState *s, int argc, reg_t *argv) {
 		return NULL_REG;
 	}
 
-	if (save.gameVersion != gameVersion) {
+	if (save.gameVersion != gameVersion && gameVersion != "" && save.gameVersion != "") {
 		warning("Save game was created for game version %s, but the current game version is %s", save.gameVersion.c_str(), gameVersion.c_str());
 		return NULL_REG;
 	}
@@ -1495,7 +1506,7 @@ reg_t kGetSaveFiles32(EngineState *s, int argc, reg_t *argv) {
 		// At least Phant2 requires use of strncpy, since it creates save game
 		// names of exactly kMaxSaveNameLength
 		strncpy(target, save.name, kMaxSaveNameLength);
-		int16 sciSaveId = (save.id == 0) ? kMaxShiftedSaveId : (save.id - kSaveIdShift);
+		int16 sciSaveId = shiftScummVMToSciSaveId(save.id);
 		saveIds.setFromInt16(i, sciSaveId);
 	}
 

@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -118,7 +117,7 @@ void _icon_menu::Activate(const _icon_list *pIconList, const _icon_menu_duplicat
 		pyIconBitmap = surface_manager->Lock_surface(m_pnIconSurfaceIDs[i]);
 		uint32 nPitch = surface_manager->Get_pitch(m_pnIconSurfaceIDs[i]);
 		// Load the icon into the surface
-		SpriteXYFrameDraw(pyIconBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, NULL, 255);
+		SpriteXYFrameDraw(pyIconBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, nullptr, 255);
 		// convert it to b/w
 		uint32 *icon_ad = (uint32 *)pyIconBitmap;
 		for (uint32 y = 0; y < ICON_Y_SIZE; y++) {
@@ -145,7 +144,7 @@ void _icon_menu::Activate(const _icon_list *pIconList, const _icon_menu_duplicat
 		pyHiLiteBitmap = surface_manager->Lock_surface(m_pnHiLiteSurfaceIDs[i]);
 		nPitch = surface_manager->Get_pitch(m_pnHiLiteSurfaceIDs[i]);
 		// Load the icon hilight
-		SpriteXYFrameDraw(pyHiLiteBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, NULL, 255);
+		SpriteXYFrameDraw(pyHiLiteBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, nullptr, 255);
 		// Unlock the surface
 		surface_manager->Unlock_surface(m_pnHiLiteSurfaceIDs[i]);
 	}
@@ -206,7 +205,7 @@ void _icon_menu::ReActivate() {
 		uint32 nPitch = surface_manager->Get_pitch(m_pnIconSurfaceIDs[i]);
 
 		// Load the icon into the surface
-		SpriteXYFrameDraw(pyIconBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, NULL, 255);
+		SpriteXYFrameDraw(pyIconBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, nullptr, 255);
 		// convert it to b/w
 		uint32 *icon_ad = (uint32 *)pyIconBitmap;
 		for (uint32 y = 0; y < ICON_Y_SIZE; y++) {
@@ -232,7 +231,7 @@ void _icon_menu::ReActivate() {
 		uint8 *pyHiLiteBitmap = surface_manager->Lock_surface(m_pnHiLiteSurfaceIDs[i]);
 		nPitch = surface_manager->Get_pitch(m_pnHiLiteSurfaceIDs[i]);
 		// Load the icon hilight
-		SpriteXYFrameDraw(pyHiLiteBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, NULL, 255);
+		SpriteXYFrameDraw(pyHiLiteBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, nullptr, 255);
 		// Unlock the surface
 		surface_manager->Unlock_surface(m_pnHiLiteSurfaceIDs[i]);
 		// Set the transparency keys for the icon
@@ -483,7 +482,7 @@ void _icon_menu::SetupAdding(const char *pcIconName, uint32 &nSurfaceID) {
 	nPitch = surface_manager->Get_pitch(nSurfaceID);
 
 	// Draw the icon into the surface.
-	SpriteXYFrameDraw(p8Bitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, NULL, 255);
+	SpriteXYFrameDraw(p8Bitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, nullptr, 255);
 
 	// Finished drawing the icon into the surfaces so we can unlock them.
 	surface_manager->Unlock_surface(nSurfaceID);
@@ -635,8 +634,8 @@ void _icon_menu::SetUpOffScreenArrows() {
 		Fatal_error("Incorrect versions loading [%s] (engine has %d, data has %d", pcArrowIconName, PC_BITMAP_SCHEMA, psIconBitmap->schema);
 
 	// Draw the two frames onto their respective surfaces.
-	SpriteXYFrameDraw(pyLeftBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, NULL, 255);
-	SpriteXYFrameDraw(pyLeftHiLiteBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 1, FALSE8, NULL, 255);
+	SpriteXYFrameDraw(pyLeftBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, nullptr, 255);
+	SpriteXYFrameDraw(pyLeftHiLiteBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 1, FALSE8, nullptr, 255);
 
 	// Finished drawing the icon into the surfaces so we can unlock them.
 	surface_manager->Unlock_surface(m_nLeftArrowID);
@@ -665,8 +664,8 @@ void _icon_menu::SetUpOffScreenArrows() {
 		Fatal_error("Incorrect versions loading [%s] (engine has %d, data has %d", pcArrowIconName, PC_BITMAP_SCHEMA, psIconBitmap->schema);
 
 	// Draw the two frames onto their respective surfaces.
-	SpriteXYFrameDraw(pyRightBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, NULL, 255);
-	SpriteXYFrameDraw(pyRightHiLiteBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 1, FALSE8, NULL, 255);
+	SpriteXYFrameDraw(pyRightBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 0, FALSE8, nullptr, 255);
+	SpriteXYFrameDraw(pyRightHiLiteBitmap, nPitch, ICON_X_SIZE, ICON_Y_SIZE, psIconBitmap, 0, 0, 1, FALSE8, nullptr, 255);
 
 	// Finished drawing the icon into the surfaces so we can unlock them.
 	surface_manager->Unlock_surface(m_nRightArrowID);

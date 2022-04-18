@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -174,31 +173,12 @@ void GfxTransitions32::processEffects(PlaneShowStyle &showStyle) {
 	}
 }
 
-// TODO: 10-argument version is only in SCI3; argc checks are currently wrong for this version
-// and need to be fixed in future
-void GfxTransitions32::kernelSetShowStyle(const uint16 argc, const reg_t planeObj, const ShowStyleType type, const int16 seconds, const int16 back, const int16 priority, const int16 animate, const int16 frameOutNow, reg_t pFadeArray, int16 divisions, const int16 blackScreen) {
+void GfxTransitions32::kernelSetShowStyle(const reg_t planeObj, const ShowStyleType type, const int16 seconds,
+	const int16 back, const int16 priority, const int16 animate, const int16 frameOutNow,
+	const reg_t pFadeArray, const int16 divisions, const int16 blackScreen) {
 
-	bool hasDivisions = false;
-	bool hasFadeArray = false;
-
-	// KQ7 2.0b uses a mismatched version of the Styler script (SCI2.1early script
-	// for SCI2.1mid engine), so the calls it makes to kSetShowStyle are wrong and
-	// put `divisions` where `pFadeArray` is supposed to be
-	if (getSciVersion() == SCI_VERSION_2_1_MIDDLE && g_sci->getGameId() == GID_KQ7) {
-		hasDivisions = argc > 7;
-		hasFadeArray = false;
-		divisions = argc > 7 ? pFadeArray.toSint16() : -1;
-		pFadeArray = NULL_REG;
-	} else if (getSciVersion() < SCI_VERSION_2_1_MIDDLE) {
-		hasDivisions = argc > 7;
-		hasFadeArray = false;
-	} else if (getSciVersion() < SCI_VERSION_3) {
-		hasDivisions = argc > 8;
-		hasFadeArray = argc > 7;
-	} else {
-		hasDivisions = argc > 9;
-		hasFadeArray = argc > 8;
-	}
+	const bool hasFadeArray = !pFadeArray.isNull();
+	const bool hasDivisions = (divisions != -1);
 
 	bool isFadeUp;
 	int16 color;
@@ -260,15 +240,12 @@ void GfxTransitions32::kernelSetShowStyle(const uint16 argc, const reg_t planeOb
 
 		// Do not add kShowStyleNone types to the showStyles list.
 		//
-		// HACK: Hoyle 5 does a fade out in some screens, and then makes a
-		// kShowStyleNone call to enter the new screen, without a fade in,
-		// thus leaving the whole screen black. By removing ths return,
-		// the code for queuing the kShowStyleNone calls is enabled, and this
-		// wrong behavior is fixed, as the screen palette is restored in the
-		// processNone() call inside processShowStyle(). I wasn't able to find
-		// any other notable difference in the graphics code of the Hoyle 5
-		// interpreter, and disabling this return has no other ill effects for
-		// this game, so this will suffice for now.
+		// This return was removed in some interpreters, notably the Windows
+		// version of Hoyle 5. In this version, a fade out is done and then
+		// kShowStyleNone is called to enter the new screen without a fade in.
+		// In such cases, we should not return here, so that the code for
+		// queuing kShowStyleNone calls is enabled and the screen palette is
+		// restored in the processNone() call inside processShowStyle().
 		if (g_sci->getGameId() != GID_HOYLE5)
 			return;
 	}

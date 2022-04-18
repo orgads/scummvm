@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,11 +24,20 @@
 #include "ultima/ultima8/world/actors/main_actor.h"
 #include "ultima/ultima8/gumps/widgets/text_widget.h"
 #include "ultima/ultima8/world/get_object.h"
+#include "ultima/ultima8/ultima8.h"
 
 namespace Ultima {
 namespace Ultima8 {
 
 DEFINE_RUNTIME_CLASSTYPE_CODE(CruAmmoGump)
+
+static const int REM_FONT_NUM = 15;
+static const int REG_FONT_NUM = 8;
+
+static const int REM_XOFF = 22;
+static const int REG_XOFF = 38;
+static const int REM_YOFF = 3;
+static const int REG_YOFF = 6;
 
 CruAmmoGump::CruAmmoGump() : CruStatGump(), _clipsText(nullptr), _bulletsText(nullptr) {
 
@@ -61,7 +69,7 @@ void CruAmmoGump::PaintThis(RenderSurface *surf, int32 lerp_factor, bool scaled)
 	if (active) {
 		Item *item = getItem(active);
 		if (item) {
-			WeaponInfo *weaponinfo = item->getShapeInfo()->_weaponInfo;
+			const WeaponInfo *weaponinfo = item->getShapeInfo()->_weaponInfo;
 			//uint16 frameno = 0;
 			if (weaponinfo && weaponinfo->_ammoType) {
 				//frameno = weaponinfo->_ammoType;
@@ -73,13 +81,17 @@ void CruAmmoGump::PaintThis(RenderSurface *surf, int32 lerp_factor, bool scaled)
 
 	// Only paint if this weapon has bullets that get used up.
 	if (bullets >= 0 && a == getControlledActor()) {
+		const int xoff = GAME_IS_REMORSE ? REM_XOFF : REG_XOFF;
+		const int yoff = GAME_IS_REMORSE ? REM_YOFF : REG_YOFF;
+		const int fontno = GAME_IS_REMORSE ? REM_FONT_NUM : REG_FONT_NUM;
+
 		const Std::string bulletstr = Std::string::format("%d", bullets);
 		if (!_bulletsText || !bulletstr.equals(_bulletsText->getText())) {
 			if (_bulletsText) {
 				RemoveChild(_bulletsText);
 				_bulletsText->Close();
 			}
-			_bulletsText = new TextWidget(22, _dims.height() / 2 - 3, bulletstr, true, 15);
+			_bulletsText = new TextWidget(xoff, _dims.height() / 2 - yoff, bulletstr, true, fontno);
 			_bulletsText->InitGump(this, false);
 		}
 
@@ -98,7 +110,7 @@ void CruAmmoGump::PaintThis(RenderSurface *surf, int32 lerp_factor, bool scaled)
 				RemoveChild(_clipsText);
 				_clipsText->Close();
 			}
-			_clipsText = new TextWidget(_dims.width() / 2 + 22, _dims.height() / 2 - 3, clipstr, true, 15);
+			_clipsText = new TextWidget(_dims.width() / 2 + xoff, _dims.height() / 2 - yoff, clipstr, true, fontno);
 			_clipsText->InitGump(this, false);
 		}
 		CruStatGump::PaintThis(surf, lerp_factor, scaled);

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -102,8 +101,13 @@ void AIScriptPhotographer::ClickedByPlayer() {
 		AI_Movement_Track_Pause(kActorPhotographer);
 		Actor_Face_Actor(kActorMcCoy, kActorPhotographer, true);
 		Actor_Face_Actor(kActorPhotographer, kActorMcCoy, true);
-		Actor_Says(kActorMcCoy, 5310, 11);
-		Actor_Says(kActorPhotographer, 40, kAnimationModeTalk);
+		if (_vm->_cutContent && Random_Query(1, 10) < 3) {
+			Actor_Says(kActorMcCoy, 8516, 14); // Any idea if they were real dogs? (gets no answer)
+			Actor_Says(kActorPhotographer, 60, kAnimationModeTalk);
+		} else {
+			Actor_Says(kActorMcCoy, 5310, 11);
+			Actor_Says(kActorPhotographer, 40, kAnimationModeTalk);
+		}
 		AI_Movement_Track_Unpause(kActorPhotographer);
 	}
 }

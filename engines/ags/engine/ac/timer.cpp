@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -41,12 +40,15 @@ std::chrono::microseconds GetFrameDuration() {
 	return _G(tick_duration);
 }
 
-void setTimerFps(int new_fps) {
+int setTimerFps(int new_fps) {
+	int old_fps = _G(framerate);
 	_G(tick_duration) = std::chrono::microseconds(1000000LL / new_fps);
+	_G(framerate) = new_fps;
 	_G(framerate_maxed) = new_fps >= 1000;
 
 	_G(last_tick_time) = AGS_Clock::now();
 	_G(next_frame_timestamp) = AGS_Clock::now();
+	return old_fps;
 }
 
 bool isTimerFpsMaxed() {
@@ -61,7 +63,7 @@ void WaitForNextFrame() {
 	if (frameDuration <= std::chrono::milliseconds::zero()) {
 		_G(next_frame_timestamp) = now;
 		// suspend while the game is being switched out
-		while (_G(game_update_suspend) > 0) {
+		while (_G(game_update_suspend)) {
 			sys_evt_process_pending();
 			_G(platform)->YieldCPU();
 		}
@@ -81,7 +83,7 @@ void WaitForNextFrame() {
 	_G(next_frame_timestamp) += frameDuration;
 
 	// suspend while the game is being switched out
-	while (_G(game_update_suspend) > 0) {
+	while (_G(game_update_suspend)) {
 		sys_evt_process_pending();
 		_G(platform)->YieldCPU();
 	}

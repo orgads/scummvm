@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -44,6 +43,7 @@
 #include "ags/engine/debugging/debugger.h"
 #include "ags/shared/debugging/out.h"
 #include "ags/engine/device/mouse_w32.h"
+#include "ags/shared/font/fonts.h"
 #include "ags/shared/gfx/bitmap.h"
 #include "ags/engine/gfx/ddb.h"
 #include "ags/engine/gfx/graphics_driver.h"
@@ -147,7 +147,7 @@ String GetSavegameErrorText(SavegameErrorType err) {
 	case kSvgErr_UnsupportedComponentVersion:
 		return "Component data version not supported.";
 	case kSvgErr_GameContentAssertion:
-		return "Saved content does not match current _GP(game).";
+		return "Saved content does not match current game.";
 	case kSvgErr_InconsistentData:
 		return "Inconsistent save data, or file is corrupted.";
 	case kSvgErr_InconsistentPlugin:
@@ -325,15 +325,15 @@ HSaveError OpenSavegame(const String &filename, SavegameDescription &desc, Saveg
 
 // Prepares engine for actual save restore (stops processes, cleans up memory)
 void DoBeforeRestore(PreservedParams &pp) {
-	pp.SpeechVOX = _GP(play).want_speech;
+	pp.SpeechVOX = _GP(play).voice_avail;
 	pp.MusicVOX = _GP(play).separate_music_lib;
 
 	unload_old_room();
 	delete _G(raw_saved_screen);
 	_G(raw_saved_screen) = nullptr;
 	remove_screen_overlay(-1);
-	_G(is_complete_overlay) = 0;
-	_G(is_text_overlay) = 0;
+	_GP(play).complete_overlay_on = 0;
+	_GP(play).text_overlay_on = 0;
 
 	// cleanup dynamic sprites
 	// NOTE: sprite 0 is a special constant sprite that cannot be dynamic
@@ -345,15 +345,8 @@ void DoBeforeRestore(PreservedParams &pp) {
 		}
 	}
 
-	// cleanup GUI backgrounds
-	for (int i = 0; i < _GP(game).numgui; ++i) {
-		delete _G(guibg)[i];
-		_G(guibg)[i] = nullptr;
-
-		if (_G(guibgbmp)[i])
-			_G(gfxDriver)->DestroyDDB(_G(guibgbmp)[i]);
-		_G(guibgbmp)[i] = nullptr;
-	}
+    // Cleanup drawn caches
+    clear_drawobj_cache();
 
 	// preserve script data sizes and cleanup scripts
 	pp.GlScDataSize = _G(gameinst)->globaldatasize;
@@ -394,7 +387,7 @@ void DoBeforeRestore(PreservedParams &pp) {
 	ccUnregisterAllObjects();
 
 	// NOTE: channels are array of MAX_SOUND_CHANNELS+1 size
-	for (int i = 0; i <= MAX_SOUND_CHANNELS; ++i) {
+	for (int i = 0; i < TOTAL_AUDIO_CHANNELS; ++i) {
 		stop_and_destroy_channel_ex(i, false);
 	}
 
@@ -438,13 +431,8 @@ HSaveError DoAfterRestore(const PreservedParams &pp, const RestoredData &r_data)
 		_GP(play).dialog_options_highlight_color = DIALOG_OPTIONS_HIGHLIGHT_COLOR_DEFAULT;
 
 	// Preserve whether the music vox is available
+	_GP(play).voice_avail = pp.SpeechVOX;
 	_GP(play).separate_music_lib = pp.MusicVOX;
-	// If they had the vox when they saved it, but they don't now
-	if ((pp.SpeechVOX < 0) && (_GP(play).want_speech >= 0))
-		_GP(play).want_speech = (-_GP(play).want_speech) - 1;
-	// If they didn't have the vox before, but now they do
-	else if ((pp.SpeechVOX >= 0) && (_GP(play).want_speech < 0))
-		_GP(play).want_speech = (-_GP(play).want_speech) - 1;
 
 	// Restore debug flags
 	if (_G(debug_flags) & DBG_DEBUGMODE)
@@ -456,7 +444,7 @@ HSaveError DoAfterRestore(const PreservedParams &pp, const RestoredData &r_data)
 	}
 
 	// Remap old sound nums in case we restored a save having a different list of audio clips
-	RemapLegacySoundNums(_GP(game), _G(views), _G(loaded_game_file_version));
+	RemapLegacySoundNums(_GP(game), _GP(views), _G(loaded_game_file_version));
 
 	// restore these to the ones retrieved from the save game
 	const size_t dynsurf_num = Math::Min((uint)MAX_DYNAMIC_SURFACES, r_data.DynamicSurfaces.size());
@@ -501,6 +489,8 @@ HSaveError DoAfterRestore(const PreservedParams &pp, const RestoredData &r_data)
 	// load the room the game was saved in
 	if (_G(displayed_room) >= 0)
 		load_new_room(_G(displayed_room), nullptr);
+	else
+		set_room_placeholder();
 
 	update_polled_stuff_if_runtime();
 
@@ -523,6 +513,10 @@ HSaveError DoAfterRestore(const PreservedParams &pp, const RestoredData &r_data)
 	update_polled_stuff_if_runtime();
 
 	if (_G(displayed_room) >= 0) {
+		// Fixup the frame index, in case the restored room does not have enough background frames
+		if (_GP(play).bg_frame < 0 || _GP(play).bg_frame >= (int)_GP(thisroom).BgFrameCount)
+			_GP(play).bg_frame = 0;
+
 		for (int i = 0; i < MAX_ROOM_BGFRAMES; ++i) {
 			if (r_data.RoomBkgScene[i]) {
 				_GP(thisroom).BgFrames[i].Graphic = r_data.RoomBkgScene[i];
@@ -545,7 +539,7 @@ HSaveError DoAfterRestore(const PreservedParams &pp, const RestoredData &r_data)
 		on_background_frame_change();
 	}
 
-	_G(gui_disabled_style) = convert_gui_disabled_style(_GP(game).options[OPT_DISABLEOFF]);
+	GUI::Options.DisabledStyle = static_cast<GuiDisableStyle>(_GP(game).options[OPT_DISABLEOFF]);
 
 	// restore the queue now that the music is playing
 	_GP(play).music_queue_size = queuedMusicSize;
@@ -560,59 +554,51 @@ HSaveError DoAfterRestore(const PreservedParams &pp, const RestoredData &r_data)
 	_GP(play).crossfading_in_channel = 0;
 	_GP(play).crossfading_out_channel = 0;
 
-	{
-		AudioChannelsLock lock;
-		// NOTE: channels are array of MAX_SOUND_CHANNELS+1 size
-		for (int i = 0; i <= MAX_SOUND_CHANNELS; ++i) {
-			const RestoredData::ChannelInfo &chan_info = r_data.AudioChans[i];
-			if (chan_info.ClipID < 0)
-				continue;
-			if ((size_t)chan_info.ClipID >= _GP(game).audioClips.size()) {
-				return new SavegameError(kSvgErr_GameObjectInitFailed,
-					String::FromFormat("Invalid audio clip index: %d (clip count: %zu).", chan_info.ClipID, _GP(game).audioClips.size()));
-			}
-			play_audio_clip_on_channel(i, &_GP(game).audioClips[chan_info.ClipID],
-			                           chan_info.Priority, chan_info.Repeat, chan_info.Pos);
-
-			auto *ch = lock.GetChannel(i);
-			if (ch != nullptr) {
-				ch->set_volume_direct(chan_info.VolAsPercent, chan_info.Vol);
-				ch->set_speed(chan_info.Speed);
-				ch->set_panning(chan_info.Pan);
-				ch->_panningAsPercentage = chan_info.PanAsPercent;
-				ch->_xSource = chan_info.XSource;
-				ch->_ySource = chan_info.YSource;
-				ch->_maximumPossibleDistanceAway = chan_info.MaxDist;
-			}
+	// NOTE: channels are array of MAX_SOUND_CHANNELS+1 size
+	for (int i = 0; i < TOTAL_AUDIO_CHANNELS; ++i) {
+		const RestoredData::ChannelInfo &chan_info = r_data.AudioChans[i];
+		if (chan_info.ClipID < 0)
+			continue;
+		if ((size_t)chan_info.ClipID >= _GP(game).audioClips.size()) {
+			return new SavegameError(kSvgErr_GameObjectInitFailed,
+				String::FromFormat("Invalid audio clip index: %d (clip count: %zu).", chan_info.ClipID, _GP(game).audioClips.size()));
 		}
-		if ((cf_in_chan > 0) && (lock.GetChannel(cf_in_chan) != nullptr))
-			_GP(play).crossfading_in_channel = cf_in_chan;
-		if ((cf_out_chan > 0) && (lock.GetChannel(cf_out_chan) != nullptr))
-			_GP(play).crossfading_out_channel = cf_out_chan;
+		play_audio_clip_on_channel(i, &_GP(game).audioClips[chan_info.ClipID],
+			                        chan_info.Priority, chan_info.Repeat, chan_info.Pos);
 
-		// If there were synced audio tracks, the time taken to load in the
-		// different channels will have thrown them out of sync, so re-time it
-		// NOTE: channels are array of MAX_SOUND_CHANNELS+1 size
-		for (int i = 0; i <= MAX_SOUND_CHANNELS; ++i) {
-			auto *ch = lock.GetChannelIfPlaying(i);
-			int pos = r_data.AudioChans[i].Pos;
-			if ((pos > 0) && (ch != nullptr)) {
-				ch->seek(pos);
-			}
+		auto *ch = AudioChans::GetChannel(i);
+		if (ch != nullptr) {
+			ch->set_volume_direct(chan_info.VolAsPercent, chan_info.Vol);
+			ch->set_speed(chan_info.Speed);
+			ch->set_panning(chan_info.Pan);
+			ch->_xSource = chan_info.XSource;
+			ch->_ySource = chan_info.YSource;
+			ch->_maximumPossibleDistanceAway = chan_info.MaxDist;
 		}
-	} // -- AudioChannelsLock
+	}
+	if ((cf_in_chan > 0) && (AudioChans::GetChannel(cf_in_chan) != nullptr))
+		_GP(play).crossfading_in_channel = cf_in_chan;
+	if ((cf_out_chan > 0) && (AudioChans::GetChannel(cf_out_chan) != nullptr))
+		_GP(play).crossfading_out_channel = cf_out_chan;
 
-	// TODO: investigate loop range
-	for (int i = 1; i < MAX_SOUND_CHANNELS; ++i) {
+	// If there were synced audio tracks, the time taken to load in the
+	// different channels will have thrown them out of sync, so re-time it
+	// NOTE: channels are array of MAX_SOUND_CHANNELS+1 size
+	for (int i = 0; i < TOTAL_AUDIO_CHANNELS; ++i) {
+		auto *ch = AudioChans::GetChannelIfPlaying(i);
+		int pos = r_data.AudioChans[i].Pos;
+		if ((pos > 0) && (ch != nullptr)) {
+			ch->seek(pos);
+		}
+	}
+
+	for (int i = NUM_SPEECH_CHANS; i < _GP(game).numGameChannels; ++i) {
 		if (r_data.DoAmbient[i])
 			PlayAmbientSound(i, r_data.DoAmbient[i], _GP(ambient)[i].vol, _GP(ambient)[i].x, _GP(ambient)[i].y);
 	}
 	update_directional_sound_vol();
 
-	for (int i = 0; i < _GP(game).numgui; ++i) {
-		_G(guibg)[i] = BitmapHelper::CreateBitmap(_GP(guis)[i].Width, _GP(guis)[i].Height, _GP(game).GetColorDepth());
-		_G(guibg)[i] = ReplaceBitmapWithSupportedFormat(_G(guibg)[i]);
-	}
+	adjust_fonts_for_render_mode(_GP(game).options[OPT_ANTIALIASFONTS]);
 
 	recreate_overlay_ddbs();
 
@@ -628,7 +614,6 @@ HSaveError DoAfterRestore(const PreservedParams &pp, const RestoredData &r_data)
 	if (_G(displayed_room) < 0) {
 		// the restart point, no room was loaded
 		load_new_room(_G(playerchar)->room, _G(playerchar));
-		_G(playerchar)->prevroom = -1;
 
 		first_room_initialization();
 	}
@@ -639,10 +624,8 @@ HSaveError DoAfterRestore(const PreservedParams &pp, const RestoredData &r_data)
 
 	// Test if the old-style audio had playing music and it was properly loaded
 	if (_G(current_music_type) > 0) {
-		AudioChannelsLock lock;
-
-		if ((_G(crossFading) > 0 && !lock.GetChannelIfPlaying(_G(crossFading))) ||
-		        (_G(crossFading) <= 0 && !lock.GetChannelIfPlaying(SCHAN_MUSIC))) {
+		if ((_G(crossFading) > 0 && !AudioChans::GetChannelIfPlaying(_G(crossFading))) ||
+				(_G(crossFading) <= 0 && !AudioChans::GetChannelIfPlaying(SCHAN_MUSIC))) {
 			_G(current_music_type) = 0; // playback failed, reset flag
 		}
 	}
@@ -668,7 +651,7 @@ HSaveError RestoreGameState(Stream *in, SavegameVersion svg_version) {
 
 
 void WriteSaveImage(Stream *out, const Bitmap *screenshot) {
-	// store the screenshot at the start to make it easily accesible
+	// store the screenshot at the start to make it easily accessible
 	out->WriteInt32((screenshot == nullptr) ? 0 : 1);
 
 	if (screenshot)

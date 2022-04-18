@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -45,6 +44,12 @@ U8MusicProcess::U8MusicProcess(MidiPlayer *player) : _midiPlayer(player),
 	_theMusicProcess = this;
 	_type = 1; // persistent
 	setRunPaused();
+
+	// Now get the transition midi
+	MusicFlex *musicflex = GameData::get_instance()->getMusic();
+	int xmidi_index = _midiPlayer->isFMSynth() ? 260 : 258;
+	MusicFlex::XMidiData *xmidi = musicflex->getXMidi(xmidi_index);
+	_midiPlayer->loadTransitionData(xmidi->_data, xmidi->_size);
 }
 
 U8MusicProcess::~U8MusicProcess() {
@@ -88,6 +93,15 @@ void U8MusicProcess::restoreMusic() {
 	_trackState._queued = 0;
 	_combatMusicActive = false;
 	playMusic_internal(_trackState._lastRequest);
+}
+
+void U8MusicProcess::fadeMusic(uint16 length) {
+	if (_midiPlayer && _midiPlayer->isPlaying())
+		_midiPlayer->startFadeOut(length);
+}
+
+bool U8MusicProcess::isFading() {
+	return _midiPlayer && _midiPlayer->isFading();
 }
 
 void U8MusicProcess::getTrackState(TrackState &trackState) const {
@@ -154,28 +168,18 @@ void U8MusicProcess::playMusic_internal(int track) {
 
 		// Get transition info
 		int trans = info->_transitions[track][measure];
-		bool speed_hack = false;
+		bool overlay = false;
 
 		if (trans < 0) {
 			trans = (-trans) - 1;
-			speed_hack = true;
+			overlay = true;
 		} else {
-			_midiPlayer->stop();
 			trans = trans - 1;
 		}
 
-		// Now get the transition midi
-		int xmidi_index = _midiPlayer->isFMSynth() ? 260 : 258;
-		MusicFlex::XMidiData *xmidi = musicflex->getXMidi(xmidi_index);
+		warning("Doing a MIDI transition! trans: %d overlay: %d", trans, overlay);
 
-		warning("Doing a MIDI transition! trans: %d xmidi: %d speedhack: %d", trans, xmidi_index, speed_hack);
-
-		if (xmidi && xmidi->_data) {
-			_midiPlayer->load(xmidi->_data, xmidi->_size, 1, speed_hack);
-			_midiPlayer->play(trans, -1);
-		} else {
-			_midiPlayer->stop();
-		}
+		_midiPlayer->playTransition(trans, overlay);
 
 		_trackState._wanted = track;
 		_state = PLAYBACK_TRANSITION;
@@ -194,11 +198,9 @@ void U8MusicProcess::run() {
 		break;
 
 	case PLAYBACK_TRANSITION:
-		if (!_midiPlayer) {
+		if (!_midiPlayer || !_midiPlayer->isPlaying()) {
+			// Transition has finished. Play the next track.
 			_state = PLAYBACK_PLAY_WANTED;
-		} else {
-			_state = PLAYBACK_PLAY_WANTED;
-			_midiPlayer->stop();
 		}
 		break;
 
@@ -221,7 +223,7 @@ void U8MusicProcess::run() {
 			if (_midiPlayer) {
 				// if there's a track queued, only play this one once
 				bool repeat = (_trackState._queued == 0);
-				_midiPlayer->load(xmidi->_data, xmidi->_size, 0, false);
+				_midiPlayer->load(xmidi->_data, xmidi->_size, 0);
 				_midiPlayer->setLooping(repeat);
 				if (_songBranches[_trackState._wanted] >= 0 && !_midiPlayer->hasBranchIndex(_songBranches[_trackState._wanted])) {
 					if (_songBranches[_trackState._wanted] == 0) {

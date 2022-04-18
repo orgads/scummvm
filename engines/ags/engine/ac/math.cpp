@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,11 +15,11 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
+#include "common/config-manager.h"
 #include "ags/engine/ac/math.h"
 #include "ags/shared/ac/common.h" // quit
 #include "ags/shared/util/math.h"
@@ -40,7 +40,7 @@ int FloatToInt(float value, int roundDirection) {
 		else if (roundDirection == eRoundUp)
 			return static_cast<int>(value + 0.999999);
 		else
-			quit("!FloatToInt: invalid round direction");
+			error("!FloatToInt: invalid round direction");
 	} else {
 		// negative number
 		if (roundDirection == eRoundUp)
@@ -50,7 +50,7 @@ int FloatToInt(float value, int roundDirection) {
 		else if (roundDirection == eRoundDown)
 			return static_cast<int>(value - 0.999999);
 		else
-			quit("!FloatToInt: invalid round direction");
+			error("!FloatToInt: invalid round direction");
 	}
 	return 0;
 }
@@ -133,14 +133,20 @@ float Math_GetPi() {
 
 float Math_Sqrt(float value) {
 	if (value < 0.0)
-		quit("!Sqrt: cannot perform square root of negative number");
+		error("!Sqrt: cannot perform square root of negative number");
 
 	return ::sqrt(value);
 }
 
 int __Rand(int upto) {
+	// WORKAROUND: Fix crash in Captain Disaster in Death Has a Million Stomping Boots
+	// at the start of Act 2, walking to Aquarium
+	if (upto == -1 && ConfMan.get("gameid") == "captaindisaster")
+		upto = INT32_MAX;
+
 	if (upto < 0)
-		quit("!Random: invalid parameter passed -- must be at least 0.");
+		error("!Random: invalid parameter passed -- must be at least 0.");
+
 	return ::AGS::g_vm->getRandomNumber(upto);
 }
 
@@ -261,27 +267,6 @@ void RegisterMathAPI() {
 	ccAddExternalStaticFunction("Maths::Tan^1", Sc_Math_Tan);
 	ccAddExternalStaticFunction("Maths::Tanh^1", Sc_Math_Tanh);
 	ccAddExternalStaticFunction("Maths::get_Pi", Sc_Math_GetPi);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("Maths::ArcCos^1", (void *)Math_ArcCos);
-	ccAddExternalFunctionForPlugin("Maths::ArcSin^1", (void *)Math_ArcSin);
-	ccAddExternalFunctionForPlugin("Maths::ArcTan^1", (void *)Math_ArcTan);
-	ccAddExternalFunctionForPlugin("Maths::ArcTan2^2", (void *)Math_ArcTan2);
-	ccAddExternalFunctionForPlugin("Maths::Cos^1", (void *)Math_Cos);
-	ccAddExternalFunctionForPlugin("Maths::Cosh^1", (void *)Math_Cosh);
-	ccAddExternalFunctionForPlugin("Maths::DegreesToRadians^1", (void *)Math_DegreesToRadians);
-	ccAddExternalFunctionForPlugin("Maths::Exp^1", (void *)Math_Exp);
-	ccAddExternalFunctionForPlugin("Maths::Log^1", (void *)Math_Log);
-	ccAddExternalFunctionForPlugin("Maths::Log10^1", (void *)Math_Log10);
-	ccAddExternalFunctionForPlugin("Maths::RadiansToDegrees^1", (void *)Math_RadiansToDegrees);
-	ccAddExternalFunctionForPlugin("Maths::RaiseToPower^2", (void *)Math_RaiseToPower);
-	ccAddExternalFunctionForPlugin("Maths::Sin^1", (void *)Math_Sin);
-	ccAddExternalFunctionForPlugin("Maths::Sinh^1", (void *)Math_Sinh);
-	ccAddExternalFunctionForPlugin("Maths::Sqrt^1", (void *)Math_Sqrt);
-	ccAddExternalFunctionForPlugin("Maths::Tan^1", (void *)Math_Tan);
-	ccAddExternalFunctionForPlugin("Maths::Tanh^1", (void *)Math_Tanh);
-	ccAddExternalFunctionForPlugin("Maths::get_Pi", (void *)Math_GetPi);
 }
 
 } // namespace AGS3

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,18 +15,11 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #define ENABLE_XCODE
-
-// HACK to allow building with the SDL backend on MinGW
-// see bug #3412 "TOOLS: MinGW tools building broken"
-#ifdef main
-#undef main
-#endif // main
 
 #if (defined(_WIN32) || defined(WIN32)) && !defined(__GNUC__)
 #define USE_WIN32_API
@@ -50,7 +43,6 @@
 #include "codeblocks.h"
 #include "msbuild.h"
 #include "msvc.h"
-#include "visualstudio.h"
 #include "xcode.h"
 
 #include <algorithm>
@@ -81,6 +73,13 @@ namespace {
 std::string unifyPath(const std::string &path);
 
 /**
+ * Removes trailing slash from path if it exists
+ *
+ * @param path Path string.
+ */
+void removeTrailingSlash(std::string& path);
+
+/**
  * Display the help text for the program.
  *
  * @param exe Name of the executable.
@@ -108,7 +107,7 @@ std::map<std::string, bool> isEngineEnabled;
 int main(int argc, char *argv[]) {
 #ifndef USE_WIN32_API
 	// Initialize random number generator for UUID creation
-	std::srand((unsigned int)std::time(0));
+	std::srand((unsigned int)std::time(nullptr));
 #endif
 
 	if (argc < 2) {
@@ -120,9 +119,7 @@ int main(int argc, char *argv[]) {
 
 	BuildSetup setup;
 	setup.srcDir = unifyPath(srcDir);
-
-	if (setup.srcDir.at(setup.srcDir.size() - 1) == '/')
-		setup.srcDir.erase(setup.srcDir.size() - 1);
+	removeTrailingSlash(setup.srcDir);
 
 	setup.filePrefix = setup.srcDir;
 	setup.outputDir = '.';
@@ -137,7 +134,7 @@ int main(int argc, char *argv[]) {
 	setup.features = getAllFeatures();
 
 	ProjectType projectType = kProjectNone;
-	const MSVCVersion *msvc = NULL;
+	const MSVCVersion *msvc = nullptr;
 	int msvcVersion = 0;
 
 	// Parse command line arguments
@@ -264,8 +261,7 @@ int main(int argc, char *argv[]) {
 			}
 
 			setup.filePrefix = unifyPath(argv[++i]);
-			if (setup.filePrefix.at(setup.filePrefix.size() - 1) == '/')
-				setup.filePrefix.erase(setup.filePrefix.size() - 1);
+			removeTrailingSlash(setup.filePrefix);
 		} else if (!std::strcmp(argv[i], "--output-dir")) {
 			if (i + 1 >= argc) {
 				std::cerr << "ERROR: Missing \"path\" parameter for \"--output-dir\"!\n";
@@ -273,9 +269,23 @@ int main(int argc, char *argv[]) {
 			}
 
 			setup.outputDir = unifyPath(argv[++i]);
-			if (setup.outputDir.at(setup.outputDir.size() - 1) == '/')
-				setup.outputDir.erase(setup.outputDir.size() - 1);
-
+			removeTrailingSlash(setup.outputDir);
+		} else if (!std::strcmp(argv[i], "--include-dir")) {
+			if (i + 1 >= argc) {
+				std::cerr << "ERROR: Missing \"path\" parameter for \"--include-dir\"!\n";
+				return -1;
+			}
+			std::string includeDir = unifyPath(argv[++i]);
+			removeTrailingSlash(includeDir);
+			setup.includeDirs.push_back(includeDir);
+		} else if (!std::strcmp(argv[i], "--library-dir")) {
+			if (i + 1 >= argc) {
+				std::cerr << "ERROR: Missing \"path\" parameter for \"--library-dir\"!\n";
+				return -1;
+			}
+			std::string libraryDir = unifyPath(argv[++i]);
+			removeTrailingSlash(libraryDir);
+			setup.libraryDirs.push_back(libraryDir);
 		} else if (!std::strcmp(argv[i], "--build-events")) {
 			setup.runBuildEvents = true;
 		} else if (!std::strcmp(argv[i], "--installer")) {
@@ -289,6 +299,10 @@ int main(int argc, char *argv[]) {
 			setup.useSDL2 = false;
 		} else if (!std::strcmp(argv[i], "--use-canonical-lib-names")) {
 			setup.useCanonicalLibNames = true;
+		} else if (!std::strcmp(argv[i], "--use-windows-unicode")) {
+			setup.useWindowsUnicode = true;
+		} else if (!std::strcmp(argv[i], "--use-windows-ansi")) {
+			setup.useWindowsUnicode = false;
 		} else {
 			std::cerr << "ERROR: Unknown parameter \"" << argv[i] << "\"\n";
 			return -1;
@@ -321,8 +335,6 @@ int main(int argc, char *argv[]) {
 	if (!getFeatureBuildState("opengl", setup.features)) {
 		setFeatureBuildState("opengl_game", setup.features, false);
 		setFeatureBuildState("opengl_shaders", setup.features, false);
-		setFeatureBuildState("opengles2", setup.features, false);
-		setFeatureBuildState("glew", setup.features, false);
 	}
 
 	// Disable engines for which we are missing dependencies
@@ -330,7 +342,9 @@ int main(int argc, char *argv[]) {
 		if (i->enable) {
 			for (StringList::const_iterator ef = i->requiredFeatures.begin(); ef != i->requiredFeatures.end(); ++ef) {
 				FeatureList::iterator feature = std::find(setup.features.begin(), setup.features.end(), *ef);
-				if (feature != setup.features.end() && !feature->enable) {
+				if (feature == setup.features.end()) {
+					std::cerr << "WARNING: Missing feature " << *ef << " from engine " << i->name << '\n';
+				} else if (!feature->enable) {
 					setEngineBuildState(i->name, setup.engines, false);
 					break;
 				}
@@ -407,6 +421,8 @@ int main(int argc, char *argv[]) {
 				setup.defines.push_back("USE_SPARKLE");
 			else if (backendWin32 && !strcmp(i->name, "libcurl"))
 				setup.defines.push_back("CURL_STATICLIB");
+			else if (!strcmp(i->name, "fluidlite"))
+				setup.defines.push_back("USE_FLUIDSYNTH");
 		}
 	}
 
@@ -425,6 +441,10 @@ int main(int argc, char *argv[]) {
 		setup.defines.push_back("DETECTION_STATIC");
 	}
 
+	if (getFeatureBuildState("opengl", setup.features)) {
+		setup.defines.push_back("USE_GLAD");
+	}
+
 	// List of global warnings and map of project-specific warnings
 	// FIXME: As shown below these two structures have different behavior for
 	// Code::Blocks and MSVC. In Code::Blocks this is used to enable *and*
@@ -434,7 +454,7 @@ int main(int argc, char *argv[]) {
 	StringList globalWarnings;
 	std::map<std::string, StringList> projectWarnings;
 
-	CreateProjectTool::ProjectProvider *provider = NULL;
+	CreateProjectTool::ProjectProvider *provider = nullptr;
 
 	switch (projectType) {
 	default:
@@ -611,10 +631,7 @@ int main(int argc, char *argv[]) {
 
 		projectWarnings["sci"].push_back("4373");
 
-		if (msvcVersion == 9)
-			provider = new CreateProjectTool::VisualStudioProvider(globalWarnings, projectWarnings, msvcVersion, *msvc);
-		else
-			provider = new CreateProjectTool::MSBuildProvider(globalWarnings, projectWarnings, msvcVersion, *msvc);
+		provider = new CreateProjectTool::MSBuildProvider(globalWarnings, projectWarnings, msvcVersion, *msvc);
 
 		break;
 
@@ -678,6 +695,11 @@ std::string unifyPath(const std::string &path) {
 	return result;
 }
 
+void removeTrailingSlash(std::string& path) {
+	if (path.size() > 0 && path.at(path.size() - 1) == '/')
+		path.erase(path.size() - 1);
+}
+
 void displayHelp(const char *exe) {
 	using std::cout;
 
@@ -702,6 +724,8 @@ void displayHelp(const char *exe) {
 	        " --output-dir path          overwrite path, where the project files are placed\n"
 	        "                            By default this is \".\", i.e. the current working\n"
 	        "                            directory\n"
+			" --include-dir path         add a path to the include search path"
+			" --library-dir path         add a path to the library search path"
 	        "\n"
 	        "MSVC specific settings:\n"
 	        " --msvc-version version     set the targeted MSVC version. Possible values:\n";
@@ -723,6 +747,10 @@ void displayHelp(const char *exe) {
 	        "                            (default: false)\n"
 	        " --use-canonical-lib-names  Use canonical library names for linking. This makes it easy to use\n"
 	        "                            e.g. vcpkg-provided libraries\n"
+	        "                            (default: false)\n"
+	        " --use-windows-unicode      Use Windows Unicode APIs\n"
+	        "                            (default: true)\n"
+	        " --use-windows-ansi         Use Windows ANSI APIs\n"
 	        "                            (default: false)\n"
 	        "\n"
 	        "Engines settings:\n"
@@ -903,11 +931,8 @@ StringList getEngineDefines(const EngineDescList &engines) {
 	StringList result;
 
 	for (EngineDescList::const_iterator i = engines.begin(); i != engines.end(); ++i) {
-		if (i->enable) {
-			std::string define = "ENABLE_" + i->name;
-			std::transform(define.begin(), define.end(), define.begin(), toupper);
-			result.push_back(define);
-		}
+		if (i->enable)
+			result.push_back("ENABLE_" + CreateProjectTool::toUpper(i->name));
 	}
 
 	return result;
@@ -1040,7 +1065,7 @@ namespace {
 // clang-format off
 const Feature s_features[] = {
 	// Libraries (must be added in generators)
-	{      "libz",        "USE_ZLIB", true, true,  "zlib (compression) support" },
+	{      "zlib",        "USE_ZLIB", true, true,  "zlib (compression) support" },
 	{       "mad",         "USE_MAD", true, true,  "libmad (MP3) support" },
 	{   "fribidi",     "USE_FRIBIDI", true, true,  "BiDi support" },
 	{       "ogg",         "USE_OGG", true, true,  "Ogg support" },
@@ -1050,16 +1075,16 @@ const Feature s_features[] = {
 	{       "png",         "USE_PNG", true, true,  "libpng support" },
 	{       "gif",         "USE_GIF", true, false, "libgif support" },
 	{      "faad",        "USE_FAAD", true, false, "AAC support" },
-	{     "mpeg2",       "USE_MPEG2", true, false, "MPEG-2 support" },
-	{    "theora",   "USE_THEORADEC", true, true,  "Theora decoding support" },
-	{  "freetype",   "USE_FREETYPE2", true, true,  "FreeType support" },
+	{     "mpeg2",       "USE_MPEG2", true, true,  "MPEG-2 support" },
+	{ "theoradec",   "USE_THEORADEC", true, true,  "Theora decoding support" },
+	{ "freetype2",   "USE_FREETYPE2", true, true,  "FreeType support" },
 	{      "jpeg",        "USE_JPEG", true, true,  "libjpeg support" },
 	{"fluidsynth",  "USE_FLUIDSYNTH", true, true,  "FluidSynth support" },
 	{ "fluidlite",   "USE_FLUIDLITE", true, false, "FluidLite support" },
 	{   "libcurl",     "USE_LIBCURL", true, true,  "libcurl support" },
 	{    "sdlnet",     "USE_SDL_NET", true, true,  "SDL_net support" },
 	{   "discord",     "USE_DISCORD", true, false, "Discord support" },
-	{      "glew",        "USE_GLEW", true, true,  "GLEW support" },
+	{ "retrowave",   "USE_RETROWAVE", true, false, "RetroWave OPL3 support" },
 
 	// Feature flags
 	{             "bink",                      "USE_BINK", false, true,  "Bink video support" },
@@ -1074,9 +1099,8 @@ const Feature s_features[] = {
 	{             "nasm",                      "USE_NASM", false, true,  "IA-32 assembly support" }, // This feature is special in the regard, that it needs additional handling.
 	{           "tinygl",                    "USE_TINYGL", false, true,  "TinyGL support" },
 	{           "opengl",                    "USE_OPENGL", false, true,  "OpenGL support" },
-	{      "opengl_game",               "USE_OPENGL_GAME", false, true,  "OpenGL support in 3d games" },
+	{      "opengl_game",               "USE_OPENGL_GAME", false, true,  "OpenGL support (classic) in 3d games" },
 	{   "opengl_shaders",            "USE_OPENGL_SHADERS", false, true,  "OpenGL support (shaders) in 3d games" },
-	{        "opengles2",                     "USE_GLES2", false, false, "forced OpenGL ES2 mode in 3d games" },
 	{          "taskbar",                   "USE_TASKBAR", false, true,  "Taskbar integration support" },
 	{            "cloud",                     "USE_CLOUD", false, true,  "Cloud integration support" },
 	{      "translation",               "USE_TRANSLATION", false, true,  "Translation support" },
@@ -1089,8 +1113,8 @@ const Feature s_features[] = {
 	{     "text-console", "USE_TEXT_CONSOLE_FOR_DEBUGGER", false, false, "Text console debugger" }, // This feature is always applied in xcode projects
 	{              "tts",                       "USE_TTS", false, true,  "Text to speech support"},
 	{"builtin-resources",             "BUILTIN_RESOURCES", false, true,  "include resources (e.g. engine data, fonts) into the binary"},
+	{   "detection-full",                "DETECTION_FULL", false, true,  "Include detection objects for all engines" },
 	{ "detection-static", "USE_DETECTION_FEATURES_STATIC", false, true,  "Static linking of detection objects for engines."},
-	{            "cxx11",                     "USE_CXX11", false, true,  "Compile with c++11 support"}
 };
 
 const Tool s_tools[] = {
@@ -1110,13 +1134,13 @@ const Tool s_tools[] = {
 
 const MSVCVersion s_msvc[] = {
 //    Ver    Name                     Solution                     Project    Toolset    LLVM
-	{  9,    "Visual Studio 2008",    "10.00",          "2008",     "4.0",     "v90",    "LLVM-vs2008" },
 	{ 10,    "Visual Studio 2010",    "11.00",          "2010",     "4.0",    "v100",    "LLVM-vs2010" },
 	{ 11,    "Visual Studio 2012",    "11.00",          "2012",     "4.0",    "v110",    "LLVM-vs2012" },
 	{ 12,    "Visual Studio 2013",    "12.00",          "2013",    "12.0",    "v120",    "LLVM-vs2013" },
 	{ 14,    "Visual Studio 2015",    "12.00",            "14",    "14.0",    "v140",    "LLVM-vs2014" },
 	{ 15,    "Visual Studio 2017",    "12.00",            "15",    "15.0",    "v141",    "llvm"        },
-	{ 16,    "Visual Studio 2019",    "12.00",    "Version 16",    "16.0",    "v142",    "llvm"        }
+	{ 16,    "Visual Studio 2019",    "12.00",    "Version 16",    "16.0",    "v142",    "llvm"        },
+	{ 17,    "Visual Studio 2022",    "12.00",    "Version 17",    "17.0",    "v143",    "llvm"        }
 };
 
 const char *s_msvc_arch_names[] = {"arm64", "x86", "x64"};
@@ -1214,7 +1238,7 @@ const MSVCVersion *getMSVCVersion(int version) {
 			return &s_msvc[i];
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 int getInstalledMSVC() {
@@ -1223,9 +1247,9 @@ int getInstalledMSVC() {
 	// Use the Visual Studio Installer to get the latest version
 	const char *vsWhere = "\"\"%PROGRAMFILES(X86)%\\Microsoft Visual Studio\\Installer\\vswhere.exe\" -latest -legacy -property installationVersion\"";
 	FILE *pipe = _popen(vsWhere, "rt");
-	if (pipe != NULL) {
+	if (pipe != nullptr) {
 		char version[50];
-		if (fgets(version, 50, pipe) != NULL) {
+		if (fgets(version, 50, pipe) != nullptr) {
 			latest = atoi(version);
 		}
 		_pclose(pipe);
@@ -1234,13 +1258,13 @@ int getInstalledMSVC() {
 	// Use the registry to get the latest version
 	if (latest == 0) {
 		HKEY key;
-		LONG err = RegOpenKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\VisualStudio\\SxS\\VS7", 0, KEY_QUERY_VALUE | KEY_WOW64_32KEY, &key);
-		if (err == ERROR_SUCCESS && key != NULL) {
+		LONG err = RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\VisualStudio\\SxS\\VS7"), 0, KEY_QUERY_VALUE | KEY_WOW64_32KEY, &key);
+		if (err == ERROR_SUCCESS && key != nullptr) {
 			const MSVCList msvc = getAllMSVCVersions();
 			for (MSVCList::const_reverse_iterator i = msvc.rbegin(); i != msvc.rend(); ++i) {
 				std::ostringstream version;
 				version << i->version << ".0";
-				err = RegQueryValueEx(key, version.str().c_str(), NULL, NULL, NULL, NULL);
+				err = RegQueryValueExA(key, version.str().c_str(), nullptr, nullptr, nullptr, nullptr);
 				if (err == ERROR_SUCCESS) {
 					latest = i->version;
 					break;
@@ -1305,6 +1329,12 @@ std::string toString(int num) {
 	std::ostringstream os;
 	os << num;
 	return os.str();
+}
+
+std::string toUpper(const std::string &str) {
+	std::string res;
+	std::transform(str.begin(), str.end(), std::back_inserter(res), toupper);
+	return res;
 }
 
 /**
@@ -1396,8 +1426,8 @@ bool compareNodes(const FileNode *l, const FileNode *r) {
 FileList listDirectory(const std::string &dir) {
 	FileList result;
 #if defined(_WIN32) || defined(WIN32)
-	WIN32_FIND_DATA fileInformation;
-	HANDLE fileHandle = FindFirstFile((dir + "/*").c_str(), &fileInformation);
+	WIN32_FIND_DATAA fileInformation;
+	HANDLE fileHandle = FindFirstFileA((dir + "/*").c_str(), &fileInformation);
 
 	if (fileHandle == INVALID_HANDLE_VALUE)
 		return result;
@@ -1407,7 +1437,7 @@ FileList listDirectory(const std::string &dir) {
 			continue;
 
 		result.push_back(FSNode(fileInformation.cFileName, (fileInformation.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0));
-	} while (FindNextFile(fileHandle, &fileInformation) == TRUE);
+	} while (FindNextFileA(fileHandle, &fileInformation) == TRUE);
 
 	FindClose(fileHandle);
 #else
@@ -1435,7 +1465,7 @@ FileList listDirectory(const std::string &dir) {
 
 void createDirectory(const std::string &dir) {
 #if defined(_WIN32) || defined(WIN32)
-	if (!CreateDirectory(dir.c_str(), NULL)) {
+	if (!CreateDirectoryA(dir.c_str(), nullptr)) {
 		if (GetLastError() != ERROR_ALREADY_EXISTS) {
 			error("Could not create folder \"" + dir + "\"");
 		}
@@ -1471,7 +1501,7 @@ FileNode *scanFiles(const std::string &dir, const StringList &includeList, const
 	FileList files = listDirectory(dir);
 
 	if (files.empty())
-		return 0;
+		return nullptr;
 
 	FileNode *result = new FileNode(dir);
 	assert(result);
@@ -1507,7 +1537,7 @@ FileNode *scanFiles(const std::string &dir, const StringList &includeList, const
 
 	if (result->children.empty()) {
 		delete result;
-		return 0;
+		return nullptr;
 	} else {
 		result->children.sort(compareNodes);
 		return result;
@@ -1567,10 +1597,15 @@ void ProjectProvider::createProject(BuildSetup &setup) {
 		ex.clear();
 		std::vector<std::string> detectionModuleDirs;
 		detectionModuleDirs.reserve(setup.engines.size());
+		bool detectAllEngines = getFeatureBuildState("detection-full", setup.features);
 
 		for (EngineDescList::const_iterator i = setup.engines.begin(), end = setup.engines.end(); i != end; ++i) {
 			// We ignore all sub engines here because they require no special handling.
 			if (isSubEngine(i->name, setup.engines)) {
+				continue;
+			}
+			// If we're not detecting all engines then ignore the disabled ones
+			if (!(detectAllEngines || i->enable)) {
 				continue;
 			}
 			detectionModuleDirs.push_back(setup.srcDir + "/engines/" + i->name);
@@ -1609,14 +1644,15 @@ void ProjectProvider::createProject(BuildSetup &setup) {
 			// Various text files
 			in.push_back(setup.srcDir + "/AUTHORS");
 			in.push_back(setup.srcDir + "/COPYING");
-			in.push_back(setup.srcDir + "/COPYING.BSD");
-			in.push_back(setup.srcDir + "/COPYING.FREEFONT");
-			in.push_back(setup.srcDir + "/COPYING.ISC");
-			in.push_back(setup.srcDir + "/COPYING.LGPL");
-			in.push_back(setup.srcDir + "/COPYING.LUA");
-			in.push_back(setup.srcDir + "/COPYING.MIT");
-			in.push_back(setup.srcDir + "/COPYING.OFL");
-			in.push_back(setup.srcDir + "/COPYING.TINYGL");
+			in.push_back(setup.srcDir + "/LICENSES/COPYING.BSD");
+			in.push_back(setup.srcDir + "/LICENSES/COPYING.LGPL");
+			in.push_back(setup.srcDir + "/LICENSES/COPYING.FREEFONT");
+			in.push_back(setup.srcDir + "/LICENSES/COPYING.OFL");
+			in.push_back(setup.srcDir + "/LICENSES/COPYING.ISC");
+			in.push_back(setup.srcDir + "/LICENSES/COPYING.LUA");
+			in.push_back(setup.srcDir + "/LICENSES/COPYING.MIT");
+			in.push_back(setup.srcDir + "/LICENSES/COPYING.TINYGL");
+			in.push_back(setup.srcDir + "/LICENSES/COPYING.GLAD");
 			in.push_back(setup.srcDir + "/COPYRIGHT");
 			in.push_back(setup.srcDir + "/NEWS.md");
 			in.push_back(setup.srcDir + "/README.md");
@@ -1770,7 +1806,7 @@ std::string ProjectProvider::getLastPathComponent(const std::string &path) {
 		return path.substr(pos + 1);
 }
 
-void ProjectProvider::addFilesToProject(const std::string &dir, std::ofstream &projectFile,
+void ProjectProvider::addFilesToProject(const std::string &dir, std::ostream &projectFile,
 										const StringList &includeList, const StringList &excludeList,
 										const std::string &filePrefix) {
 	FileNode *files = scanFiles(dir, includeList, excludeList);
@@ -2001,13 +2037,10 @@ void ProjectProvider::createModuleList(const std::string &moduleDir, const Strin
 	}
 
 	if (forDetection) {
-		int p = moduleRootDir.find('/');
+		std::string::size_type p = moduleRootDir.find('/');
 		std::string engineName = moduleRootDir.substr(p + 1);
-		std::string engineNameUpper;
+		std::string engineNameUpper = toUpper(engineName);
 
-		for (std::string::const_iterator i = engineName.begin(); i != engineName.end(); ++i) {
-			engineNameUpper += toupper(*i);
-		}
 		for (;;) {
 			std::getline(moduleMk, line);
 
@@ -2122,14 +2155,15 @@ void ProjectProvider::createEnginePluginsTable(const BuildSetup &setup) {
 		}
 
 		// Make the engine name all uppercase.
-		std::string engineName;
-		std::transform(i->name.begin(), i->name.end(), std::back_inserter(engineName), toupper);
+		const std::string engineName = toUpper(i->name);
 
 		enginePluginsTable << "#if PLUGIN_ENABLED_STATIC(" << engineName << ")\n"
 		                   << "LINK_PLUGIN(" << engineName << ")\n"
 		                   << "#endif\n";
 
-		detectionTable << "LINK_PLUGIN(" << engineName << "_DETECTION)\n";
+		detectionTable << "#if defined(ENABLE_" << engineName << ") || defined(DETECTION_FULL)\n"
+					   << "LINK_PLUGIN(" << engineName << "_DETECTION)\n"
+					   << "#endif\n";
 	}
 }
 } // namespace CreateProjectTool

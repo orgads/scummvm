@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -173,7 +172,13 @@ void Kernel::runProcesses() {
 			// we can work out what it is avoid the game totally hanging at this
 			// point.
 			//
-			if (num_run > 8096 && !p->is_terminated()) {
+			// If this threshold is set too low, it can cause issues with U8 map
+			// transitions (eg, bug #12913).  If it's too high, Crusader locks up
+			// for a really long time at this point.  Set it high enough that
+			// a process going through all map items should still terminate.
+			//
+			if (((num_run > 8192 && GAME_IS_CRUSADER) || num_run > 65534)
+					&& !p->is_terminated()) {
 				warning("Seem to be stuck in process loop - killing current process");
 				p->fail();
 			}

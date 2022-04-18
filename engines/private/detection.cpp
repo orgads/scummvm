@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -35,38 +34,38 @@ static const DebugChannelDef debugFlagList[] = {
 namespace Private {
 static const PlainGameDescriptor privateGames[] = {
 	{ "private-eye", "Private Eye" },
-	{ 0, 0 }
+	{ nullptr, nullptr }
 };
 
 static const ADGameDescription gameDescriptions[] = {
 	{
 		"private-eye",  // US release
-		0,
+		nullptr,
 		AD_ENTRY2s("pvteye.z", "b682118cda6a42fa89833cae2b8824bd", 271895,
 		   "intro.smk", "270a1d0a29df122fc3d1d38e655161a7", 7310984),
 		Common::EN_USA,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
-		"private-eye", // Demo from the US release
+		"private-eye", // Demo from the US release v1.0.0.23
 		"Demo",
 		AD_ENTRY2s("pvteye.z", "af383c813157810e89d8d6d595895ff7", 263893,
 		   "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::EN_USA,
 		Common::kPlatformWindows,
-		ADGF_TESTING | ADGF_DEMO,
+		ADGF_DEMO,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
 		"private-eye",  // EU release (UK)
-		0,
+		nullptr,
 		AD_ENTRY2s("pvteye.z", "d9ce391395701615e8b5d04bc4bf7ec3", 284699,
 		   "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::EN_GRB,
 		Common::kPlatformWindows,
-		ADGF_UNSTABLE,
+		ADGF_NO_FLAGS,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
@@ -76,17 +75,17 @@ static const ADGameDescription gameDescriptions[] = {
 		   "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::EN_GRB,
 		Common::kPlatformWindows,
-		ADGF_DEMO | ADGF_UNSTABLE,
+		ADGF_DEMO,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
-		"private-eye", // Demo from PCGamer Disc 2.6 JULY 1996
+		"private-eye", // Demo from PCGamer Disc 2.6 JULY 1996 v1.0.0.12
 		"Demo",
 		AD_ENTRY2s("pvteye.z", "8ef908e212bb9c1e10f5e3c81f56682c", 263893,
 		   "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::EN_USA,
 		Common::kPlatformWindows,
-		ADGF_TESTING | ADGF_DEMO,
+		ADGF_DEMO,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
@@ -96,17 +95,17 @@ static const ADGameDescription gameDescriptions[] = {
 		   "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::EN_USA,
 		Common::kPlatformWindows,
-		ADGF_TESTING | ADGF_DEMO,
+		ADGF_DEMO,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
 		"private-eye", // EU release (ES)
-		0,
+		nullptr,
 		AD_ENTRY2s("pvteye.ex_", "f41770550ab717086b2d0c805fef4b8f", 498176,
 		   "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::ES_ESP,
 		Common::kPlatformWindows,
-		ADGF_UNSTABLE,
+		ADGF_NO_FLAGS,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
@@ -116,27 +115,27 @@ static const ADGameDescription gameDescriptions[] = {
 		   "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::ES_ESP,
 		Common::kPlatformWindows,
-		ADGF_DEMO | ADGF_UNSTABLE,
+		ADGF_DEMO,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
 		"private-eye", // EU release (FR)
-		0,
+		nullptr,
 		AD_ENTRY2s("pvteye.ex_", "ae0dec43b2f54d45c8a1c93e97092141", 600576,
 		   "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::FR_FRA,
 		Common::kPlatformWindows,
-		ADGF_UNSTABLE,
+		ADGF_NO_FLAGS,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
 		"private-eye", // EU release (DE)
-		0,
+		nullptr,
 		AD_ENTRY2s("pvteye.ex_", "5ca171c4e8d804c7277887277d049f03", 600576,
 		   "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::DE_DEU,
 		Common::kPlatformWindows,
-		ADGF_UNSTABLE,
+		ADGF_NO_FLAGS,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
@@ -146,27 +145,47 @@ static const ADGameDescription gameDescriptions[] = {
 		    "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::DE_DEU,
 		Common::kPlatformWindows,
-		ADGF_DEMO | ADGF_UNSTABLE,
+		ADGF_DEMO,
+		GUIO1(GUIO_NOMIDI)
+	},
+	{
+		"private-eye", // Demo from the EU release (FR)
+		"Demo",
+		AD_ENTRY2s("pvtdemo.ex_", "ad2156a762b3e376fda1b791a9491ea8", 599040,
+		    "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
+		Common::FR_FRA,
+		Common::kPlatformWindows,
+		ADGF_DEMO,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
 		"private-eye",  // RU release
-		0,
+		nullptr,
 		AD_ENTRY2s("pvteye.z", "b682118cda6a42fa89833cae2b8824bd", 271895,
 		   "intro.smk", "61cc13c9e4e2affd574087209df5c4a4", 7241368),
 		Common::RU_RUS,
 		Common::kPlatformWindows,
-		ADGF_TESTING,
+		ADGF_NO_FLAGS,
+		GUIO1(GUIO_NOMIDI)
+	},
+	{
+		"private-eye",  // KO release
+		nullptr,
+		AD_ENTRY2s("pvteye.z", "b682118cda6a42fa89833cae2b8824bd", 271895,
+		   "intro.smk", "288f5f61311eb10fc6861707c340c15e", 7195200),
+		Common::KO_KOR,
+		Common::kPlatformWindows,
+		ADGF_NO_FLAGS,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
 		"private-eye", // MacOS release (US)
-		0,
+		nullptr,
 		AD_ENTRY2s("game.mac", "33553cc04813d3f658bbe9d548377878", 81894,
 		   "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::EN_USA,
 		Common::kPlatformMacintosh,
-		ADGF_UNSTABLE,
+		ADGF_NO_FLAGS,
 		GUIO1(GUIO_NOMIDI)
 	},
 	{
@@ -180,7 +199,7 @@ static const ADGameDescription gameDescriptions[] = {
 	},
 	{
 		"private-eye", // MacOS demo (US)
-		0,
+		nullptr,
 		AD_ENTRY2s("demogame.mac", "cfbceaa8b91f0f53c745db61d1bc9749", 6103,
 		    "bklynlgo.bmp", "1dfb703349a46f8ec183de107992b7f5", 33118),
 		Common::EN_USA,
@@ -204,7 +223,7 @@ static const ADGameDescription gameDescriptions[] = {
 static const char *const directoryGlobs[] = {
 	"support",
 	"intro",
-	0
+	nullptr
 };
 
 class PrivateMetaEngineDetection : public AdvancedMetaEngineDetection {

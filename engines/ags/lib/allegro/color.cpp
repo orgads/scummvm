@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -187,16 +186,24 @@ void get_color(int idx, RGB *p) {
 	*p = _G(current_palette)[idx];
 }
 
-void get_palette(PALETTE p) {
-	*p = *_G(current_palette);
-}
-
 void get_palette_range(PALETTE p, int from, int to) {
 	Common::copy(&_G(current_palette)[from], &_G(current_palette)[to + 1], &p[from]);
 }
 
+void get_palette(PALETTE p) {
+	get_palette_range(p, 0, PAL_SIZE - 1);
+}
+
 void fade_interpolate(AL_CONST PALETTE source, AL_CONST PALETTE dest, PALETTE output, int pos, int from, int to) {
-	warning("TODO: fade_interpolate");
+	assert(pos >= 0 && pos <= 64);
+	assert(from >= 0 && from < PAL_SIZE);
+	assert(to >= 0 && to < PAL_SIZE);
+
+	for (int c = from; c <= to; c++) {
+		output[c].r = ((int)source[c].r * (63 - pos) + (int)dest[c].r * pos) / 64;
+		output[c].g = ((int)source[c].g * (63 - pos) + (int)dest[c].g * pos) / 64;
+		output[c].b = ((int)source[c].b * (63 - pos) + (int)dest[c].b * pos) / 64;
+	}
 }
 
 void select_palette(AL_CONST PALETTE p) {

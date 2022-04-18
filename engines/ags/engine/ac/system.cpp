@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,11 +15,11 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
+#include "common/config-manager.h"
 #include "ags/shared/ac/common.h"
 #include "ags/engine/ac/draw.h"
 #include "ags/engine/ac/dynobj/cc_audio_channel.h"
@@ -27,11 +27,13 @@
 #include "ags/shared/ac/game_setup_struct.h"
 #include "ags/engine/ac/game_state.h"
 #include "ags/engine/ac/global_debug.h"
+#include "ags/engine/ac/global_translation.h"
 #include "ags/engine/ac/mouse.h"
 #include "ags/engine/ac/string.h"
 #include "ags/engine/ac/system.h"
 #include "ags/engine/ac/dynobj/script_system.h"
 #include "ags/engine/debugging/debug_log.h"
+#include "ags/shared/debugging/out.h"
 #include "ags/engine/gfx/graphics_driver.h"
 #include "ags/engine/main/config.h"
 #include "ags/engine/main/graphics_mode.h"
@@ -43,10 +45,13 @@
 #include "ags/engine/script/script_api.h"
 #include "ags/engine/script/script_runtime.h"
 #include "ags/engine/ac/dynobj/script_string.h"
+#include "ags/ags.h"
 #include "ags/globals.h"
 #include "ags/events.h"
 
 namespace AGS3 {
+
+using namespace AGS::Shared;
 
 bool System_HasInputFocus() {
 	return !_G(switched_away);
@@ -157,12 +162,13 @@ void System_SetGamma(int newValue) {
 }
 
 int System_GetAudioChannelCount() {
-	return MAX_SOUND_CHANNELS;
+	return _GP(game).numGameChannels;
 }
 
 ScriptAudioChannel *System_GetAudioChannels(int index) {
-	if ((index < 0) || (index >= MAX_SOUND_CHANNELS))
-		quit("!System.AudioChannels: invalid sound channel index");
+	if ((index < 0) || (index >= _GP(game).numGameChannels))
+		quitprintf("!System.AudioChannels: invalid sound channel index %d, supported %d - %d",
+			0, _GP(game).numGameChannels);
 
 	return &_G(scrAudioChannel)[index];
 }
@@ -176,10 +182,14 @@ void System_SetVolume(int newvol) {
 		quit("!System.Volume: invalid volume - must be from 0-100");
 
 	_GP(play).digital_master_volume = newvol;
-#if !AGS_PLATFORM_SCUMMVM
-	auto newvol_f = static_cast<float>(newvol) / 100.0;
-	audio_core_set_master_volume(newvol_f);
-#endif
+
+	Audio::Mixer *mixer = ::AGS::g_vm->_mixer;
+	double percent = (double)newvol / 100.0;
+	int musicVol = static_cast<int>((double)ConfMan.getInt("music_volume") * percent);
+	int sfxVol = static_cast<int>((double)ConfMan.getInt("sfx_volume") * percent);
+
+	mixer->setVolumeForSoundType(Audio::Mixer::kMusicSoundType, musicVol);
+	mixer->setVolumeForSoundType(Audio::Mixer::kSFXSoundType, sfxVol);
 }
 
 const char *System_GetRuntimeInfo() {
@@ -330,7 +340,11 @@ RuntimeScriptValue Sc_System_SaveConfigToFile(const RuntimeScriptValue *params, 
 	API_SCALL_VOID(save_config_file);
 }
 
-
+RuntimeScriptValue Sc_System_Log(const RuntimeScriptValue *params, int32_t param_count) {
+	API_SCALL_SCRIPT_SPRINTF_PURE(Sc_System_Log, 2);
+	Debug::Printf(kDbgGroup_Script, (MessageType)params[0].IValue, String::Wrapper(scsf_buffer));
+	return RuntimeScriptValue((int32_t)0);
+}
 
 
 void RegisterSystemAPI() {
@@ -363,32 +377,7 @@ void RegisterSystemAPI() {
 	ccAddExternalStaticFunction("System::set_Windowed", Sc_System_SetWindowed);
 
 	ccAddExternalStaticFunction("System::SaveConfigToFile", Sc_System_SaveConfigToFile);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("System::get_AudioChannelCount", (void *)System_GetAudioChannelCount);
-	ccAddExternalFunctionForPlugin("System::geti_AudioChannels", (void *)System_GetAudioChannels);
-	ccAddExternalFunctionForPlugin("System::get_CapsLock", (void *)System_GetCapsLock);
-	ccAddExternalFunctionForPlugin("System::get_ColorDepth", (void *)System_GetColorDepth);
-	ccAddExternalFunctionForPlugin("System::get_Gamma", (void *)System_GetGamma);
-	ccAddExternalFunctionForPlugin("System::set_Gamma", (void *)System_SetGamma);
-	ccAddExternalFunctionForPlugin("System::get_HardwareAcceleration", (void *)System_GetHardwareAcceleration);
-	ccAddExternalFunctionForPlugin("System::get_NumLock", (void *)System_GetNumLock);
-	ccAddExternalFunctionForPlugin("System::get_OperatingSystem", (void *)System_GetOS);
-	ccAddExternalFunctionForPlugin("System::get_RuntimeInfo", (void *)System_GetRuntimeInfo);
-	ccAddExternalFunctionForPlugin("System::get_ScreenHeight", (void *)System_GetScreenHeight);
-	ccAddExternalFunctionForPlugin("System::get_ScreenWidth", (void *)System_GetScreenWidth);
-	ccAddExternalFunctionForPlugin("System::get_ScrollLock", (void *)System_GetScrollLock);
-	ccAddExternalFunctionForPlugin("System::get_SupportsGammaControl", (void *)System_GetSupportsGammaControl);
-	ccAddExternalFunctionForPlugin("System::get_Version", (void *)System_GetVersion);
-	ccAddExternalFunctionForPlugin("SystemInfo::get_Version", (void *)System_GetVersion);
-	ccAddExternalFunctionForPlugin("System::get_ViewportHeight", (void *)System_GetViewportHeight);
-	ccAddExternalFunctionForPlugin("System::get_ViewportWidth", (void *)System_GetViewportWidth);
-	ccAddExternalFunctionForPlugin("System::get_Volume", (void *)System_GetVolume);
-	ccAddExternalFunctionForPlugin("System::set_Volume", (void *)System_SetVolume);
-	ccAddExternalFunctionForPlugin("System::get_VSync", (void *)System_GetVsync);
-	ccAddExternalFunctionForPlugin("System::set_VSync", (void *)System_SetVsync);
-	ccAddExternalFunctionForPlugin("System::get_Windowed", (void *)System_GetWindowed);
+	ccAddExternalStaticFunction("System::Log^102", Sc_System_Log);
 }
 
 } // namespace AGS3

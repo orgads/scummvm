@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -61,8 +60,7 @@ Bitmap *prepare_gui_screen(int x, int y, int width, int height, bool opaque) {
 	if (_G(windowBuffer)) {
 		_G(windowBuffer) = recycle_bitmap(_G(windowBuffer), _G(windowBuffer)->GetColorDepth(), _G(windowPosWidth), _G(windowPosHeight), !opaque);
 	} else {
-		_G(windowBuffer) = BitmapHelper::CreateBitmap(_G(windowPosWidth), _G(windowPosHeight), _GP(game).GetColorDepth());
-		_G(windowBuffer) = ReplaceBitmapWithSupportedFormat(_G(windowBuffer));
+		_G(windowBuffer) = CreateCompatBitmap(_G(windowPosWidth), _G(windowPosHeight));
 	}
 	_G(dialogDDB) = recycle_ddb_bitmap(_G(dialogDDB), _G(windowBuffer), false, opaque);
 	return _G(windowBuffer);
@@ -287,7 +285,7 @@ void preparesavegamelist(int ctrllist) {
 	// fill in the list box and global savegameindex[] array for backward compatibilty
 	for (_G(numsaves) = 0; _G(numsaves) < (int)saveList.size(); ++_G(numsaves)) {
 		CSCISendControlMessage(ctrllist, CLB_ADDITEM, 0,
-		                       saveList[_G(numsaves)].getDescription().c_str());
+		                       saveList[_G(numsaves)].getDescription().encode().c_str());
 		_G(filenumbers)[_G(numsaves)] = saveList[_G(numsaves)].getSaveSlot();
 		_G(filedates)[_G(numsaves)] = 0;
 		//(long int)saveList[_G(numsaves)].FileTime;

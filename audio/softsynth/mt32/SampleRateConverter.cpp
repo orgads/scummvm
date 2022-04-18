@@ -14,7 +14,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cstddef>
+#define MT32EMU_WITH_LIBSOXR_RESAMPLER 0
+#define MT32EMU_WITH_LIBSAMPLERATE_RESAMPLER 0
+#define MT32EMU_WITH_INTERNAL_RESAMPLER 1
 
 #include "SampleRateConverter.h"
 
@@ -39,7 +41,7 @@ static inline void *createDelegate(Synth &synth, double targetSampleRate, Sample
 	return new InternalResampler(synth, targetSampleRate, quality);
 #else
 	(void)synth, (void)targetSampleRate, (void)quality;
-	return NULL;
+	return nullptr;
 #endif
 }
 

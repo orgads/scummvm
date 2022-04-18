@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,7 +30,7 @@
 
 static const PlainGameDescriptor lureGames[] = {
 	{"lure", "Lure of the Temptress"},
-	{0, 0}
+	{nullptr, nullptr}
 };
 
 
@@ -90,6 +89,23 @@ static const LureGameDescription gameDescriptions[] = {
 			"lure",
 			"Konami VGA",
 			AD_ENTRY1s("disk1.vga", "fbb0fca025579c0eda81d832d1fa5567", 615008),
+			Common::EN_ANY,
+			Common::kPlatformDOS,
+			ADGF_NO_FLAGS,
+#ifdef USE_TTS
+			GUIO1(GAMEOPTION_TTS_NARRATOR)
+#else
+			GUIO0()
+#endif
+		},
+		GF_FLOPPY | GF_KONAMI
+	},
+
+	{ // Konami VGA version. Assembled 09:19:10 on 09/23/92
+		{
+			"lure",
+			"Konami VGA",
+			AD_ENTRY1s("disk1.vga", "fe11231363593982f76e0a64e988a284", 612352),
 			Common::EN_ANY,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,

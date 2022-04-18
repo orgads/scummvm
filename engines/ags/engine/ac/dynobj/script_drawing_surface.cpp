@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -45,9 +44,9 @@ Bitmap *ScriptDrawingSurface::GetBitmapSurface() {
 		return _G(dynamicallyCreatedSurfaces)[dynamicSurfaceNumber];
 	else if (linkedBitmapOnly != nullptr)
 		return linkedBitmapOnly;
-	else
-		quit("!DrawingSurface: attempted to use surface after Release was called");
-
+	else if (roomMaskType > kRoomAreaNone)
+		return _GP(thisroom).GetMask(roomMaskType);
+	quit("!DrawingSurface: attempted to use surface after Release was called");
 	return nullptr;
 }
 
@@ -77,7 +76,12 @@ const char *ScriptDrawingSurface::GetType() {
 
 int ScriptDrawingSurface::Serialize(const char *address, char *buffer, int bufsize) {
 	StartSerialize(buffer);
-	SerializeInt(roomBackgroundNumber);
+	// pack mask type in the last byte of a negative integer
+	// note: (-1) is reserved for "unused", for backward compatibility
+	if (roomMaskType > 0)
+		SerializeInt(0xFFFFFF00 | roomMaskType);
+	else
+		SerializeInt(roomBackgroundNumber);
 	SerializeInt(dynamicSpriteNumber);
 	SerializeInt(dynamicSurfaceNumber);
 	SerializeInt(currentColour);
@@ -91,7 +95,12 @@ int ScriptDrawingSurface::Serialize(const char *address, char *buffer, int bufsi
 
 void ScriptDrawingSurface::Unserialize(int index, const char *serializedData, int dataSize) {
 	StartUnserialize(serializedData, dataSize);
-	roomBackgroundNumber = UnserializeInt();
+	int room_ds = UnserializeInt();
+	if (room_ds >= 0)
+		roomBackgroundNumber = room_ds;
+	// negative value may contain a mask type
+	else if ((room_ds & 0xFF) != 0xFF)
+		roomMaskType = (RoomAreaMask)(room_ds & 0xFF);
 	dynamicSpriteNumber = UnserializeInt();
 	dynamicSurfaceNumber = UnserializeInt();
 	currentColour = UnserializeInt();
@@ -105,6 +114,7 @@ void ScriptDrawingSurface::Unserialize(int index, const char *serializedData, in
 
 ScriptDrawingSurface::ScriptDrawingSurface() {
 	roomBackgroundNumber = -1;
+	roomMaskType = kRoomAreaNone;
 	dynamicSpriteNumber = -1;
 	dynamicSurfaceNumber = -1;
 	isLinkedBitmapOnly = false;

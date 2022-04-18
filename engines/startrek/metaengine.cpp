@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -118,7 +117,7 @@ SaveStateList StarTrekMetaEngine::listSaves(const char *target) const {
 					strcpy(meta.description, "[broken saved game]");
 				}
 
-				saveList.push_back(SaveStateDescriptor(slotNr, meta.description));
+				saveList.push_back(SaveStateDescriptor(this, slotNr, meta.description));
 			}
 		}
 	}
@@ -157,21 +156,11 @@ SaveStateDescriptor StarTrekMetaEngine::querySaveMetaInfos(const char *target, i
 		}
 		if (descriptionPos >= sizeof(meta.description)) {
 			// broken meta.description, ignore it
-			SaveStateDescriptor descriptor(slotNr, "[broken saved game]");
+			SaveStateDescriptor descriptor(this, slotNr, "[broken saved game]");
 			return descriptor;
 		}
 
-		SaveStateDescriptor descriptor(slotNr, meta.description);
-
-		// Do not allow save slot 0 (used for auto-saving) to be deleted or
-		// overwritten.
-		if (slotNr == 0) {
-			descriptor.setWriteProtectedFlag(true);
-			descriptor.setDeletableFlag(false);
-		} else {
-			descriptor.setWriteProtectedFlag(false);
-			descriptor.setDeletableFlag(true);
-		}
+		SaveStateDescriptor descriptor(this, slotNr, meta.description);
 
 		if (meta.thumbnail == nullptr) {
 			return SaveStateDescriptor();
@@ -185,13 +174,7 @@ SaveStateDescriptor StarTrekMetaEngine::querySaveMetaInfos(const char *target, i
 		return descriptor;
 
 	} else {
-		SaveStateDescriptor emptySave;
-		// Do not allow save slot 0 (used for auto-saving) to be overwritten.
-		if (slotNr == 0) {
-			emptySave.setWriteProtectedFlag(true);
-		} else {
-			emptySave.setWriteProtectedFlag(false);
-		}
+		SaveStateDescriptor emptySave(this, slotNr, Common::U32String());
 		return emptySave;
 	}
 }

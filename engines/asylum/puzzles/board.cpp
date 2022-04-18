@@ -1,24 +1,25 @@
 /* ScummVM - Graphic Adventure Engine
-*
-* ScummVM is the legal property of its developers, whose names
-* are too numerous to list here. Please refer to the COPYRIGHT
-* file distributed with this source distribution.
-*
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* as published by the Free Software Foundation; either version 2
-* of the License, or (at your option) any later version.
+ *
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
 
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-*
-*/
+#include "common/language.h"
 
 #include "asylum/puzzles/board.h"
 
@@ -34,8 +35,26 @@
 
 namespace Asylum {
 
-PuzzleBoard::PuzzleBoard(AsylumEngine *engine, const PuzzleData &data) : Puzzle(engine) {
-	_data = data;
+PuzzleBoard::PuzzleBoard(AsylumEngine *engine, const PuzzleData *data) : Puzzle(engine) {
+	int i = 0;
+
+	switch (_vm->getLanguage()) {
+	default:
+	case Common::EN_ANY:
+	case Common::RU_RUS:
+		i = 0;
+		break;
+
+	case Common::DE_DEU:
+		i = 1;
+		break;
+
+	case Common::FR_FRA:
+		i = 2;
+		break;
+	}
+
+	memcpy(&_data, &data[i], sizeof(PuzzleData));
 
 	// Init board
 	_solved = false;
@@ -86,19 +105,12 @@ void PuzzleBoard::updateScreen()  {
 	getScreen()->draw(getWorld()->graphicResourceIds[_data.backgroundIndex]);
 	drawText();
 
-	getScreen()->drawGraphicsInQueue();
-	getScreen()->copyBackBufferToScreen();
-}
-
-bool PuzzleBoard::update(const AsylumEvent &) {
-	updateCursor();
-
 	if (!_solved)
 		playSound();
 
 	if (_vm->isGameFlagNotSet(_data.gameFlag)) {
 		if (strcmp(_solvedText, _data.solvedText))
-			return true;
+			return;
 
 		if (_solved) {
 			if (!getSound()->isPlaying(MAKE_RESOURCE(kResourcePackSpeech, 1))) {
@@ -114,8 +126,6 @@ bool PuzzleBoard::update(const AsylumEvent &) {
 			getSound()->playSound(MAKE_RESOURCE(kResourcePackSpeech, 1), false, Config.voiceVolume);
 		}
 	}
-
-	return true;
 }
 
 bool PuzzleBoard::mouseRightDown(const AsylumEvent &) {

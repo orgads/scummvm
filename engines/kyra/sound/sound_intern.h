@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -41,6 +40,10 @@ namespace Audio {
 class PCSpeaker;
 class MaxTrax;
 } // End of namespace Audio
+
+namespace Common {
+class MacResManager;
+} // End of namespace Common
 
 namespace Kyra {
 
@@ -136,6 +139,7 @@ public:
 	void beginFadeOut() override;
 
 	void updateVolumeSettings() override;
+	void enableMusic(int enable) override;
 
 private:
 	bool loadInstruments();
@@ -348,6 +352,57 @@ protected:
 
 	const AmigaSfxTable *_tableSfxGame;
 	int _tableSfxGame_Size;
+};
+
+class SoundMacRes;
+class HalestormDriver;
+class SoundMac : public Sound {
+public:
+	SoundMac(KyraEngine_v1 *vm, Audio::Mixer *mixer);
+	~SoundMac() override;
+
+	kType getMusicType() const override;
+
+	bool init() override { return init(musicEnabled() == 1); }
+	bool init(bool hiQuality);
+	void initAudioResourceInfo(int, void*) override {}
+	void selectAudioResourceSet(int set) override;
+	bool hasSoundFile(uint) const override { return true; }
+	void loadSoundFile(uint) override {}
+	void loadSoundFile(Common::String) override {}
+	void playTrack(uint8 track) override;
+	void haltTrack() override;
+	void playSoundEffect(uint16 track, uint8) override;
+	bool isPlaying() const override;
+	void beginFadeOut() override;
+	void updateVolumeSettings() override;
+	void enableMusic(int enable) override;
+
+private:
+	void setQuality(bool hi);
+
+	SoundMacRes *_res;
+	HalestormDriver *_driver;
+	bool _ready;
+
+	const uint16 *_resIDMusic;
+	int _currentResourceSet;
+
+	static const uint16 _resIDMusicIntro[4];
+	static const uint16 _resIDMusicIngame[35];
+	static const uint8 _musicLoopTable[35];
+	static const uint16 _resIDSfxIntro[39];
+	static const uint16 _resIDSfxIngame[39];
+
+	struct SoundEffectDef {
+		uint8 note;
+		uint8 number;
+		uint16 rate;
+		uint8 unk;
+	};
+
+	static const SoundEffectDef _soundEffectDefsIntro[16];
+	static const SoundEffectDef _soundEffectDefsIngame[120];
 };
 
 #ifdef ENABLE_EOB

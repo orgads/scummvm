@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -203,13 +202,22 @@ protected:
 	virtual void drawSquareAlgClip(int x, int y, int w, int h,
 		PixelType color, FillMode fill_m);
 
+	virtual void drawTriangleHorzAlg(int x, int y, int w, int h,
+	    bool inverted, PixelType color, FillMode fill_m);
+
+	virtual void drawTriangleHorzAlgClip(int x, int y, int w, int h,
+		bool inverted, PixelType color, FillMode fill_m);
+
+	virtual void drawTriangleFastH(int x, int y, int size,
+	    bool inverted, PixelType color, FillMode fill_m);
+
 	virtual void drawTriangleVertAlg(int x, int y, int w, int h,
 	    bool inverted, PixelType color, FillMode fill_m);
 
 	virtual void drawTriangleVertAlgClip(int x, int y, int w, int h,
 		bool inverted, PixelType color, FillMode fill_m);
 
-	virtual void drawTriangleFast(int x, int y, int size,
+	virtual void drawTriangleFastV(int x, int y, int size,
 	    bool inverted, PixelType color, FillMode fill_m);
 
 	virtual void drawBevelSquareAlg(int x, int y, int w, int h,
@@ -279,13 +287,13 @@ protected:
 	 * @param alpha Alpha intensity of the pixel (0-255)
 	 */
 	inline void blendFill(PixelType *first, PixelType *last, PixelType color, uint8 alpha) {
-		while (first != last)
+		while (first < last)
 			blendPixelPtr(first++, color, alpha);
 	}
 
 	inline void blendFillClip(PixelType *first, PixelType *last, PixelType color, uint8 alpha, int realX, int realY) {
 		if (_clippingArea.top <= realY && realY < _clippingArea.bottom) {
-			while (first != last) {
+			while (first < last) {
 				if (_clippingArea.left <= realX && realX < _clippingArea.right)
 					blendPixelPtr(first++, color, alpha);
 				else

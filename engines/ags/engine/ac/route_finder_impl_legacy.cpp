@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -39,8 +38,6 @@
 #include "ags/globals.h"
 
 namespace AGS3 {
-
-extern void update_polled_stuff_if_runtime();
 
 using AGS::Shared::Bitmap;
 namespace BitmapHelper = AGS::Shared::BitmapHelper;
@@ -215,8 +212,11 @@ static int is_route_possible(int fromx, int fromy, int tox, int toy, Bitmap *wss
 		walk_area_granularity[dd] /= walk_area_times[dd];
 		if (walk_area_granularity[dd] <= 4)
 			walk_area_granularity[dd] = 2;
+		// NB: Since MAX_GRANULARITY is 3, the following code is redundant causing compiler warnings
+#if 0
 		else if (walk_area_granularity[dd] <= 15)
 			walk_area_granularity[dd] = 3;
+#endif
 		else
 			walk_area_granularity[dd] = MAX_GRANULARITY;
 

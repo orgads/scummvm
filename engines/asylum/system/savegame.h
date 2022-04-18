@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -54,10 +53,8 @@ public:
 
 	/**
 	 * Loads a game
-	 *
-	 * @return true if it succeeds, false if it fails.
 	 */
-	bool load();
+	void load();
 
 	/**
 	 * Quick loads a game
@@ -85,6 +82,87 @@ public:
 	 */
 	void remove();
 
+	/**
+	 * Checks if a savegame is compatible
+	 *
+	 * @return true if it is, false otherwise.
+	 */
+	bool isCompatible();
+
+	//////////////////////////////////////////////////////////////////////////
+	// Static methods
+	//////////////////////////////////////////////////////////////////////////
+	/**
+	 * Seeks to a specific place in the file
+	 *
+	 * @param [in,out] file If non-null, the file.
+	 * @param offset 		Offset index of the info into the file
+	 * @param description   The description.
+	 */
+	static void seek(Common::InSaveFile *file, uint32 offset, const Common::String &description);
+
+	/**
+	 * Reads data from a file.
+	 *
+	 * @param [in,out] file If non-null, the file.
+	 * @param description   The description.
+	 *
+	 * @return the value
+	 */
+	static uint32 read(Common::InSaveFile *file, const Common::String &description);
+
+	/**
+	 * Reads data from a file.
+	 *
+	 * @param [in,out] file If non-null, the file.
+	 * @param strLength 	Length of the string.
+	 * @param description   The description.
+	 *
+	 * @return the string
+	 */
+	static Common::String read(Common::InSaveFile *file, uint32 strLength, const Common::String &description);
+
+	/**
+	 * Reads data from a file.
+	 *
+	 * @param [in,out] file If non-null, the file.
+	 * @param [in,out] data If non-null, the data.
+	 * @param size 			The size.
+	 * @param count 		Number of.
+	 * @param description   The description.
+	 */
+	static void read(Common::InSaveFile *file, Common::Serializable *data, uint32 size, uint32 count, const Common::String &description);
+
+	/**
+	 * Writes data to a file.
+	 *
+	 * @param [in,out] file If non-null, the file.
+	 * @param val 			The value
+	 * @param description   The description.
+	 */
+	static void write(Common::OutSaveFile *file, uint32 val, const Common::String &description);
+
+	/**
+	 * Writes data to a file.
+	 *
+	 * @param [in,out] file If non-null, the file.
+	 * @param val 			The string
+	 * @param strLength		The size of the string.
+	 * @param description   The description.
+	 */
+	static void write(Common::OutSaveFile *file, const Common::String &val, uint32 strLength, const Common::String &description);
+
+	/**
+	 * Writes data to a file.
+	 *
+	 * @param [in,out] file If non-null, the file.
+	 * @param [in,out] data If non-null, the data.
+	 * @param size 			The size.
+	 * @param count 		Number of.
+	 * @param description   The description.
+	 */
+	static void write(Common::OutSaveFile *file, Common::Serializable *data, uint32 size, uint32 count, const Common::String &description);
+
 	//////////////////////////////////////////////////////////////////////////
 	// Movies
 	//////////////////////////////////////////////////////////////////////////
@@ -95,7 +173,7 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	// Accessors
 	//////////////////////////////////////////////////////////////////////////
-	void setName(uint32 index, Common::String name);
+	void setName(uint32 index, const Common::String &name);
 	Common::String getName(uint32 index) const;
 
 	Common::String *getName() { return &_names[_index]; }
@@ -105,26 +183,24 @@ public:
 	bool hasSavegame(uint32 index) const;
 	ResourcePackId getScenePack() { return (ResourcePackId)(_savegameToScene[_index] + 4); }
 
+	const char *getVersion() { return _version.c_str(); }
+	uint32 getBuild() { return _build; }
+
 private:
-	AsylumEngine* _vm;
+	AsylumEngine *_vm;
 
 	uint32 _index;
 	byte _moviesViewed[196];
 	uint32 _savegameToScene[SAVEGAME_COUNT];
 	bool _savegames[SAVEGAME_COUNT];
 	Common::String _names[SAVEGAME_COUNT];
-	bool _valid;
+	Common::String _version;
+	uint32 _build;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Helpers
 	//////////////////////////////////////////////////////////////////////////
 
-	/**
-	 * Checks if a savegame is valid
-	 *
-	 * @return true if it succeeds, false if it fails.
-	 */
-	bool check();
 
 	/**
 	 * Gets a filename for a given save index
@@ -142,7 +218,7 @@ private:
 	 *
 	 * @return true if savegame present, false if not.
 	 */
-	bool isSavegamePresent(Common::String filename) const;
+	bool isSavegamePresent(const Common::String &filename) const;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Reading & writing
@@ -168,92 +244,17 @@ private:
 	 * Loads savegame data
 	 *
 	 * @param filename Filename of the file.
-	 *
-	 * @return true if it succeeds, false if it fails.
 	 */
-	bool loadData(Common::String filename);
+	void loadData(const Common::String &filename);
 
 	/**
 	 * Save savegame data.
 	 *
-	 * @param filename Filename of the file.
-	 * @param name 	   The name.
-	 * @param chapter  The chapter.
-	 *
-	 * @return true if it succeeds, false if it fails.
+	 * @param filename       Filename of the file.
+	 * @param name 	         The name.
+	 * @param chapter        The chapter.
 	 */
-	bool saveData(Common::String filename, Common::String name, ChapterIndex chapter);
-
-	/**
-	 * Seeks to a specific place in the file
-	 *
-	 * @param [in,out] file If non-null, the file.
-	 * @param offset 		Offset index of the info into the file
-	 * @param description   The description.
-	 */
-	void seek(Common::InSaveFile *file, uint32 offset, Common::String description) const;
-
-	/**
-	 * Reads data from a file.
-	 *
-	 * @param [in,out] file If non-null, the file.
-	 * @param description   The description.
-	 *
-	 * @return the value
-	 */
-	uint32 read(Common::InSaveFile *file, Common::String description) const;
-
-	/**
-	 * Reads data from a file.
-	 *
-	 * @param [in,out] file If non-null, the file.
-	 * @param strLength 	Length of the string.
-	 * @param description   The description.
-	 *
-	 * @return the string
-	 */
-	Common::String read(Common::InSaveFile *file, uint32 strLength, Common::String description) const;
-
-	/**
-	 * Reads data from a file.
-	 *
-	 * @param [in,out] file If non-null, the file.
-	 * @param [in,out] data If non-null, the data.
-	 * @param size 			The size.
-	 * @param count 		Number of.
-	 * @param description   The description.
-	 */
-	void read(Common::InSaveFile *file, Common::Serializable *data, uint32 size, uint32 count, Common::String description) const;
-
-	/**
-	 * Writes data to a file.
-	 *
-	 * @param [in,out] file If non-null, the file.
-	 * @param val 			The value
-	 * @param description   The description.
-	 */
-	void write(Common::OutSaveFile *file, uint32 val, Common::String description) const;
-
-	/**
-	 * Writes data to a file.
-	 *
-	 * @param [in,out] file If non-null, the file.
-	 * @param val 			The string
-	 * @param strLength		The size of the string.
-	 * @param description   The description.
-	 */
-	void write(Common::OutSaveFile *file, Common::String val, uint32 strLength, Common::String description) const;
-
-	/**
-	 * Writes data to a file.
-	 *
-	 * @param [in,out] file If non-null, the file.
-	 * @param [in,out] data If non-null, the data.
-	 * @param size 			The size.
-	 * @param count 		Number of.
-	 * @param description   The description.
-	 */
-	void write(Common::OutSaveFile *file, Common::Serializable *data, uint32 size, uint32 count, Common::String description) const;
+	void saveData(const Common::String &filename, const Common::String &name, ChapterIndex chapter);
 };
 
 } // End of namespace Asylum

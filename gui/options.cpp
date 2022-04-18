@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,6 +37,7 @@
 #include "common/config-manager.h"
 #include "common/gui_options.h"
 #include "common/rendermode.h"
+#include "common/savefile.h"
 #include "common/system.h"
 #include "common/textconsole.h"
 #include "common/translation.h"
@@ -56,6 +56,7 @@
 #ifdef USE_LIBCURL
 #include "backends/cloud/cloudmanager.h"
 #include "gui/downloaddialog.h"
+#include "gui/downloadiconsdialog.h"
 #endif
 
 #ifdef USE_SDL_NET
@@ -64,6 +65,7 @@
 #endif
 
 #include "graphics/renderer.h"
+#include "graphics/scalerplugin.h"
 
 namespace GUI {
 
@@ -80,16 +82,21 @@ enum {
 	kChooseSaveDirCmd		= 'chos',
 	kSavePathClearCmd		= 'clsp',
 	kChooseThemeDirCmd		= 'chth',
+	kChooseIconDirCmd		= 'chic',
 	kThemePathClearCmd		= 'clth',
+	kBrowserPathClearCmd	= 'clbr',
+	kIconPathClearCmd		= 'clic',
 	kChooseExtraDirCmd		= 'chex',
 	kExtraPathClearCmd		= 'clex',
 	kChoosePluginsDirCmd	= 'chpl',
 	kPluginsPathClearCmd	= 'clpl',
 	kChooseThemeCmd			= 'chtf',
+	kUpdateIconsCmd			= 'upic',
 	kUpdatesCheckCmd		= 'updc',
 	kKbdMouseSpeedChanged	= 'kmsc',
 	kJoystickDeadzoneChanged= 'jodc',
 	kGraphicsTabContainerReflowCmd = 'gtcr',
+	kScalerPopUpCmd			= 'scPU',
 	kFullscreenToggled		= 'oful'
 };
 
@@ -131,8 +138,8 @@ static const char *savePeriodLabels[] = { _s("Never"), _s("Every 5 mins"), _s("E
 static const int savePeriodValues[] = { 0, 5 * 60, 10 * 60, 15 * 60, 30 * 60, -1 };
 
 static const char *guiBaseLabels[] = {
-	// I18N: Automatic GUI scaling
-	_s("Auto"),
+	// I18N: Very large GUI scale
+	_s("Very large"),
 	// I18N: Large GUI scale
 	_s("Large"),
 	// I18N: Medium GUI scale
@@ -141,7 +148,7 @@ static const char *guiBaseLabels[] = {
 	_s("Small"),
 	nullptr
 };
-static const int guiBaseValues[] = { 0, 240, 480, 720, -1 };
+static const int guiBaseValues[] = { 150, 125, 100, 75, -1 };
 
 // The keyboard mouse speed values range from 0 to 7 and correspond to speeds shown in the label
 // "10" (value 3) is the default speed corresponding to the speed before introduction of this control
@@ -159,17 +166,11 @@ OptionsDialog::OptionsDialog(const Common::String &domain, const Common::String 
 
 OptionsDialog::~OptionsDialog() {
 	delete _subToggleGroup;
-	if (g_gui.useRTL()) {
-		g_gui.setDialogPaddings(0, 0);
-		g_gui.scheduleTopDialogRedraw();
-	}
 }
 
 void OptionsDialog::init() {
 	_enableControlSettings = false;
-	_onscreenCheckbox = nullptr;
 	_touchpadCheckbox = nullptr;
-	_swapMenuAndBackBtnsCheckbox = nullptr;
 	_kbdMouseSpeedDesc = nullptr;
 	_kbdMouseSpeedSlider = nullptr;
 	_kbdMouseSpeedLabel = nullptr;
@@ -185,6 +186,9 @@ void OptionsDialog::init() {
 	_renderModePopUpDesc = nullptr;
 	_stretchPopUp = nullptr;
 	_stretchPopUpDesc = nullptr;
+	_scalerPopUp = nullptr;
+	_scalerPopUpDesc = nullptr;
+	_scaleFactorPopUp = nullptr;
 	_fullscreenCheckbox = nullptr;
 	_filteringCheckbox = nullptr;
 	_aspectCheckbox = nullptr;
@@ -228,6 +232,7 @@ void OptionsDialog::init() {
 	_speechVolumeLabel = nullptr;
 	_muteCheckbox = nullptr;
 	_enableSubtitleSettings = false;
+	_enableSubtitleToggle = false;
 	_subToggleDesc = nullptr;
 	_subToggleGroup = nullptr;
 	_subToggleSubOnly = nullptr;
@@ -254,25 +259,11 @@ void OptionsDialog::build() {
 	}
 
 	// Control options
-	if (g_system->hasFeature(OSystem::kFeatureOnScreenControl)) {
-		if (ConfMan.hasKey("onscreen_control", _domain)) {
-			bool onscreenState =  g_system->getFeatureState(OSystem::kFeatureOnScreenControl);
-			if (_onscreenCheckbox != nullptr)
-				_onscreenCheckbox->setState(onscreenState);
-		}
-	}
 	if (g_system->hasFeature(OSystem::kFeatureTouchpadMode)) {
 		if (ConfMan.hasKey("touchpad_mouse_mode", _domain)) {
 			bool touchpadState =  g_system->getFeatureState(OSystem::kFeatureTouchpadMode);
 			if (_touchpadCheckbox != nullptr)
 				_touchpadCheckbox->setState(touchpadState);
-		}
-	}
-	if (g_system->hasFeature(OSystem::kFeatureSwapMenuAndBackButtons)) {
-		if (ConfMan.hasKey("swap_menu_and_back_buttons", _domain)) {
-			bool state =  g_system->getFeatureState(OSystem::kFeatureSwapMenuAndBackButtons);
-			if (_swapMenuAndBackBtnsCheckbox != nullptr)
-				_swapMenuAndBackBtnsCheckbox->setState(state);
 		}
 	}
 	if (g_system->hasFeature(OSystem::kFeatureKbdMouseSpeed)) {
@@ -348,6 +339,40 @@ void OptionsDialog::build() {
 		} else {
 			_stretchPopUpDesc->setVisible(false);
 			_stretchPopUp->setVisible(false);
+			_stretchPopUp->setEnabled(false);
+		}
+
+		_scalerPopUp->setSelected(0);
+		_scaleFactorPopUp->setSelected(0);
+
+		if (g_system->hasFeature(OSystem::kFeatureScalers)) {
+			if (ConfMan.hasKey("scaler", _domain)) {
+				const PluginList &scalerPlugins = ScalerMan.getPlugins();
+				Common::String scaler(ConfMan.get("scaler", _domain));
+
+				for (uint scalerIndex = 0; scalerIndex < scalerPlugins.size(); scalerIndex++) {
+					if (scumm_stricmp(scalerPlugins[scalerIndex]->get<ScalerPluginObject>().getName(), scaler.c_str()) != 0)
+						continue;
+
+					_scalerPopUp->setSelectedTag(scalerIndex);
+					updateScaleFactors(scalerIndex);
+
+					if (ConfMan.hasKey("scale_factor", _domain)) {
+						int scaleFactor = ConfMan.getInt("scale_factor", _domain);
+						if (scalerPlugins[scalerIndex]->get<ScalerPluginObject>().hasFactor(scaleFactor))
+							_scaleFactorPopUp->setSelectedTag(scaleFactor);
+					}
+
+					break;
+				}
+
+			}
+		} else {
+			_scalerPopUpDesc->setVisible(false);
+			_scalerPopUp->setVisible(false);
+			_scalerPopUp->setEnabled(false);
+			_scaleFactorPopUp->setVisible(false);
+			_scaleFactorPopUp->setEnabled(false);
 		}
 
 		// Fullscreen setting
@@ -359,10 +384,12 @@ void OptionsDialog::build() {
 		}
 
 		// Filtering setting
-		if (g_system->hasFeature(OSystem::kFeatureFilteringMode))
+		if (g_system->hasFeature(OSystem::kFeatureFilteringMode)) {
 			_filteringCheckbox->setState(ConfMan.getBool("filtering", _domain));
-		else
-			_filteringCheckbox->setVisible(false);
+		} else {
+			_filteringCheckbox->setState(false);
+			_filteringCheckbox->setEnabled(false);
+		}
 
 		// Aspect ratio setting
 		if (_guioptions.contains(GUIO_NOASPECT)) {
@@ -376,7 +403,7 @@ void OptionsDialog::build() {
 		_vsyncCheckbox->setState(ConfMan.getBool("vsync", _domain));
 
 		_rendererTypePopUp->setEnabled(true);
-		_rendererTypePopUp->setSelectedTag(Graphics::parseRendererTypeCode(ConfMan.get("renderer", _domain)));
+		_rendererTypePopUp->setSelectedTag(Graphics::Renderer::parseTypeCode(ConfMan.get("renderer", _domain)));
 
 		_antiAliasPopUp->setEnabled(true);
 		if (ConfMan.hasKey("antialiasing", _domain)) {
@@ -587,9 +614,35 @@ void OptionsDialog::apply() {
 					graphicsModeChanged = true;
 			}
 
+			isSet = false;
+			const PluginList &scalerPlugins = ScalerMan.getPlugins();
+			if ((int32)_scalerPopUp->getSelectedTag() >= 0) {
+				const char *name = scalerPlugins[_scalerPopUp->getSelectedTag()]->get<ScalerPluginObject>().getName();
+				if (ConfMan.get("scaler", _domain) != name)
+					graphicsModeChanged = true;
+				ConfMan.set("scaler", name, _domain);
+
+				int factor = _scaleFactorPopUp->getSelectedTag();
+				if (ConfMan.getInt("scale_factor", _domain) != factor)
+					graphicsModeChanged = true;
+				ConfMan.setInt("scale_factor", factor, _domain);
+				isSet = true;
+			}
+			if (!isSet) {
+				ConfMan.removeKey("scaler", _domain);
+				ConfMan.removeKey("scale_factor", _domain);
+
+				uint defaultScaler = g_system->getDefaultScaler();
+				uint defaultScaleFactor = g_system->getDefaultScaleFactor();
+				if (g_system->getScaler() != defaultScaler)
+					graphicsModeChanged = true;
+				else if (g_system->getScaleFactor() != defaultScaleFactor)
+					graphicsModeChanged = true;
+			}
+
 			if (_rendererTypePopUp->getSelectedTag() > 0) {
 				Graphics::RendererType selected = (Graphics::RendererType) _rendererTypePopUp->getSelectedTag();
-				ConfMan.set("renderer", Graphics::getRendererTypeCode(selected), _domain);
+				ConfMan.set("renderer", Graphics::Renderer::getTypeCode(selected), _domain);
 			} else {
 				ConfMan.removeKey("renderer", _domain);
 			}
@@ -607,6 +660,8 @@ void OptionsDialog::apply() {
 			ConfMan.removeKey("aspect_ratio", _domain);
 			ConfMan.removeKey("gfx_mode", _domain);
 			ConfMan.removeKey("stretch_mode", _domain);
+			ConfMan.removeKey("scaler", _domain);
+			ConfMan.removeKey("scale_factor", _domain);
 			ConfMan.removeKey("render_mode", _domain);
 			ConfMan.removeKey("renderer", _domain);
 			ConfMan.removeKey("antialiasing", _domain);
@@ -647,6 +702,7 @@ void OptionsDialog::apply() {
 		g_system->beginGFXTransaction();
 		g_system->setGraphicsMode(ConfMan.get("gfx_mode", _domain).c_str());
 		g_system->setStretchMode(ConfMan.get("stretch_mode", _domain).c_str());
+		g_system->setScaler(ConfMan.get("scaler", _domain).c_str(), ConfMan.getInt("scale_factor", _domain));
 
 		if (ConfMan.hasKey("aspect_ratio"))
 			g_system->setFeatureState(OSystem::kFeatureAspectRatioCorrection, ConfMan.getBool("aspect_ratio", _domain));
@@ -741,19 +797,9 @@ void OptionsDialog::apply() {
 
 	// Control options
 	if (_enableControlSettings) {
-		if (g_system->hasFeature(OSystem::kFeatureOnScreenControl)) {
-			if (ConfMan.getBool("onscreen_control", _domain) != _onscreenCheckbox->getState()) {
-				g_system->setFeatureState(OSystem::kFeatureOnScreenControl, _onscreenCheckbox->getState());
-			}
-		}
 		if (g_system->hasFeature(OSystem::kFeatureTouchpadMode)) {
 			if (ConfMan.getBool("touchpad_mouse_mode", _domain) != _touchpadCheckbox->getState()) {
 				g_system->setFeatureState(OSystem::kFeatureTouchpadMode, _touchpadCheckbox->getState());
-			}
-		}
-		if (g_system->hasFeature(OSystem::kFeatureSwapMenuAndBackButtons)) {
-			if (ConfMan.getBool("swap_menu_and_back_buttons", _domain) != _swapMenuAndBackBtnsCheckbox->getState()) {
-				g_system->setFeatureState(OSystem::kFeatureSwapMenuAndBackButtons, _swapMenuAndBackBtnsCheckbox->getState());
 			}
 		}
 		if (g_system->hasFeature(OSystem::kFeatureKbdMouseSpeed)) {
@@ -842,11 +888,9 @@ void OptionsDialog::apply() {
 	// Subtitle options
 	if (_subToggleGroup) {
 		if (_enableSubtitleSettings) {
-			bool subtitles, speech_mute;
-			int talkspeed;
-			int sliderMaxValue = _subSpeedSlider->getMaxValue();
-
-			switch (_subToggleGroup->getValue()) {
+			if (_enableSubtitleToggle) {
+				bool subtitles, speech_mute;
+				switch (_subToggleGroup->getValue()) {
 				case kSubtitlesSpeech:
 					subtitles = speech_mute = false;
 					break;
@@ -858,14 +902,19 @@ void OptionsDialog::apply() {
 				default:
 					subtitles = speech_mute = true;
 					break;
-			}
+				}
 
-			ConfMan.setBool("subtitles", subtitles, _domain);
-			ConfMan.setBool("speech_mute", speech_mute, _domain);
+				ConfMan.setBool("subtitles", subtitles, _domain);
+				ConfMan.setBool("speech_mute", speech_mute, _domain);
+			} else if (!_domain.empty()) {
+				ConfMan.removeKey("subtitles", _domain);
+				ConfMan.removeKey("speech_mute", _domain);
+			}
 
 			// Engines that reuse the subtitle speed widget set their own max value.
 			// Scale the config value accordingly (see addSubtitleControls)
-			talkspeed = (_subSpeedSlider->getValue() * 255 + sliderMaxValue / 2) / sliderMaxValue;
+			int sliderMaxValue = _subSpeedSlider->getMaxValue();
+			int talkspeed = (_subSpeedSlider->getValue() * 255 + sliderMaxValue / 2) / sliderMaxValue;
 			ConfMan.setInt("talkspeed", talkspeed, _domain);
 
 		} else {
@@ -967,6 +1016,10 @@ void OptionsDialog::handleCommand(CommandSender *sender, uint32 cmd, uint32 data
 	case kGraphicsTabContainerReflowCmd:
 		setupGraphicsTab();
 		break;
+	case kScalerPopUpCmd:
+		updateScaleFactors(data);
+		g_gui.scheduleTopDialogRedraw();
+		break;
 	case kApplyCmd:
 		apply();
 		break;
@@ -1005,14 +1058,34 @@ void OptionsDialog::setGraphicSettingsState(bool enabled) {
 	_gfxPopUp->setEnabled(enabled);
 	_renderModePopUpDesc->setEnabled(enabled);
 	_renderModePopUp->setEnabled(enabled);
-	_stretchPopUpDesc->setEnabled(enabled);
-	_stretchPopUp->setEnabled(enabled);
 	_vsyncCheckbox->setEnabled(enabled);
-	_filteringCheckbox->setEnabled(enabled);
 	_rendererTypePopUpDesc->setEnabled(enabled);
 	_rendererTypePopUp->setEnabled(enabled);
 	_antiAliasPopUpDesc->setEnabled(enabled);
 	_antiAliasPopUp->setEnabled(enabled);
+
+	if (g_system->hasFeature(OSystem::kFeatureStretchMode)) {
+		_stretchPopUpDesc->setEnabled(enabled);
+		_stretchPopUp->setEnabled(enabled);
+	} else {
+		_stretchPopUpDesc->setEnabled(false);
+		_stretchPopUp->setEnabled(false);
+	}
+
+	if (g_system->hasFeature(OSystem::kFeatureScalers)) {
+		_scalerPopUpDesc->setEnabled(enabled);
+		_scalerPopUp->setEnabled(enabled);
+		_scaleFactorPopUp->setEnabled(enabled);
+	} else {
+		_scalerPopUpDesc->setEnabled(false);
+		_scalerPopUp->setEnabled(false);
+		_scaleFactorPopUp->setEnabled(false);
+	}
+
+	if (g_system->hasFeature(OSystem::kFeatureFilteringMode))
+		_filteringCheckbox->setEnabled(enabled);
+	else
+		_filteringCheckbox->setEnabled(false);
 
 	if (g_system->hasFeature(OSystem::kFeatureFullscreenMode))
 		_fullscreenCheckbox->setEnabled(enabled);
@@ -1127,6 +1200,7 @@ void OptionsDialog::setSubtitleSettingsState(bool enabled) {
 	if ((_guioptions.contains(GUIO_NOSUBTITLES)) || (_guioptions.contains(GUIO_NOSPEECH)))
 		ena = false;
 
+	_enableSubtitleToggle = ena;
 	_subToggleGroup->setEnabled(ena);
 	_subToggleDesc->setEnabled(ena);
 
@@ -1140,17 +1214,9 @@ void OptionsDialog::setSubtitleSettingsState(bool enabled) {
 }
 
 void OptionsDialog::addControlControls(GuiObject *boss, const Common::String &prefix) {
-	// Show On-Screen control
-	if (g_system->hasFeature(OSystem::kFeatureOnScreenControl))
-		_onscreenCheckbox = new CheckboxWidget(boss, prefix + "grOnScreenCheckbox", _("Show On-screen control"));
-
 	// Touchpad Mouse mode
 	if (g_system->hasFeature(OSystem::kFeatureTouchpadMode))
 		_touchpadCheckbox = new CheckboxWidget(boss, prefix + "grTouchpadCheckbox", _("Touchpad mouse mode"));
-
-	// Swap menu and back buttons
-	if (g_system->hasFeature(OSystem::kFeatureSwapMenuAndBackButtons))
-		_swapMenuAndBackBtnsCheckbox = new CheckboxWidget(boss, prefix + "grSwapMenuAndBackBtnsCheckbox", _("Swap Menu and Back buttons"));
 
 	// Keyboard and joystick mouse speed
 	if (g_system->hasFeature(OSystem::kFeatureKbdMouseSpeed)) {
@@ -1159,7 +1225,7 @@ void OptionsDialog::addControlControls(GuiObject *boss, const Common::String &pr
 		else
 			_kbdMouseSpeedDesc = new StaticTextWidget(boss, prefix + "grKbdMouseSpeedDesc", _c("Pointer Speed:", "lowres"), _("Speed for keyboard/joystick mouse pointer control"));
 		_kbdMouseSpeedSlider = new SliderWidget(boss, prefix + "grKbdMouseSpeedSlider", _("Speed for keyboard/joystick mouse pointer control"), kKbdMouseSpeedChanged);
-		_kbdMouseSpeedLabel = new StaticTextWidget(boss, prefix + "grKbdMouseSpeedLabel", Common::U32String("  "));
+		_kbdMouseSpeedLabel = new StaticTextWidget(boss, prefix + "grKbdMouseSpeedLabel", Common::U32String("  "), Common::U32String(), ThemeEngine::kFontStyleBold, Common::UNK_LANG, false);
 		_kbdMouseSpeedSlider->setMinValue(0);
 		_kbdMouseSpeedSlider->setMaxValue(7);
 		_kbdMouseSpeedLabel->setFlags(WIDGET_CLEARBG);
@@ -1172,7 +1238,7 @@ void OptionsDialog::addControlControls(GuiObject *boss, const Common::String &pr
 		else
 			_joystickDeadzoneDesc = new StaticTextWidget(boss, prefix + "grJoystickDeadzoneDesc", _c("Joy Deadzone:", "lowres"), _("Analog joystick Deadzone"));
 		_joystickDeadzoneSlider = new SliderWidget(boss, prefix + "grJoystickDeadzoneSlider", _("Analog joystick Deadzone"), kJoystickDeadzoneChanged);
-		_joystickDeadzoneLabel = new StaticTextWidget(boss, prefix + "grJoystickDeadzoneLabel", Common::U32String("  "));
+		_joystickDeadzoneLabel = new StaticTextWidget(boss, prefix + "grJoystickDeadzoneLabel", Common::U32String("  "), Common::U32String(), ThemeEngine::kFontStyleBold, Common::UNK_LANG, false);
 		_joystickDeadzoneSlider->setMinValue(1);
 		_joystickDeadzoneSlider->setMaxValue(10);
 		_joystickDeadzoneLabel->setFlags(WIDGET_CLEARBG);
@@ -1353,10 +1419,24 @@ void OptionsDialog::addGraphicControls(GuiObject *boss, const Common::String &pr
 		sm++;
 	}
 
+	// The Scaler popup
+	const PluginList &scalerPlugins = ScalerMan.getPlugins();
+	_scalerPopUpDesc = new StaticTextWidget(boss, prefix + "grScalerPopupDesc", _("Scaler:"));
+	_scalerPopUp = new PopUpWidget(boss, prefix + "grScalerPopup", Common::U32String(), kScalerPopUpCmd);
+
+	_scalerPopUp->appendEntry(_("<default>"));
+	_scalerPopUp->appendEntry(Common::U32String());
+	for (uint scalerIndex = 0; scalerIndex < scalerPlugins.size(); scalerIndex++) {
+		_scalerPopUp->appendEntry(_c(scalerPlugins[scalerIndex]->get<ScalerPluginObject>().getPrettyName(), context), scalerIndex);
+	}
+
+	_scaleFactorPopUp = new PopUpWidget(boss, prefix + "grScaleFactorPopup");
+	updateScaleFactors(_scalerPopUp->getSelectedTag());
+
 	// Fullscreen checkbox
 	_fullscreenCheckbox = new CheckboxWidget(boss, prefix + "grFullscreenCheckbox", _("Fullscreen mode"), Common::U32String(), kFullscreenToggled);
 
-	_vsyncCheckbox = new CheckboxWidget(boss, prefix + "grVSyncCheckbox", _("V-Sync in 3D Games"), _("Wait for the vertical sync to refresh the screen in 3D renderer"));
+	_vsyncCheckbox = new CheckboxWidget(boss, prefix + "grVSyncCheckbox", _("V-Sync"), _("Wait for the vertical sync to refresh the screen in order to prevent tearing artifacts"));
 
 	if (g_system->getOverlayWidth() > 320)
 		_rendererTypePopUpDesc = new StaticTextWidget(boss, prefix + "grRendererTypePopupDesc", _("Game 3D Renderer:"));
@@ -1366,12 +1446,14 @@ void OptionsDialog::addGraphicControls(GuiObject *boss, const Common::String &pr
 	_rendererTypePopUp = new PopUpWidget(boss, prefix + "grRendererTypePopup");
 	_rendererTypePopUp->appendEntry(_("<default>"), Graphics::kRendererTypeDefault);
 	_rendererTypePopUp->appendEntry("");
-	const Graphics::RendererTypeDescription *rt = Graphics::listRendererTypes();
-	for (; rt->code; ++rt) {
-		if (g_system->getOverlayWidth() > 320)
-			_rendererTypePopUp->appendEntry(_(rt->description), rt->id);
-		else
-			_rendererTypePopUp->appendEntry(_c(rt->description, "lowres"), rt->id);
+	Common::Array<Graphics::RendererTypeDescription> rt = Graphics::Renderer::listTypes();
+	for (Common::Array<Graphics::RendererTypeDescription>::iterator it = rt.begin();
+	        it != rt.end(); ++it) {
+		if (g_system->getOverlayWidth() > 320) {
+			_rendererTypePopUp->appendEntry(_(it->description), it->id);
+		} else {
+			_rendererTypePopUp->appendEntry(_c(it->description, "lowres"), it->id);
+		}
 	}
 
 	_antiAliasPopUpDesc = new StaticTextWidget(boss, prefix + "grAntiAliasPopupDesc", _("3D Anti-aliasing:"));
@@ -1568,11 +1650,12 @@ void OptionsDialog::addSubtitleControls(GuiObject *boss, const Common::String &p
 
 	// Subtitle speed
 	_subSpeedSlider = new SliderWidget(boss, prefix + "subSubtitleSpeedSlider", Common::U32String(), kSubtitleSpeedChanged);
-	_subSpeedLabel = new StaticTextWidget(boss, prefix + "subSubtitleSpeedLabel", Common::U32String("100%"));
+	_subSpeedLabel = new StaticTextWidget(boss, prefix + "subSubtitleSpeedLabel", Common::U32String("100%"), Common::U32String(), ThemeEngine::kFontStyleBold, Common::UNK_LANG, false);
 	_subSpeedSlider->setMinValue(0); _subSpeedSlider->setMaxValue(maxSliderVal);
 	_subSpeedLabel->setFlags(WIDGET_CLEARBG);
 
 	_enableSubtitleSettings = true;
+	_enableSubtitleToggle = true;
 }
 
 void OptionsDialog::addVolumeControls(GuiObject *boss, const Common::String &prefix) {
@@ -1583,7 +1666,7 @@ void OptionsDialog::addVolumeControls(GuiObject *boss, const Common::String &pre
 	else
 		_musicVolumeDesc = new StaticTextWidget(boss, prefix + "vcMusicText", _c("Music volume:", "lowres"));
 	_musicVolumeSlider = new SliderWidget(boss, prefix + "vcMusicSlider", Common::U32String(), kMusicVolumeChanged);
-	_musicVolumeLabel = new StaticTextWidget(boss, prefix + "vcMusicLabel", Common::U32String("100%"));
+	_musicVolumeLabel = new StaticTextWidget(boss, prefix + "vcMusicLabel", Common::U32String("100%"), Common::U32String(), ThemeEngine::kFontStyleBold, Common::UNK_LANG, false);
 	_musicVolumeSlider->setMinValue(0);
 	_musicVolumeSlider->setMaxValue(Audio::Mixer::kMaxMixerVolume);
 	_musicVolumeLabel->setFlags(WIDGET_CLEARBG);
@@ -1595,7 +1678,7 @@ void OptionsDialog::addVolumeControls(GuiObject *boss, const Common::String &pre
 	else
 		_sfxVolumeDesc = new StaticTextWidget(boss, prefix + "vcSfxText", _c("SFX volume:", "lowres"), _("Special sound effects volume"));
 	_sfxVolumeSlider = new SliderWidget(boss, prefix + "vcSfxSlider", _("Special sound effects volume"), kSfxVolumeChanged);
-	_sfxVolumeLabel = new StaticTextWidget(boss, prefix + "vcSfxLabel", Common::U32String("100%"));
+	_sfxVolumeLabel = new StaticTextWidget(boss, prefix + "vcSfxLabel", Common::U32String("100%"), Common::U32String(), ThemeEngine::kFontStyleBold, Common::UNK_LANG, false);
 	_sfxVolumeSlider->setMinValue(0);
 	_sfxVolumeSlider->setMaxValue(Audio::Mixer::kMaxMixerVolume);
 	_sfxVolumeLabel->setFlags(WIDGET_CLEARBG);
@@ -1605,7 +1688,7 @@ void OptionsDialog::addVolumeControls(GuiObject *boss, const Common::String &pre
 	else
 		_speechVolumeDesc = new StaticTextWidget(boss, prefix + "vcSpeechText" , _c("Speech volume:", "lowres"));
 	_speechVolumeSlider = new SliderWidget(boss, prefix + "vcSpeechSlider", Common::U32String(), kSpeechVolumeChanged);
-	_speechVolumeLabel = new StaticTextWidget(boss, prefix + "vcSpeechLabel", Common::U32String("100%"));
+	_speechVolumeLabel = new StaticTextWidget(boss, prefix + "vcSpeechLabel", Common::U32String("100%"), Common::U32String(), ThemeEngine::kFontStyleBold, Common::UNK_LANG, false);
 	_speechVolumeSlider->setMinValue(0);
 	_speechVolumeSlider->setMaxValue(Audio::Mixer::kMaxMixerVolume);
 	_speechVolumeLabel->setFlags(WIDGET_CLEARBG);
@@ -1703,6 +1786,9 @@ void OptionsDialog::reflowLayout() {
 }
 
 void OptionsDialog::setupGraphicsTab() {
+	if (_graphicsTabId != -1) {
+		setGraphicSettingsState(_enableGraphicSettings);
+	}
 	if (!_fullscreenCheckbox)
 		return;
 	_gfxPopUpDesc->setVisible(true);
@@ -1722,6 +1808,38 @@ void OptionsDialog::setupGraphicsTab() {
 	_aspectCheckbox->setVisible(true);
 	_renderModePopUpDesc->setVisible(true);
 	_renderModePopUp->setVisible(true);
+
+	if (g_system->hasFeature(OSystem::kFeatureScalers)) {
+		_scalerPopUpDesc->setVisible(true);
+		_scalerPopUp->setVisible(true);
+		_scaleFactorPopUp->setVisible(true);
+	} else {
+		_scalerPopUpDesc->setVisible(false);
+		_scalerPopUp->setVisible(false);
+		_scaleFactorPopUp->setVisible(false);
+	}
+}
+
+void OptionsDialog::updateScaleFactors(uint32 tag) {
+	if ((int32)tag >= 0) {
+		const PluginList &scalerPlugins = ScalerMan.getPlugins();
+		const Common::Array<uint> &factors = scalerPlugins[tag]->get<ScalerPluginObject>().getFactors();
+
+		_scaleFactorPopUp->clearEntries();
+		for (Common::Array<uint>::const_iterator it = factors.begin(); it != factors.end(); it++) {
+			_scaleFactorPopUp->appendEntry(Common::U32String::format("%dx", (*it)), (*it));
+		}
+
+		if (g_system->getScaler() == tag) {
+			_scaleFactorPopUp->setSelectedTag(g_system->getScaleFactor());
+		} else {
+			_scaleFactorPopUp->setSelectedTag(scalerPlugins[tag]->get<ScalerPluginObject>().getDefaultFactor());
+		}
+	} else {
+		_scaleFactorPopUp->clearEntries();
+		_scaleFactorPopUp->appendEntry(_("<default>"));
+		_scaleFactorPopUp->setSelected(0);
+	}
 }
 
 #pragma mark -
@@ -1736,12 +1854,16 @@ GlobalOptionsDialog::GlobalOptionsDialog(LauncherDialog *launcher)
 	_savePathClearButton = nullptr;
 	_themePath = nullptr;
 	_themePathClearButton = nullptr;
+	_iconPath = nullptr;
+	_iconPathClearButton = nullptr;
 	_extraPath = nullptr;
 	_extraPathClearButton = nullptr;
 #ifdef DYNAMIC_MODULES
 	_pluginsPath = nullptr;
 	_pluginsPathClearButton = nullptr;
 #endif
+	_browserPath = nullptr;
+	_browserPathClearButton = nullptr;
 	_curTheme = nullptr;
 	_guiBasePopUpDesc = nullptr;
 	_guiBasePopUp = nullptr;
@@ -1809,6 +1931,9 @@ GlobalOptionsDialog::GlobalOptionsDialog(LauncherDialog *launcher)
 	_ttsCheckbox = nullptr;
 	_ttsVoiceSelectionPopUp = nullptr;
 #endif
+#ifdef USE_DISCORD
+	_discordRpcCheckbox = nullptr;
+#endif
 }
 
 GlobalOptionsDialog::~GlobalOptionsDialog() {
@@ -1824,7 +1949,7 @@ void GlobalOptionsDialog::build() {
 	//
 	// 1) The graphics tab
 	//
-	_graphicsTabId = tab->addTab(g_system->getOverlayWidth() > 320 ? _("Graphics") : _("GFX"), "GlobalOptions_Graphics");
+	_graphicsTabId = tab->addTab(g_system->getOverlayWidth() > 320 ? _("Graphics") : _("GFX"), "GlobalOptions_Graphics", false);
 	ScrollContainerWidget *graphicsContainer = new ScrollContainerWidget(tab, "GlobalOptions_Graphics.Container", "GlobalOptions_Graphics_Container", kGraphicsTabContainerReflowCmd);
 	graphicsContainer->setTarget(this);
 	graphicsContainer->setBackgroundType(ThemeEngine::kWidgetBackgroundNo);
@@ -1840,11 +1965,9 @@ void GlobalOptionsDialog::build() {
 	}
 
 	//
-	// The control tab (currently visible only for AndroidSDL, SDL, and Vita platform, visibility checking by features
+	// The control tab (currently visible only for SDL and Vita platform, visibility checking by features
 	//
 	if (g_system->hasFeature(OSystem::kFeatureTouchpadMode) ||
-		g_system->hasFeature(OSystem::kFeatureOnScreenControl) ||
-		g_system->hasFeature(OSystem::kFeatureSwapMenuAndBackButtons) ||
 		g_system->hasFeature(OSystem::kFeatureKbdMouseSpeed) ||
 		g_system->hasFeature(OSystem::kFeatureJoystickDeadzone)) {
 		tab->addTab(_("Control"), "GlobalOptions_Control");
@@ -1869,14 +1992,14 @@ void GlobalOptionsDialog::build() {
 	}
 
 	if (!keymaps.empty()) {
-		tab->addTab(_("Keymaps"), "GlobalOptions_KeyMapper");
+		tab->addTab(_("Keymaps"), "GlobalOptions_KeyMapper", false);
 		addKeyMapperControls(tab, "GlobalOptions_KeyMapper.", keymaps, Common::ConfigManager::kKeymapperDomain);
 	}
 
 	//
 	// The backend tab (shown only if the backend implements one)
 	//
-	int backendTabId = tab->addTab(_("Backend"), "GlobalOptions_Backend");
+	int backendTabId = tab->addTab(_("Backend"), "GlobalOptions_Backend", false);
 
 	g_system->registerDefaultSettings(_domain);
 	_backendOptions = g_system->buildBackendOptionsWidget(tab, "GlobalOptions_Backend.Container", _domain);
@@ -1927,9 +2050,9 @@ void GlobalOptionsDialog::build() {
 	// 6) The miscellaneous tab
 	//
 	if (g_system->getOverlayWidth() > 320)
-		tab->addTab(_("Misc"), "GlobalOptions_Misc");
+		tab->addTab(_("Misc"), "GlobalOptions_Misc", false);
 	else
-		tab->addTab(_c("Misc", "lowres"), "GlobalOptions_Misc");
+		tab->addTab(_c("Misc", "lowres"), "GlobalOptions_Misc", false);
 	ScrollContainerWidget *miscContainer = new ScrollContainerWidget(tab, "GlobalOptions_Misc.Container", "GlobalOptions_Misc_Container");
 	miscContainer->setTarget(this);
 	miscContainer->setBackgroundType(ThemeEngine::kWidgetBackgroundNo);
@@ -1941,9 +2064,9 @@ void GlobalOptionsDialog::build() {
 	// 7) The Cloud tab (remote storages)
 	//
 	if (g_system->getOverlayWidth() > 320)
-		tab->addTab(_("Cloud"), "GlobalOptions_Cloud");
+		tab->addTab(_("Cloud"), "GlobalOptions_Cloud", false);
 	else
-		tab->addTab(_c("Cloud", "lowres"), "GlobalOptions_Cloud");
+		tab->addTab(_c("Cloud", "lowres"), "GlobalOptions_Cloud", false);
 
 	ScrollContainerWidget *container = new ScrollContainerWidget(tab, "GlobalOptions_Cloud.Container", "GlobalOptions_Cloud_Container", kCloudTabContainerReflowCmd);
 	container->setTarget(this);
@@ -1992,6 +2115,7 @@ void GlobalOptionsDialog::build() {
 	// Set _savePath to the current save path
 	Common::String savePath(ConfMan.get("savepath", _domain));
 	Common::String themePath(ConfMan.get("themepath", _domain));
+	Common::String iconPath(ConfMan.get("iconspath", _domain));
 	Common::String extraPath(ConfMan.get("extrapath", _domain));
 
 	if (savePath.empty() || !ConfMan.hasKey("savepath", _domain)) {
@@ -2004,6 +2128,12 @@ void GlobalOptionsDialog::build() {
 		_themePath->setLabel(_c("None", "path"));
 	} else {
 		_themePath->setLabel(themePath);
+	}
+
+	if (iconPath.empty() || !ConfMan.hasKey("iconspath", _domain)) {
+		_iconPath->setLabel(_c("None", "path"));
+	} else {
+		_iconPath->setLabel(iconPath);
 	}
 
 	if (extraPath.empty() || !ConfMan.hasKey("extrapath", _domain)) {
@@ -2023,8 +2153,8 @@ void GlobalOptionsDialog::build() {
 #endif
 
 	// Misc Tab
-	_guiBasePopUp->setSelected(1);
-	int value = ConfMan.getInt("gui_base");
+	_guiBasePopUp->setSelected(2);
+	int value = ConfMan.getInt("gui_scale");
 	for (int i = 0; guiBaseLabels[i]; i++) {
 		if (value == guiBaseValues[i])
 			_guiBasePopUp->setSelected(i);
@@ -2094,6 +2224,14 @@ void GlobalOptionsDialog::addPathsControls(GuiObject *boss, const Common::String
 	_themePathClearButton = addClearButton(boss, prefix + "ThemePathClearButton", kThemePathClearCmd);
 
 	if (!lowres)
+		new ButtonWidget(boss, prefix + "IconButton", _("Icon Path:"), Common::U32String(), kChooseIconDirCmd);
+	else
+		new ButtonWidget(boss, prefix + "IconButton", _c("Icon Path:", "lowres"), Common::U32String(), kChooseIconDirCmd);
+	_iconPath = new StaticTextWidget(boss, prefix + "IconPath", _c("None", "path"));
+
+	_iconPathClearButton = addClearButton(boss, prefix + "IconPathClearButton", kIconPathClearCmd);
+
+	if (!lowres)
 		new ButtonWidget(boss, prefix + "ExtraButton", _("Extra Path:"), _("Specifies path to additional data used by all games or ScummVM"), kChooseExtraDirCmd);
 	else
 		new ButtonWidget(boss, prefix + "ExtraButton", _c("Extra Path:", "lowres"), _("Specifies path to additional data used by all games or ScummVM"), kChooseExtraDirCmd);
@@ -2116,6 +2254,14 @@ void GlobalOptionsDialog::addPathsControls(GuiObject *boss, const Common::String
 	if (confPath.empty())
 		confPath = g_system->getDefaultConfigFileName();
 	new StaticTextWidget(boss, prefix + "ConfigPath", _("ScummVM config path: ") + confPath, confPath);
+
+	Common::U32String browserPath = _("<default>");
+	if (ConfMan.hasKey("browser_lastpath"))
+		browserPath = ConfMan.get("browser_lastpath");
+
+	// I18N: Referring to the last path memorized when adding a game
+	_browserPath = new StaticTextWidget(boss, prefix + "BrowserPath", _("Last browser path: ") + browserPath, browserPath);
+	_browserPathClearButton = addClearButton(boss, prefix + "BrowserPathClearButton", kBrowserPathClearCmd);
 }
 
 void GlobalOptionsDialog::addMiscControls(GuiObject *boss, const Common::String &prefix, bool lowres) {
@@ -2167,6 +2313,15 @@ void GlobalOptionsDialog::addMiscControls(GuiObject *boss, const Common::String 
 
 	_guiConfirmExit->setState(ConfMan.getBool("confirm_exit", _domain));
 
+#ifdef USE_DISCORD
+	_discordRpcCheckbox = new CheckboxWidget(boss, prefix + "DiscordRpc",
+		_("Enable Discord integration"),
+		_("Show information about the games you are playing on Discord if the Discord client is running.")
+	);
+
+	_discordRpcCheckbox->setState(ConfMan.getBool("discord_rpc", _domain));
+#endif
+
 	// TODO: joystick setting
 
 #ifdef USE_TRANSLATION
@@ -2217,19 +2372,27 @@ void GlobalOptionsDialog::addMiscControls(GuiObject *boss, const Common::String 
 	}
 
 #ifdef USE_UPDATES
-	_updatesPopUpDesc = new StaticTextWidget(boss, prefix + "UpdatesPopupDesc", _("Update check:"), _("How often to check ScummVM updates"));
-	_updatesPopUp = new PopUpWidget(boss, prefix + "UpdatesPopup");
+	if (g_system->getUpdateManager()) {
+		_updatesPopUpDesc = new StaticTextWidget(boss, prefix + "UpdatesPopupDesc", _("Update check:"), _("How often to check ScummVM updates"));
+		_updatesPopUp = new PopUpWidget(boss, prefix + "UpdatesPopup");
 
-	const int *vals = Common::UpdateManager::getUpdateIntervals();
-	while (*vals != -1) {
-		_updatesPopUp->appendEntry(Common::UpdateManager::updateIntervalToString(*vals), *vals);
-		vals++;
+		const int *vals = Common::UpdateManager::getUpdateIntervals();
+		while (*vals != -1) {
+			_updatesPopUp->appendEntry(Common::UpdateManager::updateIntervalToString(*vals), *vals);
+			vals++;
+		}
+
+		_updatesPopUp->setSelectedTag(Common::UpdateManager::normalizeInterval(ConfMan.getInt("updates_check")));
+
+		new ButtonWidget(boss, prefix + "UpdatesCheckManuallyButton", _("Check now"), Common::U32String(), kUpdatesCheckCmd);
 	}
-
-	_updatesPopUp->setSelectedTag(Common::UpdateManager::normalizeInterval(ConfMan.getInt("updates_check")));
-
-	new ButtonWidget(boss, prefix + "UpdatesCheckManuallyButton", _("Check now"), Common::U32String(), kUpdatesCheckCmd);
 #endif // USE_UPDATES
+
+#ifdef USE_CLOUD
+#ifdef USE_LIBCURL
+	new ButtonWidget(boss, prefix + "UpdateIconsButton", _("Update Icons"), Common::U32String(), kUpdateIconsCmd);
+#endif
+#endif
 }
 
 #ifdef USE_CLOUD
@@ -2357,6 +2520,95 @@ void GlobalOptionsDialog::addAccessibilityControls(GuiObject *boss, const Common
 }
 #endif // USE_TTS
 
+struct ExistingSave {
+	MetaEngine *metaEngine;
+	Common::String target;
+	SaveStateDescriptor desc;
+
+	ExistingSave(MetaEngine *_metaEngine, const Common::String &_target, const SaveStateDescriptor &_desc) :
+		metaEngine(_metaEngine),
+		target(_target),
+		desc(_desc)
+	{}
+};
+
+bool GlobalOptionsDialog::updateAutosavePeriod(int newValue) {
+	const int oldAutosavePeriod = ConfMan.getInt("autosave_period");
+	if (oldAutosavePeriod != 0 || newValue <= 0)
+		return true;
+	typedef Common::Array<ExistingSave> ExistingSaveList;
+	ExistingSaveList saveList;
+	using Common::ConfigManager;
+	const int maxListSize = 10;
+	bool hasMore = false;
+	const ConfigManager::DomainMap &domains = ConfMan.getGameDomains();
+	for (ConfigManager::DomainMap::const_iterator it = domains.begin(), end = domains.end(); it != end; ++it) {
+		const Common::String target = it->_key;
+		const ConfigManager::Domain domain = it->_value;
+		// note that engineid isn't present on games that predate it
+		// and haven't been run since it was introduced.
+		const Common::String engine = domain.getValOrDefault("engineid");
+		if (const Plugin *detectionPlugin = EngineMan.findPlugin(engine)) {
+			if (const Plugin *plugin = PluginMan.getEngineFromMetaEngine(detectionPlugin)) {
+				MetaEngine &metaEngine = plugin->get<MetaEngine>();
+				const int autoSaveSlot = metaEngine.getAutosaveSlot();
+				if (autoSaveSlot < 0)
+					continue;
+				SaveStateDescriptor desc = metaEngine.querySaveMetaInfos(target.c_str(), autoSaveSlot);
+				if (desc.getSaveSlot() != -1 && !desc.getDescription().empty() && !desc.hasAutosaveName()) {
+					if (saveList.size() >= maxListSize) {
+						hasMore = true;
+						break;
+					}
+					saveList.push_back(ExistingSave(&metaEngine, target, desc));
+				}
+			}
+		}
+	}
+	if (!saveList.empty()) {
+		Common::U32StringArray altButtons;
+		altButtons.push_back(_("Ignore"));
+		altButtons.push_back(_("Disable autosave"));
+		Common::U32String message = _("WARNING: Autosave was enabled. Some of your games have existing "
+				  "saved games on the autosave slot. You can either move the "
+				  "existing saves to new slots, disable autosave, or ignore (you "
+				  "will be prompted when autosave is about to overwrite a save).\n"
+				  "List of games:\n");
+		for (ExistingSaveList::const_iterator it = saveList.begin(), end = saveList.end(); it != end; ++it)
+			message += Common::U32String(it->target) + Common::U32String(": ") + it->desc.getDescription() + "\n";
+		message.deleteLastChar();
+		if (hasMore)
+			message += _("\nAnd more...");
+		GUI::MessageDialog warn(message, _("Move"), altButtons);
+		switch (warn.runModal()) {
+		case GUI::kMessageOK: {
+			ExistingSaveList failedSaves;
+			for (ExistingSaveList::const_iterator it = saveList.begin(), end = saveList.end(); it != end; ++it) {
+				if (it->metaEngine->copySaveFileToFreeSlot(it->target.c_str(), it->desc.getSaveSlot())) {
+					g_system->getSavefileManager()->removeSavefile(
+							it->metaEngine->getSavegameFile(it->desc.getSaveSlot(), it->target.c_str()));
+				} else {
+					failedSaves.push_back(*it);
+				}
+			}
+			if (!failedSaves.empty()) {
+				Common::U32String failMessage = _("ERROR: Failed to move the following saved games:\n");
+				for (ExistingSaveList::const_iterator it = failedSaves.begin(), end = failedSaves.end(); it != end; ++it)
+					failMessage += Common::U32String(it->target) + Common::U32String(": ") + it->desc.getDescription() + "\n";
+				failMessage.deleteLastChar();
+				GUI::MessageDialog(failMessage).runModal();
+			}
+			break;
+		}
+		case GUI::kMessageAlt:
+			break;
+		case GUI::kMessageAlt + 1:
+			return false;
+		}
+	}
+	return true;
+}
+
 void GlobalOptionsDialog::apply() {
 	OptionsDialog::apply();
 
@@ -2373,6 +2625,12 @@ void GlobalOptionsDialog::apply() {
 		ConfMan.set("themepath", themePath.encode(), _domain);
 	else
 		ConfMan.removeKey("themepath", _domain);
+
+	Common::U32String iconPath(_iconPath->getLabel());
+	if (!iconPath.empty() && (iconPath != _c("None", "path")))
+		ConfMan.set("iconspath", iconPath.encode(), _domain);
+	else
+		ConfMan.removeKey("iconspath", _domain);
 
 	Common::U32String extraPath(_extraPath->getLabel());
 	if (!extraPath.empty() && (extraPath != _c("None", "path")))
@@ -2398,17 +2656,21 @@ void GlobalOptionsDialog::apply() {
 #endif // USE_SDL_NET
 #endif // USE_CLOUD
 
-	int oldGuiBase = ConfMan.getInt("gui_base");
-	ConfMan.setInt("gui_base", _guiBasePopUp->getSelectedTag(), _domain);
-	if (oldGuiBase != (int)_guiBasePopUp->getSelectedTag())
+	int oldGuiScale = ConfMan.getInt("gui_scale");
+	ConfMan.setInt("gui_scale", _guiBasePopUp->getSelectedTag(), _domain);
+	if (oldGuiScale != (int)_guiBasePopUp->getSelectedTag())
 		g_gui.computeScaleFactor();
 
-	ConfMan.setInt("autosave_period", _autosavePeriodPopUp->getSelectedTag(), _domain);
+	const int autosavePeriod = _autosavePeriodPopUp->getSelectedTag();
+	if (updateAutosavePeriod(autosavePeriod))
+		ConfMan.setInt("autosave_period", autosavePeriod, _domain);
+	else
+		_autosavePeriodPopUp->setSelected(0);
 
 #ifdef USE_UPDATES
-	ConfMan.setInt("updates_check", _updatesPopUp->getSelectedTag());
-
 	if (g_system->getUpdateManager()) {
+		ConfMan.setInt("updates_check", _updatesPopUp->getSelectedTag());
+
 		if (_updatesPopUp->getSelectedTag() == Common::UpdateManager::kUpdateIntervalNotSupported) {
 			g_system->getUpdateManager()->setAutomaticallyChecksForUpdates(Common::UpdateManager::kUpdateStateDisabled);
 		} else {
@@ -2458,13 +2720,12 @@ void GlobalOptionsDialog::apply() {
 	int selectedLang = _guiLanguagePopUp->getSelectedTag();
 	Common::String oldLang = ConfMan.get("gui_language");
 	Common::String newLang = TransMan.getLangById(selectedLang);
-	Common::String newCharset;
 	if (newLang != oldLang) {
 		TransMan.setLanguage(newLang);
 		ConfMan.set("gui_language", newLang);
-		newCharset = TransMan.getCurrentCharset();
 		isRebuildNeeded = true;
 	}
+	bool wantsBuiltinLang = TransMan.currentIsBuiltinLanguage();
 
 	bool guiUseGameLanguage = _guiLanguageUseGameLanguageCheckbox->getState();
 	ConfMan.setBool("gui_use_game_language", guiUseGameLanguage, _domain);
@@ -2481,6 +2742,11 @@ void GlobalOptionsDialog::apply() {
 	if (_guiConfirmExit) {
 		ConfMan.setBool("confirm_exit", _guiConfirmExit->getState(), _domain);
 	}
+#ifdef USE_DISCORD
+	if (_discordRpcCheckbox) {
+		ConfMan.setBool("discord_rpc", _discordRpcCheckbox->getState(), _domain);
+	}
+#endif // USE_DISCORD
 
 	GUI::ThemeEngine::GraphicsMode gfxMode = (GUI::ThemeEngine::GraphicsMode)_rendererPopUp->getSelectedTag();
 	Common::String oldGfxConfig = ConfMan.get("gui_renderer");
@@ -2503,12 +2769,15 @@ void GlobalOptionsDialog::apply() {
 		newGfxConfig = oldGfxConfig;
 		ConfMan.set("gui_renderer", newGfxConfig, _domain);
 #ifdef USE_TRANSLATION
-		bool isCharsetEqual = (newCharset == TransMan.getCurrentCharset());
+		// One reason for failing to load the theme is if we want a language other than
+		// the builtin language and the theme does not have unicode fonts for those.
+		// We can detect this case as it falls back to the builtin language.
+		bool themeLangIssue = (!wantsBuiltinLang && TransMan.currentIsBuiltinLanguage());
 		TransMan.setLanguage(oldLang);
 		_guiLanguagePopUp->setSelectedTag(selectedLang);
 		ConfMan.set("gui_language", oldLang);
 
-		if (!isCharsetEqual)
+		if (themeLangIssue)
 			errorMessage = _("Theme does not support selected language!");
 		else
 #endif // USE_TRANSLATION
@@ -2525,11 +2794,7 @@ void GlobalOptionsDialog::apply() {
 	if (ttsMan) {
 #ifdef USE_TRANSLATION
 		if (newLang != oldLang) {
-			if (newLang == "C")
-				ttsMan->setLanguage("en");
-			else {
-				ttsMan->setLanguage(newLang);
-			}
+			ttsMan->setLanguage(newLang);
 			_ttsVoiceSelectionPopUp->setSelected(0);
 		}
 #else
@@ -2599,6 +2864,16 @@ void GlobalOptionsDialog::handleCommand(CommandSender *sender, uint32 cmd, uint3
 		}
 		break;
 	}
+	case kChooseIconDirCmd: {
+		BrowserDialog browser(_("Select directory for GUI launcher thumbnails"), true);
+		if (browser.runModal() > 0) {
+			// User made his choice...
+			Common::FSNode dir(browser.getResult());
+			_iconPath->setLabel(dir.getPath());
+			g_gui.scheduleTopDialogRedraw();
+		}
+		break;
+	}
 	case kChooseExtraDirCmd: {
 		BrowserDialog browser(_("Select directory for extra files"), true);
 		if (browser.runModal() > 0) {
@@ -2637,9 +2912,26 @@ void GlobalOptionsDialog::handleCommand(CommandSender *sender, uint32 cmd, uint3
 		break;
 	}
 #endif
+
+#ifdef USE_LIBCURL
+	case kUpdateIconsCmd: {
+		DownloadIconsDialog dia;
+
+		if (dia.runModal() > 0) {
+			if (_launcher && _launcher->getType() == kLauncherDisplayGrid)
+				_launcher->rebuild();
+		}
+
+		break;
+	}
+#endif
+
 #endif
 	case kThemePathClearCmd:
 		_themePath->setLabel(_c("None", "path"));
+		break;
+	case kIconPathClearCmd:
+		_iconPath->setLabel(_c("None", "path"));
 		break;
 	case kExtraPathClearCmd:
 		_extraPath->setLabel(_c("None", "path"));
@@ -2652,6 +2944,12 @@ void GlobalOptionsDialog::handleCommand(CommandSender *sender, uint32 cmd, uint3
 		_pluginsPath->setLabel(_c("None", "path"));
 		break;
 #endif
+	case kBrowserPathClearCmd:
+		ConfMan.removeKey("browser_lastpath", Common::ConfigManager::kApplicationDomain);
+		ConfMan.flushToDisk();
+		_browserPath->setLabel(_("Last browser path: ") + _("<default>"));
+
+		break;
 #ifdef USE_CLOUD
 #ifdef USE_SDL_NET
 	case kRootPathClearCmd:
@@ -2916,10 +3214,20 @@ void GlobalOptionsDialog::reflowLayout() {
 		delete _themePathClearButton;
 		_themePathClearButton = addClearButton(_tabWidget, "GlobalOptions_Paths.ThemePathClearButton", kThemePathClearCmd);
 
+		_tabWidget->removeWidget(_iconPathClearButton);
+		_iconPathClearButton->setNext(nullptr);
+		delete _iconPathClearButton;
+		_iconPathClearButton = addClearButton(_tabWidget, "GlobalOptions_Paths.IconPathClearButton", kIconPathClearCmd);
+
 		_tabWidget->removeWidget(_extraPathClearButton);
 		_extraPathClearButton->setNext(nullptr);
 		delete _extraPathClearButton;
 		_extraPathClearButton = addClearButton(_tabWidget, "GlobalOptions_Paths.ExtraPathClearButton", kExtraPathClearCmd);
+
+		_tabWidget->removeWidget(_browserPathClearButton);
+		_browserPathClearButton->setNext(nullptr);
+		delete _browserPathClearButton;
+		_browserPathClearButton = addClearButton(_tabWidget, "GlobalOptions_Paths.BrowserPathClearButton", kBrowserPathClearCmd);
 	}
 
 	_tabWidget->setActiveTab(activeTab);

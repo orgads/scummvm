@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -45,6 +44,7 @@ const PlainGameDescriptor SCOTT_GAME_LIST[] = {
 	{ "pirateisle",        "Return to Pirate Isle" },
 	{ "buckaroobanzai",    "Buckaroo Banzai" },
 	{ "marveladventure",   "Marvel Adventure #1" },
+	{ "marveladventure2",  "Marvel Adventure #2" },
 	{ "scottsampler",      "Adventure International's Mini-Adventure Sampler" },
 
 	// 11 Mysterious Adventures by Brian Howarth
@@ -92,6 +92,7 @@ const GlkDetectionEntry SCOTT_GAMES[] = {
 	DT_ENTRY0("pirateisle",        "6d98f422cc986d959a3c74351785aea3", 19013),
 	DT_ENTRY0("buckaroobanzai",    "ee2c7139d58423c5e25dd918fcb48383", 17989),
 	DT_ENTRY0("marveladventure",   "aadcc04e6b37eb9d30a58b5bc775842e", 18876),
+	DT_ENTRY0("marveladventure2",  "f7e772643a24eaf94cfb2d48e3949ec1", 18643),
 	DT_ENTRY0("scottsampler",      "d569a769f304dc02b3062d97458ddd01", 13854),
 
 	// PDA game versions
@@ -146,6 +147,19 @@ const GlkDetectionEntry SCOTT_GAMES[] = {
 	DT_ENTRY0("romulanadv",       "d97b5cb5ed66eb276ef9f1c1bae0b8dd", 13959),
 	DT_ENTRY0("topsecretadv",     "effb411e74dfe3a8d69b57b9bc3a2cef", 15575),
 
+	//ZX Spectrum games
+	//11 Mysterious Adventures
+	DT_ENTRY1("goldenbaton", "ZXSpectrum", "cb7dadc9d5f8bce453b9139265e4dd7d", 32060),
+	DT_ENTRY1("timemachine", "ZXSpectrum", "b22d1f4d46c99ff4443d541d3fe424c1", 30928),
+	DT_ENTRY1("arrowofdeath1", "ZXSpectrum", "3a5c3f4079c1c0347f03420db8ad4596", 34105),
+	DT_ENTRY1("arrowofdeath2", "ZXSpectrum", "d3f8943c4f5f71ce00139065055a72ee", 38043),
+	DT_ENTRY1("pulsar7", "ZXSpectrum", "441edd90fc7f9ff39a5eebe035a974e9", 29961),
+	DT_ENTRY1("circus", "ZXSpectrum", "ed99306a2fb23bf6579068a4d74034ee", 27746),
+	DT_ENTRY1("feasibility", "ZXSpectrum", "5e381e83f15d77e3542be4a4cffc8e25", 37395),
+	DT_ENTRY1("akyrz", "ZXSpectrum", "b0f8676817475753f1edd7f1eeea31fb", 33753),
+	DT_ENTRY1("perseus", "ZXSpectrum", "84d5fbb16a37e495abf09d191fd8b1a2", 31504),
+	DT_ENTRY1("10indians", "ZXSpectrum", "afde056c152de79ea20453c42a2d08af", 31664),
+	DT_ENTRY1("waxworks11", "ZXSpectrum", "6c6fbbbb50032463a6ea71c6750ea1f5", 32662),
 	DT_END_MARKER
 };
 

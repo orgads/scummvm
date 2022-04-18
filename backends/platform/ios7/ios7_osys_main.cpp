@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,6 +27,7 @@
 
 #include <sys/time.h>
 #include <QuartzCore/QuartzCore.h>
+#include <dlfcn.h>
 
 #include "common/scummsys.h"
 #include "common/util.h"
@@ -68,7 +68,7 @@ public:
 			: DefaultSaveFileManager(defaultSavepath), _sandboxRootPath(sandboxRootPath) {
 	}
 
-	virtual bool removeSavefile(const Common::String &filename) override {
+	bool removeSavefile(const Common::String &filename) override {
 		Common::String chrootedFile = getSavePath() + "/" + filename;
 		Common::String realFilePath = _sandboxRootPath + chrootedFile;
 
@@ -131,8 +131,6 @@ int OSystem_iOS7::timerHandler(int t) {
 }
 
 void OSystem_iOS7::initBackend() {
-	_mutexManager = new PthreadMutexManager();
-
 #ifdef IPHONE_SANDBOXED
 	_savefileManager = new SandboxedSaveFileManager(_chrootBasePath, "/Savegames");
 #else
@@ -199,8 +197,6 @@ bool OSystem_iOS7::getFeatureState(Feature f) {
 		return _videoContext->asprectRatioCorrection;
 	case kFeatureVirtualKeyboard:
 		return isKeyboardShown();
-	case kFeatureHiDPI:
-		return true;
 
 	default:
 		return false;
@@ -311,10 +307,14 @@ void OSystem_iOS7::setTimerCallback(TimerProc callback, int interval) {
 		_timerCallback = NULL;
 }
 
+Common::MutexInternal *OSystem_iOS7::createMutex() {
+	return createPthreadMutexInternal();
+}
+
 void OSystem_iOS7::quit() {
 }
 
-void OSystem_iOS7::getTimeAndDate(TimeDate &td) const {
+void OSystem_iOS7::getTimeAndDate(TimeDate &td, bool skipRecord) const {
 	time_t curTime = time(0);
 	struct tm t = *localtime(&curTime);
 	td.tm_sec = t.tm_sec;
@@ -412,4 +412,8 @@ void iOS7_main(int argc, char **argv) {
 		//*stderr = NULL;
 		fclose(newfp);
 	}
+}
+
+void *iOS7_getProcAddress(const char *name) {
+	return dlsym(RTLD_SELF, name);
 }

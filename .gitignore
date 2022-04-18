@@ -3,6 +3,7 @@
 .*.swp
 .*.swo
 *.o
+*.o.tmp
 *.dwo
 scummvm.dwp
 lib*.a
@@ -28,13 +29,13 @@ lib*.a
 /MT32_PCM.ROM
 /ScummVM.app
 /scummvm.docktileplugin
-/\!ScummVM
+/\!ScummVM*
 /*,e1f
 /scummvm-ps3.pkg
 /*.ipk
 /map.txt
 *.elf
-/*.nds
+*.nds
 /*.3dsx
 /*.cia
 /*.smdh
@@ -60,6 +61,7 @@ lib*.a
 /doc/de/NEUES
 /doc/de/NEUES.html
 /doc/docportal/_build
+/ScummVM Manual*.pdf
 
 /build*
 /staging
@@ -94,6 +96,7 @@ lib*.a
 /dists/codeblocks/*.cbp
 /dists/codeblocks/*.depend
 /dists/codeblocks/*.layout
+/dists/codeblocks/engines/
 /dists/codeblocks/scummvm*
 
 /doc/doxygen/html
@@ -108,6 +111,7 @@ project.xcworkspace
 /dists/macosx/build
 /dists/macosx/scummvm.xcodeproj
 /dists/macosx/create_project
+/devtools/create_project/xcode/build
 
 /dists/msvc/[Dd]ebug*/
 /dists/msvc/[Rr]elease*/
@@ -120,6 +124,7 @@ project.xcworkspace
 
 /dists/engine-data/testbed-audiocd-files/testbed.config
 /dists/engine-data/testbed-audiocd-files/testbed.out
+/dists/engine-data/playground3d
 
 
 /doc/*.aux
@@ -143,7 +148,9 @@ project.xcworkspace
 /devtools/convbdf
 /devtools/convbdf.dSYM
 /devtools/md5table
+/devtools/md5table.dSYM
 /devtools/make-scumm-fontdata
+/devtools/make-scumm-fontdata.dSYM
 /devtools/create_access/create_access
 /devtools/create_cryo/create_cryo_dat
 /devtools/create_cryomni3d/create_cryomni3d_dat
@@ -280,5 +287,11 @@ android_project
 
 #Ignore snapcraft build artifacts
 .snap
+
+#Ignore emscripten build artifacts
+dists/emscripten/libs/
+dists/emscripten/games/
+dists/emscripten/emsdk-*
+
 lua.tgz
 dists/engine-data/patches/grim_pnc

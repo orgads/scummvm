@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -64,7 +63,7 @@ void ConvertShape::Read(Common::SeekableReadStream &source, const ConvertShapeFo
 		char ident[4];
 		source.read(ident, csf->_bytes_ident);
 
-		if (memcmp (ident, csf->_ident, csf->_bytes_ident)) {
+		if (memcmp(ident, csf->_ident, csf->_bytes_ident)) {
 			perr << "Warning: Corrupt shape!" << Std::endl;
 			return;
 		}
@@ -102,8 +101,7 @@ void ConvertShape::Read(Common::SeekableReadStream &source, const ConvertShapeFo
 //	}
 
 	// Create _frames array
-	_frames = new ConvertShapeFrame[_num_frames];
-	memset (_frames, 0, _num_frames * sizeof(ConvertShapeFrame));
+	_frames = new ConvertShapeFrame[_num_frames]();
 
 	// Now read the _frames
 	for(uint32 f = 0; f < _num_frames; ++f) {
@@ -316,7 +314,7 @@ void ConvertShapeFrame::ReadCmpFrame(Common::SeekableReadStream &source, const C
 
 	_bytes_rle = rlebuf.pos();
 	_rle_data = new uint8[_bytes_rle];
-	memcpy (_rle_data, rlebuf.getData(), _bytes_rle);
+	memcpy(_rle_data, rlebuf.getData(), _bytes_rle);
 }
 
 void ConvertShapeFrame::GetPixels(uint8 *buf, int32 count, int32 x, int32 y) {
@@ -427,7 +425,7 @@ bool ConvertShape::Check(Common::SeekableReadStream &source, const ConvertShapeF
 		ident[csf->_bytes_ident] = 0;
 		source.read(ident, csf->_bytes_ident);
 
-		if (memcmp (ident, csf->_ident, csf->_bytes_ident)) {
+		if (memcmp(ident, csf->_ident, csf->_bytes_ident)) {
 			// Return to start position
 			source.seek(start_pos);
 			return false;
@@ -447,7 +445,7 @@ bool ConvertShape::Check(Common::SeekableReadStream &source, const ConvertShapeF
 
 	// Create _frames array
 	ConvertShapeFrame oneframe;
-	memset (&oneframe, 0, sizeof(ConvertShapeFrame));
+	memset(&oneframe, 0, sizeof(ConvertShapeFrame));
 
 	// Now read the _frames
 	for (int f = 0; f < numFrames; f++) {
@@ -606,7 +604,7 @@ bool ConvertShape::CheckUnsafe(Common::SeekableReadStream &source, const Convert
 		ident[csf->_bytes_ident] = 0;
 		source.read(ident, csf->_bytes_ident);
 
-		if (memcmp (ident, csf->_ident, csf->_bytes_ident)) {
+		if (memcmp(ident, csf->_ident, csf->_bytes_ident)) {
 			// Return to start position
 			source.seek(start_pos);
 			return false;
@@ -626,7 +624,7 @@ bool ConvertShape::CheckUnsafe(Common::SeekableReadStream &source, const Convert
 
 	// Create _frames array
 	ConvertShapeFrame oneframe;
-	memset (&oneframe, 0, sizeof(ConvertShapeFrame));
+	memset(&oneframe, 0, sizeof(ConvertShapeFrame));
 
 	// Now read the _frames
 	for (int f = 0; f < numFrames; f++) {

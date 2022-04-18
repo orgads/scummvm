@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -48,6 +47,9 @@ AudioPlayer::AudioPlayer(BladeRunnerEngine *vm) {
 		_tracks[i].stream = nullptr;
 	}
 
+	// _sfxVolume here sets a percentage to be appied on the specified track volume
+	// before sending it to the audio player
+	// (setting _sfxVolume to 100 renders it indifferent)
 	_sfxVolume = BLADERUNNER_ORIGINAL_SETTINGS ? 65 : 100;
 }
 
@@ -89,9 +91,11 @@ void AudioPlayer::adjustPan(int track, int pan, uint32 delaySeconds) {
 	_vm->_audioMixer->adjustPan(_tracks[track].channel, pan, 60u * delaySeconds);
 }
 
-void AudioPlayer::setVolume(int volume) {
-	_sfxVolume = volume;
-}
+// We no longer set the _sfxVolume (audio player's default volume percent) via a public method
+// It is set in AudioPlayer::AudioPlayer() constructor and keeps its value constant.
+//void AudioPlayer::setVolume(int volume) {
+//	_sfxVolume = volume;
+//}
 
 int AudioPlayer::getVolume() const {
 	return _sfxVolume;

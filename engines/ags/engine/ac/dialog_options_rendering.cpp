@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -269,27 +268,6 @@ void RegisterDialogOptionsRenderingAPI() {
 	ccAddExternalObjectFunction("DialogOptionsRenderingInfo::set_Y", Sc_DialogOptionsRendering_SetY);
 	ccAddExternalObjectFunction("DialogOptionsRenderingInfo::get_HasAlphaChannel", Sc_DialogOptionsRendering_GetHasAlphaChannel);
 	ccAddExternalObjectFunction("DialogOptionsRenderingInfo::set_HasAlphaChannel", Sc_DialogOptionsRendering_SetHasAlphaChannel);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::get_ActiveOptionID", (void *)DialogOptionsRendering_GetActiveOptionID);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::set_ActiveOptionID", (void *)DialogOptionsRendering_SetActiveOptionID);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::get_DialogToRender", (void *)DialogOptionsRendering_GetDialogToRender);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::get_Height", (void *)DialogOptionsRendering_GetHeight);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::set_Height", (void *)DialogOptionsRendering_SetHeight);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::get_ParserTextBoxX", (void *)DialogOptionsRendering_GetParserTextboxX);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::set_ParserTextBoxX", (void *)DialogOptionsRendering_SetParserTextboxX);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::get_ParserTextBoxY", (void *)DialogOptionsRendering_GetParserTextboxY);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::set_ParserTextBoxY", (void *)DialogOptionsRendering_SetParserTextboxY);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::get_ParserTextBoxWidth", (void *)DialogOptionsRendering_GetParserTextboxWidth);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::set_ParserTextBoxWidth", (void *)DialogOptionsRendering_SetParserTextboxWidth);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::get_Surface", (void *)DialogOptionsRendering_GetSurface);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::get_Width", (void *)DialogOptionsRendering_GetWidth);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::set_Width", (void *)DialogOptionsRendering_SetWidth);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::get_X", (void *)DialogOptionsRendering_GetX);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::set_X", (void *)DialogOptionsRendering_SetX);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::get_Y", (void *)DialogOptionsRendering_GetY);
-	ccAddExternalFunctionForPlugin("DialogOptionsRenderingInfo::set_Y", (void *)DialogOptionsRendering_SetY);
 }
 
 } // namespace AGS3

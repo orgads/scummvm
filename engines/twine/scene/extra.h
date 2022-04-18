@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +23,7 @@
 #define TWINE_SCENE_EXTRA_H
 
 #include "common/scummsys.h"
+#include "common/rect.h"
 #include "twine/scene/actor.h"
 
 namespace TwinE {
@@ -43,22 +43,22 @@ struct ExtraShape {
 };
 
 enum ExtraType {
-	TIME_OUT = 1 << 0,       // 0x0001
-	FLY = 1 << 1,            // 0x0002
-	UNK2 = 1 << 2,           // 0x0004
-	UNK3 = 1 << 3,           // 0x0008
-	STOP_COL = 1 << 4,       // 0x0010
-	TAKABLE = 1 << 5,        // 0x0020
-	FLASH = 1 << 6,          // 0x0040
-	UNK7 = 1 << 7,           // 0x0080
-	UNK8 = 1 << 8,           // 0x0100
-	MAGIC_BALL_KEY = 1 << 9, // 0x0200
-	TIME_IN = 1 << 10,       // 0x0400
-	RESET_EXTRA = 1 << 11,   // 0x0800
-	EXPLOSION = 1 << 12,     // 0x1000
-	WAIT_NO_COL = 1 << 13,   // 0x2000
-	BONUS = 1 << 14,         // 0x4000
-	UNK15 = 1 << 15          // 0x8000
+	TIME_OUT = 1 << 0,        // 0x0001
+	FLY = 1 << 1,             // 0x0002
+	END_OBJ = 1 << 2,         // 0x0004
+	END_COL = 1 << 3,         // 0x0008
+	STOP_COL = 1 << 4,        // 0x0010
+	TAKABLE = 1 << 5,         // 0x0020
+	FLASH = 1 << 6,           // 0x0040
+	SEARCH_OBJ = 1 << 7,      // 0x0080
+	IMPACT = 1 << 8,          // 0x0100
+	MAGIC_BALL_KEY = 1 << 9,  // 0x0200
+	TIME_IN = 1 << 10,        // 0x0400
+	ONE_FRAME = 1 << 11,      // 0x0800
+	EXPLOSION = 1 << 12,      // 0x1000
+	WAIT_NO_COL = 1 << 13,    // 0x2000
+	WAIT_SOME_TIME = 1 << 14, // 0x4000
+	COMPUTE_TRAJ = 1 << 15    // 0x8000 used in dotemu enhanced to render the magic ball trajectories
 };
 
 struct ExtraListStruct {
@@ -92,11 +92,11 @@ private:
 	void processMagicballBounce(ExtraListStruct *extra, int32 x, int32 y, int32 z);
 	int32 findExtraKey() const;
 	int32 addExtraAimingAtKey(int32 actorIdx, int32 x, int32 y, int32 z, int32 spriteIdx, int32 extraIdx);
-	void drawSpecialShape(const ExtraShape &shapeTable, int32 x, int32 y, int32 color, int32 angle, int32 size);
+	void drawSpecialShape(const ExtraShape &shapeTable, int32 x, int32 y, int32 color, int32 angle, int32 size, Common::Rect &renderRect);
 
 public:
 	Extra(TwinEEngine *engine);
-	ExtraListStruct extraList[EXTRA_MAX_ENTRIES];
+	ExtraListStruct _extraList[EXTRA_MAX_ENTRIES];
 
 	int32 addExtra(int32 actorIdx, int32 x, int32 y, int32 z, int32 spriteIdx, int32 targetActor, int32 maxSpeed, int32 strengthOfHit);
 
@@ -108,16 +108,25 @@ public:
 	 */
 	int32 addExtraExplode(int32 x, int32 y, int32 z);
 
+	inline int32 addExtraExplode(const IVec3 &pos) {
+		return addExtraExplode(pos.x, pos.y, pos.z);
+	}
+
 	/** Reset all used extras */
 	void resetExtras();
 
 	int32 addExtraSpecial(int32 x, int32 y, int32 z, ExtraSpecialType type);
 	int32 addExtraBonus(int32 x, int32 y, int32 z, int32 xAngle, int32 yAngle, int32 type, int32 bonusAmount);
+
+	inline int32 addExtraBonus(const IVec3 &pos, int32 xAngle, int32 yAngle, int32 type, int32 bonusAmount) {
+		return addExtraBonus(pos.x, pos.y, pos.z, xAngle, yAngle, type, bonusAmount);
+	}
+
 	int32 addExtraThrow(int32 actorIdx, int32 x, int32 y, int32 z, int32 spriteIdx, int32 xAngle, int32 yAngle, int32 xRotPoint, int32 extraAngle, int32 strengthOfHit);
 	int32 addExtraAiming(int32 actorIdx, int32 x, int32 y, int32 z, int32 spriteIdx, int32 targetActorIdx, int32 finalAngle, int32 strengthOfHit);
 	void addExtraThrowMagicball(int32 x, int32 y, int32 z, int32 xAngle, int32 yAngle, int32 xRotPoint, int32 extraAngle);
 
-	void drawExtraSpecial(int32 extraIdx, int32 x, int32 y);
+	void drawExtraSpecial(int32 extraIdx, int32 x, int32 y, Common::Rect &renderRect);
 
 	int getBonusSprite(BonusParameter bonusParameter) const;
 

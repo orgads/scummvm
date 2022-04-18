@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -56,9 +55,9 @@ run_metacommand
 	0 to go on to next metacommand,
 	1 to stop running metacommands,  and
 	2 to end the turn.
-	3 indicates that redirection has just occured
-	4 indicates a subcall has just occured.
-	5 to go on to next metacommand after a return has occured.
+	3 indicates that redirection has just occurred
+	4 indicates a subcall has just occurred.
+	5 to go on to next metacommand after a return has occurred.
 	-2 means we're doing disambiguation and just hit an action token.
 
 */
@@ -217,7 +216,7 @@ static int decode_instr(op_rec *oprec, const integer *data, int maxleng) {
 	rbool special_arg1;  /* Is the first argument a special 0-length argument? */
 
 	oprec->negate = oprec->failmsg = oprec->disambig = 0;
-	oprec->errmsg = NULL;
+	oprec->errmsg = nullptr;
 	oprec->op = -1;
 	oprec->opdata = &illegal_def;
 	oprec->argcnt = 0;
@@ -336,7 +335,7 @@ static int decode_instr(op_rec *oprec, const integer *data, int maxleng) {
 static rbool decode_args(int ip_, op_rec *oprec) {
 	rbool grammer_arg; /* Have NOUN/OBJECT that is 0 and so failed argok tests */
 
-	if (oprec->errmsg != NULL) {
+	if (oprec->errmsg != nullptr) {
 		if (!PURE_ERROR)
 			writeln(oprec->errmsg);
 		return 0;
@@ -412,7 +411,7 @@ typedef struct {
 } subcall_rec;
 
 
-static subcall_rec *substack = NULL;
+static subcall_rec *substack = nullptr;
 static short subcnt = 0;
 static short subsize = 0;
 
@@ -428,7 +427,7 @@ static rbool push_subcall(int cnum, int ip_, int failaddr) {
 		rm_trap = 0;
 		substack = (subcall_rec *)rrealloc(substack, subsize * sizeof(subcall_rec));
 		rm_trap = 1;
-		if (substack == NULL) { /* out of memory */
+		if (substack == nullptr) { /* out of memory */
 			substack = savestack;
 			return 0;
 		}
@@ -493,8 +492,8 @@ static int run_metacommand(int cnum, int *redir_offset)
 	  0 to go on to next metacommand,
 	  1 to stop running metacommands,  and
 	  2 to end the turn.
-	  3 indicates that redirection has just occured
-	  4 indicates a subcall has just occured.
+	  3 indicates that redirection has just occurred
+	  4 indicates a subcall has just occurred.
 	  5 Is used to go on to the next metacommand after a Return.
 	  -2 means we're doing disambiguation and just hit an action token. */
 {
@@ -748,7 +747,7 @@ static rbool fix_objrec(parse_rec **objrec, word match,
 						int real_obj,
 						parse_rec *actrec, parse_rec *dobjrec,
 						parse_rec *iobjrec) {
-	if (real_obj) *objrec = make_parserec(real_obj, NULL);
+	if (real_obj) *objrec = make_parserec(real_obj, nullptr);
 	else if (match == ext_code[wdobject]) *objrec = copy_parserec(iobjrec);
 	else if (match == ext_code[wdnoun]) *objrec = copy_parserec(dobjrec);
 	else if (match == ext_code[wdname]) *objrec = copy_parserec(actrec);
@@ -957,7 +956,7 @@ static void scan_for_actor(integer m_actor, int *start, int *end) {
 	assert(m_actor != 0);
 
 	if (aver >= AGX00) {
-		if (start != NULL) *start = verbptr[DIR_ADDR_CODE];
+		if (start != nullptr) *start = verbptr[DIR_ADDR_CODE];
 		*end = verbend[DIR_ADDR_CODE];
 		return;
 	}
@@ -969,7 +968,7 @@ static void scan_for_actor(integer m_actor, int *start, int *end) {
 		}
 	*end = i;
 
-	if (start == NULL) return;
+	if (start == nullptr) return;
 
 	for (i = verbptr[DIR_ADDR_CODE]; i <= *end; i++)
 		if (creat_fix[command[i].actor - first_creat]
@@ -990,8 +989,8 @@ int scan_metacommand(integer m_actor, int vcode,
 /* If doing disambiguation, then -2=end of cycle, something happened;
    0 or 1=end of cycle; nothing happened; 2=end of turn, nothing happened. */
 /* If redir_flag is non-NULL, it is set when redirection occurs:
-   1+=Redirection occured
-   2=Grammar-changing redirection occured. */
+   1+=Redirection occurred
+   2=Grammar-changing redirection occurred. */
 {
 	int i, oldi;
 	word m_verb;
@@ -1001,7 +1000,7 @@ int scan_metacommand(integer m_actor, int vcode,
 			 commands)-- this is used to hold the offset
 			 of the given redirect. */
 	long redirect_count;  /* This is a safety measure: this keeps track of how
-			many redirections have occured on a single turn, and
+			many redirections have occurred on a single turn, and
 			if there are "too many" it will issue an error message
 			and stop. This is to prevent the system from getting
 			into a redirection loop. The number should be set
@@ -1071,7 +1070,7 @@ int scan_metacommand(integer m_actor, int vcode,
 				/* REDIRECT :If we do a redirect from a broader grammar to a
 				   narrower grammer, it will be noted so that certain types
 				   of grammer checking can be disabled. */
-				if (redir_flag != NULL) {
+				if (redir_flag != nullptr) {
 					if (*redir_flag < 2
 					        && redir_narrows_grammar(&command[oldi], &command[i]))
 						*redir_flag = 2;
@@ -1134,7 +1133,7 @@ int scan_metacommand(integer m_actor, int vcode,
 				if (m_actor == 0)
 					scanend = verbend[vcode];
 				else
-					scan_for_actor(m_actor, NULL, &scanend);
+					scan_for_actor(m_actor, nullptr, &scanend);
 				m_verb = syntbl[auxsyn[vcode]];
 
 				i--; /* Cause the last command to restart,

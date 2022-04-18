@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -29,8 +28,7 @@
 #include "scumm/actor.h"
 #include "scumm/cdda.h"
 #include "scumm/file.h"
-#include "scumm/imuse/imuse.h"
-#include "scumm/imuse_digi/dimuse.h"
+#include "scumm/imuse_digi/dimuse_engine.h"
 #include "scumm/players/player_towns.h"
 #include "scumm/resource.h"
 #include "scumm/scumm.h"
@@ -56,15 +54,19 @@ struct MP3OffsetTable {					/* Compressed Sound (.SO3) */
 };
 
 
-Sound::Sound(ScummEngine *parent, Audio::Mixer *mixer)
+Sound::Sound(ScummEngine *parent, Audio::Mixer *mixer, bool useReplacementAudioTracks)
 	:
 	_vm(parent),
 	_mixer(mixer),
+	_useReplacementAudioTracks(useReplacementAudioTracks),
+	_replacementTrackStartTime(0),
+	_replacementTrackPauseTime(0),
+	_musicTimer(0),
 	_soundQuePos(0),
 	_soundQue2Pos(0),
 	_sfxFilename(),
 	_sfxFileEncByte(0),
-	_offsetTable(0),
+	_offsetTable(nullptr),
 	_numSoundEffects(0),
 	_soundMode(kVOCMode),
 	_talk_sound_a1(0),
@@ -97,6 +99,7 @@ Sound::Sound(ScummEngine *parent, Audio::Mixer *mixer)
 	_loomSteamCD.balance = 0;
 
 	_isLoomSteam = _vm->_game.id == GID_LOOM && Common::File::exists("CDDA.SOU");
+	_loomOvertureTransition = DEFAULT_LOOM_OVERTURE_TRANSITION + ConfMan.getInt("loom_overture_ticks");
 
 	_loomSteamCDAudioHandle = new Audio::SoundHandle();
 	_talkChannelHandle = new Audio::SoundHandle();
@@ -108,6 +111,74 @@ Sound::~Sound() {
 	free(_offsetTable);
 	delete _loomSteamCDAudioHandle;
 	delete _talkChannelHandle;
+}
+
+bool Sound::isRolandLoom() const {
+	return
+		(_vm->_game.id == GID_LOOM) &&
+		(_vm->_game.version == 3) &&
+		(_vm->_game.platform == Common::kPlatformDOS) &&
+		(_vm->VAR(_vm->VAR_SOUNDCARD) == 4);
+}
+
+void Sound::updateMusicTimer() {
+	bool isLoomOverture = (isRolandLoom() && _currentCDSound == 56 && !(_vm->_game.features & GF_DEMO));
+
+	// If the replacement track has ended, reset the timer to 0 like when
+	// playing the original music. We make an exception for the Overture,
+	// since it may need to keep running after the track has ended.
+	//
+	// This is also why we can't query the CD audio manager for the current
+	// position. That, and the fact that the CD manager does not provide
+	// this information at the time of writing.
+
+	if (!pollCD() && !isLoomOverture) {
+		_currentCDSound = 0;
+		_musicTimer = 0;
+		_replacementTrackStartTime = 0;
+		_replacementTrackPauseTime = 0;
+		return;
+	}
+
+	// Time is measured in "ticks", with ten ticks per second. This should
+	// be exact enough, while providing an easily understandable unit of
+	// measurement for the adjustment slider.
+
+	// The rate at which the timer is advanced is hard-coded for the Loom
+	// Overture. When playing the original music the rate is apparently
+	// based on the MIDI tempo of it. But at least for Loom, the Overture
+	// seems to be the only piece of music where timing matters.
+
+	// These are the values the timer will have to reach or exceed for the
+	// Overture to work correctly:
+
+	// 4   - Fade in the "OVERTURE" text
+	// 198 - Fade down the "OVERTURE" text
+	// 204 - Show the LucasFilm logo
+	// 278 - End the Overture
+
+	uint32 now = g_system->getMillis();
+	uint32 ticks = (now - _replacementTrackStartTime) / 100;
+
+	// If the track ends before the timer reaches 198, skip ahead. (If the
+	// timer didn't even reach 4 you weren't really trying, and must be
+	// punished for that!)
+
+	if (isLoomOverture && !pollCD()) {
+		uint32 fadeDownTick = TIMER_TO_TICKS(198);
+		if (ticks < fadeDownTick) {
+			_replacementTrackStartTime = now - 100 * fadeDownTick;
+			ticks = fadeDownTick;
+		}
+	}
+
+	_musicTimer = TICKS_TO_TIMER(ticks);
+
+	// But don't let the timer exceed 278 until the Overture has ended, or
+	// the music will be cut off.
+
+	if (isLoomOverture && pollCD() && _musicTimer >= 278)
+		_musicTimer = 277;
 }
 
 void Sound::addSoundToQueue(int sound, int heOffset, int heChannel, int heFlags, int heFreq, int hePan, int heVol) {
@@ -182,12 +253,85 @@ void Sound::processSoundQueues() {
 	_soundQuePos = 0;
 }
 
+int Sound::getReplacementAudioTrack(int soundID) {
+	int trackNr = -1;
+
+	if (_vm->_game.id == GID_LOOM) {
+		if (_vm->_game.features & GF_DEMO) {
+			// If I understand correctly, the shorter demo only
+			// has the Loom intro music. The longer demo has a
+			// couple of tracks that it will cycle through if
+			// you leave the demo running.
+
+			if (isRolandLoom())
+				soundID -= 10;
+
+			switch (soundID) {
+			case 19:
+				trackNr = 2;
+				break;
+			case 20:
+				trackNr = 4;
+				break;
+			case 21:
+				trackNr = 7;
+				break;
+			case 23:
+				trackNr = 8;
+				break;
+			case 26:
+				trackNr = 3;
+				break;
+			}
+		} else {
+			if (isRolandLoom())
+				soundID -= 32;
+
+			// The first track, the Overture, only exists as a
+			// Roland track.
+			if (soundID >= 24 && soundID <= 32) {
+				trackNr = soundID - 23;
+			} else if (soundID == 19) {
+				trackNr = 10;
+			} else if (soundID == 21) {
+				trackNr = 11;
+			}
+		}
+	}
+
+	if (trackNr != -1 && !_vm->existExtractedCDAudioFiles(trackNr))
+		trackNr = -1;
+
+	return trackNr;
+}
+
 void Sound::playSound(int soundID) {
 	byte *ptr;
 	byte *sound;
 	Audio::AudioStream *stream;
 	int size = -1;
 	int rate;
+
+	if (_useReplacementAudioTracks) {
+		// Note that music does not loop. Probably because it's likely
+		// to be interrupted by sound effects before it's over anyway.
+		//
+		// In the FM Towns version, music does play continuously (each
+		// track has two versions), probably because CD audio and sound
+		// effects are played independent of each other. Personally I
+		// find the game harder when the music is allowed to drown out
+		// the sound effects.
+
+		int trackNr = getReplacementAudioTrack(soundID);
+		if (trackNr != -1) {
+			_currentCDSound = soundID;
+			_replacementTrackStartTime = g_system->getMillis();
+			_replacementTrackPauseTime = 0;
+			_musicTimer = 0;
+			g_system->getAudioCDManager()->play(trackNr, 1, 0, 0, true);
+			return;
+		}
+	}
 
 	if (_vm->_game.id == GID_LOOM && _vm->_game.platform == Common::kPlatformPCEngine) {
 		if (soundID >= 13 && soundID <= 32) {
@@ -238,7 +382,7 @@ void Sound::playSound(int soundID) {
 		memcpy(sound, ptr, size);
 
 		stream = Audio::makeRawStream(sound, size, rate, Audio::FLAG_UNSIGNED);
-		_mixer->playStream(Audio::Mixer::kSFXSoundType, NULL, stream, soundID);
+		_mixer->playStream(Audio::Mixer::kSFXSoundType, nullptr, stream, soundID);
 	}
 	// WORKAROUND bug # 1311447
 	else if (READ_BE_UINT32(ptr) == 0x460e200d) {
@@ -261,7 +405,7 @@ void Sound::playSound(int soundID) {
 		sound = (byte *)malloc(size);
 		memcpy(sound, ptr, size);
 		stream = Audio::makeRawStream(sound, size, rate, Audio::FLAG_UNSIGNED);
-		_mixer->playStream(Audio::Mixer::kSFXSoundType, NULL, stream, soundID);
+		_mixer->playStream(Audio::Mixer::kSFXSoundType, nullptr, stream, soundID);
 	}
 	// Support for sampled sound effects in Monkey Island 1 and 2
 	else if (_vm->_game.platform != Common::kPlatformFMTowns
@@ -336,7 +480,7 @@ void Sound::playSound(int soundID) {
 		sound = (byte *)malloc(size);
 		memcpy(sound, ptr + 6, size);
 		stream = Audio::makeRawStream(sound, size, rate, Audio::FLAG_UNSIGNED);
-		_mixer->playStream(Audio::Mixer::kSFXSoundType, NULL, stream, soundID);
+		_mixer->playStream(Audio::Mixer::kSFXSoundType, nullptr, stream, soundID);
 	}
 	else if (_vm->_game.platform != Common::kPlatformFMTowns && READ_BE_UINT32(ptr) == MKTAG('S','O','U','N')) {
 		if (_vm->_game.version != 3)
@@ -403,7 +547,7 @@ void Sound::playSound(int soundID) {
 			stream = plainStream;
 		}
 
-		_mixer->playStream(Audio::Mixer::kSFXSoundType, NULL, stream, soundID, vol, 0);
+		_mixer->playStream(Audio::Mixer::kSFXSoundType, nullptr, stream, soundID, vol, 0);
 	}
 	else {
 
@@ -465,6 +609,26 @@ void Sound::processSfxQueues() {
 					_mouthSyncMode = 1;
 				}
 			}
+#if defined(ENABLE_SCUMM_7_8)
+			if (_vm->_imuseDigital && !_vm->_imuseDigital->isFTSoundEngine()) {
+				int volume = a->_talkVolume;
+				int frequency = a->_talkFrequency;
+				int pan = a->_talkPan;
+				if (_vm->_imuseDigital->isSoundRunning(kTalkSoundID)) {
+					if (_vm->VAR(_vm->VAR_VOICE_MODE) == 2)
+						volume = 0;
+					if (_vm->_imuseDigital->getCurSpeechVolume() != volume) {
+						_vm->_imuseDigital->setVolume(kTalkSoundID, volume);
+					}
+					if (_vm->_imuseDigital->getCurSpeechFrequency() != frequency) {
+						_vm->_imuseDigital->setFrequency(kTalkSoundID, frequency);
+					}
+					if (_vm->_imuseDigital->getCurSpeechPan() != pan) {
+						_vm->_imuseDigital->setPan(kTalkSoundID, pan);
+					}
+				}
+			}
+#endif
 		}
 
 		if ((!ConfMan.getBool("subtitles") && finished) || (finished && _vm->_talkDelay == 0)) {
@@ -484,21 +648,53 @@ static int compareMP3OffsetTable(const void *a, const void *b) {
 	return ((const MP3OffsetTable *)a)->org_offset - ((const MP3OffsetTable *)b)->org_offset;
 }
 
+static Audio::AudioStream *checkForBrokenIndy4Sample(Common::SeekableReadStream *file, uint32 offset) {
+	// WORKAROUND: Check for original Indy4 MONSTER.SOU bug
+	// The speech sample at VCTL offset 0x76ccbca ("Hey you!") which is used
+	// when Indy gets caught on the German submarine seems to not be a VOC
+	// but raw PCM s16be at (this is a guess) 44.1 kHz with a bogus VOC header.
+	// To work around this we skip the VOC header and decode the raw PCM data.
+	// Fixes Trac#10559
+	byte vocHeader[32];
+
+	file->read(vocHeader, 32);
+	// If the bogus VOC header isn't found, don't apply the workaround
+	if (memcmp(vocHeader, "Creative Voice File\x1a\x1a\x00\x0a\x01\x29\x11\x01\x02\x50\x01\xa6\x00", 32) != 0) {
+		file->seek(-32, SEEK_CUR);
+		return nullptr;
+	}
+
+	const int size = 86016; // size of speech sample
+	offset += 32; // size of VOC header
+	return Audio::makeRawStream(
+		new Common::SeekableSubReadStream(
+			file,
+			offset,
+			offset + size,
+			DisposeAfterUse::YES
+		),
+		44100,
+		Audio::FLAG_16BITS,
+		DisposeAfterUse::YES
+	);
+}
+
 void Sound::startTalkSound(uint32 offset, uint32 b, int mode, Audio::SoundHandle *handle) {
 	int num = 0, i;
 	int id = -1;
 	int size = 0;
 	Common::ScopedPtr<ScummFile> file;
 
-	bool _sampleIsPCMS16BE44100 = false;
+	if (_vm->_game.id == GID_CMI || (_vm->_game.id == GID_DIG && !(_vm->_game.features & GF_DEMO))) {
+		// COMI (full & demo), DIG (full)
+		_sfxMode |= mode;
 
-	if (_vm->_game.id == GID_CMI) {
-		_sfxMode |= mode;
+		if (_vm->_game.id == GID_DIG)
+			_curSoundPos = 0;
+
 		return;
-	} else if (_vm->_game.id == GID_DIG) {
+	} else if (_vm->_game.id == GID_DIG && (_vm->_game.features & GF_DEMO)) {
 		_sfxMode |= mode;
-		if (!(_vm->_game.features & GF_DEMO))
-			return;
 
 		char filename[30];
 		char roomname[10];
@@ -543,6 +739,68 @@ void Sound::startTalkSound(uint32 offset, uint32 b, int mode, Audio::SoundHandle
 			warning("startTalkSound: dig demo: voc file not found");
 			return;
 		}
+
+		file->seek(0, SEEK_END);
+#if defined(ENABLE_SCUMM_7_8)
+		int fileSize = file->pos();
+		_vm->_imuseDigital->startVoice(filename, file.release(), 0, fileSize);
+#endif
+		return;
+	} else if (_vm->_game.id == GID_FT) {
+		int totalOffset, soundSize, fileSize, headerTag;
+
+		if (_vm->_voiceMode != 2) {
+			file.reset(new ScummFile());
+			if (!file)
+				error("startTalkSound: Out of memory");
+
+			if (!_vm->openFile(*file, _sfxFilename)) {
+				warning("startTalkSound: could not open sfx file %s", _sfxFilename.c_str());
+				return;
+			}
+
+			file->setEnc(_sfxFileEncByte);
+			file->seek(offset, SEEK_SET);
+
+			if (b > 8) {
+				num = (b - 8) >> 1;
+			}
+
+			if (num >= 50)
+				num = 48;
+
+			assert(num + 1 < (int)ARRAYSIZE(_mouthSyncTimes));
+			for (i = 0; i < num; i++)
+				_mouthSyncTimes[i] = file->readUint16BE();
+
+			_mouthSyncTimes[i] = 0xFFFF;
+			_sfxMode |= mode;
+			_curSoundPos = 0;
+			_mouthSyncMode = true;
+
+			totalOffset = offset + b;
+			file->seek(totalOffset, SEEK_SET);
+			headerTag = file->readUint32BE();
+			soundSize = file->readUint32BE() - 8;
+			fileSize = soundSize;
+			if (headerTag == MKTAG('C','r','e','a')) {
+				file->seek(totalOffset + 27, SEEK_SET);
+				fileSize = 31;
+				fileSize += file->readUint32LE() >> 8;
+#if defined(ENABLE_SCUMM_7_8)
+				_vm->_imuseDigital->startVoice(_sfxFilename.c_str(), file.release(), totalOffset, fileSize);
+#else
+				(void)fileSize;
+#endif
+			} else if (headerTag == MKTAG('V','T','L','K')) {
+#if defined(ENABLE_SCUMM_7_8)
+				_vm->_imuseDigital->startVoice(_sfxFilename.c_str(), file.release(), totalOffset + 8, soundSize);
+#endif
+			} else {
+				file.release()->close();
+			}
+		}
+		return;
 	} else {
 		// This has been verified for INDY4, DOTT and SAM
 		if (_vm->_voiceMode == 2 && _vm->_game.version <= 6)
@@ -566,14 +824,14 @@ void Sound::startTalkSound(uint32 offset, uint32 b, int mode, Audio::SoundHandle
 			num = (b - 8) >> 1;
 		}
 
-		if (_offsetTable != NULL) {
-			MP3OffsetTable *result = NULL, key;
+		if (_offsetTable != nullptr) {
+			MP3OffsetTable *result = nullptr, key;
 
 			key.org_offset = offset;
 			result = (MP3OffsetTable *)bsearch(&key, _offsetTable, _numSoundEffects,
 													sizeof(MP3OffsetTable), compareMP3OffsetTable);
 
-			if (result == NULL) {
+			if (result == nullptr) {
 				warning("startTalkSound: did not find sound at offset %d", offset);
 				return;
 			}
@@ -587,16 +845,6 @@ void Sound::startTalkSound(uint32 offset, uint32 b, int mode, Audio::SoundHandle
 			size = result->compressed_size;
 #endif
 		} else {
-			// WORKAROUND: Original Indy4 MONSTER.SOU bug
-			// The speech sample at VCTL offset 0x76ccbca ("Hey you!") which is used
-			// when Indy gets caught on the German submarine seems to not be a VOC
-			// but raw PCM s16be at (this is a guess) 44.1 kHz with a bogus VOC header.
-			// To work around this we skip the VOC header and decode the raw PCM data.
-			// Fixes Trac#10559
-			if (mode == 2 && (_vm->_game.id == GID_INDY4) && (_vm->_language == Common::EN_ANY) && offset == 0x76ccbca) {
-				_sampleIsPCMS16BE44100 = true;
-				size = 86016; // size of speech sample
-			}
 			offset += 8;
 		}
 
@@ -632,7 +880,7 @@ void Sound::startTalkSound(uint32 offset, uint32 b, int mode, Audio::SoundHandle
 	}
 
 	if (!_soundsPaused && _mixer->isReady()) {
-		Audio::AudioStream *input = NULL;
+		Audio::AudioStream *input = nullptr;
 
 		switch (_soundMode) {
 		case kMP3Mode:
@@ -660,12 +908,17 @@ void Sound::startTalkSound(uint32 offset, uint32 b, int mode, Audio::SoundHandle
 #endif
 			break;
 		default:
-			if (_sampleIsPCMS16BE44100) {
-				offset += 32; // size of VOC header
-				input = Audio::makeRawStream(new Common::SeekableSubReadStream(file.release(), offset, offset + size, DisposeAfterUse::YES), 44100, Audio::FLAG_16BITS, DisposeAfterUse::YES);
-			} else {
-				input = Audio::makeVOCStream(file.release(), Audio::FLAG_UNSIGNED, DisposeAfterUse::YES);
+			if (mode == 2 && _vm->_game.id == GID_INDY4 && offset == 0x76ccbd4)
+				input = checkForBrokenIndy4Sample(file.release(), offset);
+
+			if (!input) {
+				input = Audio::makeVOCStream(
+					file.release(),
+					Audio::FLAG_UNSIGNED,
+					DisposeAfterUse::YES
+				);
 			}
+
 			break;
 		}
 
@@ -674,12 +927,7 @@ void Sound::startTalkSound(uint32 offset, uint32 b, int mode, Audio::SoundHandle
 			return;
 		}
 
-		if (_vm->_imuseDigital) {
-#ifdef ENABLE_SCUMM_7_8
-			//_vm->_imuseDigital->stopSound(kTalkSoundID);
-			_vm->_imuseDigital->startVoice(kTalkSoundID, input);
-#endif
-		} else {
+		if (!_vm->_imuseDigital) {
 			if (mode == 1) {
 				_mixer->playStream(Audio::Mixer::kSFXSoundType, handle, input, id);
 			} else {
@@ -709,6 +957,11 @@ bool Sound::isMouthSyncOff(uint pos) {
 	bool val = true;
 	uint16 *ms = _mouthSyncTimes;
 
+	if (_vm->_game.id == GID_DIG && !(_vm->_game.features & GF_DEMO)) {
+		pos = 1000 * pos / 60;
+		val = false;
+	}
+
 	_endOfMouthSync = false;
 	do {
 		val = !val;
@@ -723,8 +976,9 @@ bool Sound::isMouthSyncOff(uint pos) {
 
 int Sound::isSoundRunning(int sound) const {
 #ifdef ENABLE_SCUMM_7_8
-	if (_vm->_imuseDigital)
-		return (_vm->_imuseDigital->getSoundStatus(sound) != 0);
+	if (_vm->_imuseDigital) {
+		return (_vm->_imuseDigital->isSoundRunning(sound) != 0);
+	}
 #endif
 
 	if (sound == _currentCDSound)
@@ -760,7 +1014,7 @@ bool Sound::isSoundInUse(int sound) const {
 
 #ifdef ENABLE_SCUMM_7_8
 	if (_vm->_imuseDigital)
-		return (_vm->_imuseDigital->getSoundStatus(sound) != 0);
+		return (_vm->_imuseDigital->isSoundRunning(sound) != 0);
 #endif
 
 	if (sound == _currentCDSound)
@@ -808,6 +1062,9 @@ void Sound::stopSound(int sound) {
 
 	if (sound != 0 && sound == _currentCDSound) {
 		_currentCDSound = 0;
+		_musicTimer = 0;
+		_replacementTrackStartTime = 0;
+		_replacementTrackPauseTime = 0;
 		stopCD();
 		stopCDTimer();
 	}
@@ -834,6 +1091,9 @@ void Sound::stopSound(int sound) {
 void Sound::stopAllSounds() {
 	if (_currentCDSound != 0) {
 		_currentCDSound = 0;
+		_musicTimer = 0;
+		_replacementTrackStartTime = 0;
+		_replacementTrackPauseTime = 0;
 		stopCD();
 		stopCDTimer();
 	}
@@ -858,8 +1118,9 @@ void Sound::soundKludge(int *list, int num) {
 
 #ifdef ENABLE_SCUMM_7_8
 	if (_vm->_imuseDigital) {
-		_vm->_imuseDigital->parseScriptCmds(list[0], list[1], list[2], list[3], list[4],
-												list[5], list[6], list[7]);
+		_vm->_imuseDigital->parseScriptCmds(list[0],  list[1],  list[2],  list[3],  list[4],
+									  list[5],  list[6],  list[7],  list[8],  list[9],
+									  list[10], list[11], list[12], list[13], list[14], list[15]);
 		return;
 	}
 #endif
@@ -922,6 +1183,54 @@ void Sound::pauseSounds(bool pause) {
 		else
 			startCDTimer();
 	}
+
+	if (pause) {
+		if (!_replacementTrackPauseTime)
+			_replacementTrackPauseTime = g_system->getMillis();
+	} else {
+		_replacementTrackStartTime += (g_system->getMillis() - _replacementTrackPauseTime);
+		_replacementTrackPauseTime = 0;
+	}
+}
+
+bool Sound::isSfxFileCompressed() {
+	return !(_soundMode == kVOCMode);
+}
+
+bool Sound::hasSfxFile() const
+{
+	return !_sfxFilename.empty();
+}
+
+ScummFile *Sound::restoreDiMUSESpeechFile(const char *fileName) {
+	Common::ScopedPtr<ScummFile> file;
+	file.reset(new ScummFile());
+	if (!_vm->openFile(*file, fileName)) {
+		return NULL;
+	}
+
+	return file.release();
+}
+
+/* The approach used by the full version of The Dig for obtaining mouth syncs is a bit weird:
+ * they are stored in a text marker found inside the DiMUSE map for each speech file, and when
+ * said engine reaches said marker, the function below is triggered.
+ *
+ * A good reason why this is the way it's done, is that in The Dig the whole speech file,
+ * including its map (and consequently, the text marker), is compressed with the same codec as
+ * sound data; this prevents us from getting the mouth syncs before the file has started playing.
+ * Also, although I can't confirm this, there might be more than one sync marker in a single
+ * speech file, so let's just be safe and follow what the original does.
+ */
+void Sound::extractSyncsFromDiMUSEMarker(const char *marker) {
+	int syncIdx = 0;
+
+	while (marker[syncIdx * 8]) {
+		_mouthSyncTimes[syncIdx] = (uint16)atoi(&marker[syncIdx * 8]);
+		syncIdx++;
+	}
+
+	_mouthSyncTimes[syncIdx] = 0xFFFF;
 }
 
 void Sound::setupSfxFile() {
@@ -941,11 +1250,11 @@ void Sound::setupSfxFile() {
 #ifdef USE_MAD
 		{ "so3", kMP3Mode },
 #endif
-		{ 0, kVOCMode }
+		{ nullptr, kVOCMode }
 	};
 
 	ScummFile file;
-	_offsetTable = NULL;
+	_offsetTable = nullptr;
 	_sfxFileEncByte = 0;
 	_sfxFilename.clear();
 
@@ -1044,6 +1353,9 @@ static void cd_timer_handler(void *refCon) {
 }
 
 void Sound::startCDTimer() {
+	if (_useReplacementAudioTracks)
+		return;
+
 	// This timer interval is based on two scenes: The Monkey Island 1
 	// intro, and the scene in Loom CD where Chaos appears. In both cases
 	// the game plays the scene as two separate sounds, even though both
@@ -1059,6 +1371,9 @@ void Sound::startCDTimer() {
 }
 
 void Sound::stopCDTimer() {
+	if (_useReplacementAudioTracks)
+		return;
+
 	_vm->getTimerManager()->removeTimerProc(&cd_timer_handler);
 }
 
@@ -1136,6 +1451,41 @@ void Sound::saveLoadWithSerializer(Common::Serializer &s) {
 	s.syncAsSint16LE(_currentMusic, VER(35));
 }
 
+void Sound::restoreAfterLoad() {
+	_musicTimer = 0;
+	_replacementTrackStartTime = 0;
+	_replacementTrackPauseTime = 0;
+
+	if (_useReplacementAudioTracks && _currentCDSound) {
+		int trackNr = getReplacementAudioTrack(_currentCDSound);
+		if (trackNr != -1) {
+			uint32 now = g_system->getMillis();
+			uint32 frame;
+
+			_musicTimer = _vm->VAR(_vm->VAR_MUSIC_TIMER);
+			_replacementTrackPauseTime = 0;
+
+			// We try to resume the audio track from where it was
+			// saved. The timer isn't very accurate, but it should
+			// be good enough.
+
+			if (_musicTimer > 0) {
+				_replacementTrackStartTime = now - 100 * TIMER_TO_TICKS(_musicTimer);
+				frame = (75 * TIMER_TO_TICKS(_musicTimer)) / 10;
+			} else {
+				_replacementTrackStartTime = now;
+				frame = 0;
+			}
+
+			// If the user has fiddled with the Loom overture
+			// setting, the calculated position could be outside
+			// the track, but it seems a warning message is as bad
+			// as it gets.
+
+			g_system->getAudioCDManager()->play(trackNr, 1, frame, 0, true);
+		}
+	}
+}
 
 #pragma mark -
 #pragma mark --- Sound resource handling ---
@@ -1199,6 +1549,14 @@ int ScummEngine::readSoundResource(ResId idx) {
 				pri = 3;
 				break;
 			case MKTAG('R','O','L',' '):
+				// Some of the Mac MI2 music only exists as Roland tracks. The
+				// original interpreter doesn't play them. I don't think there
+				// is any similarly missing FoA music.
+				if (_game.id == GID_MONKEY2 && _game.platform == Common::kPlatformMacintosh && !_enableEnhancements) {
+					pri = -1;
+					break;
+				}
+
 				pri = 3;
 				if (_native_mt32)
 					pri = 5;
@@ -1296,7 +1654,7 @@ int ScummEngine::readSoundResource(ResId idx) {
 		Common::File dmuFile;
 		char buffer[128];
 		debugC(DEBUG_SOUND, "Found base tag FMUS in sound %d, size %d", idx, total_size);
-		debugC(DEBUG_SOUND, "It was at position %d", _fileHandle->pos());
+		debugC(DEBUG_SOUND, "It was at position %d", (int)_fileHandle->pos());
 
 		_fileHandle->seek(4, SEEK_CUR);
 		// HSHD size
@@ -1898,7 +2256,7 @@ int ScummEngine::readSoundResourceSmallHeader(ResId idx) {
 
 	debug(4, "readSoundResourceSmallHeader(%d)", idx);
 
-	if ((_game.id == GID_LOOM) && (_game.version == 3) && (_game.platform == Common::kPlatformDOS) && VAR(VAR_SOUNDCARD) == 4) {
+	if (_sound->isRolandLoom()) {
 		// Roland resources in Loom are tagless
 		// So we add an RO tag to allow imuse to detect format
 		byte *ptr, *src_ptr;

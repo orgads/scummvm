@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -26,6 +25,7 @@
 #include "common/macresman.h"
 #include "common/substream.h"
 #include "common/winexe.h"
+#include "graphics/wincursor.h"
 
 #include "director/director.h"
 #include "director/cast.h"
@@ -38,7 +38,7 @@
 namespace Director {
 
 Archive *DirectorEngine::createArchive() {
-	if (getPlatform() == Common::kPlatformMacintosh) {
+	if (getPlatform() != Common::kPlatformWindows) {
 		if (getVersion() < 400)
 			return new MacArchive();
 		else
@@ -57,12 +57,12 @@ Common::Error Window::loadInitialMovie() {
 	debug(0, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 	Common::String movie = (_vm->getGameGID() == GID_TESTALL) ? getNextMovieFromQueue().movie : _vm->getEXEName();
 
-	probeProjector(movie);
-
-	if (g_director->getPlatform() == Common::kPlatformWindows)
+	if (g_director->getPlatform() == Common::kPlatformWindows) {
 		loadEXE(movie);
-	else
+	} else {
+		probeProjector(movie);
 		loadMac(movie);
+	}
 
 	if (!_mainArchive) {
 		warning("Cannot open main movie");
@@ -71,8 +71,37 @@ Common::Error Window::loadInitialMovie() {
 
 	_currentMovie = new Movie(this);
 	_currentPath = getPath(movie, _currentPath);
-	_currentMovie->loadSharedCastsFrom(_currentPath + g_director->_sharedCastFile);
+	Common::String sharedCastPath = getSharedCastPath();
+	if (!sharedCastPath.empty() && !sharedCastPath.equalsIgnoreCase(movie))
+		_currentMovie->loadSharedCastsFrom(sharedCastPath);
+
+	// load startup movie
+	Common::String startupPath = g_director->getStartupPath();
+	if (!startupPath.empty()) {
+		Common::SeekableReadStream *const stream = SearchMan.createReadStreamForMember(startupPath);
+		if (stream) {
+			uint size = stream->size();
+			char *script = (char *)calloc(size + 1, 1);
+
+			stream->read(script, size);
+
+			LingoArchive *mainArchive = g_director->getCurrentMovie()->getMainLingoArch();
+			mainArchive->addCode(Common::U32String(script, Common::kMacRoman), kMovieScript, 65535);
+			_currentMovie->processEvent(kEventStartUp);
+
+			free(script);
+		} else {
+			warning("Window::LoadInitialMovie: failed to load startup scripts");
+		}
+	}
+
 	_currentMovie->setArchive(_mainArchive);
+
+	// XLibs are usually loaded in the initial movie.
+	// These may not be present if a --start-movie is specified, so
+	// we sometimes need to load them manually.
+	if (!g_director->getStartMovie().startMovie.empty())
+		loadStartMovieXLibs();
 
 	return Common::kNoError;
 }
@@ -81,16 +110,16 @@ void Window::probeProjector(const Common::String &movie) {
 	if (g_director->getPlatform() == Common::kPlatformWindows)
 		return;
 
-	Director::MacArchive *archive = new MacArchive();
-
+	MacArchive *archive = new MacArchive();
 	if (!archive->openFile(movie)) {
 		delete archive;
-
 		return;
 	}
 
-	// Let's check if it is a projector file
-	// So far tested with Spaceship Warlock, D2
+	probeMacBinary(archive);
+}
+
+void Window::probeMacBinary(MacArchive *archive) {
 	if (archive->hasResource(MKTAG('B', 'N', 'D', 'L'), "Projector")) {
 		warning("Detected Projector file");
 
@@ -107,15 +136,6 @@ void Window::probeProjector(const Common::String &movie) {
 			}
 		}
 
-		if (archive->hasResource(MKTAG('X', 'C', 'O', 'D'), -1)) {
-			Common::Array<uint16> xcod = archive->getResourceIDList(MKTAG('X', 'C', 'O', 'D'));
-			for (Common::Array<uint16>::iterator iterator = xcod.begin(); iterator != xcod.end(); ++iterator) {
-				Resource res = archive->getResourceDetail(MKTAG('X', 'C', 'O', 'D'), *iterator);
-				debug(0, "Detected XObject '%s'", res.name.c_str());
-				g_lingo->openXLib(res.name, kXObj);
-			}
-		}
-
 		if (archive->hasResource(MKTAG('S', 'T', 'R', '#'), 0)) {
 			if (_currentMovie)
 				_currentMovie->setArchive(archive);
@@ -129,19 +149,42 @@ void Window::probeProjector(const Common::String &movie) {
 			if (num == 0)
 				error("No strings in Projector file");
 
-			Common::String sname = name->readPascalString();
+			Common::String sname = decodePlatformEncoding(name->readPascalString());
+			Common::String moviePath = pathMakeRelative(sname);
+			if (testPath(moviePath)) {
+				_nextMovie.movie = moviePath;
+				warning("Replaced score name with: %s (from %s)", _nextMovie.movie.c_str(), sname.c_str());
 
-			_nextMovie.movie = pathMakeRelative(sname);
-			warning("Replaced score name with: %s (from %s)", _nextMovie.movie.c_str(), sname.c_str());
+				delete _currentMovie;
+				_currentMovie = nullptr;
 
-			delete _currentMovie;
-			_currentMovie = nullptr;
-
+			} else {
+				warning("Couldn't find score with name: %s", sname.c_str());
+			}
 			delete name;
+
+
 		}
 	}
 
-	delete archive;
+	if (archive->hasResource(MKTAG('X', 'C', 'O', 'D'), -1)) {
+		Common::Array<uint16> xcod = archive->getResourceIDList(MKTAG('X', 'C', 'O', 'D'));
+		for (Common::Array<uint16>::iterator iterator = xcod.begin(); iterator != xcod.end(); ++iterator) {
+			Resource res = archive->getResourceDetail(MKTAG('X', 'C', 'O', 'D'), *iterator);
+			debug(0, "Detected XObject '%s'", res.name.c_str());
+			g_lingo->openXLib(res.name, kXObj);
+		}
+	}
+	if (archive->hasResource(MKTAG('X', 'C', 'M', 'D'), -1)) {
+		Common::Array<uint16> xcmd = archive->getResourceIDList(MKTAG('X', 'C', 'M', 'D'));
+		for (Common::Array<uint16>::iterator iterator = xcmd.begin(); iterator != xcmd.end(); ++iterator) {
+			Resource res = archive->getResourceDetail(MKTAG('X', 'C', 'M', 'D'), *iterator);
+			debug(0, "Detected XCMD '%s'", res.name.c_str());
+			g_lingo->openXLib(res.name, kXObj);
+		}
+	}
+	// Register the resfile so that Cursor::readFromResource can find it
+	g_director->_openResFiles.setVal(archive->getPathName(), archive);
 }
 
 Archive *Window::openMainArchive(const Common::String movie) {
@@ -167,7 +210,7 @@ void Window::loadEXE(const Common::String movie) {
 		iniStream->read(script, iniStream->size());
 
 		_currentMovie = new Movie(this);
-		_currentMovie->getMainLingoArch()->addCode(script, kMovieScript, 0);
+		_currentMovie->getMainLingoArch()->addCode(Common::U32String(script, Common::kWindows1252), kMovieScript, 0);
 		_currentMovie->processEvent(kEventStartUp);
 		delete _currentMovie;
 		_currentMovie = nullptr;
@@ -177,7 +220,7 @@ void Window::loadEXE(const Common::String movie) {
 		warning("No LINGO.INI");
 	}
 
-	Common::SeekableReadStream *exeStream = SearchMan.createReadStreamForMember(movie);
+	Common::SeekableReadStream *exeStream = SearchMan.createReadStreamForMember(Common::Path(movie, g_director->_dirSeparator));
 	if (!exeStream)
 		error("Failed to open EXE '%s'", g_director->getEXEName().c_str());
 
@@ -197,17 +240,21 @@ void Window::loadEXE(const Common::String movie) {
 
 		const Common::Array<Common::WinResourceID> versions = exe->getIDList(Common::kWinVersion);
 		for (uint i = 0; i < versions.size(); i++) {
-			Common::SeekableReadStream *res = exe->getResource(Common::kWinVersion, versions[i]);
-
-			Common::WinResources::VersionInfo *info = Common::WinResources::parseVersionInfo(res);
+			Common::WinResources::VersionInfo *info = exe->getVersionResource(versions[i]);
 
 			for (Common::WinResources::VersionHash::const_iterator it = info->hash.begin(); it != info->hash.end(); ++it)
 				warning("info <%s>: <%s>", it->_key.c_str(), it->_value.encode().c_str());
 
 			delete info;
-			delete res;
 
 		}
+
+		Common::Array<Common::WinResourceID> idList = exe->getIDList(Common::kWinGroupCursor);
+		for (uint i = 0; i < idList.size(); i++) {
+			Graphics::WinCursorGroup *group = Graphics::WinCursorGroup::createCursorGroup(exe, idList[i]);
+			g_director->_winCursor.push_back(group);
+		}
+
 		delete exe;
 
 		exeStream->seek(-4, SEEK_END);
@@ -256,7 +303,7 @@ void Window::loadEXEv3(Common::SeekableReadStream *stream) {
 			byte *buf = (byte *)malloc(mmmSize);
 			stream->read(buf, mmmSize);
 			stream->seek(riffOffset);
-			Common::String fname = Common::String::format("./dumps/%s", mmmFileName.c_str());
+			Common::String fname = Common::String::format("./dumps/%s", encodePathForDump(mmmFileName).c_str());
 
 
 			if (!out.open(fname.c_str(), true)) {
@@ -284,8 +331,10 @@ void Window::loadEXEv3(Common::SeekableReadStream *stream) {
 }
 
 void Window::loadEXEv4(Common::SeekableReadStream *stream) {
-	if (stream->readUint32BE() != MKTAG('P', 'J', '9', '3'))
-		error("Invalid projector tag found in v4 EXE");
+	uint32 ver = stream->readUint32BE();
+
+	if (ver != MKTAG('P', 'J', '9', '3'))
+		error("Invalid projector tag found in v4 EXE [%s]", tag2str(ver));
 
 	uint32 rifxOffset = stream->readUint32LE();
 	/* uint32 fontMapOffset = */ stream->readUint32LE();
@@ -324,8 +373,10 @@ void Window::loadEXEv5(Common::SeekableReadStream *stream) {
 }
 
 void Window::loadEXEv7(Common::SeekableReadStream *stream) {
-	if (stream->readUint32LE() != MKTAG('P', 'J', '0', '0'))
-		error("Invalid projector tag found in v7 EXE");
+	uint32 ver = stream->readUint32LE();
+
+	if (ver != MKTAG('P', 'J', '0', '0') && ver != MKTAG('P', 'J', '0', '1'))
+		error("Invalid projector tag found in v7 EXE [%s]", tag2str(ver));
 
 	uint32 rifxOffset = stream->readUint32LE();
 	stream->readUint32LE(); // unknown
@@ -352,7 +403,7 @@ void Window::loadMac(const Common::String movie) {
 		// The RIFX is located in the data fork of the executable
 		_macBinary = new Common::MacResManager();
 
-		if (!_macBinary->open(movie) || !_macBinary->hasDataFork())
+		if (!_macBinary->open(Common::Path(movie, g_director->_dirSeparator)) || !_macBinary->hasDataFork())
 			error("Failed to open Mac binary '%s'", movie.c_str());
 
 		Common::SeekableReadStream *dataFork = _macBinary->getDataFork();
@@ -378,6 +429,13 @@ void Window::loadMac(const Common::String movie) {
 			_currentMovie = nullptr;
 		}
 	}
+}
+
+void Window::loadStartMovieXLibs() {
+	if (strcmp(g_director->getGameId(), "warlock") == 0 && g_director->getPlatform() != Common::kPlatformWindows) {
+		g_lingo->openXLib("FPlayXObj", kXObj);
+	}
+	g_lingo->openXLib("SerialPort", kXObj);
 }
 
 } // End of namespace Director

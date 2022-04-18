@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -30,6 +29,7 @@
 #include "ags/shared/ac/game_setup_struct.h"
 #include "ags/engine/ac/game_state.h"
 #include "ags/engine/ac/room_status.h"
+#include "ags/engine/ac/route_finder.h"
 #include "ags/engine/ac/translation.h"
 #include "ags/engine/debugging/ags_editor_debugger.h"
 #include "ags/engine/debugging/debug_log.h"
@@ -39,13 +39,13 @@
 #include "ags/engine/main/config.h"
 #include "ags/engine/main/engine.h"
 #include "ags/engine/main/main.h"
-#include "ags/engine/main/main_header.h"
 #include "ags/engine/main/quit.h"
 #include "ags/shared/ac/sprite_cache.h"
 #include "ags/engine/gfx/graphics_driver.h"
 #include "ags/shared/gfx/bitmap.h"
 #include "ags/shared/core/asset_manager.h"
 #include "ags/engine/platform/base/ags_platform_driver.h"
+#include "ags/engine/platform/base/sys_main.h"
 #include "ags/plugins/plugin_engine.h"
 #include "ags/engine/media/audio/audio_system.h"
 #include "ags/globals.h"
@@ -84,23 +84,6 @@ void quit_check_dynamic_sprites(QuitReason qreason) {
 				debug_script_warn("Dynamic sprite %d was never deleted", i);
 		}
 	}
-}
-
-void quit_shutdown_platform(QuitReason qreason) {
-	// Be sure to unlock mouse on exit, or users will hate us
-	_G(platform)->UnlockMouse();
-	_G(platform)->AboutToQuitGame();
-
-	_G(our_eip) = 9016;
-
-	pl_stop_plugins();
-
-	quit_check_dynamic_sprites(qreason);
-
-	_G(platform)->FinishedUsingGraphicsMode();
-
-	if (_G(use_cdplayer))
-		_G(platform)->ShutdownCDPlayer();
 }
 
 void quit_shutdown_audio() {
@@ -152,9 +135,8 @@ QuitReason quit_check_for_error_state(const char *&qmsg, String &alertis) {
 }
 
 void quit_message_on_exit(const String &qmsg, String &alertis, QuitReason qreason) {
-	// successful exit displays no messages (because Windoze closes the dos-box
-	// if it is empty).
-	if ((qreason & kQuitKind_NormalExit) == 0 && !_G(handledErrorInEditor)) {
+	// successful exit or user abort displays no messages
+	if ((qreason & (kQuitKind_NormalExit | kQuit_UserAbort)) == 0 && !_G(handledErrorInEditor)) {
 		// Display the message (at this point the window still exists)
 		sprintf(_G(pexbuf), "%s\n", qmsg.GetCStr());
 		alertis.Append(_G(pexbuf));
@@ -219,7 +201,17 @@ void quit_free() {
 
 	quit_shutdown_scripts();
 
-	quit_shutdown_platform(qreason);
+	// Be sure to unlock mouse on exit, or users will hate us
+	sys_window_lock_mouse(false);
+
+	_G(our_eip) = 9016;
+
+	pl_stop_plugins();
+
+	quit_check_dynamic_sprites(qreason);
+
+	if (_G(use_cdplayer))
+		_G(platform)->ShutdownCDPlayer();
 
 	_G(our_eip) = 9019;
 
@@ -245,6 +237,8 @@ void quit_free() {
 	quit_message_on_exit(quitmsg, alertis, qreason);
 
 	quit_release_data();
+
+	_G(platform)->PreBackendExit();
 
 	// release backed library
 	// WARNING: no Allegro objects should remain in memory after this,

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -112,13 +111,13 @@ const int LegacyRoomVolumeFactor = 30;
 #define OVER_TEXTMSG  1
 #define OVER_COMPLETE 2
 #define OVER_PICTURE  3
+#define OVER_TEXTSPEECH 4
 #define OVER_CUSTOM   100
 #define OVR_AUTOPLACE 30000
 #define FOR_ANIMATION 1
 #define FOR_SCRIPT    2
 #define FOR_EXITLOOP  3
 #define CHMLSOFFS (MAX_ROOM_OBJECTS+1)    // reserve this many movelists for objects & stuff
-#define MAX_SCREEN_OVERLAYS 20
 #define abort_all_conditions _G(restrict_until)
 #define MAX_SCRIPT_AT_ONCE 10
 #define EVENT_NONE       0
@@ -140,25 +139,17 @@ const int LegacyRoomVolumeFactor = 30;
 
 #define MAX_PLUGIN_OBJECT_READERS 50
 
-#ifndef MAX_PATH
-#define MAX_PATH 260
-#endif
-
-#define TRANS_ALPHA_CHANNEL 20000
-#define TRANS_OPAQUE        20001
-#define TRANS_RUN_PLUGIN    20002
-
-
 #define LOCTYPE_HOTSPOT 1
 #define LOCTYPE_CHAR 2
 #define LOCTYPE_OBJ  3
 
 #define MAX_DYNAMIC_SURFACES 20
 
-#define MAX_ANIMATING_BUTTONS 15
 #define RESTART_POINT_SAVE_GAME_NUMBER 999
 
 #define MAX_OPEN_SCRIPT_FILES 10
+
+#define RETURN_CONTINUE 1
 
 } // namespace AGS3
 

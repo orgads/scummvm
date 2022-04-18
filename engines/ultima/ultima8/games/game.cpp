@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,7 +23,7 @@
 
 #include "ultima/ultima8/misc/pent_include.h"
 #include "ultima/ultima8/games/u8_game.h"
-#include "ultima/ultima8/games/remorse_game.h"
+#include "ultima/ultima8/games/cru_game.h"
 #include "ultima/ultima8/graphics/palette_manager.h"
 #include "ultima/ultima8/kernel/kernel.h"
 #include "ultima/ultima8/gumps/main_menu_process.h"
@@ -51,7 +50,7 @@ Game *Game::createGame(const GameInfo *info) {
 		return new U8Game();
 	case GameInfo::GAME_REMORSE:
 	case GameInfo::GAME_REGRET:
-		return new RemorseGame();
+		return new CruGame();
 	default:
 		CANT_HAPPEN_MSG("createGame: invalid _game");
 	}
@@ -79,14 +78,13 @@ uint32 Game::I_playEndgame(const uint8 *args, unsigned int /*argsize*/) {
 	return 0;
 }
 
-uint32 Game::I_playCredits(const uint8 *args, unsigned int /*argsize*/) {
-	perr << "TODO: Implement I_playCredits";
-	// TODO: need a process to wait for here.
-	// Should fade out, credits, fade in.
-	// Double-check in the disasm that this should just play credits and
-	// not also endgame movie.
-	// Game::get_instance()->playCredits();
+uint32 Game::I_playCredits(const uint8 */*args*/, unsigned int /*argsize*/) {
+	Game::get_instance()->playCredits();
+	return 0;
+}
 
+uint32 Game::I_playDemoScreen(const uint8 */*args*/, unsigned int /*argsize*/) {
+	Game::get_instance()->playDemoScreen();
 	return 0;
 }
 

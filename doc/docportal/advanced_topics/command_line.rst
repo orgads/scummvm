@@ -141,7 +141,7 @@ Short options are listed where they are available.
         ``--list-saves --game=TARGET``,,"Displays a list of saved games for the game (TARGET) specified"
         ``--list-targets``,``-t``,"Displays list of configured targets and exits"
         ``--list-themes``,,"Displays list of all usable GUI themes"
-        ``--logfile=PATH``,-l,"Uses alternate path for log file (SDL backend only)."
+        ``--logfile=PATH``,``-l``,"Uses alternate path for log file (SDL backend only)."
         ``--midi-gain=NUM``,,":ref:`Sets the gain for MIDI playback <gain>`. 0-1000 (default: 100). Only supported by some MIDI drivers"
         ``--multi-midi``,,":ref:`Enables combination AdLib and native MIDI <multi>`"
         ``--music-driver=MODE``,``-e``,":ref:`Selects preferred music device <device>`"
@@ -157,6 +157,7 @@ Short options are listed where they are available.
         ``--render-mode=MODE``,,":ref:`Enables additional render modes <render>`"
         ``--save-slot=NUM``,``-x``,"Specifies the saved game slot to load (default: autosave)"
         ``--savepath=PATH``,,":ref:`Specifies path to where saved games are stored <savepath>`"
+        ``--screenshotpath=PATH``,,"Specify path where screenshot files are created (SDL backend only)"
         ``--sfx-volume=NUM``,``-s``,":ref:`Sets the sfx volume <sfx>`, 0-255 (default: 192)"
         ``--soundfont=FILE``,,":ref:`Selects the SoundFont for MIDI playback. <soundfont>`. Only supported by some MIDI drivers."
         ``--speech-volume=NUM``,``-r``,":ref:`Sets the speech volume <speechvol>`, 0-255 (default: 192)"
@@ -165,7 +166,7 @@ Short options are listed where they are available.
         ``--tempo=NUM``,,"Sets music tempo (in percent, 50-200) for SCUMM games (default: 100)"
         ``--themepath=PATH``,,":ref:`Specifies path to where GUI themes are stored <themepath>`"
         ``--version``,``-v``,"Displays ScummVM version information and exits"
-
-
-
-
+        ``--md5``,,"Shows MD5 hash of the file given by ``--md5-path=PATH``. If ``--md5-length=NUM`` is passed then it shows the MD5 hash of the first ``NUM`` bytes of the file given by ``PATH``. If ``--md5-engine=ENGINE_ID`` option is passed then it auto-calculates the required bytes and its hash, overriding ``--md5-length``"
+        ``--md5-path=PATH``,,"Used with ``--md5`` to specify path of file to calculate MD5 hash of (default: ./scummvm)"
+        ``--md5-length=NUM``,,"Used with ``--md5`` to specify the number of bytes to be hashed. If ``NUM`` is 0, MD5 hash of the whole file is calculated. Of ``NUM`` is negative, the MD5 hash is calculated from the tail. Is overriden if passed with ``--md5-engine`` option. (default: 0)"
+        ``--md5-engine=ENGINE_ID``,,"Used with ``--md5`` to specify engine of game for which hash is to be calculated. Overrides ``--md5-length`` if passed with it"

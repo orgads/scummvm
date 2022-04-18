@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -181,7 +180,7 @@ GfxScreen::GfxScreen(ResourceManager *resMan) : _resMan(resMan) {
 	Graphics::PixelFormat format8 = Graphics::PixelFormat::createFormatCLUT8();
 	const Graphics::PixelFormat *format = &format8;
 	if (ConfMan.getBool("rgb_rendering"))
-		format = 0; // Backend's preferred mode; RGB if available
+		format = nullptr; // Backend's preferred mode; RGB if available
 
 	if (g_sci->hasMacIconBar()) {
 		// For SCI1.1 Mac games with the custom icon bar, we need to expand the screen
@@ -209,14 +208,14 @@ GfxScreen::GfxScreen(ResourceManager *resMan) : _resMan(resMan) {
 		if (_paletteModsEnabled)
 			_paletteMapScreen = (byte *)calloc(_displayPixels, 1);
 		else
-			_paletteMapScreen = 0;
+			_paletteMapScreen = nullptr;
 	} else {
-		_displayedScreen = 0;
-		_palette = 0;
-		_rgbScreen = 0;
-		_paletteMapScreen = 0;
+		_displayedScreen = nullptr;
+		_palette = nullptr;
+		_rgbScreen = nullptr;
+		_paletteMapScreen = nullptr;
 	}
-	_backupScreen = 0;
+	_backupScreen = nullptr;
 }
 
 GfxScreen::~GfxScreen() {
@@ -908,7 +907,7 @@ int16 *GfxScreen::unditherGetDitheredBgColors() {
 	if (_unditheringEnabled)
 		return _ditheredPicColors;
 	else
-		return NULL;
+		return nullptr;
 }
 
 void GfxScreen::debugShowMap(int mapNo) {

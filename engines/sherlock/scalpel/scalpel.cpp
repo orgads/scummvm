@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -1275,7 +1274,6 @@ bool ScalpelEngine::play3doMovie(const Common::String &filename, const Common::P
 	Video::ThreeDOMovieDecoder *videoDecoder = new Video::ThreeDOMovieDecoder();
 	Graphics::ManagedSurface tempSurface;
 
-	Common::Point framePos(pos.x, pos.y);
 	ImageFile3DO *frameImageFile = nullptr;
 	ImageFrame *frameImage = nullptr;
 	bool frameShown = false;
@@ -1285,17 +1283,30 @@ bool ScalpelEngine::play3doMovie(const Common::String &filename, const Common::P
 		return false;
 	}
 
+	Common::Point moviePos(pos.x, pos.y);
+	int frameWidth = 8;
+
 	bool halfSize = isPortrait && !_isScreenDoubled;
+
 	if (isPortrait) {
-		// only for portrait videos, not for EA intro logo and such
-		if ((framePos.x >= 8) && (framePos.y >= 8)) { // safety check
-			framePos.x -= 8;
-			framePos.y -= 8; // frame is 8 pixels on left + top, and 7 pixels on right + bottom
+		if (!halfSize) {
+			moviePos.x *= 2;
+			moviePos.y *= 2;
+			frameWidth *= 2;
 		}
+
+		// Safety check. Only for portrait videos, not for EA intro logo and such
+		if (moviePos.x < frameWidth)
+			moviePos.x = frameWidth;
+		if (moviePos.y < frameWidth)
+			moviePos.y = frameWidth;
 
 		frameImageFile = new ImageFile3DO("vidframe.cel", kImageFile3DOType_Cel);
 		frameImage = &(*frameImageFile)[0];
 	}
+
+	 // frame is 8 pixels on left + top, and 7 pixels on right + bottom
+	Common::Point framePos(moviePos.x - frameWidth, moviePos.y - frameWidth);
 
 	bool skipVideo = false;
 	//byte bytesPerPixel = videoDecoder->getPixelFormat().bytesPerPixel;
@@ -1308,7 +1319,7 @@ bool ScalpelEngine::play3doMovie(const Common::String &filename, const Common::P
 
 	// If we're to show the movie at half-size, we'll need a temporary intermediate surface
 	if (halfSize)
-		tempSurface.create(width / 2, height / 2);
+		tempSurface.create(width / 2, height / 2, videoDecoder->getPixelFormat());
 
 	while (!shouldQuit() && !videoDecoder->endOfVideo() && !skipVideo) {
 		if (videoDecoder->needsUpdate()) {
@@ -1382,9 +1393,9 @@ bool ScalpelEngine::play3doMovie(const Common::String &filename, const Common::P
 				}
 
 				if (isPortrait && !halfSize) {
-					screen.rawBlitFrom(*frame, Common::Point(pos.x * 2, pos.y * 2));
+					screen.rawBlitFrom(*frame, moviePos);
 				} else {
-					_screen->SHblitFrom(*frame, pos);
+					_screen->SHblitFrom(*frame, moviePos);
 				}
 
 				_screen->update();

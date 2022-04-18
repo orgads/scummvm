@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,6 +27,7 @@
 
 #include "director/director.h"
 #include "director/archive.h"
+#include "director/window.h"
 #include "director/util.h"
 
 namespace Director {
@@ -35,7 +35,7 @@ namespace Director {
 // Base Archive code
 
 Archive::Archive() {
-	_stream = 0;
+	_stream = nullptr;
 	_isBigEndian = true;
 }
 
@@ -48,7 +48,7 @@ Common::String Archive::getFileName() const { return Director::getFileName(_path
 bool Archive::openFile(const Common::String &fileName) {
 	Common::File *file = new Common::File();
 
-	if (!file->open(fileName)) {
+	if (!file->open(Common::Path(fileName, g_director->_dirSeparator))) {
 		warning("Archive::openFile(): Error opening file %s", fileName.c_str());
 		delete file;
 		return false;
@@ -71,7 +71,7 @@ void Archive::close() {
 	if (_stream)
 		delete _stream;
 
-	_stream = 0;
+	_stream = nullptr;
 }
 
 int Archive::getFileSize() {
@@ -146,14 +146,14 @@ uint32 Archive::getOffset(uint32 tag, uint16 id) const {
 	return resMap[id].offset;
 }
 
-uint16 Archive::findResourceID(uint32 tag, const Common::String &resName) const {
+uint16 Archive::findResourceID(uint32 tag, const Common::String &resName, bool ignoreCase) const {
 	if (!_types.contains(tag) || resName.empty())
 		return 0xFFFF;
 
 	const ResourceMap &resMap = _types[tag];
 
 	for (ResourceMap::const_iterator it = resMap.begin(); it != resMap.end(); it++)
-		if (it->_value.name.matchString(resName))
+		if (it->_value.name.matchString(resName, ignoreCase))
 			return it->_key;
 
 	return 0xFFFF;
@@ -204,7 +204,7 @@ uint32 Archive::convertTagToUppercase(uint32 tag) {
 
 // Mac Archive code
 
-MacArchive::MacArchive() : Archive(), _resFork(0) {
+MacArchive::MacArchive() : Archive(), _resFork(nullptr) {
 }
 
 MacArchive::~MacArchive() {
@@ -214,7 +214,7 @@ MacArchive::~MacArchive() {
 void MacArchive::close() {
 	Archive::close();
 	delete _resFork;
-	_resFork = 0;
+	_resFork = nullptr;
 }
 
 bool MacArchive::openFile(const Common::String &fileName) {
@@ -224,12 +224,12 @@ bool MacArchive::openFile(const Common::String &fileName) {
 
 	Common::String fName = fileName;
 
-	if (!_resFork->open(fName) || !_resFork->hasResFork()) {
+	if (!_resFork->open(Common::Path(fName, g_director->_dirSeparator)) || !_resFork->hasResFork()) {
 		close();
 		return false;
 	}
 
-	_pathName = _resFork->getBaseFileName();
+	_pathName = _resFork->getBaseFileName().toString(g_director->_dirSeparator);
 	if (_pathName.hasSuffix(".bin")) {
 		for (int i = 0; i < 4; i++)
 			_pathName.deleteLastChar();
@@ -289,7 +289,7 @@ Common::SeekableReadStreamEndian *MacArchive::getResource(uint32 tag, uint16 id)
 		return nullptr;
 	}
 
-	return new Common::SeekableSubReadStreamEndian(stream, 0, stream->size(), true, DisposeAfterUse::NO);
+	return new Common::SeekableSubReadStreamEndian(stream, 0, stream->size(), true, DisposeAfterUse::YES);
 }
 
 // RIFF Archive code
@@ -339,8 +339,15 @@ bool RIFFArchive::openStream(Common::SeekableReadStream *stream, uint32 startOff
 		byte nameSize = stream->readByte();
 
 		if (nameSize) {
+			bool skip = false;
 			for (uint8 i = 0; i < nameSize; i++) {
-				name += stream->readByte();
+				byte b = stream->readByte();
+
+				if (!b)
+					skip = true;
+
+				if (!skip)
+					name += b;
 			}
 		}
 
@@ -395,6 +402,7 @@ Common::SeekableReadStreamEndian *RIFFArchive::getResource(uint32 tag, uint16 id
 RIFXArchive::RIFXArchive() : Archive() {
 	_isBigEndian = true;
 	_rifxType = 0;
+	_ilsBodyOffset = 0;
 }
 
 RIFXArchive::~RIFXArchive() {
@@ -423,6 +431,16 @@ bool RIFXArchive::openStream(Common::SeekableReadStream *stream, uint32 startOff
 		if (Common::MacResManager::isMacBinary(*stream)) {
 			warning("RIFXArchive::openStream(): MacBinary detected, overriding");
 
+			// We need to look at the resource fork to detect XCOD resources
+			Common::SeekableSubReadStream *macStream = new Common::SeekableSubReadStream(stream, 0, stream->size());
+			MacArchive *macArchive = new MacArchive();
+			if (!macArchive->openStream(macStream)) {
+				delete macArchive;
+			} else {
+				g_director->getCurrentWindow()->probeMacBinary(macArchive);
+			}
+
+			// Then read the data fork
 			moreOffset = Common::MacResManager::getDataForkOffset();
 			stream->seek(startOffset + moreOffset);
 
@@ -483,7 +501,7 @@ bool RIFXArchive::openStream(Common::SeekableReadStream *stream, uint32 startOff
 		Common::DumpFile out;
 
 		char buf[256];
-		sprintf(buf, "./dumps/%s-%08x", g_director->getEXEName().c_str(), startOffset);
+		sprintf(buf, "./dumps/%s-%08x", encodePathForDump(g_director->getEXEName()).c_str(), startOffset);
 
 		if (out.open(buf, true)) {
 			out.write(dumpData, sz);
@@ -492,10 +510,9 @@ bool RIFXArchive::openStream(Common::SeekableReadStream *stream, uint32 startOff
 		} else {
 			warning("RIFXArchive::openStream(): Can not open dump file %s", buf);
 		}
-
-		free(dumpData);
-		delete dumpStream;
 	}
+	free(dumpData);
+	delete dumpStream;
 
 	// If we couldn't read the map, we can't do anything past this point.
 	if (!readMapSuccess)
@@ -543,7 +560,7 @@ bool RIFXArchive::openStream(Common::SeekableReadStream *stream, uint32 startOff
 			else
 				prepend = "stream";
 
-			Common::String filename = Common::String::format("./dumps/%s-%s-%d", prepend.c_str(), tag2str(_resources[i]->tag), _resources[i]->index);
+			Common::String filename = Common::String::format("./dumps/%s-%s-%d", encodePathForDump(prepend).c_str(), tag2str(_resources[i]->tag), _resources[i]->index);
 			resStream->read(data, len);
 
 			if (!out.open(filename, true)) {
@@ -700,7 +717,7 @@ bool RIFXArchive::readAfterburnerMap(Common::SeekableReadStreamEndian &stream, u
 		Common::DumpFile out;
 
 		char buf[256];
-		sprintf(buf, "./dumps/%s-%s", g_director->getEXEName().c_str(), "ABMP");
+		sprintf(buf, "./dumps/%s-%s", encodePathForDump(g_director->getEXEName()).c_str(), "ABMP");
 
 		if (out.open(buf, true)) {
 			byte *data = (byte *)malloc(abmpStream->size());

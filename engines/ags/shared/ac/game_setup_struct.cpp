@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -40,8 +39,6 @@ GameSetupStruct::GameSetupStruct()
 	, roomNames(nullptr)
 	, scoreClipID(0) {
 	memset(invinfo, 0, sizeof(invinfo));
-	for (int i = 0; i < MAX_CURSOR; ++i)
-		mcurs[i].clear();
 	memset(lipSyncFrameLetters, 0, sizeof(lipSyncFrameLetters));
 	memset(guid, 0, sizeof(guid));
 	memset(saveGameFileExtension, 0, sizeof(saveGameFileExtension));
@@ -81,14 +78,14 @@ void GameSetupStruct::Free() {
 // Assigns font info parameters using legacy flags value read from the game data
 void SetFontInfoFromLegacyFlags(FontInfo &finfo, const uint8_t data) {
 	finfo.Flags = (data >> 6) & 0xFF;
-	finfo.SizePt = data & FFLG_LEGACY_SIZEMASK;
+	finfo.Size = data & FFLG_LEGACY_SIZEMASK;
 }
 
 void AdjustFontInfoUsingFlags(FontInfo &finfo, const uint32_t flags) {
 	finfo.Flags = flags;
 	if ((flags & FFLG_SIZEMULTIPLIER) != 0) {
-		finfo.SizeMultiplier = finfo.SizePt;
-		finfo.SizePt = 0;
+		finfo.SizeMultiplier = finfo.Size;
+		finfo.Size = 0;
 	}
 }
 
@@ -134,7 +131,7 @@ void GameSetupStruct::read_font_infos(Shared::Stream *in, GameDataVersion data_v
 	} else {
 		for (int i = 0; i < numfonts; ++i) {
 			uint32_t flags = in->ReadInt32();
-			fonts[i].SizePt = in->ReadInt32();
+			fonts[i].Size = in->ReadInt32();
 			fonts[i].Outline = in->ReadInt32();
 			fonts[i].YOffset = in->ReadInt32();
 			fonts[i].LineSpacing = Math::Max<int32_t>(0, in->ReadInt32());
@@ -160,9 +157,6 @@ void GameSetupStruct::WriteInvInfo_Aligned(Stream *out) {
 }
 
 HGameFileError GameSetupStruct::read_cursors(Shared::Stream *in, GameDataVersion data_ver) {
-	if (numcursors > MAX_CURSOR)
-		return new MainGameFileError(kMGFErr_TooManyCursors, String::FromFormat("Count: %d, max: %d", numcursors, MAX_CURSOR));
-
 	ReadMouseCursors_Aligned(in);
 	return HGameFileError::None();
 }
@@ -199,6 +193,7 @@ void GameSetupStruct::read_words_dictionary(Shared::Stream *in) {
 }
 
 void GameSetupStruct::ReadMouseCursors_Aligned(Stream *in) {
+	mcurs.resize(numcursors);
 	AlignedStream align_s(in, Shared::kAligned_Read);
 	for (int iteratorCount = 0; iteratorCount < numcursors; ++iteratorCount) {
 		mcurs[iteratorCount].ReadFromFile(&align_s);
@@ -411,7 +406,8 @@ void ConvertOldGameStruct(OldGameSetupStruct *ogss, GameSetupStruct *gss) {
 	}
 
 	memcpy(&gss->invinfo[0], &ogss->invinfo[0], 100 * sizeof(InventoryItemInfo));
-	memcpy(&gss->mcurs[0], &ogss->mcurs[0], 10 * sizeof(MouseCursor));
+	for (int i = 0; i < 10; ++i)
+		gss->mcurs[i] = ogss->mcurs[i];
 	for (int i = 0; i < MAXGLOBALMES; i++)
 		gss->messages[i] = ogss->messages[i];
 	gss->dict = ogss->dict;

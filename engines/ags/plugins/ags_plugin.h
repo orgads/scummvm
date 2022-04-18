@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,16 +30,13 @@
 #ifndef AGS_PLUGINS_AGS_PLUGIN_H
 #define AGS_PLUGINS_AGS_PLUGIN_H
 
+#include "common/array.h"
 #include "ags/shared/core/types.h"
 #include "ags/shared/font/ags_font_renderer.h"
-#include "common/array.h"
+#include "ags/plugins/plugin_base.h"
+#include "ags/engine/util/library_scummvm.h"
 
 namespace AGS3 {
-
-class ScriptMethodParams : public Common::Array<intptr_t> {
-public:
-	NumberPtr _result;
-};
 
 // If the plugin isn't using DDraw, don't require the headers
 #ifndef DIRECTDRAW_VERSION
@@ -63,6 +59,8 @@ class BITMAP;
 typedef int HWND;
 #endif
 
+#define MAXPLUGINS 20
+
 #define AGSIFUNC(type) virtual type
 
 #define MASK_WALKABLE   1
@@ -71,13 +69,15 @@ typedef int HWND;
 // MASK_REGIONS is interface version 11 and above only
 #define MASK_REGIONS    4
 
+#define PLUGIN_FILENAME_MAX (49)
+
 // **** WARNING: DO NOT ALTER THESE CLASSES IN ANY WAY!
 // **** CHANGING THE ORDER OF THE FUNCTIONS OR ADDING ANY VARIABLES
 // **** WILL CRASH THE SYSTEM.
 
 struct AGSColor {
-unsigned char r, g, b;
-unsigned char padding;
+	unsigned char r, g, b;
+	unsigned char padding;
 };
 
 struct AGSGameOptions {
@@ -154,7 +154,7 @@ struct AGSCharacter {
 	short actx = 0, acty = 0;
 	char  name[40];
 	char  scrname[20];
-	char  on = 0;
+	int8  on = 0;
 };
 
 // AGSObject.flags
@@ -169,10 +169,10 @@ struct AGSObject {
 	short baseline = 0;       // <=0 to use Y co-ordinate; >0 for specific baseline
 	short view = 0, loop = 0, frame = 0; // only used to track animation - 'num' holds the current sprite
 	short wait = 0, moving = 0;
-	char  cycling = 0;        // is it currently animating?
-	char  overall_speed = 0;
-	char  on = 0;
-	char  flags = 0;
+	int8  cycling = 0;        // is it currently animating?
+	int8  overall_speed = 0;
+	int8  on = 0;
+	int8  flags = 0;
 };
 
 // AGSViewFrame.flags
@@ -198,7 +198,7 @@ struct AGSMouseCursor {
 	short hotx = 0, hoty = 0; // x,y hotspot co-ordinates
 	short view = 0;           // view (for animating cursors) or -1
 	char  name[10];           // name of cursor mode
-	char  flags = 0;          // MCF_flags above
+	int8  flags = 0;          // MCF_flags above
 };
 
 // The editor-to-plugin interface
@@ -323,8 +323,11 @@ public:
 	// get engine version
 	AGSIFUNC(const char *) GetEngineVersion();
 	// register a script function with the system
-	AGSIFUNC(void) RegisterScriptFunction(const char *name, void *address);
-	#ifdef WINDOWS_VERSION
+	AGSIFUNC(void) RegisterScriptFunction(const char *name,
+		Plugins::ScriptContainer *instance);
+	AGSIFUNC(void) RegisterBuiltInFunction(const char *name,
+		Plugins::ScriptContainer *instance);
+#ifdef WINDOWS_VERSION
 	// get game window handle
 	AGSIFUNC(HWND) GetWindowHandle();
 	// get reference to main DirectDraw interface
@@ -374,6 +377,8 @@ public:
 	AGSIFUNC(int)  FWrite(void *, int32, int32);
 	// similar to fread - buffer, size, filehandle
 	AGSIFUNC(int)  FRead(void *, int32, int32);
+	// similar to fseek
+	AGSIFUNC(bool)FSeek(soff_t offset, int origin, int32 handle);
 	// print text, wrapping as usual
 	AGSIFUNC(void) DrawTextWrapped(int32 x, int32 y, int32 width, int32 font, int32 color, const char *text);
 	// set the current active 'screen'
@@ -425,7 +430,7 @@ public:
 	// get the walk-behind baseline of a specific WB area
 	AGSIFUNC(int)    GetWalkbehindBaseline(int32 walkbehind);
 	// get the address of a script function
-	AGSIFUNC(void *) GetScriptFunctionAddress(const char *funcName);
+	AGSIFUNC(Plugins::PluginMethod) GetScriptFunctionAddress(const char *funcName);
 	// get the transparent colour of a bitmap
 	AGSIFUNC(int)    GetBitmapTransparentColor(BITMAP *);
 	// get the character scaling level at a particular point
@@ -558,33 +563,24 @@ public:
 	AGSIFUNC(void)  GetRenderStageDesc(AGSRenderStageDesc *desc);
 };
 
-#ifdef THIS_IS_THE_PLUGIN
+struct EnginePlugin {
+	char filename[PLUGIN_FILENAME_MAX + 1] = { 0 };
+	AGS::Engine::Library   library;
+	Plugins::PluginBase *_plugin = nullptr;
+	bool available = false;
+	char *savedata = nullptr;
+	int savedatasize = 0;
+	int wantHook = 0;
+	int invalidatedRegion = 0;
+	bool builtin = false;
 
-#ifdef WINDOWS_VERSION
-#define DLLEXPORT extern "C" __declspec(dllexport)
-#else
-// MAC VERSION: compile with -fvisibility=hidden
-// gcc -dynamiclib -std=gnu99 agsplugin.c -fvisibility=hidden -o agsplugin.dylib
-#define DLLEXPORT extern "C" __attribute__((visibility("default")))
-#endif
+	IAGSEngine  eiface;
 
-DLLEXPORT const char *AGS_GetPluginName(void);
-DLLEXPORT int    AGS_EditorStartup(IAGSEditor *);
-DLLEXPORT void   AGS_EditorShutdown(void);
-DLLEXPORT void   AGS_EditorProperties(HWND);
-DLLEXPORT int    AGS_EditorSaveGame(char *, int);
-DLLEXPORT void   AGS_EditorLoadGame(char *, int);
-DLLEXPORT void   AGS_EngineStartup(IAGSEngine *);
-DLLEXPORT void   AGS_EngineShutdown(void);
-DLLEXPORT int    AGS_EngineOnEvent(int, int);
-DLLEXPORT int    AGS_EngineDebugHook(const char *, int, int);
-DLLEXPORT void   AGS_EngineInitGfx(const char *driverID, void *data);
-// We export this to verify that we are an AGS Plugin
-DLLEXPORT int    AGS_PluginV2() {
-return 1;
-}
-
-#endif // THIS_IS_THE_PLUGIN
+	EnginePlugin() {
+		eiface.version = 0;
+		eiface.pluginId = 0;
+	}
+};
 
 extern void PluginSimulateMouseClick(int pluginButtonID);
 

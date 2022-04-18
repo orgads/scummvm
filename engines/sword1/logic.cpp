@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -1552,19 +1551,19 @@ int Logic::fnGetPos(Object *cpt, int32 id, int32 targetId, int32 b, int32 c, int
 	}
 	_scriptVars[RETURN_VALUE_3] = target->o_dir;
 
-	int32 megaSeperation;
+	int32 megaSeparation;
 	if (targetId == DUANE)
-		megaSeperation = 70; // George & Duane stand with feet 70 pixels apart when at full scale
+		megaSeparation = 70; // George & Duane stand with feet 70 pixels apart when at full scale
 	else if (targetId == BENOIR)
-		megaSeperation = 61; // George & Benoir
+		megaSeparation = 61; // George & Benoir
 	else
-		megaSeperation = 42; // George & Nico/Goinfre stand with feet 42 pixels apart when at full scale
+		megaSeparation = 42; // George & Nico/Goinfre stand with feet 42 pixels apart when at full scale
 
 	if (target->o_status & STAT_SHRINK) {
 		int32 scale = (target->o_scale_a * target->o_ycoord + target->o_scale_b) / 256;
-		_scriptVars[RETURN_VALUE_4] = (megaSeperation * scale) / 256;
+		_scriptVars[RETURN_VALUE_4] = (megaSeparation * scale) / 256;
 	} else
-		_scriptVars[RETURN_VALUE_4] = megaSeperation;
+		_scriptVars[RETURN_VALUE_4] = megaSeparation;
 	return SCRIPT_CONT;
 }
 

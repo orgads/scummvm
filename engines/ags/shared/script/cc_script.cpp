@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -210,7 +209,6 @@ bool ccScript::Read(Stream *in) {
 	int n;
 	char gotsig[5];
 	_G(currentline) = -1;
-	// MACPORT FIX: swap 'size' and 'nmemb'
 	in->Read(gotsig, 4);
 	gotsig[4] = 0;
 
@@ -227,24 +225,18 @@ bool ccScript::Read(Stream *in) {
 
 	if (globaldatasize > 0) {
 		globaldata = (char *)malloc(globaldatasize);
-		// MACPORT FIX: swap
 		in->Read(globaldata, globaldatasize);
 	} else
 		globaldata = nullptr;
 
 	if (codesize > 0) {
 		code = (int32_t *)malloc(codesize * sizeof(int32_t));
-		// MACPORT FIX: swap
-
-		// 64 bit: Read code into 8 byte array, necessary for being able to perform
-		// relocations on the references.
 		in->ReadArrayOfInt32(code, codesize);
 	} else
 		code = nullptr;
 
 	if (stringssize > 0) {
 		strings = (char *)malloc(stringssize);
-		// MACPORT FIX: swap
 		in->Read(strings, stringssize);
 	} else
 		strings = nullptr;
@@ -253,7 +245,6 @@ bool ccScript::Read(Stream *in) {
 	if (numfixups > 0) {
 		fixuptypes = (char *)malloc(numfixups);
 		fixups = (int32_t *)malloc(numfixups * sizeof(int32_t));
-		// MACPORT FIX: swap 'size' and 'nmemb'
 		in->Read(fixuptypes, numfixups);
 		in->ReadArrayOfInt32(fixups, numfixups);
 	} else {

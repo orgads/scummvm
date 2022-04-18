@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -38,7 +37,7 @@
 namespace Sci {
 #pragma mark CelScaler
 
-Common::ScopedPtr<CelScaler> CelObj::_scaler;
+CelScaler *CelObj::_scaler = nullptr;
 
 void CelScaler::activateScaleTables(const Ratio &scaleX, const Ratio &scaleY) {
 	for (int i = 0; i < ARRAYSIZE(_scaleTables); ++i) {
@@ -90,13 +89,15 @@ void CelObj::init() {
 	CelObj::deinit();
 	_drawBlackLines = false;
 	_nextCacheId = 1;
-	_scaler.reset(new CelScaler());
-	_cache.reset(new CelCache(100));
+	_scaler = new CelScaler();
+	_cache = new CelCache(100);
 }
 
 void CelObj::deinit() {
-	_scaler.reset();
-	_cache.reset();
+	delete _scaler;
+	_scaler = nullptr;
+	delete _cache;
+	_cache = nullptr;
 }
 
 #pragma mark -
@@ -686,7 +687,7 @@ void CelObj::submitPalette() const {
 #pragma mark CelObj - Caching
 
 int CelObj::_nextCacheId = 1;
-Common::ScopedPtr<CelCache> CelObj::_cache;
+CelCache *CelObj::_cache = nullptr;
 
 int CelObj::searchCache(const CelInfo32 &celInfo, int *const nextInsertIndex) const {
 	*nextInsertIndex = -1;

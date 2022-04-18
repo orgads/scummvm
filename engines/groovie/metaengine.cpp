@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -44,11 +43,12 @@ public:
 	int getMaximumSaveSlot() const override;
 	void removeSaveState(const char *target, int slot) const override;
 	SaveStateDescriptor querySaveMetaInfos(const char *target, int slot) const override;
+	int getAutosaveSlot() const override;
 };
 
 Common::Error GroovieMetaEngine::createInstance(OSystem *syst, Engine **engine, const ADGameDescription *gd) const {
 #ifndef ENABLE_GROOVIE2
-	if (((const GroovieGameDescription *)gd)->version == kGroovieV2)
+	if (((const GroovieGameDescription *)gd)->version != kGroovieT7G)
 		return Common::Error(Common::kUnsupportedGameidError, _s("GroovieV2 support is not compiled in"));
 #endif
 
@@ -61,6 +61,7 @@ bool GroovieMetaEngine::hasFeature(MetaEngineFeature f) const {
 		(f == kSupportsListSaves) ||
 		(f == kSupportsLoadingDuringStartup) ||
 		(f == kSupportsDeleteSave) ||
+		(f == kSimpleSavesNames) ||
 		(f == kSavesSupportMetaInfo);
 }
 
@@ -89,6 +90,10 @@ SaveStateDescriptor GroovieMetaEngine::querySaveMetaInfos(const char *target, in
 	delete savefile;
 
 	return desc;
+}
+
+int GroovieMetaEngine::getAutosaveSlot() const {
+	return GroovieEngine::AUTOSAVE_SLOT;
 }
 
 } // End of namespace Groovie

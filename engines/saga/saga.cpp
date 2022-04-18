@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -65,7 +64,6 @@ SagaEngine::SagaEngine(OSystem *syst, const SAGAGameDescription *gameDesc)
 	_spiritualBarometer = 0;
 
 	_soundVolume = 0;
-	_musicVolume = 0;
 	_speechVolume = 0;
 	_subtitlesEnabled = false;
 	_voicesEnabled = false;
@@ -128,12 +126,6 @@ SagaEngine::SagaEngine(OSystem *syst, const SAGAGameDescription *gameDesc)
 	// Mac CD Wyrmkeep
 	SearchMan.addSubDirectoryMatching(gameDataDir, "patch");
 
-	// Dinotopia
-	SearchMan.addSubDirectoryMatching(gameDataDir, "smack");
-
-	// FTA2
-	SearchMan.addSubDirectoryMatching(gameDataDir, "video");
-
 	_displayClip.left = _displayClip.top = 0;
 }
 
@@ -158,13 +150,11 @@ SagaEngine::~SagaEngine() {
 	delete _events;
 	_events = NULL;
 
-	if (!isSaga2()) {
-		delete _font;
-		_font = NULL;
+	delete _font;
+	_font = NULL;
 
-		delete _sprite;
-		_sprite = NULL;
-	}
+	delete _sprite;
+	_sprite = NULL;
 
 	delete _anim;
 	_anim = NULL;
@@ -172,10 +162,8 @@ SagaEngine::~SagaEngine() {
 	delete _script;
 	_script = NULL;
 
-	if (!isSaga2()) {
-		delete _interface;
-		_interface = NULL;
-	}
+	delete _interface;
+	_interface = NULL;
 
 	delete _actor;
 	_actor = NULL;
@@ -212,7 +200,6 @@ Common::Error SagaEngine::run() {
 	ConfMan.registerDefault("talkspeed", "255");
 	ConfMan.registerDefault("subtitles", "true");
 
-	_musicVolume = ConfMan.getInt("music_volume");
 	_subtitlesEnabled = ConfMan.getBool("subtitles");
 	_readingSpeed = getTalkspeed();
 	_copyProtection = ConfMan.getBool("copy_protection");
@@ -232,12 +219,6 @@ Common::Error SagaEngine::run() {
 			_resource = new Resource_RES(this);
 			break;
 #endif
-#ifdef ENABLE_SAGA2
-		case GID_DINO:
-		case GID_FTA2:
-			_resource = new Resource_HRS(this);
-			break;
-#endif
 		default:
 			break;
 	}
@@ -249,20 +230,15 @@ Common::Error SagaEngine::run() {
 	}
 
 	// Initialize engine modules
-	// TODO: implement differences for SAGA2
 	_sndRes = new SndRes(this);
 	_events = new Events(this);
 
-	if (!isSaga2()) {
-		if (getLanguage() == Common::JA_JPN)
-			_font = new SJISFont(this);
-		else
-			_font = new DefaultFont(this);
-		_sprite = new Sprite(this);
-		_script = new SAGA1Script(this);
-	} else {
-		_script = new SAGA2Script(this);
-	}
+	if (getLanguage() == Common::JA_JPN)
+		_font = new SJISFont(this);
+	else
+		_font = new DefaultFont(this);
+	_sprite = new Sprite(this);
+	_script = new SAGA1Script(this);
 
 	_anim = new Anim(this);
 	_interface = new Interface(this); // requires script module
@@ -296,16 +272,12 @@ Common::Error SagaEngine::run() {
 	// Initialize system specific sound
 	_sound = new Sound(this, _mixer);
 
-	if (!isSaga2()) {
-		_interface->converseClear();
-		_script->setVerb(_script->getVerbType(kVerbWalkTo));
-	}
+	_interface->converseClear();
+	_script->setVerb(_script->getVerbType(kVerbWalkTo));
 
-	_music->setVolume(_musicVolume, 1);
+	_music->resetVolume();
 
-	if (!isSaga2()) {
-		_gfx->initPalette();
-	}
+	_gfx->initPalette();
 
 	if (_voiceFilesExist) {
 		if (getGameId() == GID_IHNM) {
@@ -392,6 +364,8 @@ Common::Error SagaEngine::run() {
 		_render->drawScene();
 		_system->delayMillis(10);
 	}
+
+	_music->close();
 
 	return Common::kNoError;
 }
@@ -496,33 +470,32 @@ const char *SagaEngine::getObjectName(uint16 objectId) const {
 	return NULL;
 }
 
+int SagaEngine::getLanguageIndex() {
+	switch (getLanguage()) {
+	case Common::EN_ANY:
+		return 0;
+	case Common::DE_DEU:
+		return 1;
+	case Common::IT_ITA:
+		return 2;
+	case Common::ES_ESP:
+		return 3;
+	case Common::FR_FRA:
+		return 4;
+	case Common::JA_JPN:
+		return 5;
+	case Common::RU_RUS:
+		return 6;
+	case Common::HE_ISR:
+		return 7;
+	default:
+		return 0;
+	}
+}
+
 const char *SagaEngine::getTextString(int textStringId) {
 	const char *string;
-	int lang = 0;
-
-	switch (getLanguage()) {
-		case Common::DE_DEU:
-			lang = 1;
-			break;
-		case Common::IT_ITA:
-			lang = 2;
-			break;
-		case Common::ES_ESP:
-			lang = 3;
-			break;
-		case Common::RU_RUS:
-			lang = 4;
-			break;
-		case Common::FR_FRA:
-			lang = 5;
-			break;
-		case Common::JA_JPN:
-			lang = 6;
-			break;
-		default:
-			lang = 0;
-			break;
-	}
+	int lang = getLanguageIndex();
 
 	if (getLanguage() == Common::RU_RUS && textStringId == 43) {
 		if (getGameId() == GID_ITE)
@@ -655,9 +628,7 @@ void SagaEngine::syncSoundSettings() {
 	if (_readingSpeed > 3)
 		_readingSpeed = 0;
 
-	_musicVolume = ConfMan.getInt("music_volume");
-	_music->setVolume(_musicVolume, 1);
-	_sound->setVolume();
+	_music->syncSoundSettings();
 }
 
 void SagaEngine::pauseEngineIntern(bool pause) {

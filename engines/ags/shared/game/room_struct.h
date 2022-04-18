@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -64,6 +63,15 @@ typedef std::shared_ptr<ccScript> PScript;
 // later, when more engine source is put in AGS namespace and
 // refactored.
 
+// Room's area mask type
+enum RoomAreaMask {
+	kRoomAreaNone = 0,
+	kRoomAreaHotspot,
+	kRoomAreaWalkBehind,
+	kRoomAreaWalkable,
+	kRoomAreaRegion
+};
+
 // Room's audio volume modifier
 enum RoomVolumeMod {
 	kRoomVolumeQuietest = -3,
@@ -79,6 +87,11 @@ enum RoomVolumeMod {
 
 	kRoomVolumeMin = kRoomVolumeQuietest,
 	kRoomVolumeMax = kRoomVolumeExtra2,
+};
+
+// Extended room boolean options
+enum RoomFlags {
+	kRoomFlag_BkgFrameLocked = 0x01
 };
 
 // Flag tells that walkable area does not have continious zoom
@@ -120,6 +133,8 @@ struct RoomOptions {
 	int  PlayerView;
 	// Room's music volume modifier
 	RoomVolumeMod MusicVolume;
+	// A collection of boolean options
+	int  Flags;
 
 	RoomOptions();
 };
@@ -231,8 +246,8 @@ struct WalkBehind {
 #define MSG_TIMELIMIT   0x02
 
 struct MessageInfo {
-	char    DisplayAs; // 0 - std display window, >=1 - as character's speech
-	char    Flags; // combination of MSG_xxx flags
+	int8    DisplayAs; // 0 - std display window, >=1 - as character's speech
+	int8    Flags; // combination of MSG_xxx flags
 
 	MessageInfo();
 };
@@ -279,6 +294,11 @@ public:
 	void            InitDefaults();
 	// Set legacy resolution type
 	void            SetResolution(RoomResolutionType type);
+
+	// Gets bitmap of particular mask layer
+	Bitmap *GetMask(RoomAreaMask mask) const;
+	// Gets mask's scale relative to the room's background size
+	float   GetMaskScale(RoomAreaMask mask) const;
 
 	// TODO: see later whether it may be more convenient to move these to the Region class instead.
 	// Gets if the given region has light level set
@@ -352,6 +372,8 @@ public:
 	PInteractionScripts     EventHandlers;
 	// Compiled room script
 	PScript                 CompiledScript;
+	// Various extended options with string values, meta-data etc
+	StringMap               StrOptions;
 
 private:
 	// Room's legacy resolution type, defines relation room and game's resolution

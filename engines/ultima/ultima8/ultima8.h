@@ -5,10 +5,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,8 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -74,7 +73,6 @@ private:
 
 	static Ultima8Engine *_instance;
 
-	Std::list<ObjId> _textModes;      //!< Gumps that want text mode
 	bool _fontOverride;
 	bool _fontAntialiasing;
 	// Audio Mixer
@@ -106,6 +104,7 @@ private:
 	int32 _lerpFactor;       //!< Interpolation factor for this frame (0-256)
 	bool _inBetweenFrame;    //!< Set true if we are doing an inbetween frame
 
+	bool _highRes;			 //!< Set to true to enable larger screen size
 	bool _frameSkip;         //!< Set to true to enable frame skipping (default false)
 	bool _frameLimit;        //!< Set to true to enable frame limiting (default true)
 	bool _interpolate;       //!< Set to true to enable interpolation (default true)
@@ -171,6 +170,8 @@ protected:
 
 	bool initialize() override;
 
+	void pauseEngineIntern(bool pause) override;
+
 	/**
 	 * Returns the data archive folder and version that's required
 	 */
@@ -215,6 +216,11 @@ public:
 	static const int U8_DEFAULT_SCREEN_HEIGHT = 200;
 	static const int CRUSADER_DEFAULT_SCREEN_WIDTH = 640;
 	static const int CRUSADER_DEFAULT_SCREEN_HEIGHT = 480;
+
+	static const int U8_HIRES_SCREEN_WIDTH = 640;
+	static const int U8_HIRES_SCREEN_HEIGHT = 400;
+	static const int CRUSADER_HIRES_SCREEN_WIDTH = 1024;
+	static const int CRUSADER_HIRES_SCREEN_HEIGHT = 768;
 
 	INTRINSIC(I_getCurrentTimerTick);
 	INTRINSIC(I_setAvatarInStasis);
@@ -341,13 +347,7 @@ public:
 
 	//! start a new game
 	//! \return true if succesful.
-	bool newGame(int saveSlot = -1, int difficulty = -1);
-
-	//! Enter gump text mode (aka Unicode keyhandling)
-	void enterTextMode(Gump *);
-
-	//! Leave gump text mode (aka Unicode keyhandling)
-	void leaveTextMode(Gump *);
+	bool newGame(int saveSlot = -1);
 
 	//! Display an error message box
 	//! \param message The message to display on the box
@@ -375,8 +375,6 @@ public:
 	void makeCheater() {
 		_hasCheated = true;
 	}
-	Gump *getMenuGump() const;
-
 	bool isInterpolationEnabled() const {
 		return _interpolate;
 	}

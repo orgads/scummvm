@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -60,11 +59,16 @@ reg_t kRestartGame16(EngineState *s, int argc, reg_t *argv) {
 ** Returns the restarting_flag in acc
 */
 reg_t kGameIsRestarting(EngineState *s, int argc, reg_t *argv) {
-	s->r_acc = make_reg(0, s->gameIsRestarting);
+	// Always return the previous flag value
+	const int16 previousRestartingFlag = s->gameIsRestarting;
 
-	if (argc) { // Only happens during replay
-		if (!argv[0].toUint16()) // Set restarting flag
-			s->gameIsRestarting = GAMEISRESTARTING_NONE;
+	// Games pass zero to clear the restarting flag from their Game:doit method on
+	// each cycle. Other scripts query the restarting flag by passing no parameters.
+	if (argc > 0 && argv[0].toUint16() == 0) {
+		s->gameIsRestarting = GAMEISRESTARTING_NONE;
+	} else {
+		// Only speed throttle calls from game loops or our script patches.
+		return make_reg(0, previousRestartingFlag);
 	}
 
 	uint32 neededSleep = 30;
@@ -96,25 +100,6 @@ reg_t kGameIsRestarting(EngineState *s, int argc, reg_t *argv) {
 			neededSleep = 60;
 		}
 		break;
-	case GID_KQ6: {
-		// KQ6 has talking inventory items that animate in the inventory window.
-		//  This is done with unthrottled inner loops which we replace with
-		//  calls to kGameIsRestarting so that the screen updates and responds
-		//  to input. Since this can happen in any room, we detect if the caller
-		//  is inventory script 907. See kq6PatchTalkingInventory.
-		if (s->_executionStack.size() >= 2) {
-			Common::List<ExecStack>::const_iterator iter = s->_executionStack.reverse_begin();
-			--iter; // skip this kernel call
-			if (iter->type == EXEC_STACK_TYPE_CALL) {
-				int callerScriptNumber = s->_segMan->getScript(iter->addr.pc.getSegment())->getScriptNumber();
-				if (callerScriptNumber == 907) {
-					s->_throttleTrigger = true;
-					neededSleep = 90; // talk animation interval
-				}
-			}
-		}
-		break;
-	}
 	case GID_SQ4:
 		// In SQ4 (floppy and CD) the sequel police appear way too quickly in
 		// the Skate-o-rama rooms, resulting in all sorts of timer issues, like
@@ -133,7 +118,7 @@ reg_t kGameIsRestarting(EngineState *s, int argc, reg_t *argv) {
 	s->speedThrottler(neededSleep);
 
 	s->_paletteSetIntensityCounter = 0;
-	return s->r_acc;
+	return make_reg(0, previousRestartingFlag);
 }
 
 reg_t kHaveMouse(EngineState *s, int argc, reg_t *argv) {
@@ -247,8 +232,6 @@ reg_t kGetTime(EngineState *s, int argc, reg_t *argv) {
 	TimeDate loc_time;
 	uint16 retval = 0; // Avoid spurious warning
 
-	g_system->getTimeAndDate(loc_time);
-
 	int mode = (argc > 0) ? argv[0].toUint16() : 0;
 
 	// Modes 2 and 3 are supported since 0.629.
@@ -262,6 +245,7 @@ reg_t kGetTime(EngineState *s, int argc, reg_t *argv) {
 		debugC(kDebugLevelTime, "GetTime(elapsed) returns %d", retval);
 		break;
 	case KGETTIME_TIME_12HOUR :
+		g_system->getTimeAndDate(loc_time);
 		loc_time.tm_hour %= 12;
 		if (loc_time.tm_hour == 0) {
 			loc_time.tm_hour = 12;
@@ -270,11 +254,13 @@ reg_t kGetTime(EngineState *s, int argc, reg_t *argv) {
 		debugC(kDebugLevelTime, "GetTime(12h) returns %d", retval);
 		break;
 	case KGETTIME_TIME_24HOUR :
+		g_system->getTimeAndDate(loc_time);
 		retval = (loc_time.tm_hour << 11) | (loc_time.tm_min << 5) | (loc_time.tm_sec >> 1);
 		debugC(kDebugLevelTime, "GetTime(24h) returns %d", retval);
 		break;
 	case KGETTIME_DATE :
 	{
+		g_system->getTimeAndDate(loc_time);
 		// SCI0 late: Year since 1920 (0 = 1920, 1 = 1921, etc)
 		// SCI01 and newer: Year since 1980 (0 = 1980, 1 = 1981, etc)
 		// Atari ST SCI0 late versions use the newer base year.
@@ -932,8 +918,8 @@ reg_t kKawaDbugStr(EngineState *s, int argc, reg_t *argv)
 reg_t kEmpty(EngineState *s, int argc, reg_t *argv) {
 	// Placeholder for empty kernel functions which are still called from the
 	// engine scripts (like the empty kSetSynonyms function in SCI1.1). This
-	// differs from dummy functions because it does nothing and never throws a
-	// warning when it is called.
+	// differs from dummy functions because it doesn't throw an error when it
+	// is called.
 	return s->r_acc;
 }
 

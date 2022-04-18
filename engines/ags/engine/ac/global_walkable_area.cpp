@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -89,12 +88,10 @@ int GetWalkableAreaAtScreen(int x, int y) {
 }
 
 int GetWalkableAreaAtRoom(int x, int y) {
-	if ((x >= _GP(thisroom).Width) | (x < 0) | (y < 0) | (y >= _GP(thisroom).Height))
-		return 0;
-	int result = get_walkable_area_pixel(x, y);
-	if (result <= 0)
-		return 0;
-	return result;
+	int area = get_walkable_area_pixel(x, y);
+	// IMPORTANT: disabled walkable areas are actually erased completely from the mask;
+	// see: RemoveWalkableArea() and RestoreWalkableArea().
+	return area >= 0 && area < (MAX_WALK_AREAS + 1) ? area : 0;
 }
 
 } // namespace AGS3

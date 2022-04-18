@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,14 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "common/file.h"
 #include "xeen/xeen.h"
 #include "xeen/debugger.h"
+#include "xeen/files.h"
 
 namespace Xeen {
 
@@ -60,6 +60,7 @@ Debugger::Debugger(XeenEngine *vm) : GUI::Debugger(), _vm(vm),
 	registerCmd("invincible", WRAP_METHOD(Debugger, cmdInvincible));
 	registerCmd("strength", WRAP_METHOD(Debugger, cmdSuperStrength));
 	registerCmd("intangible", WRAP_METHOD(Debugger, cmdIntangible));
+	registerCmd("load", WRAP_METHOD(Debugger, cmdLoadOriginal));
 }
 
 void Debugger::onFrame() {
@@ -218,6 +219,57 @@ bool Debugger::cmdIntangible(int argc, const char **argv) {
 	_intangible = (argc < 2) || strcmp(argv[1], "off");
 	debugPrintf("Intangibility is %s\n", _intangible ? "on" : "off");
 	return true;
+}
+
+bool Debugger::cmdLoadOriginal(int argc, const char **argv) {
+	Combat &combat = *g_vm->_combat;
+	FileManager &files = *g_vm->_files;
+	Interface &intf = *g_vm->_interface;
+	Map &map = *g_vm->_map;
+	Party &party = *g_vm->_party;
+
+	if (argc != 3) {
+		debugPrintf("load <game path> <savegame slot>: Loads original save\n");
+		return true;
+	}
+
+	// Loop through loading the sides' save archives
+	SaveArchive *archives[2] = { File::_xeenSave, File::_darkSave };
+	CCArchive *cc[2] = { File::_xeenCc, File::_darkCc };
+	const char *prefix[2] = { "XEEN", "DARK" };
+
+	Common::FSNode folder(argv[1]);
+
+	for (int idx = 0; idx < 2; ++idx) {
+		Common::FSNode fsNode = folder.getChild(
+			Common::String::format("%s%.2d.SAV", prefix[idx], strToInt(argv[2])));
+		Common::File f;
+
+		if (f.open(fsNode)) {
+			archives[idx]->load(f);
+			f.close();
+		} else {
+			archives[idx]->reset(cc[idx]);
+		}
+	}
+
+	// TODO: Figure out to set correct side from original saves
+	files.setGameCc(_vm->getGameID() == GType_DarkSide ? 1 : 0);
+
+	// Load the character roster and party
+	File::_currentSave->loadParty();
+
+	// Reset any combat information from the previous game
+	combat.reset();
+	party._treasure.reset();
+
+	// Load the new map
+	map.clearMaze();
+	map._loadCcNum = files._ccNum;
+	map.load(party._mazeId);
+
+	intf.drawParty(true);
+	return false;
 }
 
 } // End of namespace Xeen

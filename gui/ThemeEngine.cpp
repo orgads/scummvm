@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -51,6 +50,7 @@ namespace GUI {
 const char *const ThemeEngine::kImageLogo = "logo.bmp";
 const char *const ThemeEngine::kImageLogoSmall = "logo_small.bmp";
 const char *const ThemeEngine::kImageSearch = "search.bmp";
+const char *const ThemeEngine::kImageGroup = "groupbtn.bmp";
 const char *const ThemeEngine::kImageEraser = "eraser.bmp";
 const char *const ThemeEngine::kImageDelButton = "delbtn.bmp";
 const char *const ThemeEngine::kImageList = "list.bmp";
@@ -121,6 +121,9 @@ static const DrawDataInfo kDrawDataDefaults[] = {
 	{kDDDefaultBackground,            "default_bg",           kDrawLayerBackground,   kDDNone},
 	{kDDTextSelectionBackground,      "text_selection",       kDrawLayerForeground,  kDDNone},
 	{kDDTextSelectionFocusBackground, "text_selection_focus", kDrawLayerForeground,  kDDNone},
+	{kDDThumbnailBackground,    	  "thumb_bg",   		  kDrawLayerForeground,   kDDNone},
+	{kDDGridItemIdle,    	  	 	  "griditem_bg",   		  kDrawLayerForeground,   kDDNone},
+	{kDDGridItemHover,    	  	  	  "griditem_hover_bg",	  kDrawLayerForeground,   kDDNone},
 
 	{kDDWidgetBackgroundDefault,    "widget_default",   kDrawLayerBackground,   kDDNone},
 	{kDDWidgetBackgroundSmall,      "widget_small",     kDrawLayerBackground,   kDDNone},
@@ -347,7 +350,7 @@ bool ThemeEngine::init() {
 			if (member) {
 				_themeArchive = Common::makeZipArchive(member->createReadStream());
 				if (!_themeArchive) {
-					warning("Failed to open Zip archive '%s'.", member->getDisplayName().c_str());
+					warning("Failed to open Zip archive '%s'.", member->getName().c_str());
 				}
 			} else {
 				_themeArchive = Common::makeZipArchive(node);
@@ -526,14 +529,14 @@ bool ThemeEngine::addFont(TextData textId, const Common::String &language, const
 	if (!language.empty()) {
 #ifdef USE_TRANSLATION
 		Common::String cl = TransMan.getCurrentLanguage();
+#else
+		Common::String cl("en");
+#endif
 		if (!cl.matchString(language, true))
 			return true;	// Skip
 
 		if (_texts[textId] != nullptr)	// We already loaded something
 			return true;
-#else
-		return true;	// Safely ignore
-#endif
 	}
 
 	if (_texts[textId] != nullptr)
@@ -544,52 +547,22 @@ bool ThemeEngine::addFont(TextData textId, const Common::String &language, const
 	if (file == "default") {
 		_texts[textId]->_fontPtr = _font;
 	} else {
-		Common::String localized = FontMan.genLocalizedFontFilename(file);
-		const Common::String charset
-#ifdef USE_TRANSLATION
-		                            (textId == kTextDataExtraLang ? "" : TransMan.getCurrentCharset())
-#endif
-		                            ;
-
-		// Try localized fonts
-		_texts[textId]->_fontPtr = loadFont(localized, scalableFile, charset, pointsize, textId == kTextDataDefault);
+		_texts[textId]->_fontPtr = loadFont(file, scalableFile, pointsize, textId == kTextDataDefault);
 
 		if (!_texts[textId]->_fontPtr) {
-			warning("Failed to load localized font '%s'", localized.c_str());
-			// Try standard fonts
-			_texts[textId]->_fontPtr = loadFont(file, scalableFile, Common::String(), pointsize, textId == kTextDataDefault);
-
-			if (!_texts[textId]->_fontPtr) {
-				error("Couldn't load font '%s'/'%s'", file.c_str(), scalableFile.c_str());
+			warning("Couldn't load font '%s'/'%s'", file.c_str(), scalableFile.empty()? "(none)" : scalableFile.c_str());
 #ifdef USE_TRANSLATION
-				TransMan.setLanguage("C");
-				Common::TextToSpeechManager *ttsMan;
-				if ((ttsMan = g_system->getTextToSpeechManager()) != nullptr)
-					ttsMan->setLanguage("en");
-#endif // USE_TRANSLATION
-
-				// No font, cleanup TextDrawData
-				delete _texts[textId];
-				_texts[textId] = nullptr;
-
-				return false; // fall-back attempt failed
-			}
-			// Success in fall-back attempt to standard (non-localized) font.
-			// However, still returns false here, probably to avoid ugly / garbage glyphs side-effects
-			// FIXME If we return false anyway why would we attempt the fall-back in the first place?
-#ifdef USE_TRANSLATION
-			TransMan.setLanguage("C");
+			TransMan.setLanguage("en");
 			Common::TextToSpeechManager *ttsMan;
 			if ((ttsMan = g_system->getTextToSpeechManager()) != nullptr)
 				ttsMan->setLanguage("en");
 #endif // USE_TRANSLATION
-			// Returning true here, would allow falling back to standard fonts for the missing ones,
-			// but that leads to "garbage" glyphs being displayed on screen for non-Latin languages
+
 			// No font, cleanup TextDrawData
 			delete _texts[textId];
 			_texts[textId] = nullptr;
 
-			return false;
+			return false; // fall-back attempt failed
 		}
 	}
 
@@ -614,7 +587,7 @@ Common::Array<Common::Language> getLangIdentifiers(const Common::String &languag
 		{ "ja", Common::JA_JPN },
 		{ "ko", Common::KO_KOR },
 		{ "zh", Common::ZH_ANY },
-		{ "zh", Common::ZH_CNA },
+		{ "zh", Common::ZH_CHN },
 		{ "zh", Common::ZH_TWN }
 	};
 
@@ -689,6 +662,7 @@ bool ThemeEngine::addBitmap(const Common::String &filename, const Common::String
 			Common::SeekableReadStream *stream = (*i)->createReadStream();
 			if (stream) {
 				image = new Graphics::SVGBitmap(stream);
+				delete stream;
 				break;
 			}
 		}
@@ -804,7 +778,7 @@ void ThemeEngine::loadTheme(const Common::String &themeId) {
 
 	for (int i = 0; i < kDrawDataMAX; ++i) {
 		if (_widgets[i] == nullptr) {
-			warning("Missing data asset: '%s'", kDrawDataDefaults[i].name);
+			warning("Missing data asset: '%s' in theme '%s", kDrawDataDefaults[i].name, themeId.c_str());
 		} else {
 			_widgets[i]->calcBackgroundOffset();
 		}
@@ -919,13 +893,13 @@ bool ThemeEngine::loadThemeXML(const Common::String &themeId) {
 		assert((*i)->getName().hasSuffix(".stx"));
 
 		if (_parser->loadStream((*i)->createReadStream()) == false) {
-			warning("Failed to load STX file '%s'", (*i)->getDisplayName().c_str());
+			warning("Failed to load STX file '%s'", (*i)->getName().c_str());
 			_parser->close();
 			return false;
 		}
 
 		if (_parser->parse() == false) {
-			warning("Failed to parse STX file '%s'", (*i)->getDisplayName().c_str());
+			warning("Failed to parse STX file '%s'", (*i)->getName().c_str());
 			_parser->close();
 			return false;
 		}
@@ -1083,7 +1057,7 @@ void ThemeEngine::drawLineSeparator(const Common::Rect &r) {
 	drawDD(kDDSeparator, r);
 }
 
-void ThemeEngine::drawCheckbox(const Common::Rect &r, const Common::U32String &str, bool checked, WidgetStateInfo state, bool rtl) {
+void ThemeEngine::drawCheckbox(const Common::Rect &r, int spacing, const Common::U32String &str, bool checked, WidgetStateInfo state, bool rtl) {
 	if (!ready())
 		return;
 
@@ -1105,10 +1079,10 @@ void ThemeEngine::drawCheckbox(const Common::Rect &r, const Common::U32String &s
 	drawDD(dd, r2);
 
 	if (rtl) {
-		r2.right = r2.left - checkBoxSize;
+		r2.right -= checkBoxSize + spacing;
 		r2.left = r.left;
 	} else {
-		r2.left = r2.right + checkBoxSize;
+		r2.left += checkBoxSize + spacing;
 		r2.right = r.right;
 	}
 
@@ -1118,7 +1092,7 @@ void ThemeEngine::drawCheckbox(const Common::Rect &r, const Common::U32String &s
 	}
 }
 
-void ThemeEngine::drawRadiobutton(const Common::Rect &r, const Common::U32String &str, bool checked, WidgetStateInfo state, bool rtl) {
+void ThemeEngine::drawRadiobutton(const Common::Rect &r, int spacing, const Common::U32String &str, bool checked, WidgetStateInfo state, bool rtl) {
 	if (!ready())
 		return;
 
@@ -1140,10 +1114,10 @@ void ThemeEngine::drawRadiobutton(const Common::Rect &r, const Common::U32String
 	drawDD(dd, r2);
 
 	if (rtl) {
-		r2.right = r2.left - checkBoxSize;
+		r2.right -= checkBoxSize + spacing;
 		r2.left = r.left;
 	} else {
-		r2.left = r2.right + checkBoxSize;
+		r2.left += checkBoxSize + spacing;
 		r2.right = MAX(r2.left, r.right);
 	}
 
@@ -1301,6 +1275,18 @@ void ThemeEngine::drawWidgetBackground(const Common::Rect &r, WidgetBackground b
 		drawDD(kDDWidgetBackgroundSlider, r);
 		break;
 
+	case kThumbnailBackground:
+		drawDD(kDDThumbnailBackground, r);
+		break;
+
+	case kGridItemBackground:
+		drawDD(kDDGridItemIdle, r);
+		break;
+
+	case kGridItemHighlight:
+		drawDD(kDDGridItemHover, r);
+		break;
+
 	default:
 		drawDD(kDDWidgetBackgroundDefault, r);
 		break;
@@ -1452,6 +1438,22 @@ void ThemeEngine::drawChar(const Common::Rect &r, byte ch, const Graphics::Font 
 	restoreBackground(charArea);
 	font->drawChar(&_screen, ch, charArea.left, charArea.top, rgbColor);
 	addDirtyRect(charArea);
+}
+
+void ThemeEngine::drawFoldIndicator(const Common::Rect &r, bool expanded) {
+	Graphics::VectorRenderer::TriangleOrientation orient;
+	if (_layerToDraw == kDrawLayerBackground)
+		return;
+
+	if (expanded)
+		orient = Graphics::VectorRenderer::kTriangleDown;
+	else
+		orient = Graphics::VectorRenderer::kTriangleRight;
+
+	_vectorRenderer->setFillMode(Graphics::VectorRenderer::kFillForeground);
+	_vectorRenderer->setFgColor(_textColors[kTextColorNormal]->r, _textColors[kTextColorNormal]->g, _textColors[kTextColorNormal]->b);
+	_vectorRenderer->drawTriangle(r.left + r.width() / 4, r.top + r.height() / 4, r.width() / 2, r.height() / 2, orient);
+	addDirtyRect(r);
 }
 
 void ThemeEngine::debugWidgetPosition(const char *name, const Common::Rect &r) {
@@ -1663,9 +1665,9 @@ DrawData ThemeEngine::parseDrawDataId(const Common::String &name) const {
  * External data loading
  *********************************************************/
 
-const Graphics::Font *ThemeEngine::loadScalableFont(const Common::String &filename, const Common::String &charset, const int pointsize, Common::String &name) {
+const Graphics::Font *ThemeEngine::loadScalableFont(const Common::String &filename, const int pointsize, Common::String &name) {
 #ifdef USE_FREETYPE2
-	name = Common::String::format("%s-%s@%d", filename.c_str(), charset.c_str(), pointsize);
+	name = Common::String::format("%s@%d", filename.c_str(), pointsize);
 
 	// Try already loaded fonts.
 	const Graphics::Font *font = FontMan.getFontByName(name);
@@ -1729,16 +1731,21 @@ const Graphics::Font *ThemeEngine::loadFont(const Common::String &filename, Comm
 	return nullptr;
 }
 
-const Graphics::Font *ThemeEngine::loadFont(const Common::String &filename, const Common::String &scalableFilename, const Common::String &charset, const int pointsize, const bool makeLocalizedFont) {
+const Graphics::Font *ThemeEngine::loadFont(const Common::String &filename, const Common::String &scalableFilename, const int pointsize, const bool makeLocalizedFont) {
 	Common::String fontName;
 
 	const Graphics::Font *font = nullptr;
 
 	// Prefer scalable fonts over non-scalable fonts
 	if (!scalableFilename.empty())
-		font = loadScalableFont(scalableFilename, charset, pointsize, fontName);
+		font = loadScalableFont(scalableFilename, pointsize, fontName);
 
-	if (!font)
+	// We can use non-scalable fonts, but only for English
+	bool allowNonScalable = true;
+#ifdef USE_TRANSLATION
+	allowNonScalable = TransMan.currentIsBuiltinLanguage();
+#endif
+	if (!font && allowNonScalable)
 		font = loadFont(filename, fontName);
 
 	// If the font is successfully loaded store it in the font manager.
@@ -1913,7 +1920,7 @@ void ThemeEngine::listUsableThemes(Common::Archive &archive, Common::List<ThemeD
 		td.name.clear();
 		if (themeConfigUsable(**i, td.name)) {
 			td.filename = (*i)->getName();
-			td.id = (*i)->getDisplayName();
+			td.id = (*i)->getName();
 
 			// If the name of the node object also contains
 			// the ".zip" suffix, we will strip it.
@@ -2088,6 +2095,10 @@ Common::Rect ThemeEngine::swapClipRect(const Common::Rect &newRect) {
 	Common::Rect oldRect = _clip;
 	_clip = newRect;
 	return oldRect;
+}
+
+const Common::Rect ThemeEngine::getClipRect() {
+	return _clip;
 }
 
 void ThemeEngine::disableClipRect() {

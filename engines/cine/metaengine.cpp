@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -127,9 +126,7 @@ SaveStateList CineMetaEngine::listSaves(const char *target) const {
 				strncpy(saveDesc, saveNames[slotNum], SAVEGAME_NAME_LEN);
 				saveDesc[sizeof(CommandeType) - 1] = 0;
 
-				SaveStateDescriptor saveStateDesc(slotNum, saveDesc);
-				saveStateDesc.setAutosave(slotNum == getAutosaveSlot());
-				saveStateDesc.setWriteProtectedFlag(saveStateDesc.isAutosave());
+				SaveStateDescriptor saveStateDesc(this, slotNum, saveDesc);
 
 				if (saveStateDesc.getDescription().empty()) {
 					if (saveStateDesc.isAutosave()) {
@@ -152,10 +149,7 @@ SaveStateList CineMetaEngine::listSaves(const char *target) const {
 
 	// No saving on empty autosave slot
 	if (!foundAutosave) {
-		SaveStateDescriptor desc;
-		desc.setDescription(_("Empty autosave"));
-		desc.setSaveSlot(getAutosaveSlot());
-		desc.setWriteProtectedFlag(true);
+		SaveStateDescriptor desc(this, getAutosaveSlot(), _("Empty autosave"));
 		saveList.push_back(desc);
 	}
 
@@ -184,7 +178,7 @@ SaveStateDescriptor CineMetaEngine::querySaveMetaInfos(const char *target, int s
 
 	if (f) {
 		// Create the return descriptor
-		SaveStateDescriptor desc;
+		SaveStateDescriptor desc(this, slot, Common::U32String());
 
 		ExtendedSavegameHeader header;
 		if (readSavegameHeader(f.get(), &header, false)) {
@@ -213,21 +207,12 @@ SaveStateDescriptor CineMetaEngine::querySaveMetaInfos(const char *target, int s
 			desc.setDescription(_("Unnamed savegame"));
 		}
 
-		desc.setSaveSlot(slot);
-		desc.setAutosave(slot == getAutosaveSlot());
-		desc.setWriteProtectedFlag(desc.isAutosave());
-
 		return desc;
 	}
 
 	// No saving on empty autosave slot
 	if (slot == getAutosaveSlot()) {
-		SaveStateDescriptor desc;
-		desc.setDescription(_("Empty autosave"));
-		desc.setSaveSlot(slot);
-		desc.setAutosave(true);
-		desc.setWriteProtectedFlag(true);
-		return desc;
+		return SaveStateDescriptor(this, slot, _("Empty autosave"));
 	}
 
 	return SaveStateDescriptor();

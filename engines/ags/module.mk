@@ -2,6 +2,7 @@ MODULE := engines/ags
 
 MODULE_OBJS = \
 	ags.o \
+	dialogs.o \
 	events.o \
 	game_scanner.o \
 	globals.o \
@@ -38,6 +39,7 @@ MODULE_OBJS = \
 	shared/ac/keycode.o \
 	shared/ac/mouse_cursor.o \
 	shared/ac/sprite_cache.o \
+	shared/ac/sprite_file.o \
 	shared/ac/view.o \
 	shared/ac/words_dictionary.o \
 	shared/core/asset.o \
@@ -81,7 +83,6 @@ MODULE_OBJS = \
 	shared/util/ini_file.o \
 	shared/util/ini_util.o \
 	shared/util/lzw.o \
-	shared/util/misc.o \
 	shared/util/memory_stream.o \
 	shared/util/multi_file_lib.o \
 	shared/util/path.o \
@@ -286,6 +287,38 @@ MODULE_OBJS = \
 	plugins/ags_plugin.o \
 	plugins/plugin_base.o \
 	plugins/plugin_object_reader.o \
+	plugins/core/core.o \
+	plugins/core/audio_channel.o \
+	plugins/core/audio_clip.o \
+	plugins/core/button.o \
+	plugins/core/character.o \
+	plugins/core/date_time.o \
+	plugins/core/dialog.o \
+	plugins/core/dialog_options_rendering_info.o \
+	plugins/core/drawing_surface.o \
+	plugins/core/dynamic_sprite.o \
+	plugins/core/file.o \
+	plugins/core/game.o \
+	plugins/core/global_api.o \
+	plugins/core/gui.o \
+	plugins/core/gui_control.o \
+	plugins/core/hotspot.o \
+	plugins/core/inventory_item.o \
+	plugins/core/inv_window.o \
+	plugins/core/label.o \
+	plugins/core/listbox.o \
+	plugins/core/maths.o \
+	plugins/core/mouse.o \
+	plugins/core/object.o \
+	plugins/core/overlay.o \
+	plugins/core/parser.o \
+	plugins/core/region.o \
+	plugins/core/room.o \
+	plugins/core/slider.o \
+	plugins/core/string.o \
+	plugins/core/system.o \
+	plugins/core/textbox.o \
+	plugins/core/view_frame.o \
 	plugins/ags_agi/ags_agi.o \
 	plugins/ags_blend/ags_blend.o \
 	plugins/ags_clipboard/ags_clipboard.o \
@@ -296,6 +329,7 @@ MODULE_OBJS = \
 	plugins/ags_creditz/drawing.o \
 	plugins/ags_fire/ags_fire.o \
 	plugins/ags_flashlight/ags_flashlight.o \
+	plugins/ags_flashlight/gfx.o \
 	plugins/ags_galaxy_steam/ags_wadjeteye_steam.o \
 	plugins/ags_galaxy_steam/ags_galaxy_steam.o \
 	plugins/ags_joy/ags_joy.o \
@@ -318,7 +352,14 @@ MODULE_OBJS = \
 	plugins/ags_sprite_font/variable_width_sprite_font_clifftop.o \
 	plugins/ags_shell/ags_shell.o \
 	plugins/ags_tcp_ip/ags_tcp_ip.o \
-	plugins/ags_wadjet_util/ags_wadjet_util.o
+	plugins/ags_touch/ags_touch.o \
+	plugins/ags_wadjet_util/ags_wadjet_util.o \
+	plugins/ags_waves/ags_waves.o \
+	plugins/ags_waves/data.o \
+	plugins/ags_waves/draw.o \
+	plugins/ags_waves/sound.o \
+	plugins/ags_waves/warper.o \
+	plugins/ags_waves/weather.o
 
 ifdef ENABLE_AGS_TESTS
 MODULE_OBJS += \

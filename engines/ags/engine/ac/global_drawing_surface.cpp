@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -148,7 +147,7 @@ void RawPrint(int xx, int yy, const char *text) {
 }
 void RawPrintMessageWrapped(int xx, int yy, int wid, int font, int msgm) {
 	char displbuf[3000];
-	int linespacing = getfontspacing_outlined(font);
+	const int linespacing = get_font_linespacing(font);
 	data_to_game_coords(&xx, &yy);
 	wid = data_to_game_coord(wid);
 
@@ -156,13 +155,13 @@ void RawPrintMessageWrapped(int xx, int yy, int wid, int font, int msgm) {
 	// it's probably too late but check anyway
 	if (strlen(displbuf) > 2899)
 		quit("!RawPrintMessageWrapped: message too long");
-	if (break_up_text_into_lines(displbuf, Lines, wid, font) == 0)
+	if (break_up_text_into_lines(displbuf, _GP(Lines), wid, font) == 0)
 		return;
 
 	RAW_START();
 	color_t text_color = _GP(play).raw_color;
-	for (size_t i = 0; i < Lines.Count(); i++)
-		wouttext_outline(RAW_SURFACE(), xx, yy + linespacing * i, font, text_color, Lines[i].GetCStr());
+	for (size_t i = 0; i < _GP(Lines).Count(); i++)
+		wouttext_outline(RAW_SURFACE(), xx, yy + linespacing * i, font, text_color, _GP(Lines)[i].GetCStr());
 	invalidate_screen();
 	mark_current_background_dirty();
 	RAW_END();

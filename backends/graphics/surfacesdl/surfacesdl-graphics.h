@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -40,6 +39,10 @@
 #define USE_SDL_DEBUG_FOCUSRECT
 #endif
 
+enum {
+	GFX_SURFACESDL = 0
+};
+
 
 class AspectRatio {
 	int _kw, _kh;
@@ -61,37 +64,42 @@ public:
 	SurfaceSdlGraphicsManager(SdlEventSource *sdlEventSource, SdlWindow *window);
 	virtual ~SurfaceSdlGraphicsManager();
 
-	virtual bool hasFeature(OSystem::Feature f) const override;
-	virtual void setFeatureState(OSystem::Feature f, bool enable) override;
-	virtual bool getFeatureState(OSystem::Feature f) const override;
+	bool hasFeature(OSystem::Feature f) const override;
+	void setFeatureState(OSystem::Feature f, bool enable) override;
+	bool getFeatureState(OSystem::Feature f) const override;
 
-	virtual const OSystem::GraphicsMode *getSupportedGraphicsModes() const override;
-	virtual int getDefaultGraphicsMode() const override;
-	virtual bool setGraphicsMode(int mode, uint flags = OSystem::kGfxModeNoFlags) override;
-	virtual int getGraphicsMode() const override;
+	const OSystem::GraphicsMode *getSupportedGraphicsModes() const override;
+	int getDefaultGraphicsMode() const override;
+	bool setGraphicsMode(int mode, uint flags = OSystem::kGfxModeNoFlags) override;
+	int getGraphicsMode() const override;
+	uint getDefaultScaler() const override;
+	uint getDefaultScaleFactor() const override;
+	bool setScaler(uint mode, int factor) override;
+	uint getScaler() const override;
+	uint getScaleFactor() const override;
 #ifdef USE_RGB_COLOR
-	virtual Graphics::PixelFormat getScreenFormat() const override { return _screenFormat; }
-	virtual Common::List<Graphics::PixelFormat> getSupportedFormats() const override;
+	Graphics::PixelFormat getScreenFormat() const override { return _screenFormat; }
+	Common::List<Graphics::PixelFormat> getSupportedFormats() const override;
 #endif
 #if SDL_VERSION_ATLEAST(2, 0, 0)
-	virtual const OSystem::GraphicsMode *getSupportedStretchModes() const override;
-	virtual int getDefaultStretchMode() const override;
-	virtual bool setStretchMode(int mode) override;
-	virtual int getStretchMode() const override;
+	const OSystem::GraphicsMode *getSupportedStretchModes() const override;
+	int getDefaultStretchMode() const override;
+	bool setStretchMode(int mode) override;
+	int getStretchMode() const override;
 #endif
-	virtual void initSize(uint w, uint h, const Graphics::PixelFormat *format = NULL) override;
-	virtual int getScreenChangeID() const override { return _screenChangeCount; }
+	void initSize(uint w, uint h, const Graphics::PixelFormat *format = NULL) override;
+	int getScreenChangeID() const override { return _screenChangeCount; }
 
-	virtual void beginGFXTransaction() override;
-	virtual OSystem::TransactionError endGFXTransaction() override;
+	void beginGFXTransaction() override;
+	OSystem::TransactionError endGFXTransaction() override;
 
-	virtual int16 getHeight() const override;
-	virtual int16 getWidth() const override;
+	int16 getHeight() const override;
+	int16 getWidth() const override;
 
 protected:
 	// PaletteManager API
-	virtual void setPalette(const byte *colors, uint start, uint num) override;
-	virtual void grabPalette(byte *colors, uint start, uint num) const override;
+	void setPalette(const byte *colors, uint start, uint num) override;
+	void grabPalette(byte *colors, uint start, uint num) const override;
 
 	/**
 	 * Convert from the SDL pixel format to Graphics::PixelFormat
@@ -100,35 +108,35 @@ protected:
 	 */
 	Graphics::PixelFormat convertSDLPixelFormat(SDL_PixelFormat *in) const;
 public:
-	virtual void copyRectToScreen(const void *buf, int pitch, int x, int y, int w, int h) override;
-	virtual Graphics::Surface *lockScreen() override;
-	virtual void unlockScreen() override;
-	virtual void fillScreen(uint32 col) override;
-	virtual void updateScreen() override;
-	virtual void setFocusRectangle(const Common::Rect& rect) override;
-	virtual void clearFocusRectangle() override;
+	void copyRectToScreen(const void *buf, int pitch, int x, int y, int w, int h) override;
+	Graphics::Surface *lockScreen() override;
+	void unlockScreen() override;
+	void fillScreen(uint32 col) override;
+	void updateScreen() override;
+	void setFocusRectangle(const Common::Rect& rect) override;
+	void clearFocusRectangle() override;
 
-	virtual Graphics::PixelFormat getOverlayFormat() const override { return _overlayFormat; }
-	virtual void clearOverlay() override;
-	virtual void grabOverlay(Graphics::Surface &surface) const override;
-	virtual void copyRectToOverlay(const void *buf, int pitch, int x, int y, int w, int h) override;
-	virtual int16 getOverlayHeight() const override { return _videoMode.overlayHeight; }
-	virtual int16 getOverlayWidth() const override { return _videoMode.overlayWidth; }
+	Graphics::PixelFormat getOverlayFormat() const override { return _overlayFormat; }
+	void clearOverlay() override;
+	void grabOverlay(Graphics::Surface &surface) const override;
+	void copyRectToOverlay(const void *buf, int pitch, int x, int y, int w, int h) override;
+	int16 getOverlayHeight() const override { return _videoMode.overlayHeight; }
+	int16 getOverlayWidth() const override { return _videoMode.overlayWidth; }
 
-	virtual void setMouseCursor(const void *buf, uint w, uint h, int hotspotX, int hotspotY, uint32 keycolor, bool dontScale = false, const Graphics::PixelFormat *format = NULL) override;
-	virtual void setCursorPalette(const byte *colors, uint start, uint num) override;
+	void setMouseCursor(const void *buf, uint w, uint h, int hotspotX, int hotspotY, uint32 keycolor, bool dontScale = false, const Graphics::PixelFormat *format = NULL) override;
+	void setCursorPalette(const byte *colors, uint start, uint num) override;
 
 #ifdef USE_OSD
-	virtual void displayMessageOnOSD(const Common::U32String &msg) override;
-	virtual void displayActivityIconOnOSD(const Graphics::Surface *icon) override;
+	void displayMessageOnOSD(const Common::U32String &msg) override;
+	void displayActivityIconOnOSD(const Graphics::Surface *icon) override;
 #endif
 
 	// Override from Common::EventObserver
-	virtual bool notifyEvent(const Common::Event &event) override;
+	bool notifyEvent(const Common::Event &event) override;
 
 	// SdlGraphicsManager interface
-	virtual void notifyVideoExpose() override;
-	virtual void notifyResize(const int width, const int height) override;
+	void notifyVideoExpose() override;
+	void notifyResize(const int width, const int height) override;
 
 protected:
 #ifdef USE_OSD
@@ -157,16 +165,14 @@ protected:
 	void drawOSD();
 #endif
 
-	virtual bool gameNeedsAspectRatioCorrection() const override {
+	bool gameNeedsAspectRatioCorrection() const override {
 		return _videoMode.aspectRatioCorrection;
 	}
-	virtual int getGameRenderScale() const override {
+	int getGameRenderScale() const override {
 		return _videoMode.scaleFactor;
 	}
 
-	virtual void handleResizeImpl(const int width, const int height) override;
-
-	virtual int getGraphicsModeScale(int mode) const override;
+	void handleResizeImpl(const int width, const int height) override;
 
 	virtual void setupHardwareSize();
 
@@ -185,6 +191,7 @@ protected:
 	int SDL_SetColors(SDL_Surface *surface, SDL_Color *colors, int firstcolor, int ncolors);
 	int SDL_SetAlpha(SDL_Surface *surface, Uint32 flag, Uint8 alpha);
 	int SDL_SetColorKey(SDL_Surface *surface, Uint32 flag, Uint32 key);
+	bool _vsync;
 #endif
 
 	/** Unseen game screen */
@@ -256,7 +263,7 @@ protected:
 		int stretchMode;
 #endif
 
-		int mode;
+		uint scalerIndex;
 		int scaleFactor;
 
 		int screenWidth, screenHeight;
@@ -277,7 +284,7 @@ protected:
 			stretchMode = 0;
 #endif
 
-			mode = 0;
+			scalerIndex = 0;
 			scaleFactor = 0;
 
 			screenWidth = 0;
@@ -317,7 +324,7 @@ protected:
 
 	const PluginList &_scalerPlugins;
 	ScalerPluginObject *_scalerPlugin;
-	uint _scalerIndex;
+	Scaler *_scaler;
 	uint _maxExtraPixels;
 	uint _extraPixels;
 
@@ -411,12 +418,12 @@ protected:
 	virtual void setAspectRatioCorrection(bool enable);
 	void setFilteringMode(bool enable);
 
-	virtual bool saveScreenshot(const Common::String &filename) const override;
+	bool saveScreenshot(const Common::String &filename) const override;
 	virtual void setGraphicsModeIntern();
 
 private:
 	void setFullscreenMode(bool enable);
-	void handleScalerHotkeys(int factor);
+	void handleScalerHotkeys(uint mode, int factor);
 
 	/**
 	 * Converts the given point from the overlay's coordinate space to the

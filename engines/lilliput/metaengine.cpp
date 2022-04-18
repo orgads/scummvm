@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -57,6 +56,14 @@ public:
 	SaveStateList listSaves(const char *target) const override;
 	SaveStateDescriptor querySaveMetaInfos(const char *target, int slot) const override;
 	void removeSaveState(const char *target, int slot) const override;
+	Common::String getSavegameFile(int saveGameIdx, const char *target) const override {
+		if (!target)
+			target = getEngineId();
+		if (saveGameIdx == kSavegameFilePattern)
+			return Common::String::format("%s-##.SAV", target);
+		else
+			return Common::String::format("%s-%02d.SAV", target, saveGameIdx);
+	}
 };
 
 Common::Error LilliputMetaEngine::createInstance(OSystem *syst, Engine **engine, const ADGameDescription *gd) const {
@@ -117,7 +124,7 @@ SaveStateList LilliputMetaEngine::listSaves(const char *target) const {
 				file->read(name, nameSize);
 				name[nameSize] = 0;
 
-				saveList.push_back(SaveStateDescriptor(slotNum, name));
+				saveList.push_back(SaveStateDescriptor(this, slotNum, name));
 				delete file;
 			}
 		}
@@ -128,8 +135,7 @@ SaveStateList LilliputMetaEngine::listSaves(const char *target) const {
 }
 
 SaveStateDescriptor LilliputMetaEngine::querySaveMetaInfos(const char *target, int slot) const {
-	Common::String fileName = Common::String::format("%s-%02d.SAV", target, slot);
-	Common::InSaveFile *file = g_system->getSavefileManager()->openForLoading(fileName);
+	Common::InSaveFile *file = g_system->getSavefileManager()->openForLoading(getSavegameFile(slot, target));
 
 	if (file) {
 		int saveVersion = file->readByte();
@@ -147,7 +153,7 @@ SaveStateDescriptor LilliputMetaEngine::querySaveMetaInfos(const char *target, i
 			saveName += curChr;
 		}
 
-		SaveStateDescriptor desc(slot, saveName);
+		SaveStateDescriptor desc(this, slot, saveName);
 
 		Graphics::Surface *thumbnail;
 		if (!Graphics::loadThumbnail(*file, thumbnail)) {
@@ -155,9 +161,6 @@ SaveStateDescriptor LilliputMetaEngine::querySaveMetaInfos(const char *target, i
 			return SaveStateDescriptor();
 		}
 		desc.setThumbnail(thumbnail);
-
-		desc.setDeletableFlag(true);
-		desc.setWriteProtectedFlag(false);
 
 		uint32 saveDate = file->readUint32BE();
 		uint16 saveTime = file->readUint16BE();
@@ -173,11 +176,6 @@ SaveStateDescriptor LilliputMetaEngine::querySaveMetaInfos(const char *target, i
 
 		desc.setSaveTime(hour, minutes);
 
-		// Slot 0 is used for the 'restart game' save in all Robin games, thus
-		// we prevent it from being deleted.
-		desc.setDeletableFlag(slot != 0);
-		desc.setWriteProtectedFlag(slot == 0);
-
 		delete file;
 		return desc;
 	}
@@ -185,8 +183,7 @@ SaveStateDescriptor LilliputMetaEngine::querySaveMetaInfos(const char *target, i
 }
 
 void LilliputMetaEngine::removeSaveState(const char *target, int slot) const {
-	Common::String fileName = Common::String::format("%s-%02d.SAV", target, slot);
-	g_system->getSavefileManager()->removeSavefile(fileName);
+	g_system->getSavefileManager()->removeSavefile(getSavegameFile(slot, target));
 }
 
 } // End of namespace Lilliput

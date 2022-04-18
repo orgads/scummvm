@@ -5,9 +5,9 @@
  * file distributed with this source distribution.
  *
  * This _program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This _program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -26,6 +26,7 @@
 #include "backends/platform/3ds/options-dialog.h"
 #include "backends/platform/3ds/config.h"
 #include "common/rect.h"
+#include "graphics/conversion.h"
 #include "graphics/fontman.h"
 #include "gui/gui-manager.h"
 
@@ -627,12 +628,14 @@ void OSystem_3DS::clearOverlay() {
 }
 
 void OSystem_3DS::grabOverlay(Graphics::Surface &surface) {
-	byte *dst = (byte *)surface.getPixels();
+	assert(surface.w >= getOverlayWidth());
+	assert(surface.h >= getOverlayHeight());
+	assert(surface.format.bytesPerPixel == _overlay.format.bytesPerPixel);
 
-	for (int y = 0; y < getOverlayHeight(); ++y) {
-		memcpy(dst, _overlay.getBasePtr(0, y), getOverlayWidth() * _overlay.format.bytesPerPixel);
-		dst += surface.pitch;
-	}
+	byte *src = (byte *)_overlay.getPixels();
+	byte *dst = (byte *)surface.getPixels();
+	Graphics::copyBlit(dst, src, surface.pitch, _overlay.pitch,
+		getOverlayWidth(), getOverlayHeight(), _overlay.format.bytesPerPixel);
 }
 
 void OSystem_3DS::copyRectToOverlay(const void *buf, int pitch, int x,
@@ -690,7 +693,7 @@ void OSystem_3DS::displayMessageOnOSD(const Common::U32String &msg) {
 		font->drawString(&_osdMessage, lines[i],
 		                 0, 0 + i * lineHeight + vOffset + lineSpacing, width,
 		                 _pfDefaultTexture.RGBToColor(255, 255, 255),
-		                 Graphics::kTextAlignCenter);
+		                 Graphics::kTextAlignCenter, 0, true);
 	}
 
 	_osdMessageEndTime = getMillis(true) + kOSDMessageDuration;
@@ -769,7 +772,7 @@ void OSystem_3DS::setMouseCursor(const void *buf, uint w, uint h,
 	_cursorKeyColor = keycolor;
 	_pfCursor = !format ? Graphics::PixelFormat::createFormatCLUT8() : *format;
 
-	if (w != _cursor.w || h != _cursor.h || _cursor.format != _pfCursor) {
+	if (w != (uint)_cursor.w || h != (uint)_cursor.h || _cursor.format != _pfCursor) {
 		_cursor.create(w, h, _pfCursor);
 		_cursorTexture.create(w, h, &DEFAULT_MODE);
 	}
@@ -800,11 +803,11 @@ void applyKeyColor(Graphics::Surface *src, Graphics::Surface *dst, const SrcColo
 	assert(dst->format.bytesPerPixel == 4);
 	assert((dst->w >= src->w) && (dst->h >= src->h));
 
-	for (uint y = 0; y < src->h; ++y) {
+	for (uint y = 0; y < (uint)src->h; ++y) {
 		SrcColor *srcPtr = (SrcColor *)src->getBasePtr(0, y);
 		uint32 *dstPtr = (uint32 *)dst->getBasePtr(0, y);
 
-		for (uint x = 0; x < src->w; ++x) {
+		for (uint x = 0; x < (uint)src->w; ++x) {
 			const SrcColor color = *srcPtr++;
 
 			if (color == keyColor) {

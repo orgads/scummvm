@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,12 +24,12 @@
 #include <unistd.h>
 
 #include <ogc/conf.h>
-#include <ogc/mutex.h>
 #include <ogc/lwp_watchdog.h>
 
 #include "common/config-manager.h"
 #include "common/textconsole.h"
 #include "backends/fs/wii/wii-fs-factory.h"
+#include "backends/mutex/wii/wii-mutex.h"
 #include "backends/saves/default/default-saves.h"
 #include "backends/timer/default/default-timer.h"
 
@@ -221,40 +220,8 @@ void OSystem_Wii::delayMillis(uint msecs) {
 	usleep(msecs * 1000);
 }
 
-OSystem::MutexRef OSystem_Wii::createMutex() {
-	mutex_t *mutex = (mutex_t *) malloc(sizeof(mutex_t));
-	s32 res = LWP_MutexInit(mutex, true);
-
-	if (res) {
-		printf("ERROR creating mutex\n");
-		free(mutex);
-		return NULL;
-	}
-
-	return (MutexRef) mutex;
-}
-
-void OSystem_Wii::lockMutex(MutexRef mutex) {
-	s32 res = LWP_MutexLock(*(mutex_t *)mutex);
-
-	if (res)
-		printf("ERROR locking mutex %p (%d)\n", mutex, res);
-}
-
-void OSystem_Wii::unlockMutex(MutexRef mutex) {
-	s32 res = LWP_MutexUnlock(*(mutex_t *)mutex);
-
-	if (res)
-		printf("ERROR unlocking mutex %p (%d)\n", mutex, res);
-}
-
-void OSystem_Wii::deleteMutex(MutexRef mutex) {
-	s32 res = LWP_MutexDestroy(*(mutex_t *)mutex);
-
-	if (res)
-		printf("ERROR destroying mutex %p (%d)\n", mutex, res);
-
-	free(mutex);
+Common::MutexInternal *OSystem_Wii::createMutex() {
+	return createWiiMutexInternal();
 }
 
 Audio::Mixer *OSystem_Wii::getMixer() {
@@ -266,7 +233,7 @@ FilesystemFactory *OSystem_Wii::getFilesystemFactory() {
 	return &WiiFilesystemFactory::instance();
 }
 
-void OSystem_Wii::getTimeAndDate(TimeDate &td) const {
+void OSystem_Wii::getTimeAndDate(TimeDate &td, bool skipRecord) const {
 	time_t curTime = time(0);
 	struct tm t = *localtime(&curTime);
 	td.tm_sec = t.tm_sec;

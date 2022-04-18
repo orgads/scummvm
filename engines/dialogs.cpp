@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -264,6 +263,7 @@ ConfigDialog::ConfigDialog() :
 
 	const Common::String &gameDomain = ConfMan.getActiveDomainName();
 	const MetaEngine *metaEngine = g_engine->getMetaEngine();
+	const MetaEngineDetection &metaEngineDetection = g_engine->getMetaEngineDetection();
 
 	// GUI:  Add tab widget
 	GUI::TabWidget *tab = new GUI::TabWidget(this, "GlobalConfig.TabWidget");
@@ -272,10 +272,12 @@ ConfigDialog::ConfigDialog() :
 	// The game specific options tab
 	//
 
-	int tabId = tab->addTab(_("Game"), "GlobalConfig_Engine");
+	int tabId = tab->addTab(_("Game"), "GlobalConfig_Engine", false);
 
 	if (g_engine->hasFeature(Engine::kSupportsChangingOptionsDuringRuntime)) {
 		_engineOptions = metaEngine->buildEngineOptionsWidgetDynamic(tab, "GlobalConfig_Engine.Container", gameDomain);
+		if (!_engineOptions)
+			_engineOptions = metaEngineDetection.buildEngineOptionsWidgetStatic(tab, "GlobalConfig_Engine.Container", gameDomain);
 	}
 
 	if (_engineOptions) {
@@ -313,14 +315,14 @@ ConfigDialog::ConfigDialog() :
 
 	Common::KeymapArray keymaps = metaEngine->initKeymaps(gameDomain.c_str());
 	if (!keymaps.empty()) {
-		tab->addTab(_("Keymaps"), "GlobalConfig_KeyMapper");
+		tab->addTab(_("Keymaps"), "GlobalConfig_KeyMapper", false);
 		addKeyMapperControls(tab, "GlobalConfig_KeyMapper.", keymaps, gameDomain);
 	}
 
 	//
 	// The backend tab (shown only if the backend implements one)
 	//
-	int backendTabId = tab->addTab(_("Backend"), "GlobalConfig_Backend");
+	int backendTabId = tab->addTab(_("Backend"), "GlobalConfig_Backend", false);
 
 	_backendOptions = g_system->buildBackendOptionsWidget(tab, "GlobalConfig_Backend.Container", _domain);
 
@@ -335,11 +337,11 @@ ConfigDialog::ConfigDialog() :
 	//
 	AchMan.setActiveDomain(metaEngine->getAchievementsInfo(gameDomain));
 	if (AchMan.getAchievementCount()) {
-		tab->addTab(_("Achievements"), "GlobalConfig_Achievements");
+		tab->addTab(_("Achievements"), "GlobalConfig_Achievements", false);
 		addAchievementsControls(tab, "GlobalConfig_Achievements.");
 	}
 	if (AchMan.getStatCount()) {
-		tab->addTab(_("Statistics"), "GlobalConfig_Achievements");
+		tab->addTab(_("Statistics"), "GlobalConfig_Achievements", false);
 		addStatisticsControls(tab, "GlobalConfig_Achievements.");
 	}
 
@@ -375,7 +377,7 @@ void ConfigDialog::apply() {
 }
 
 ExtraGuiOptionsWidget::ExtraGuiOptionsWidget(GuiObject *containerBoss, const Common::String &name, const Common::String &domain, const ExtraGuiOptions &options) :
-		OptionsContainerWidget(containerBoss, name, dialogLayout(domain), true, domain),
+		OptionsContainerWidget(containerBoss, name, dialogLayout(domain), false, domain),
 		_options(options) {
 
 	for (uint i = 0; i < _options.size(); i++) {

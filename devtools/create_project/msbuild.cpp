@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -65,6 +64,7 @@ inline void outputConfigurationType(const BuildSetup &setup, std::ostream &proje
 		project << "\t\t<ConfigurationType>StaticLibrary</ConfigurationType>\n";
 	}
 	project << "\t\t<PlatformToolset>" << (config == "LLVM" ? msvc.toolsetLLVM : msvc.toolsetMSVC ) << "</PlatformToolset>\n";
+	project << "\t\t<CharacterSet>" << (setup.useWindowsUnicode ? "Unicode" : "NotSet") << "</CharacterSet>\n";
 	if (msvc.version >= 16 && config == "Analysis") {
 		project << "\t\t<EnableASAN>true</EnableASAN>\n";
 	}	
@@ -357,13 +357,21 @@ void MSBuildProvider::outputGlobalPropFile(const BuildSetup &setup, std::ofstrea
 	if (runBuildEvents)
 		definesList += REVISION_DEFINE ";";
 
+	std::string includeDirsList;
+	for (StringList::const_iterator i = setup.includeDirs.begin(); i != setup.includeDirs.end(); ++i)
+		includeDirsList += convertPathToWin(*i) + ';';
+
+	std::string libraryDirsList;
+	for (StringList::const_iterator i = setup.libraryDirs.begin(); i != setup.libraryDirs.end(); ++i)
+		libraryDirsList += convertPathToWin(*i) + ';';
+
 	properties << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
 	           << "<Project DefaultTargets=\"Build\" ToolsVersion=\"" << _msvcVersion.project << "\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">\n"
 	           << "\t<PropertyGroup>\n"
 	           << "\t\t<_PropertySheetDisplayName>" << setup.projectDescription << "_Global</_PropertySheetDisplayName>\n"
 	           << "\t\t<ExecutablePath>$(" << LIBS_DEFINE << ")\\bin;$(" << LIBS_DEFINE << ")\\bin\\" << getMSVCArchName(arch) << ";$(" << LIBS_DEFINE << ")\\$(Configuration)\\bin;$(ExecutablePath)</ExecutablePath>\n"
-	           << "\t\t<LibraryPath>$(" << LIBS_DEFINE << ")\\lib\\" << getMSVCArchName(arch) << ";$(" << LIBS_DEFINE << ")\\lib\\" << getMSVCArchName(arch) << "\\$(Configuration);$(" << LIBS_DEFINE << ")\\lib;$(" << LIBS_DEFINE << ")\\$(Configuration)\\lib;$(LibraryPath)</LibraryPath>\n"
-	           << "\t\t<IncludePath>$(" << LIBS_DEFINE << ")\\include;$(" << LIBS_DEFINE << ")\\include\\" << (setup.useSDL2 ? "SDL2" : "SDL") << ";$(IncludePath)</IncludePath>\n"
+	           << "\t\t<LibraryPath>" << libraryDirsList << "$(" << LIBS_DEFINE << ")\\lib\\" << getMSVCArchName(arch) << ";$(" << LIBS_DEFINE << ")\\lib\\" << getMSVCArchName(arch) << "\\$(Configuration);$(" << LIBS_DEFINE << ")\\lib;$(" << LIBS_DEFINE << ")\\$(Configuration)\\lib;$(LibraryPath)</LibraryPath>\n"
+	           << "\t\t<IncludePath>" << includeDirsList << "$(" << LIBS_DEFINE << ")\\include;$(" << LIBS_DEFINE << ")\\include\\" << (setup.useSDL2 ? "SDL2" : "SDL") << ";$(IncludePath)</IncludePath>\n"
 	           << "\t\t<OutDir>$(Configuration)" << getMSVCArchName(arch) << "\\</OutDir>\n"
 	           << "\t\t<IntDir>$(Configuration)" << getMSVCArchName(arch) << "\\$(ProjectName)\\</IntDir>\n"
 	           << "\t</PropertyGroup>\n"
@@ -439,7 +447,7 @@ void MSBuildProvider::createBuildProp(const BuildSetup &setup, bool isRelease, M
 		           << "\t\t\t<BufferSecurityCheck>false</BufferSecurityCheck>\n"
 		           << "\t\t\t<DebugInformationFormat></DebugInformationFormat>\n"
 		           << "\t\t\t<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>\n"
-		           << "\t\t\t<EnablePREfast>" << (configuration == "Analysis" ? "true" : "false") << "</EnablePREfast>\n"
+		           << "\t\t\t<EnablePREfast>false</EnablePREfast>\n"
 		           << "\t\t</ClCompile>\n"
 		           << "\t\t<Lib>\n"
 		           << "\t\t\t<LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>\n"
@@ -498,7 +506,7 @@ void MSBuildProvider::outputNasmCommand(std::ostream &projectFile, const std::st
 	}
 }
 
-void MSBuildProvider::writeFileListToProject(const FileNode &dir, std::ofstream &projectFile, const int,
+void MSBuildProvider::writeFileListToProject(const FileNode &dir, std::ostream &projectFile, const int,
 											 const std::string &objPrefix, const std::string &filePrefix) {
 	// Reset lists
 	_filters.clear();

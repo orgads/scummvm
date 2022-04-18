@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -42,13 +41,34 @@ struct LingoArchive;
 struct Resource;
 class Stxt;
 class BitmapCastMember;
+class FilmLoopCastMember;
 class ScriptCastMember;
 class ShapeCastMember;
 class TextCastMember;
 
+typedef Common::HashMap<byte, byte> CharMap;
+typedef Common::HashMap<uint16, uint16> FontSizeMap;
+struct FontXPlatformInfo {
+	Common::String toFont;
+		bool remapChars;
+	FontSizeMap sizeMap;
+
+	FontXPlatformInfo() : remapChars(false) {}
+};
+typedef Common::HashMap<Common::String, FontXPlatformInfo *> FontXPlatformMap;
+
+struct FontMapEntry {
+	uint16 toFont;
+	bool remapChars;
+	FontSizeMap sizeMap;
+
+	FontMapEntry() : toFont(0), remapChars(false) {}
+};
+typedef Common::HashMap<uint16, FontMapEntry *> FontMap;
+
 class Cast {
 public:
-	Cast(Movie *movie, bool shared = false);
+	Cast(Movie *movie, uint16 castLibID, bool shared = false);
 	~Cast();
 
 	void loadArchive();
@@ -62,6 +82,8 @@ public:
 	void loadCastData(Common::SeekableReadStreamEndian &stream, uint16 id, Resource *res);
 	void loadCastInfo(Common::SeekableReadStreamEndian &stream, uint16 id);
 	void loadLingoContext(Common::SeekableReadStreamEndian &stream);
+	void loadExternalSound(Common::SeekableReadStreamEndian &stream);
+	void loadSord(Common::SeekableReadStreamEndian &stream);
 
 	void loadCastChildren();
 	void loadSoundCasts();
@@ -76,19 +98,33 @@ public:
 	const Stxt *getStxt(int castId);
 	Common::String getVideoPath(int castId);
 
+	// release all castmember's widget, should be called when we are changing movie.
+	// because widget is handled by channel, thus we should clear all of those run-time info when we are switching the movie. (because we will create new widgets for cast)
+	void releaseCastMemberWidget();
+
 	void dumpScript(const char *script, ScriptType type, uint16 id);
+	PaletteV4 loadPalette(Common::SeekableReadStreamEndian &stream);
+
+	Common::CodePage getFileEncoding();
+	Common::U32String decodeString(const Common::String &str);
 
 private:
-	PaletteV4 loadPalette(Common::SeekableReadStreamEndian &stream);
-	void loadScriptText(Common::SeekableReadStreamEndian &stream);
+	void loadScriptText(Common::SeekableReadStreamEndian &stream, uint16 id);
 	void loadFontMap(Common::SeekableReadStreamEndian &stream);
-	Common::String getString(Common::String str);
+	void loadFontMapV4(Common::SeekableReadStreamEndian &stream);
+	void loadFXmp(Common::SeekableReadStreamEndian &stream);
+	bool readFXmpLine(Common::SeekableReadStreamEndian &stream);
 
 public:
 	Archive *_castArchive;
 	uint16 _version;
+	Common::Platform _platform;
+	uint16 _castLibID;
 
-	Common::HashMap<uint16, Common::String> _fontMap;
+	CharMap _macCharsToWin;
+	CharMap _winCharsToMac;
+	FontXPlatformMap _fontXPlatformMap;
+	FontMap _fontMap;
 
 	Common::HashMap<int, CastMember *> *_loadedCast;
 	Common::HashMap<int, const Stxt *> *_loadedStxts;
@@ -100,7 +136,6 @@ public:
 	uint16 _stageColor;
 	int _defaultPalette;
 
-	uint16 _movieScriptCount;
 	LingoArchive *_lingoArchive;
 
 private:

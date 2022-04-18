@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -60,9 +59,9 @@ SaveFileRewriteStream::SaveFileRewriteStream(const Common::String &fileName,
 	const bool seekToEnd = (mode == kFileOpenModeOpenOrCreate);
 
 	if (!truncate && inFile) {
-		const uint s = inFile->size();
-		ensureCapacity(s);
-		inFile->read(_data, s);
+		const uint32 size = inFile->size();
+		ensureCapacity(size);
+		_size = inFile->read(_data, size);
 		if (seekToEnd) {
 			seek(0, SEEK_END);
 		}
@@ -129,8 +128,8 @@ reg_t file_open(EngineState *s, const Common::String &filename, kFileOpenMode mo
 	englishName.toLowercase();
 
 	Common::String wrappedName = unwrapFilename ? g_sci->wrapFilename(englishName) : englishName;
-	Common::SeekableReadStream *inFile = 0;
-	Common::WriteStream *outFile = 0;
+	Common::SeekableReadStream *inFile = nullptr;
+	Common::WriteStream *outFile = nullptr;
 	Common::SaveFileManager *saveFileMan = g_sci->getSaveFileManager();
 
 	bool isCompressed = true;
@@ -256,12 +255,12 @@ reg_t file_open(EngineState *s, const Common::String &filename, kFileOpenMode mo
 FileHandle *getFileFromHandle(EngineState *s, uint handle) {
 	if ((handle == 0) || ((handle >= kVirtualFileHandleStart) && (handle <= kVirtualFileHandleEnd))) {
 		error("Attempt to use invalid file handle (%d)", handle);
-		return 0;
+		return nullptr;
 	}
 
 	if ((handle >= s->_fileHandles.size()) || !s->_fileHandles[handle].isOpen()) {
 		warning("Attempt to use invalid/unused file handle %d", handle);
-		return 0;
+		return nullptr;
 	}
 
 	return &s->_fileHandles[handle];
@@ -315,7 +314,7 @@ bool fillSavegameDesc(const Common::String &filename, SavegameDesc &desc) {
 		return false;
 	}
 
-	const int id = strtol(filename.end() - 3, NULL, 10);
+	const int id = strtol(filename.end() - 3, nullptr, 10);
 	desc.id = id;
 	// We need to fix date in here, because we save DDMMYYYY instead of
 	// YYYYMMDD, so sorting wouldn't work
@@ -343,9 +342,7 @@ bool fillSavegameDesc(const Common::String &filename, SavegameDesc &desc) {
 		nameString = nameU32String.encode(Common::kWindows1255);
 	}
 
-	// At least Phant2 requires use of strncpy, since it creates save game
-	// names of exactly kMaxSaveNameLength
-	strncpy(desc.name, nameString.c_str(), kMaxSaveNameLength);
+	Common::strlcpy(desc.name, nameString.c_str(), sizeof(desc.name));
 
 	return true;
 }
@@ -362,7 +359,7 @@ void listSavegames(Common::Array<SavegameDesc> &saves) {
 		//  whose autosave should appear as a normal saved game
 		if (g_sci->getGameId() != GID_QFG3 &&
 			g_sci->getGameId() != GID_QFG4) {
-			const int id = strtol(filename.end() - 3, NULL, 10);
+			const int id = strtol(filename.end() - 3, nullptr, 10);
 			if (id == kNewGameId || id == kAutoSaveId) {
 				continue;
 			}
@@ -474,7 +471,7 @@ int shiftScummVMToSciSaveId(int saveId) {
 }
 #endif
 
-FileHandle::FileHandle() : _in(0), _out(0) {
+FileHandle::FileHandle() : _in(nullptr), _out(nullptr) {
 }
 
 FileHandle::~FileHandle() {
@@ -488,8 +485,8 @@ void FileHandle::close() {
 		delete _in;
 	else
 		delete _out;
-	_in = 0;
-	_out = 0;
+	_in = nullptr;
+	_out = nullptr;
 	_name.clear();
 }
 

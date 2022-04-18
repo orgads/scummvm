@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -121,8 +120,8 @@ void _logic::___init(const char *name) {
 
 	// clear the pointer to the voxel object specific structure
 	// if these are NULL then the object is non mega
-	voxel_info = NULL;
-	mega = NULL; // clear mega info
+	voxel_info = nullptr;
+	mega = nullptr; // clear mega info
 
 	// defaults to a prop
 	image_type = PROP;
@@ -152,8 +151,8 @@ void _logic::___init(const char *name) {
 
 	// clear the logic tree
 	for (j = 0; j < TREE_SIZE; j++) {
-		logic[j] = 0;
-		logic_ref[j] = 0;
+		logic[j] = nullptr;
+		logic_ref[j] = nullptr;
 	}
 
 	// set owner rect to something safe - for fn_on_screen calls by props
@@ -192,7 +191,7 @@ void _mega::___init() {
 	auto_target_pan = ZERO_TURN; // auto target
 
 	target_pan = ZERO_TURN; // reset turn-on-spot-to pan
-	cur_parent = NULL;
+	cur_parent = nullptr;
 	cur_slice = 0;
 	number_of_barriers = 0;  // number of local barriers associated with mega position
 	number_of_nudge = 0;     // number of local barriers associated with mega position
@@ -210,7 +209,7 @@ void _mega::___init() {
 	m_phase = 0;
 
 	m_main_route.total_points = 0; // final route size
-	m_main_route.diag_bars = 0;
+	m_main_route.diag_bars = nullptr;
 	m_main_route.number_of_diag_bars = 0;
 
 	use_strike_script = 0;
@@ -677,7 +676,7 @@ void _game_session::Reset_all_objects() {
 
 	for (uint32 j = 0; j < tot_obs; j++) {
 		logic_structs[j]->logic_level = 0;
-		logic_structs[j]->logic_ref[1] = 0;
+		logic_structs[j]->logic_ref[1] = nullptr;
 	}
 }
 

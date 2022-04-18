@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -91,7 +90,7 @@ byte *CifFile::getCifData(ResourceManager::CifInfo &info, uint *size) const {
 	if (_f->read(buf, dataSize) < dataSize) {
 		warning("Failed to read CifFile '%s'", _name.c_str());
 		delete[] buf;
-		return 0;
+		return nullptr;
 	}
 
 	if (size)
@@ -108,7 +107,7 @@ class CifFile20 : public CifFile {
 public:
 	CifFile20(const Common::String &name, Common::File *f) : CifFile(name, f) { }
 protected:
-	virtual void readCifInfo(Common::File &f);
+	void readCifInfo(Common::File &f) override;
 };
 
 void CifFile20::readCifInfo(Common::File &f) {
@@ -119,7 +118,7 @@ class CifFile21 : public CifFile {
 public:
 	CifFile21(const Common::String &name, Common::File *f) : CifFile(name, f) { }
 protected:
-	virtual void readCifInfo(Common::File &f);
+	void readCifInfo(Common::File &f) override;
 };
 
 void CifFile21::readCifInfo(Common::File &f) {
@@ -133,7 +132,7 @@ const CifFile *CifFile::load(const Common::String &name) {
 
 	if (!f->open(name + ".cif")) {
 		delete f;
-		return 0;
+		return nullptr;
 	}
 
 	char id[20];
@@ -143,7 +142,7 @@ const CifFile *CifFile::load(const Common::String &name) {
 	if (f->eos() || Common::String(id) != "CIF FILE WayneSikes") {
 		warning("Invalid id string found in CifFile '%s'", name.c_str());
 		delete f;
-		return 0;
+		return nullptr;
 	}
 
 	// 4 bytes unused
@@ -169,7 +168,7 @@ const CifFile *CifFile::load(const Common::String &name) {
 		warning("Failed to read CifFile '%s'", name.c_str());
 		delete cifFile;
 		delete f;
-		return 0;
+		return nullptr;
 	}
 
 	return cifFile;
@@ -274,13 +273,13 @@ byte *CifTree::getCifData(const Common::String &name, ResourceManager::CifInfo &
 	uint32 dataOffset;
 
 	if (!getCifInfo(name, info, &dataOffset))
-		return 0;
+		return nullptr;
 
 	Common::File f;
 
 	if (!f.open(_filename)) {
 		warning("Failed to open CifTree '%s'", _name.c_str());
-		return 0;
+		return nullptr;
 	}
 
 	uint dataSize = (info.comp == 2 ? info.compressedSize : info.size);
@@ -290,7 +289,7 @@ byte *CifTree::getCifData(const Common::String &name, ResourceManager::CifInfo &
 		warning("Failed to read data for '%s' from CifTree '%s'", name.c_str(), _name.c_str());
 		delete[] buf;
 		f.close();
-		return 0;
+		return nullptr;
 	}
 
 	f.close();
@@ -309,7 +308,7 @@ byte *ResourceManager::getCifData(const Common::String &treeName, const Common::
 	} else {
 		const CifTree *cifTree = findCifTree(treeName);
 		if (!cifTree)
-			return 0;
+			return nullptr;
 
 		buf = cifTree->getCifData(name, info, size);
 	}
@@ -322,7 +321,7 @@ byte *ResourceManager::getCifData(const Common::String &treeName, const Common::
 			warning("Failed to decompress '%s'", name.c_str());
 			delete[] buf;
 			delete[] raw;
-			return 0;
+			return nullptr;
 		}
 		delete[] buf;
 		if (size)
@@ -337,9 +336,9 @@ class CifTree20 : public CifTree {
 public:
 	CifTree20(const Common::String &name, const Common::String &ext) : CifTree(name, ext) { }
 protected:
-	virtual uint readHeader(Common::File &f);
-	virtual void readCifInfo(Common::File &f, CifInfoChain &chain);
-	virtual uint32 getVersion() const { return 0x00020000; }
+	uint readHeader(Common::File &f) override;
+	void readCifInfo(Common::File &f, CifInfoChain &chain) override;
+	uint32 getVersion() const override { return 0x00020000; }
 };
 
 uint CifTree20::readHeader(Common::File &f) {
@@ -373,9 +372,9 @@ public:
 	CifTree21(const Common::String &name, const Common::String &ext) : CifTree20(name, ext), _hasLongNames(false), _hasOffsetFirst(false) { };
 
 protected:
-	virtual uint readHeader(Common::File &f);
-	virtual void readCifInfo(Common::File &f, CifInfoChain &chain);
-	virtual uint32 getVersion() const { return 0x00020001; }
+	uint readHeader(Common::File &f) override;
+	void readCifInfo(Common::File &f, CifInfoChain &chain) override;
+	uint32 getVersion() const override { return 0x00020001; }
 
 private:
 	void determineSubtype(Common::File &f);
@@ -418,7 +417,7 @@ void CifTree21::readCifInfo(Common::File &f, CifInfoChain &chain) {
 
 	f.skip(32); // TODO
 
-	readCifInfo20(f, info, (_hasOffsetFirst ? 0 : &chain.dataOffset));
+	readCifInfo20(f, info, (_hasOffsetFirst ? nullptr : &chain.dataOffset));
 
 	if (!_hasOffsetFirst)
 		chain.next = f.readUint16LE();
@@ -459,7 +458,7 @@ const CifTree *CifTree::load(const Common::String &name, const Common::String &e
 
 	if (!f.open(name + '.' + ext)) {
 		warning("Failed to open CifTree '%s'", name.c_str());
-		return 0;
+		return nullptr;
 	}
 
 	char id[20];
@@ -469,7 +468,7 @@ const CifTree *CifTree::load(const Common::String &name, const Common::String &e
 	if (f.eos() || Common::String(id) != "CIF TREE WayneSikes") {
 		warning("Invalid id string found in CifTree '%s'", name.c_str());
 		f.close();
-		return 0;
+		return nullptr;
 	}
 
 	// 4 bytes unused
@@ -547,8 +546,8 @@ bool CifExporter::dump(const byte *data, uint32 size, const ResourceManager::Cif
 
 class CifExporter20 : public CifExporter {
 protected:
-	virtual void writeCifInfo(Common::DumpFile &f, const ResourceManager::CifInfo &info) const;
-	uint32 getVersion() const { return 0x00020000; }
+	void writeCifInfo(Common::DumpFile &f, const ResourceManager::CifInfo &info) const override;
+	uint32 getVersion() const override { return 0x00020000; }
 };
 
 void CifExporter20::writeCifInfo(Common::DumpFile &f, const ResourceManager::CifInfo &info) const {
@@ -567,8 +566,8 @@ void CifExporter20::writeCifInfo(Common::DumpFile &f, const ResourceManager::Cif
 
 class CifExporter21 : public CifExporter20 {
 protected:
-	virtual void writeCifInfo(Common::DumpFile &f, const ResourceManager::CifInfo &info) const;
-	uint32 getVersion() const { return 0x00020001; }
+	void writeCifInfo(Common::DumpFile &f, const ResourceManager::CifInfo &info) const override;
+	uint32 getVersion() const override { return 0x00020001; }
 };
 
 void CifExporter21::writeCifInfo(Common::DumpFile &f, const ResourceManager::CifInfo &info) const {
@@ -590,7 +589,7 @@ const CifExporter *CifExporter::create(uint32 version) {
 		break;
 	default:
 		warning("Version %d.%d not supported by CifExporter", version >> 16, version & 0xffff);
-		return 0;
+		return nullptr;
 	}
 
 	return exp;
@@ -622,7 +621,7 @@ const CifTree *ResourceManager::findCifTree(const Common::String &name) const {
 			return _cifTrees[i];
 
 	warning("CifTree '%s' not loaded", name.c_str());
-	return 0;
+	return nullptr;
 }
 
 void ResourceManager::initialize() {
@@ -682,7 +681,7 @@ byte *ResourceManager::getCifData(const Common::String &name, CifInfo &info, uin
 			warning("Failed to decompress '%s'", name.c_str());
 			delete[] buf;
 			delete[] raw;
-			return 0;
+			return nullptr;
 		}
 		delete[] buf;
 		if (size)

@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -60,7 +59,7 @@
 
 namespace Stark {
 
-UserInterface::UserInterface(Gfx::Driver *gfx) :
+UserInterface::UserInterface(StarkEngine *vm, Gfx::Driver *gfx) :
 		_gfx(gfx),
 		_cursor(nullptr),
 		_diaryIndexScreen(nullptr),
@@ -82,6 +81,7 @@ UserInterface::UserInterface(Gfx::Driver *gfx) :
 		_currentScreen(nullptr),
 		_gameWindowThumbnail(nullptr),
 		_modalDialog(nullptr) {
+	_vm = vm;
 }
 
 UserInterface::~UserInterface() {
@@ -114,7 +114,7 @@ void UserInterface::init() {
 	_diaryPagesScreen = new DiaryPagesScreen(_gfx, _cursor);
 	_dialogScreen = new DialogScreen(_gfx, _cursor);
 	_fmvScreen = new FMVScreen(_gfx, _cursor);
-	_modalDialog = new DialogBox(_gfx, _cursor);
+	_modalDialog = new DialogBox(_vm, _gfx, _cursor);
 
 	_prevScreenNameStack.push(Screen::kScreenMainMenu);
 	_currentScreen = _fmvScreen;
@@ -360,8 +360,8 @@ void UserInterface::saveGameScreenThumbnail() {
 	_gameWindowThumbnail->create(kThumbnailWidth, kThumbnailHeight, big->format);
 
 	uint32 *dst = (uint32 *)_gameWindowThumbnail->getPixels();
-	for (uint i = 0; i < _gameWindowThumbnail->h; i++) {
-		for (uint j = 0; j < _gameWindowThumbnail->w; j++) {
+	for (int i = 0; i < _gameWindowThumbnail->h; i++) {
+		for (int j = 0; j < _gameWindowThumbnail->w; j++) {
 			uint32 srcX = big->w * j / _gameWindowThumbnail->w;
 			uint32 srcY = big->h * i / _gameWindowThumbnail->h;
 			uint32 *src = (uint32 *)big->getBasePtr(srcX, srcY);

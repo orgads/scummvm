@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -42,6 +41,8 @@ namespace Sci {
 #define GAMEOPTION_UPSCALE_VIDEOS           GUIO_GAMEOPTIONS13
 #define GAMEOPTION_RGB_RENDERING            GUIO_GAMEOPTIONS14
 #define GAMEOPTION_PALETTE_MODS             GUIO_GAMEOPTIONS15
+#define GAMEOPTION_SQ1_BEARDED_MUSICIANS    GUIO_GAMEOPTIONS16
+#define GAMEOPTION_TTS                      GUIO_GAMEOPTIONS17
 
 enum SciGameId {
 	GID_ASTROCHICKEN,
@@ -110,6 +111,7 @@ enum SciGameId {
 	GID_QFG4,
 	GID_QFG4DEMO,	// We have a separate ID for QFG4 demo, because it's actually a completely different game (SCI1.1 vs SCI2/SCI2.1)
 	GID_RAMA,
+	GID_REALM,
 	GID_SHIVERS,
 	//GID_SHIVERS2,	// Not SCI
 	GID_SLATER,
@@ -140,8 +142,8 @@ enum SciVersion {
 	SCI_VERSION_2, // GK1, PQ4 floppy, QFG4 floppy
 	SCI_VERSION_2_1_EARLY, // GK2 demo, KQ7 1.4/1.51, LSL6 hires, PQ4CD, QFG4CD
 	SCI_VERSION_2_1_MIDDLE, // GK2, Hoyle 5, KQ7 2.00b, MUMG Deluxe, Phantasmagoria 1, PQ:SWAT, Shivers 1, SQ6, Torin
-	SCI_VERSION_2_1_LATE, // demos and Mac versions of LSL7, Lighthouse, RAMA
-	SCI_VERSION_3 // LSL7, Lighthouse, RAMA, Phantasmagoria 2
+	SCI_VERSION_2_1_LATE, // Demos and Mac versions of LSL7, Lighthouse, RAMA
+	SCI_VERSION_3 // LSL7, Lighthouse, RAMA, Phantasmagoria 2, interactive Lighthouse demos
 };
 
 /** MIDI devices */

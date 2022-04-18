@@ -5,10 +5,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,8 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Inventory related functions
  */
@@ -28,7 +27,7 @@
 #include "tinsel/dw.h"
 #include "tinsel/events.h"	// for PLR_EVENT, PLR_EVENT
 #include "tinsel/object.h"
-#include "tinsel/rince.h"
+#include "tinsel/movers.h"
 
 namespace Common {
 class Serializer;
@@ -157,24 +156,18 @@ struct INV_DEF {
 
 //----- Data pertinant to scene hoppers ------------------------
 
-#include "common/pack-start.h"	// START STRUCT PACKING
-
 struct HOPPER {
 	uint32		hScene;
 	SCNHANDLE	hSceneDesc;
 	uint32		numEntries;
 	uint32		entryIndex;
-} PACKED_STRUCT;
-typedef HOPPER *PHOPPER;
+};
 
 struct HOPENTRY {
 	uint32	eNumber;	// entrance number
 	SCNHANDLE hDesc;	// handle to entrance description
 	uint32	flags;
-} PACKED_STRUCT;
-typedef HOPENTRY *PHOPENTRY;
-
-#include "common/pack-end.h"	// END STRUCT PACKING
+};
 
 enum BTYPE {
 	RGROUP, ///< Radio button group - 1 is selectable at a time. Action on double click
@@ -391,7 +384,7 @@ private:
 	OBJECT *AddInvObject(int num, const FREEL **pfreel, const FILM **pfilm);
 	void AddBackground(OBJECT **rect, OBJECT **title, int extraH, int extraV, int textFrom);
 	void AddBackground(OBJECT **rect, int extraH, int extraV);
-	void AddTitle(POBJECT *title, int extraH);
+	void AddTitle(OBJECT **title, int extraH);
 	void AddSlider(OBJECT **slide, const FILM *pfilm);
 	void AddBox(int *pi, const int i);
 	void AddEWSlider(OBJECT **slide, const FILM *pfilm);
@@ -513,13 +506,13 @@ private:
 	bool _bMoveOnUnHide; // Set before start of conversation
 	    // - causes conversation to be started in a sensible place
 
-	PHOPPER _pHopper;
-	PHOPENTRY _pEntries;
+	HOPPER *_pHopper;
+	HOPENTRY *_pEntries;
 	int _numScenes;
 
 	int _numEntries;
 
-	PHOPPER _pChosenScene;
+	HOPPER *_pChosenScene;
 
 	int _lastChosenScene;
 	bool _bRemember;

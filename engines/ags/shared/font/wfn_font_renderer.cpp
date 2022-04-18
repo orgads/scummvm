@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,16 +15,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
+#include "ags/shared/font/wfn_font_renderer.h"
 #include "ags/shared/ac/common.h" // our_eip
 #include "ags/shared/core/asset_manager.h"
 #include "ags/shared/debugging/out.h"
 #include "ags/shared/font/wfn_font.h"
-#include "ags/shared/font/wfn_font_renderer.h"
 #include "ags/shared/gfx/bitmap.h"
 #include "ags/shared/util/stream.h"
 #include "ags/globals.h"
@@ -100,52 +99,50 @@ int RenderChar(Bitmap *ds, const int at_x, const int at_y, const WFNChar &wfn_ch
 	const unsigned char *actdata = wfn_char.Data;
 	const int bytewid = wfn_char.GetRowByteCount();
 
-	int x = at_x;
-	int y = at_y;
-	for (int h = 0; h < height; ++h) {
-		for (int w = 0; w < width; ++w) {
+	// NOTE: allegro's putpixel ignores clipping (optimization),
+	// so we'll have to accomodate for that ourselves
+	Rect clip = ds->GetClip();
+	int sx = MAX(at_x, clip.Left), ex = MIN(at_x + width * scale, clip.Right + 1);
+	int sy = MAX(at_y, clip.Top), ey = MIN(at_y + height * scale, clip.Bottom + 1);
+	for (int h = 0, y = sy; h < height && y < ey; ++h, y += scale) {
+		for (int w = 0, x = sx; w < width && x < ex; ++w, x += scale) {
 			if (((actdata[h * bytewid + (w / 8)] & (0x80 >> (w % 8))) != 0)) {
 				if (scale > 1) {
-					ds->FillRect(Rect(x + w, y + h, x + w + (scale - 1),
-					                  y + h + (scale - 1)), text_color);
+					ds->FillRect(RectWH(x, y, scale - 1, scale - 1), text_color);
 				} else {
-					ds->PutPixel(x + w, y + h, text_color);
+					ds->PutPixel(x, y, text_color);
 				}
 			}
-
-			x += scale - 1;
 		}
-		y += scale - 1;
-		x = at_x;
 	}
 	return width * scale;
 }
 
 bool WFNFontRenderer::LoadFromDisk(int fontNumber, int fontSize) {
-	return LoadFromDiskEx(fontNumber, fontSize, nullptr);
+	return LoadFromDiskEx(fontNumber, fontSize, nullptr, nullptr);
 }
 
 bool WFNFontRenderer::IsBitmapFont() {
 	return true;
 }
 
-bool WFNFontRenderer::LoadFromDiskEx(int fontNumber, int fontSize, const FontRenderParams *params) {
+bool WFNFontRenderer::LoadFromDiskEx(int fontNumber, int fontSize,
+		const FontRenderParams *params, FontMetrics *metrics) {
 	String file_name;
 	Stream *ffi = nullptr;
-	soff_t asset_size = 0;
 
 	file_name.Format("agsfnt%d.wfn", fontNumber);
-	ffi = _GP(AssetMgr)->OpenAsset(file_name, &asset_size);
+	ffi = _GP(AssetMgr)->OpenAsset(file_name);
 	if (ffi == nullptr) {
 		// actual font not found, try font 0 instead
 		file_name = "agsfnt0.wfn";
-		ffi = _GP(AssetMgr)->OpenAsset(file_name, &asset_size);
+		ffi = _GP(AssetMgr)->OpenAsset(file_name);
 		if (ffi == nullptr)
 			return false;
 	}
 
 	WFNFont *font = new WFNFont();
-	WFNError err = font->ReadFromFile(ffi, asset_size);
+	WFNError err = font->ReadFromFile(ffi);
 	delete ffi;
 	if (err == kWFNErr_HasBadCharacters)
 		Debug::Printf(kDbgMsg_Warn, "WARNING: font '%s' has mistakes in data format, some characters may be displayed incorrectly", file_name.GetCStr());

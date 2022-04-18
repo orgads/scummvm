@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -36,6 +35,7 @@
 
 #include "director/types.h"
 #include "director/util.h"
+#include "director/debugger.h"
 #include "director/detection.h"
 
 namespace Common {
@@ -47,6 +47,7 @@ class SeekableReadStreamEndian;
 namespace Graphics {
 class MacWindowManager;
 struct MacPlotData;
+struct WinCursorGroup;
 typedef Common::Array<byte *> MacPatterns;
 
 class ManagedSurface;
@@ -83,7 +84,8 @@ enum {
 	kDebugScreenshot	= 1 << 14,
 	kDebugDesktop		= 1 << 15,
 	kDebug32bpp			= 1 << 16,
-	kDebugEndVideo		= 1 << 17
+	kDebugEndVideo		= 1 << 17,
+	kDebugLingoStrict	= 1 << 18
 };
 
 struct MovieReference {
@@ -97,6 +99,12 @@ struct MovieReference {
 struct StartMovie {
 	Common::String startMovie;
 	int16 startFrame;
+
+};
+
+struct StartOptions {
+	StartMovie startMovie;
+	Common::String startupPath;
 };
 
 struct PaletteV4 {
@@ -118,6 +126,8 @@ struct MacShape {
 
 	Graphics::MacPlotData *pd;
 };
+
+const int SCALE_THRESHOLD = 0x100;
 
 // An extension of MacPlotData for interfacing with inks and patterns without
 // needing extra surfaces.
@@ -141,7 +151,12 @@ struct DirectorPlotData {
 	uint32 foreColor;
 	bool applyColor;
 
-	void setApplyColor(); // graphics.cpp
+	// graphics.cpp
+	void setApplyColor();
+	uint32 preprocessColor(uint32 src);
+	void inkBlitShape(Common::Rect &srcRect);
+	void inkBlitSurface(Common::Rect &srcRect, const Graphics::Surface *mask);
+	void inkBlitStretchSurface(Common::Rect &srcRect, const Graphics::Surface *mask);
 
 	DirectorPlotData(Graphics::MacWindowManager *w, SpriteType s, InkType i, int a, uint32 b, uint32 f) : _wm(w), sprite(s), ink(i), alpha(a), backColor(b), foreColor(f) {
 		srf = nullptr;
@@ -187,19 +202,23 @@ public:
 	void setVersion(uint16 version);
 	Common::Platform getPlatform() const;
 	Common::Language getLanguage() const;
+	Common::String getTargetName() { return _targetName; }
 	const char *getExtra();
 	Common::String getEXEName() const;
 	StartMovie getStartMovie() const;
-	DirectorSound *getSoundManager() const { return _soundManager; }
+	void parseOptions();
 	Graphics::MacWindowManager *getMacWindowManager() const { return _wm; }
 	Archive *getMainArchive() const;
 	Lingo *getLingo() const { return _lingo; }
 	Window *getStage() const { return _stage; }
 	Window *getCurrentWindow() const { return _currentWindow; }
 	void setCurrentWindow(Window *window) { _currentWindow = window; };
+	Window *getCursorWindow() const { return _cursorWindow; }
+	void setCursorWindow(Window *window) { _cursorWindow = window; }
 	Movie *getCurrentMovie() const;
 	void setCurrentMovie(Movie *movie);
 	Common::String getCurrentPath() const;
+	Common::String getStartupPath() const;
 
 	// graphics.cpp
 	bool hasFeature(EngineFeature f) const override;
@@ -220,17 +239,19 @@ public:
 	void loadPatterns();
 	uint32 transformColor(uint32 color);
 	Graphics::MacPatterns &getPatterns();
-	void setCursor(int type);
+	void setCursor(DirectorCursor type);
 	void draw();
 
 	Graphics::MacDrawPixPtr getInkDrawPixel();
 
 	void loadKeyCodes();
+	Common::CodePage getPlatformEncoding();
 
 	Archive *createArchive();
 
 	// events.cpp
-	void processEvents();
+	bool processEvents(bool captureClick = false);
+	void processEventQUIT();
 	uint32 getMacTicks();
 
 public:
@@ -240,14 +261,15 @@ public:
 
 public:
 	int _colorDepth;
-	Common::HashMap<int, int> _macKeyCodes;
+	Common::HashMap<int, int> _KeyCodes;
 	int _machineType;
 	bool _playbackPaused;
 	bool _skipFrameAdvance;
 	bool _centerStage;
+	char _dirSeparator;
 
 	Common::HashMap<Common::String, Archive *, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> _openResFiles;
-	Common::String _sharedCastFile;
+	Common::Array<Graphics::WinCursorGroup *> _winCursor;
 
 protected:
 	Common::Error run() override;
@@ -256,7 +278,6 @@ private:
 	const DirectorGameDescription *_gameDescription;
 	Common::FSNode _gameDataDir;
 
-	DirectorSound *_soundManager;
 	byte *_currentPalette;
 	uint16 _currentPaletteLength;
 	Lingo *_lingo;
@@ -265,6 +286,7 @@ private:
 	Window *_stage;
 	Datum *_windowList; // Lingo list
 	Window *_currentWindow;
+	Window *_cursorWindow;
 
 	Graphics::MacPatterns _director3Patterns;
 	Graphics::MacPatterns _director3QuickDrawPatterns;
@@ -272,9 +294,12 @@ private:
 	Common::HashMap<int, PaletteV4> _loadedPalettes;
 
 	Graphics::ManagedSurface *_surface;
+
+	StartOptions _options;
 };
 
 extern DirectorEngine *g_director;
+extern Debugger *g_debugger;
 extern uint32 wmMode;
 
 } // End of namespace Director

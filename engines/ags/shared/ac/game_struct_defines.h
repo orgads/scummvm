@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -77,16 +76,16 @@ namespace AGS3 {
 #define OPT_GLOBALTALKANIMSPD 39
 #define OPT_HIGHESTOPTION_321 39
 #define OPT_SPRITEALPHA     40
-#define OPT_HIGHESTOPTION_330 OPT_SPRITEALPHA
 #define OPT_SAFEFILEPATHS   41
-#define OPT_HIGHESTOPTION_335 OPT_SAFEFILEPATHS
 #define OPT_DIALOGOPTIONSAPI 42 // version of dialog options API (-1 for pre-3.4.0 API)
 #define OPT_BASESCRIPTAPI   43 // version of the Script API (ScriptAPIVersion) used to compile game script
 #define OPT_SCRIPTCOMPATLEV 44 // level of API compatibility (ScriptAPIVersion) used to compile game script
 #define OPT_RENDERATSCREENRES 45 // scale sprites at the (final) screen resolution
 #define OPT_RELATIVEASSETRES 46 // relative asset resolution mode (where sprites are resized to match game type)
 #define OPT_WALKSPEEDABSOLUTE 47 // if movement speeds are independent of walkable mask resolution
-#define OPT_HIGHESTOPTION   OPT_WALKSPEEDABSOLUTE
+#define OPT_CLIPGUICONTROLS 48 // clip drawn gui control contents to the control's rectangle
+#define OPT_GAMETEXTENCODING 49 // how the text in the game data should be interpreted
+#define OPT_HIGHESTOPTION   OPT_GAMETEXTENCODING
 #define OPT_NOMODMUSIC      98
 #define OPT_LIPSYNCTEXT     99
 #define PORTRAIT_LEFT       0
@@ -105,7 +104,19 @@ namespace AGS3 {
 #define FFLG_LEGACY_SIZEMASK 0x3f
 #define MAX_LEGACY_FONT_SIZE 63
 // Contemporary font flags
-#define FFLG_SIZEMULTIPLIER  0x01  // size data means multiplier
+#define FFLG_SIZEMULTIPLIER        0x01  // size data means multiplier
+#define FFLG_DEFLINESPACING        0x02  // linespacing derived from the font height
+// Font load flags, primarily for backward compatibility:
+// REPORTNOMINALHEIGHT: get_font_height should return nominal font's height,
+// eq to "font size" parameter, otherwise returns real pixel height.
+#define FFLG_REPORTNOMINALHEIGHT   0x04
+// ASCENDFIXUP: do the TTF ascender fixup, where font's ascender is resized
+// to the nominal font's height.
+#define FFLG_ASCENDERFIXUP         0x08
+// Collection of flags defining fully backward compatible TTF fixup
+#define FFLG_TTF_BACKCOMPATMASK   (FFLG_REPORTNOMINALHEIGHT | FFLG_ASCENDERFIXUP)
+// Collection of flags defining font's load mode
+#define FFLG_LOADMODEMASK         (FFLG_REPORTNOMINALHEIGHT | FFLG_ASCENDERFIXUP)
 // Font outline types
 #define FONT_OUTLINE_NONE -1
 #define FONT_OUTLINE_AUTO -10
@@ -166,8 +177,11 @@ enum ScriptAPIVersion {
 	kScriptAPI_v350 = 6,
 	kScriptAPI_v3507 = 7,
 	kScriptAPI_v351 = 8,
-	kScriptAPI_Current = kScriptAPI_v351
+	kScriptAPI_v360 = 3060000,
+	kScriptAPI_Current = kScriptAPI_v360
 };
+
+extern const char *GetScriptAPIName(ScriptAPIVersion v);
 
 // Determines whether the graphics renderer should scale sprites at the final
 // screen resolution, as opposed to native resolution
@@ -229,18 +243,27 @@ struct SpriteInfo {
 // provide instructions on adjusting drawing position, as well as arranging
 // multiple lines, and similar cases.
 struct FontInfo {
+	enum AutoOutlineStyle : int {
+		kSquared = 0,
+		kRounded = 1,
+	};
+
 	// General font's loading and rendering flags
-	uint32_t      Flags = 0;
-	// Font size, in points (basically means pixels in AGS)
-	int           SizePt = 0;
+	uint32_t      Flags;
+	// Nominal font import size (in pixels)
+	int           Size;
 	// Factor to multiply base font size by
-	int           SizeMultiplier = 0;
+	int           SizeMultiplier;
 	// Outlining font index, or auto-outline flag
-	char          Outline = 0;
+	int8          Outline;
 	// Custom vertical render offset, used mainly for fixing broken fonts
-	int           YOffset = 0;
-	// custom line spacing between two lines of text (0 = use font height)
-	int           LineSpacing = 0;
+	int           YOffset;
+	// Custom line spacing between two lines of text (0 = use font height)
+	int           LineSpacing;
+	// When automatic outlining, thickness of the outline (0 = no auto outline)
+	int           AutoOutlineThickness;
+	// When automatic outlining, style of the outline
+	AutoOutlineStyle AutoOutlineStyle;
 
 	FontInfo();
 };

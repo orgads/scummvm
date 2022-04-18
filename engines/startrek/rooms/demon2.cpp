@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -80,44 +79,44 @@ enum demon2TextIds {
 
 // TODO: Finish floppy offsets
 extern const RoomTextOffsets demon2TextOffsets[] = {
-	{ TX_SPEAKER_KIRK, 2890, 0 },
-	{ TX_SPEAKER_MCCOY, 2901, 0 },
-	{ TX_SPEAKER_SPOCK, 2911, 0 },
-	{ TX_SPEAKER_EVERTS, 2921, 0 },
-	{ TX_DEM2_001, 3275, 0 },
-	{ TX_DEM2_002, 3732, 0 },
-	{ TX_DEM2_003, 4228, 0 },
-	{ TX_DEM2_004, 3912, 0 },
-	{ TX_DEM2_005, 1613, 0 },
-	{ TX_DEM2_006, 1466, 0 },
-	{ TX_DEM2_007, 1336, 0 },
-	{ TX_DEM2_008, 1161, 0 },
-	{ TX_DEM2_009, 1963, 0 },
-	{ TX_DEM2_010, 2071, 0 },
-	{ TX_DEM2_011, 1050, 0 },
-	{ TX_DEM2_012, 2212, 0 },
-	{ TX_DEM2_013, 1869, 0 },
-	{ TX_DEM2_014, 2384, 0 },
-	{ TX_DEM2_015, 3346, 0 },
-	{ TX_DEM2_016, 3561, 0 },
-	{ TX_DEM2_017, 3414, 0 },
-	{ TX_DEM2_018, 4111, 0 },
-	{ TX_DEM2_019, 3618, 0 },
-	{ TX_DEM2_020, 3791, 0 },
-	{ TX_DEM2N000, 3197, 0 },
-	{ TX_DEM2N002, 2935, 0 },
-	{ TX_DEM2N003, 3117, 0 },
-	{ TX_DEM2N004, 3014, 0 },
-	{ TX_DEM2N005, 586, 0 },
-	{ TX_DEM2N006, 710, 0 },
-	{ TX_DEM2N007, 405, 0 },
-	{ TX_DEM2N008, 454, 0 },
-	{ TX_DEM2N009, 357, 0 },
-	{ TX_DEM2N010, 637, 0 },
-	{ TX_DEM2N011, 785, 0 },
-	{ TX_DEM2N012, 503, 0 },
-	{ TX_DEM2N013, 2529, 0 },
-	{          -1, 0,    0 }
+	{ TX_SPEAKER_KIRK, 2890, 0, 0, 0 },
+	{ TX_SPEAKER_MCCOY, 2901, 0, 0, 0 },
+	{ TX_SPEAKER_SPOCK, 2911, 0, 0, 0 },
+	{ TX_SPEAKER_EVERTS, 2921, 0, 0, 0 },
+	{ TX_DEM2_001, 3275, 0, 0, 0 },
+	{ TX_DEM2_002, 3732, 0, 0, 0 },
+	{ TX_DEM2_003, 4228, 0, 0, 0 },
+	{ TX_DEM2_004, 3912, 0, 0, 0 },
+	{ TX_DEM2_005, 1613, 0, 0, 0 },
+	{ TX_DEM2_006, 1466, 0, 0, 0 },
+	{ TX_DEM2_007, 1336, 0, 0, 0 },
+	{ TX_DEM2_008, 1161, 0, 0, 0 },
+	{ TX_DEM2_009, 1963, 0, 0, 0 },
+	{ TX_DEM2_010, 2071, 0, 0, 0 },
+	{ TX_DEM2_011, 1050, 0, 0, 0 },
+	{ TX_DEM2_012, 2212, 0, 0, 0 },
+	{ TX_DEM2_013, 1869, 0, 0, 0 },
+	{ TX_DEM2_014, 2384, 0, 0, 0 },
+	{ TX_DEM2_015, 3346, 0, 0, 0 },
+	{ TX_DEM2_016, 3561, 0, 0, 0 },
+	{ TX_DEM2_017, 3414, 0, 0, 0 },
+	{ TX_DEM2_018, 4111, 0, 0, 0 },
+	{ TX_DEM2_019, 3618, 0, 0, 0 },
+	{ TX_DEM2_020, 3791, 0, 0, 0 },
+	{ TX_DEM2N000, 3197, 0, 0, 0 },
+	{ TX_DEM2N002, 2935, 0, 0, 0 },
+	{ TX_DEM2N003, 3117, 0, 0, 0 },
+	{ TX_DEM2N004, 3014, 0, 0, 0 },
+	{ TX_DEM2N005, 586, 0, 0, 0 },
+	{ TX_DEM2N006, 710, 0, 0, 0 },
+	{ TX_DEM2N007, 405, 0, 0, 0 },
+	{ TX_DEM2N008, 454, 0, 0, 0 },
+	{ TX_DEM2N009, 357, 0, 0, 0 },
+	{ TX_DEM2N010, 637, 0, 0, 0 },
+	{ TX_DEM2N011, 785, 0, 0, 0 },
+	{ TX_DEM2N012, 503, 0, 0, 0 },
+	{ TX_DEM2N013, 2529, 0, 0, 0 },
+	{          -1, 0,    0, 0, 0 }
 };
 
 extern const RoomText demon2Texts[] = {

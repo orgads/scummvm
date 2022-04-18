@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,17 +15,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef DIRECTOR_LINGO_OBJECT_H
 #define DIRECTOR_LINGO_OBJECT_H
 
-// FIXME: Basic Lingo types like Datum should probably be in a separate, smaller header
+#include "director/director.h"
 #include "director/lingo/lingo.h"
-#include "director/lingo/lingo-gr.h"
 
 namespace Director {
 
@@ -87,6 +85,11 @@ protected:
 
 public:
 	static void initMethods(MethodProto protos[]) {
+		if (_methods) {
+			warning("Object::initMethods: Methods already initialized");
+			return;
+		}
+
 		_methods = new SymbolHash;
 		for (MethodProto *mtd = protos; mtd->name; mtd++) {
 			if (mtd->version > g_lingo->_vm->getVersion())
@@ -188,7 +191,6 @@ SymbolHash *Object<Derived>::_methods = nullptr;
 
 class ScriptContext : public Object<ScriptContext> {
 public:
-	LingoArchive *_archive;
 	ScriptType _scriptType;
 	int _id;
 	Common::Array<Common::String> _functionNames; // used by cb_localcall
@@ -199,7 +201,7 @@ public:
 	Common::HashMap<uint32, Datum> _objArray;
 
 public:
-	ScriptContext(Common::String name, LingoArchive *archive = nullptr, ScriptType type = kNoneScript, int id = 0);
+	ScriptContext(Common::String name, ScriptType type = kNoneScript, int id = 0);
 	ScriptContext(const ScriptContext &sc);
 	~ScriptContext() override;
 
@@ -212,7 +214,7 @@ public:
 	Datum getProp(const Common::String &propName) override;
 	bool setProp(const Common::String &propName, const Datum &value) override;
 
-	Symbol define(Common::String &name, int nargs, ScriptData *code, Common::Array<Common::String> *argNames, Common::Array<Common::String> *varNames);
+	Symbol define(const Common::String &name, ScriptData *code, Common::Array<Common::String> *argNames, Common::Array<Common::String> *varNames);
 };
 
 namespace LM {

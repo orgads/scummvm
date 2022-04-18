@@ -7,6 +7,7 @@
       use_scummvm/install_computer
       use_scummvm/the_launcher
       use_scummvm/game_files
+      use_scummvm/mac_game_files
       use_scummvm/add_play_games
       use_scummvm/save_load_games
       use_scummvm/keyboard_shortcuts
@@ -51,6 +52,7 @@
       advanced_topics/configuration_file
       advanced_topics/understand_audio
       advanced_topics/understand_graphics
+      advanced_topics/understand_search_box
 
 .. toctree::
       :caption: Help
@@ -99,6 +101,8 @@ We have a user manual section covering **THE BASICS**:
       Playing games
       ^^^^^^^^^^^^^^^
       :doc:`use_scummvm/game_files`
+
+      :doc:`use_scummvm/mac_game_files`
 
       :doc:`use_scummvm/add_play_games`
 
@@ -166,6 +170,8 @@ We also have guides on how to get ScummVM running on a wide range of other platf
       :doc:`other_platforms/amigaos_4`
 
       :doc:`other_platforms/atari`
+
+      :doc:`other_platforms/morphos`
 
       :doc:`other_platforms/risc_os`
 

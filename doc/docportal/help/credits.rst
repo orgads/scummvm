@@ -20,6 +20,8 @@ Project Leaders
      -
    * - Einar Johan T. Sømåen
      -
+   * - Lothar Serra Mari
+     -
 
 PR Office
 *********
@@ -49,48 +51,6 @@ Retired Project Leaders
 
 Engine Teams
 ************
-
-SCUMM
-^^^^^
-
-.. list-table::
-   :widths: 35 65
-
-   * - Torbjörn Andersson
-     -
-   * - James Brown
-     - (retired)
-   * - Jonathan Gray
-     - (retired)
-   * - Vincent Hamm
-     - (retired)
-   * - Max Horn
-     - (retired)
-   * - Travis Howell
-     -
-   * - Paweł Kołodziejski
-     - Codecs, iMUSE, Smush, etc.
-   * - Gregory Montoir
-     - (retired)
-   * - Eugene Sandulenko
-     - FT INSANE, MM NES, MM C64, game detection, Herc/CGA
-   * - Ludvig Strigeus
-     - (retired)
-
-HE
-^^
-
-.. list-table::
-   :widths: 35 65
-
-   * - Jonathan Gray
-     - (retired)
-   * - Travis Howell
-     -
-   * - Gregory Montoir
-     - (retired)
-   * - Eugene Sandulenko
-     -
 
 Access
 ^^^^^^
@@ -376,6 +336,21 @@ CruisE
    * - Vincent Hamm
      - (retired)
 
+Cryo
+^^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - Arnaud Boutonné
+     -
+   * - Filippos Karapetis
+     -
+   * - Retro-Junk;
+     -
+   * - Eugene Sandulenko
+     -
+
 Cryomni3D
 ^^^^^^^^^
 
@@ -393,12 +368,14 @@ Director
 
    * - Eugene Sandulenko
      -
+   * - Crane Yang
+     - GSoC Student
    * - Dmitry Iskrich
      -
-   * - Dylan Servilla
-     -
+   * - Deborah Servilla
+     - GSoC Student
    * - Nathanael Gentry
-     -
+     - GSoC Student
    * - Roland van Laar
      -
    * - Scott Percival
@@ -473,17 +450,8 @@ DreamWeb
    * - Willem Jan Palenstijn
      -
 
-Fullpipe
-^^^^^^^^
-
-.. list-table::
-   :widths: 35 65
-
-   * - Eugene Sandulenko
-     -
-
-ScummGlk
-^^^^^^^^
+Glk
+^^^
 
 .. list-table::
    :widths: 35 65
@@ -546,6 +514,8 @@ Grim
      - Grim (retired)
    * - Giulio Camuffo
      - Grim (retired)
+   * - Daniel Schepler
+     - Initial engine contributor
    * - Dries Harnie
      - EMI
    * - Paweł Kołodziejski
@@ -567,13 +537,15 @@ Groovie
 
    * - Henry Bush
      -
+   * - Ray Carro
+     -
    * - Scott Thomas
      -
    * - Jordi Vilalta Prat
      -
 
-Hades' Challenge
-^^^^^^^^^^^^^^^^
+Hades Challenge
+^^^^^^^^^^^^^^^
 
 .. list-table::
    :widths: 35 65
@@ -614,6 +586,15 @@ Hugo
    * - Oystein Eftevaag
      -
    * - Eugene Sandulenko
+     -
+
+Hypno
+^^^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - Gustavo Grieco
      -
 
 ICB
@@ -801,6 +782,17 @@ Myst 3
    * - Bastien Bouclet
      -
 
+Nancy
+^^^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - Kaloyan Chehlarski
+     -
+   * - Walter van Niftrik
+     -
+
 Neverhood
 ^^^^^^^^^
 
@@ -810,6 +802,15 @@ Neverhood
    * - Benjamin Haisch
      -
    * - Filippos Karapetis
+     -
+
+NGI
+^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - Eugene Sandulenko
      -
 
 Parallaction
@@ -913,6 +914,17 @@ SAGA
    * - Eugene Sandulenko
      -
 
+SAGA2
+^^^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - Yuri Guimaraes
+     - GSoC Student
+   * - Eugene Sandulenko
+     -
+
 SCI
 ^^^
 
@@ -942,6 +954,50 @@ SCI
    * - Colin Snover
      -
 
+SCUMM
+^^^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - Torbjörn Andersson
+     -
+   * - Andrea Boscarino
+     - Digital iMUSE, various fixes
+   * - James Brown
+     - (retired)
+   * - Jonathan Gray
+     - (retired)
+   * - Vincent Hamm
+     - (retired)
+   * - Max Horn
+     - (retired)
+   * - Travis Howell
+     -
+   * - Paweł Kołodziejski
+     - Codecs, iMUSE, Smush, etc.
+   * - Gregory Montoir
+     - (retired)
+   * - Eugene Sandulenko
+     - FT INSANE, MM NES, MM C64, game detection, Herc/CGA
+   * - Ludvig Strigeus
+     - (retired)
+
+SCUMM HE
+^^^^^^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - Jonathan Gray
+     - (retired)
+   * - Travis Howell
+     -
+   * - Gregory Montoir
+     - (retired)
+   * - Eugene Sandulenko
+     -
+
 Sherlock
 ^^^^^^^^
 
@@ -966,6 +1022,17 @@ Sky
    * - Joost Peters
      -
 
+SLUDGE
+^^^^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - Eugene Sandulenko
+     -
+   * - Simei Yin
+     - GSoC Student
+
 Stark
 ^^^^^
 
@@ -978,6 +1045,19 @@ Stark
      -
    * - Liu Zhaosong
      -
+
+Star Trek
+^^^^^^^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - Matthew Hoops
+     - (retired)
+   * - Filippos Karapetis
+     -
+   * - Matthew Stewart
+     - GSoC Student
 
 Supernova
 ^^^^^^^^^
@@ -1274,6 +1354,8 @@ Xeen
 
    * - Paul Gilbert
      -
+   * - Benoit Pierre
+     -
    * - David Goldsmith
      - (analysis)
    * - Matt Taylor
@@ -1394,6 +1476,8 @@ Nintendo DS
 
    * - Bertrand Augereau
      - HQ software scaler
+   * - Cameron Cawley
+     -
    * - Neil Millstone
      -
 
@@ -1463,8 +1547,8 @@ PlayStation Vita
    * - rsn8887
      -
 
-SDL (Win/Linux/OS X/etc.)
-^^^^^^^^^^^^^^^^^^^^^^^^^
+SDL (Win/Linux/macOS/etc.)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :widths: 35 65
@@ -1574,8 +1658,12 @@ Miscellaneous
      - Restoring original Drascula tracks, and writing convert_dxa.bat
    * - Chris Page
      - Return to launcher, savestate improvements, leak fixes, ... (GSoC 2008 task) (retired)
+   * - Coen Rampen
+     - Sound improvements
    * - Robin Watts
      - ARM assembly routines for nice speedups on several ports; improvements to the sound mixer
+   * - Trembyle
+     - Archivist
 
 Website (code)
 **************
@@ -1606,8 +1694,6 @@ Website (maintenance)
      - Forum, IRC channel, Screen Shots and Mailing list maintainer
    * - John Willis
      -
-   * - Matan Bareket
-     - Site maintainer
 
 Website (content)
 *****************
@@ -1653,6 +1739,8 @@ Retired Team Members
      - Port: X11
    * - Won Star
      - Former GP32 porter
+   * - Matan Bareket
+     - Website, Infrastructure, UI/UX
 
 Other contributions
 ===================
@@ -1810,6 +1898,8 @@ Win32
 
    * - Travis Howell
      -
+   * - Lothar Serra Mari
+     -
 
 Win64
 ^^^^^
@@ -1821,6 +1911,8 @@ Win64
      - (retired)
    * - Johannes Schickel
      - (retired)
+   * - Lothar Serra Mari
+     -
 
 GUI Translations
 ****************
@@ -2105,6 +2197,19 @@ Mortevielle
      - Improve English translation
    * - Thierry Crozat
      - Improve English translation
+
+Prince
+^^^^^^
+
+.. list-table::
+   :widths: 35 65
+
+   * - ShinjiGR
+     - English translation
+   * - Eugene Sandulenko
+     - English translation
+   * - Anna Baldur
+     - English translation
 
 Supernova
 ^^^^^^^^^

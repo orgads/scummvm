@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,9 +24,14 @@
 #include "common/system.h"
 #include "common/savefile.h"
 #include "common/file.h"
+#include "common/translation.h"
 
 #include "graphics/thumbnail.h"
 
+#include "backends/keymapper/action.h"
+#include "backends/keymapper/keymapper.h"
+
+#include "adl/adl.h"
 #include "adl/detection.h"
 #include "adl/disk_image_helpers.h"
 
@@ -63,6 +67,10 @@ GameVersion getGameVersion(const AdlGameDescription &adlDesc) {
 	return adlDesc.version;
 }
 
+Common::Language getLanguage(const AdlGameDescription &adlDesc) {
+	return adlDesc.desc.language;
+}
+
 Common::Platform getPlatform(const AdlGameDescription &adlDesc) {
 	return adlDesc.desc.platform;
 }
@@ -75,11 +83,13 @@ public:
 
 	bool hasFeature(MetaEngineFeature f) const override;
 	SaveStateDescriptor querySaveMetaInfos(const char *target, int slot) const override;
-	int getMaximumSaveSlot() const override { return 'O' - 'A'; }
+	int getAutosaveSlot() const override { return 15; }
+	int getMaximumSaveSlot() const override { return 15; }
 	SaveStateList listSaves(const char *target) const override;
 	void removeSaveState(const char *target, int slot) const override;
 
 	Common::Error createInstance(OSystem *syst, Engine **engine, const ADGameDescription *gd) const override;
+	Common::KeymapArray initKeymaps(const char *target) const override;
 };
 
 bool AdlMetaEngine::hasFeature(MetaEngineFeature f) const {
@@ -91,7 +101,6 @@ bool AdlMetaEngine::hasFeature(MetaEngineFeature f) const {
 	case kSavesSupportThumbnail:
 	case kSavesSupportCreationDate:
 	case kSavesSupportPlayTime:
-	case kSimpleSavesNames:
 		return true;
 	default:
 		return false;
@@ -125,7 +134,7 @@ SaveStateDescriptor AdlMetaEngine::querySaveMetaInfos(const char *target, int sl
 		return SaveStateDescriptor();
 	}
 
-	SaveStateDescriptor sd(slot, name);
+	SaveStateDescriptor sd(this, slot, name);
 
 	int year = inFile->readUint16BE();
 	int month = inFile->readByte();
@@ -187,7 +196,7 @@ SaveStateList AdlMetaEngine::listSaves(const char *target) const {
 		delete inFile;
 
 		int slotNum = atoi(fileName.c_str() + fileName.size() - 2);
-		SaveStateDescriptor sd(slotNum, name);
+		SaveStateDescriptor sd(this, slotNum, name);
 		saveList.push_back(sd);
 	}
 
@@ -239,6 +248,21 @@ Common::Error AdlMetaEngine::createInstance(OSystem *syst, Engine **engine, cons
 	}
 
 	return Common::kNoError;
+}
+
+Common::KeymapArray AdlMetaEngine::initKeymaps(const char *target) const {
+	using namespace Common;
+
+	Keymap *engineKeymap = new Keymap(Keymap::kKeymapTypeGame, "adl", "ADL");
+
+	Action *act;
+
+	act = new Action("QUIT", _("Quit"));
+	act->setCustomEngineActionEvent(kADLActionQuit);
+	act->addDefaultInputMapping("C+q");
+	engineKeymap->addAction(act);
+
+	return Keymap::arrayOf(engineKeymap);
 }
 
 } // End of namespace Adl

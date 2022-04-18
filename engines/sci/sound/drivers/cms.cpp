@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -197,8 +196,8 @@ public:
 
 	void onTimer() override;
 
-	MidiChannel *allocateChannel() override { return 0; }
-	MidiChannel *getPercussionChannel() override { return 0; }
+	MidiChannel *allocateChannel() override { return nullptr; }
+	MidiChannel *getPercussionChannel() override { return nullptr; }
 
 	bool isStereo() const override { return true; }
 	int getRate() const override { return _rate; }
@@ -254,7 +253,7 @@ private:
 };
 
 CMSVoice::CMSVoice(uint8 id, MidiDriver_CMS* driver, CMSEmulator *cms, SciSpan<const uint8>& patchData) : _id(id), _regOffset(id > 5 ? id - 6 : id), _portOffset(id > 5 ? 2 : 0),
-	_driver(driver), _cms(cms), _assign(0xFF), _note(0xFF), _sustained(false), _duration(0), _releaseDuration(0), _secondaryVoice(0), _patchData(patchData) {
+	_driver(driver), _cms(cms), _assign(0xFF), _note(0xFF), _sustained(false), _duration(0), _releaseDuration(0), _secondaryVoice(nullptr), _patchData(patchData) {
 	assert(_id < 12);
 	_octaveRegs[_id >> 1] = 0;
 }
@@ -384,7 +383,7 @@ void CMSVoice_V0::programChange(int program) {
 		if (data.getUint8At(pos) == 0xFF) {
 			_secondaryVoice->stop();
 			_secondaryVoice->_assign = 0xFF;
-			_secondaryVoice = 0;
+			_secondaryVoice = nullptr;
 		} else {
 			_secondaryVoice->setPanMask(_panMask);
 			_secondaryVoice->programChange(program);
@@ -471,7 +470,7 @@ void CMSVoice_V0::update() {
 
 void CMSVoice_V0::reset() {
 	_envState = kReady;
-	_secondaryVoice = 0;
+	_secondaryVoice = nullptr;
 	_assign = _note = _envNote = 0xFF;
 	_panMask = _id & 1 ? 0xF0 : 0x0F;
 	_envTL = 0;
@@ -744,7 +743,7 @@ const int CMSVoice_V1::_velocityTable[32] = {
 };
 
 MidiDriver_CMS::MidiDriver_CMS(Audio::Mixer* mixer, ResourceManager* resMan, SciVersion version) : MidiDriver_Emulated(mixer), _resMan(resMan),
-	_version(version), _cms(0), _rate(0), _playSwitch(true), _masterVolume(0), _numVoicesPrimary(version > SCI_VERSION_0_LATE ? 12 : 8),
+	_version(version), _cms(nullptr), _rate(0), _playSwitch(true), _masterVolume(0), _numVoicesPrimary(version > SCI_VERSION_0_LATE ? 12 : 8),
 	_actualTimerInterval(1000000 / _baseFreq), _reqTimerInterval(1000000/60), _numVoicesSecondary(version > SCI_VERSION_0_LATE ? 0 : 4) {
 	memset(_voice, 0, sizeof(_voice));
 	_updateTimer = _reqTimerInterval;
@@ -1108,7 +1107,7 @@ void MidiDriver_CMS::unbindVoices(int channelNr, int voices, bool bindSecondary)
 				if (sec) {
 					sec->stop();
 					sec->_assign = 0xFF;
-					_voice[i]->_secondaryVoice = 0;
+					_voice[i]->_secondaryVoice = nullptr;
 				}
 
 				--voices;
@@ -1145,7 +1144,7 @@ void MidiDriver_CMS::unbindVoices(int channelNr, int voices, bool bindSecondary)
 			if (sec) {
 				sec->stop();
 				sec->_assign = 0xFF;
-				_voice[voiceNr]->_secondaryVoice = 0;
+				_voice[voiceNr]->_secondaryVoice = nullptr;
 			}
 
 			--voices;
@@ -1329,7 +1328,7 @@ public:
 
 	void playSwitch(bool play) override { _driver->property(MidiDriver_CMS::MIDI_PROP_PLAYSWITCH, play ? 1 : 0); }
 
-	const char *reportMissingFiles() override { return _filesMissing ? _requiredFiles : 0; }
+	const char *reportMissingFiles() override { return _filesMissing ? _requiredFiles : nullptr; }
 
 private:
 	bool _filesMissing;
@@ -1350,7 +1349,7 @@ int MidiPlayer_CMS::open(ResourceManager *resMan) {
 }
 
 void MidiPlayer_CMS::close() {
-	_driver->setTimerCallback(0, 0);
+	_driver->setTimerCallback(nullptr, nullptr);
 	_driver->close();
 	delete _driver;
 	_driver = nullptr;

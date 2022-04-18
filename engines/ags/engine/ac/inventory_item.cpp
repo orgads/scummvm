@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -222,24 +221,6 @@ void RegisterInventoryItemAPI() {
 	ccAddExternalObjectFunction("InventoryItem::get_ID", Sc_InventoryItem_GetID);
 	ccAddExternalObjectFunction("InventoryItem::get_Name", Sc_InventoryItem_GetName_New);
 	ccAddExternalObjectFunction("InventoryItem::set_Name", Sc_InventoryItem_SetName);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("InventoryItem::GetAtScreenXY^2", (void *)GetInvAtLocation);
-	ccAddExternalFunctionForPlugin("InventoryItem::IsInteractionAvailable^1", (void *)InventoryItem_CheckInteractionAvailable);
-	ccAddExternalFunctionForPlugin("InventoryItem::GetName^1", (void *)InventoryItem_GetName);
-	ccAddExternalFunctionForPlugin("InventoryItem::GetProperty^1", (void *)InventoryItem_GetProperty);
-	ccAddExternalFunctionForPlugin("InventoryItem::GetPropertyText^2", (void *)InventoryItem_GetPropertyText);
-	ccAddExternalFunctionForPlugin("InventoryItem::GetTextProperty^1", (void *)InventoryItem_GetTextProperty);
-	ccAddExternalFunctionForPlugin("InventoryItem::RunInteraction^1", (void *)InventoryItem_RunInteraction);
-	ccAddExternalFunctionForPlugin("InventoryItem::SetName^1", (void *)InventoryItem_SetName);
-	ccAddExternalFunctionForPlugin("InventoryItem::get_CursorGraphic", (void *)InventoryItem_GetCursorGraphic);
-	ccAddExternalFunctionForPlugin("InventoryItem::set_CursorGraphic", (void *)InventoryItem_SetCursorGraphic);
-	ccAddExternalFunctionForPlugin("InventoryItem::get_Graphic", (void *)InventoryItem_GetGraphic);
-	ccAddExternalFunctionForPlugin("InventoryItem::set_Graphic", (void *)InventoryItem_SetGraphic);
-	ccAddExternalFunctionForPlugin("InventoryItem::get_ID", (void *)InventoryItem_GetID);
-	ccAddExternalFunctionForPlugin("InventoryItem::get_Name", (void *)InventoryItem_GetName_New);
-	ccAddExternalFunctionForPlugin("InventoryItem::set_Name", (void *)InventoryItem_SetName);
 }
 
 } // namespace AGS3

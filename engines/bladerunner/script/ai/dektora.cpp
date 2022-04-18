@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -118,8 +117,8 @@ bool AIScriptDektora::Update() {
 	}
 
 	if (chapter == 4) {
-		if (Actor_Query_Goal_Number(kActorDektora) < 300) {
-			Actor_Set_Goal_Number(kActorDektora, 300);
+		if (Actor_Query_Goal_Number(kActorDektora) < kGoalDektoraStartAct4StashedAway) {
+			Actor_Set_Goal_Number(kActorDektora, kGoalDektoraStartAct4StashedAway);
 		}
 		return true;
 	}
@@ -575,6 +574,11 @@ bool AIScriptDektora::GoalChanged(int currentGoalNumber, int newGoalNumber) {
 
 	case kGoalDektoraNR11RanAway:
 		Game_Flag_Set(kFlagDektoraRanAway);
+#if !BLADERUNNER_ORIGINAL_BUGS
+		// This will teleport Dektora out of the NR11 scene
+		// and remove the awry target hotspot at the region where she left
+		Actor_Set_Goal_Number(kActorDektora, kGoalDektoraStartAct4StashedAway);
+#endif // !BLADERUNNER_ORIGINAL_BUGS
 		break;
 
 	case 299:
@@ -583,10 +587,10 @@ bool AIScriptDektora::GoalChanged(int currentGoalNumber, int newGoalNumber) {
 		Actor_Set_Goal_Number(kActorDektora, kGoalDektoraGone);
 		break;
 
-	case 300:
+	case kGoalDektoraStartAct4StashedAway:
 		AI_Movement_Track_Flush(kActorDektora);
 		Actor_Put_In_Set(kActorDektora, kSetFreeSlotA);
-		Actor_Set_At_Waypoint(kActorDektora, 33, 0);
+		Actor_Set_At_Waypoint(kActorDektora, 33, 0); // in kSetFreeSlotA
 		break;
 
 	default:

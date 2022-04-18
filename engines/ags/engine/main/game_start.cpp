@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,15 +32,16 @@
 #include "ags/engine/ac/mouse.h"
 #include "ags/engine/ac/room.h"
 #include "ags/engine/ac/screen.h"
+#include "ags/engine/ac/timer.h"
 #include "ags/engine/debugging/debug_log.h"
 #include "ags/engine/debugging/debugger.h"
 #include "ags/shared/debugging/out.h"
-#include "ags/engine/main/main_header.h"
+#include "ags/engine/device/mouse_w32.h"
 #include "ags/engine/main/game_run.h"
 #include "ags/engine/main/game_start.h"
-#include "ags/engine/script/script.h"
 #include "ags/engine/media/audio/audio_system.h"
-#include "ags/engine/ac/timer.h"
+#include "ags/engine/script/script_runtime.h"
+#include "ags/engine/script/script.h"
 #include "ags/ags.h"
 #include "ags/globals.h"
 
@@ -73,6 +73,7 @@ void start_game_load_savegame_on_startup() {
 }
 
 void start_game() {
+	set_room_placeholder();
 	set_cursor_mode(MODE_WALK);
 	_GP(mouse).SetPosition(Point(160, 100));
 	newmusic(0);
@@ -96,8 +97,6 @@ void start_game() {
 	if (_G(displayed_room) < 0) {
 		current_fade_out_effect();
 		load_new_room(_G(playerchar)->room, _G(playerchar));
-		// load_new_room updates it, but it should be -1 in the first room
-		_G(playerchar)->prevroom = -1;
 	}
 
 	first_room_initialization();

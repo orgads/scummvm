@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -71,7 +70,7 @@ void Script::setHotspotScript(uint16 hotspotId, uint16 scriptIndex, uint16 v3) {
 	uint16 offset = res.getHotspotScript(scriptIndex);
 	Hotspot *hotspot = res.getActiveHotspot(hotspotId);
 
-	if (hotspot != NULL) {
+	if (hotspot != nullptr) {
 		hotspot->setHotspotScript(offset);
 	} else {
 		HotspotData *hs = res.getHotspot(hotspotId);
@@ -212,7 +211,7 @@ void Script::endgameSequence(uint16 v1, uint16 v2, uint16 v3) {
 
 	Sound.killSounds();
 	if (animResult == ABORT_NONE) {
-		Sound.musicInterface_Play(Sound.isRoland() ? 0 : 0x28, 0, false);
+		Sound.musicInterface_Play(Sound.isRoland() ? 0 : 0x28, false);
 		events.interruptableDelay(5500);
 	}
 	delete anim;
@@ -224,7 +223,7 @@ void Script::endgameSequence(uint16 v1, uint16 v2, uint16 v3) {
 
 	if (!Sound.isRoland())
 		Sound.loadSection(ADLIB_ENDGAME_SOUND_RESOURCE_ID);
-	Sound.musicInterface_Play(Sound.isRoland() ? 6 : 0, 0, true);
+	Sound.musicInterface_Play(Sound.isRoland() ? 6 : 0, true);
 
 	anim = new AnimationSequence(ENDGAME_ANIM_ID + 2, p, false);
 	anim->show();
@@ -561,7 +560,7 @@ void Script::checkWakeBrenda(uint16 v1, uint16 v2, uint16 v3) {
 
 void Script::displayMessage(uint16 messageId, uint16 characterId, uint16 destCharacterId) {
 	Hotspot *hotspot = Resources::getReference().getActiveHotspot(characterId);
-	if (hotspot != NULL)
+	if (hotspot != nullptr)
 		hotspot->showMessage(messageId, destCharacterId);
 }
 
@@ -589,7 +588,7 @@ void Script::setSupportData(uint16 hotspotId, uint16 index, uint16 v3) {
 
 	uint16 dataId = res.getCharOffset(index);
 	CharacterScheduleEntry *entry = res.charSchedules().getEntry(dataId);
-	assert(entry != NULL);
+	assert(entry != nullptr);
 
 	Hotspot *h = res.getActiveHotspot(hotspotId);
 	assert(h);
@@ -775,7 +774,7 @@ void Script::checkSound(uint16 soundNumber, uint16 v2, uint16 v3) {
 	Sound.tidySounds();
 
 	SoundDescResource *rec = Sound.findSound(soundNumber);
-	Resources::getReference().fieldList().setField(GENERAL, (rec != NULL) ? 1 : 0);
+	Resources::getReference().fieldList().setField(GENERAL, (rec != nullptr) ? 1 : 0);
 }
 
 typedef void(*SequenceMethodPtr)(uint16, uint16, uint16);
@@ -853,7 +852,7 @@ static const SequenceMethodRecord scriptMethods[] = {
 	{64, Script::randomToGeneral},
 	{65, Script::checkCellDoor},
 	{66, Script::checkSound},
-	{0xff, NULL}};
+	{0xff, nullptr}};
 
 static const char *scriptOpcodes[] = {
 	"ABORT", "ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "EQUALS", "NOT_EQUALS",
@@ -1104,7 +1103,7 @@ uint16 Script::execute(uint16 startOffset) {
 			if (gDebugLevel >= ERROR_DETAILED) {
 				// Set up the debug string for the method call
 				if (rec->methodIndex == 0xff) strcat(debugInfo, " INVALID INDEX");
-				else if (scriptMethodNames[param] == NULL) strcat(debugInfo, " UNKNOWN METHOD");
+				else if (scriptMethodNames[param] == nullptr) strcat(debugInfo, " UNKNOWN METHOD");
 				else {
 					strcat(debugInfo, " ");
 					Common::strlcat(debugInfo, scriptMethodNames[param], MAX_DESC_SIZE);

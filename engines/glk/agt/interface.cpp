@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -630,7 +629,7 @@ void prompt_out(int n)
 	if (PURE_INPUT && n == 1) agt_textcolor(-1);
 	if (n == 1) {
 		agt_newline();
-		gen_sysmsg(1, ">", MSG_MAIN, NULL);
+		gen_sysmsg(1, ">", MSG_MAIN, nullptr);
 	}
 	if (n == 2) agt_puts("? ");
 	agt_textcolor(7);
@@ -672,23 +671,23 @@ void set_test_mode(fc_type fc) {
 	log_in = readopen(fc, fLOG, &errstr);
 
 	if (make_test) {
-		if (errstr == NULL)
+		if (errstr == nullptr)
 			fatal("Log file already exists.");
-		log_out = writeopen(fc, fLOG, NULL, &errstr);
-		if (errstr != NULL)
+		log_out = writeopen(fc, fLOG, nullptr, &errstr);
+		if (errstr != nullptr)
 			fatal("Couldn't create log file.");
 		logflag = 1;
 		return;
 	}
 
 	logdelay = 0;
-	if (errstr != NULL)
+	if (errstr != nullptr)
 		fatal("Couldn't open log file.");
 	logflag = 2;
 
 	script_on = 1;
-	scriptfile = writeopen(fc, fSCR, NULL, &errstr);
-	if (errstr != NULL)
+	scriptfile = writeopen(fc, fSCR, nullptr, &errstr);
+	if (errstr != nullptr)
 		fatal("Couldn't open script file.");
 }
 

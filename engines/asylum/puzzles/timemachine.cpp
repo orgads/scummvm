@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -48,10 +47,15 @@ const int16 puzzleTimeMachinePoints[5][2] = {
 
 PuzzleTimeMachine::PuzzleTimeMachine(AsylumEngine *engine) : Puzzle(engine) {
 	_leftButtonClicked = true;
+	_counter = 0;
 
 	memset(&_frameIndexes,		0, sizeof(_frameIndexes));
 	memset(&_frameCounts,		0, sizeof(_frameCounts));
 	memset(&_frameIncrements,	0, sizeof(_frameIncrements));
+	memset(&_state,				0, sizeof(_state));
+
+	_data_45AAA8 = _data_45AAAC = 0;
+	_currentFrameIndex = 0;
 
 	reset();
 }
@@ -119,9 +123,7 @@ bool PuzzleTimeMachine::init(const AsylumEvent &evt) {
 	return true;
 }
 
-bool PuzzleTimeMachine::update(const AsylumEvent &)  {
-	updateCursor();
-
+void PuzzleTimeMachine::updateScreen()  {
 	// Draw screen elements
 	getScreen()->clearGraphicsInQueue();
 	getScreen()->fillRect(0, 0, 640, 480, 115);
@@ -167,10 +169,6 @@ bool PuzzleTimeMachine::update(const AsylumEvent &)  {
 
 	_leftButtonClicked = true;
 
-	// Draw to screen
-	getScreen()->drawGraphicsInQueue();
-	getScreen()->copyBackBufferToScreen();
-
 	// Check for puzzle completion
 	if (_counter > 30 && _vm->isGameFlagSet(kGameFlag925)) {
 		getCursor()->hide();
@@ -196,8 +194,6 @@ bool PuzzleTimeMachine::update(const AsylumEvent &)  {
 
 		_frameIndexes[5] = (_frameIndexes[5] + 1) % _frameCounts[5];
 	}
-
-	return true;
 }
 
 bool PuzzleTimeMachine::mouseLeftDown(const AsylumEvent &evt) {

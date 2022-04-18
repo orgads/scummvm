@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -49,7 +48,7 @@ void EventsManager::pollEvents() {
 			_G(want_exit) = true;
 			_G(abort_engine) = true;
 			_G(check_dynamic_sprites_at_exit) = false;
-			break;
+			return;
 
 		case Common::EVENT_JOYAXIS_MOTION:
 			assert(e.joystick.axis < 32);
@@ -311,12 +310,9 @@ bool EventsManager::ags_key_to_scancode(AGS3::eAGSKeyCode key, Common::KeyCode(&
 	return false;
 }
 
-AGS3::eAGSKeyCode EventsManager::ags_keycode_from_scummvm(const Common::Event &event) {
+AGS3::eAGSKeyCode EventsManager::scummvm_key_to_ags_key(const Common::Event &event) {
 	if (event.type != Common::EVENT_KEYDOWN)
 		return AGS3::eAGSKeyCodeNone;
-
-	if (event.kbd.ascii >= 32 && event.kbd.ascii <= 127)
-		return static_cast<AGS3::eAGSKeyCode>(event.kbd.ascii);
 
 	const Common::KeyCode sym = event.kbd.keycode;
 	const uint16 mod = event.kbd.flags;
@@ -328,6 +324,9 @@ AGS3::eAGSKeyCode EventsManager::ags_keycode_from_scummvm(const Common::Event &e
 		else if ((mod & Common::KBD_ALT) != 0) // align letters to code 301
 			return static_cast<AGS3::eAGSKeyCode>(AGS_EXT_KEY_SHIFT + (sym - Common::KEYCODE_a) + 1);
 	}
+
+	if (event.kbd.ascii >= 32 && event.kbd.ascii <= 127)
+		return static_cast<AGS3::eAGSKeyCode>(event.kbd.ascii);
 
 	// Remaining codes may match or not, but we use a big table anyway.
 	// TODO: this is code by [sonneveld],

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -54,14 +53,27 @@ public:
 
 	bool    Seek(soff_t offset, StreamSeek origin) override;
 
-private:
-	soff_t _bufferPosition;
-	std::vector<char> _buffer;
-
-	soff_t _position;
+protected:
+	soff_t _start;
 	soff_t _end;
 
+private:
 	void FillBufferFromPosition(soff_t position);
+
+	soff_t _position;
+	soff_t _bufferPosition;
+	std::vector<char> _buffer;
+};
+
+
+// Creates a BufferedStream limited by an arbitrary offset range
+class BufferedSectionStream : public BufferedStream {
+public:
+	BufferedSectionStream(const String &file_name, soff_t start_pos, soff_t end_pos,
+		FileOpenMode open_mode, FileWorkMode work_mode, DataEndianess stream_endianess = kLittleEndian);
+
+	soff_t  GetPosition() const override;
+	soff_t  GetLength() const override;
 };
 
 } // namespace Shared

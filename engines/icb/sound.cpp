@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -256,7 +255,7 @@ int32 EvalEnv(const CEnvelope &env, int32 x) {
 _linked_data_file *GetMissionSfxFile() {
 	uint32 fileHash;
 	uint32 clusterHash;
-	_linked_data_file *f = NULL;
+	_linked_data_file *f = nullptr;
 
 	// if no mission return NULL
 	if (!g_mission) {
@@ -284,7 +283,7 @@ _linked_data_file *GetSessionSfxFile() {
 	// if no session return NULL
 	if ((!g_mission) || (!(g_mission->session))) {
 		warning("no session so no sfx file!");
-		return NULL;
+		return nullptr;
 	}
 
 	uint32 fileHash = NULL_HASH;
@@ -327,7 +326,7 @@ int32 WhichMissionSfx(uint32 sfx) {
 	uint32 n;
 
 	linkedSfx = GetMissionSfxFile();
-	if (linkedSfx == NULL)
+	if (linkedSfx == nullptr)
 		return -1;
 
 	n = linkedSfx->Fetch_item_number_by_hash(sfx);
@@ -343,7 +342,7 @@ int32 WhichSessionSfx(uint32 sfx) {
 	uint32 n;
 
 	linkedSfx = GetSessionSfxFile();
-	if (linkedSfx == NULL)
+	if (linkedSfx == nullptr)
 		return -1;
 
 	n = linkedSfx->Fetch_item_number_by_hash(sfx);
@@ -396,7 +395,7 @@ int32 GetFreeChannel() {
 
 // Get sfx for this registered sound
 CSfx *CRegisteredSound::GetSfx() {
-	CSfx *the_sfx = 0;
+	CSfx *the_sfx = nullptr;
 
 	if (m_sfxNumber == -1)
 		Fatal_error("sfx is not found in session or mission");
@@ -831,8 +830,10 @@ int32 assignedSounds = 0;
 void UpdateSounds10Hz() {
 	int32 i;
 
-	for (i = 0; i < MAX_REGISTERED_SOUNDS; i++)
-		g_registeredSounds[i]->Update10Hz();
+	for (i = 0; i < MAX_REGISTERED_SOUNDS; i++) {
+		if (g_registeredSounds[i])
+			g_registeredSounds[i]->Update10Hz();
+	}
 }
 
 // called every game cycle sets hearable and unhearable sounds...
@@ -1025,7 +1026,7 @@ void RegisterSoundOffset(uint32 obj, const char *offsetName, const char *sfxName
 		g_registeredSounds[i]->RegisterFromAbsolute(obj, sndID, sfxName, sfxHash, xo, yo, zo, volume_offset);
 	}
 	// absolute sound (no name)
-	else if ((offsetName == NULL) || (strcmp(offsetName, "") == 0)) {
+	else if ((offsetName == nullptr) || (strcmp(offsetName, "") == 0)) {
 		// absolute address
 		g_registeredSounds[i]->RegisterFromAbsolute(obj, sndID, sfxName, sfxHash, xo, yo, zo, volume_offset);
 	}
@@ -1056,7 +1057,7 @@ void RegisterSound(uint32 obj, const char *sfxName, uint32 sfxHash, const char *
 	const char *name;
 
 	if (obj == SPECIAL_SOUND)
-		name = NULL;
+		name = nullptr;
 	else
 		name = (const char *)(MS->objects->Fetch_items_name_by_number(obj));
 
@@ -1065,14 +1066,14 @@ void RegisterSound(uint32 obj, const char *sfxName, uint32 sfxHash, const char *
 
 // register a sound from an absolute position
 void RegisterSoundAbsolute(uint32 obj, const char *sfxName, uint32 sfxHash, const char *sndID, PXreal x, PXreal y, PXreal z, int8 volume_offset) {
-	RegisterSoundOffset(obj, NULL, sfxName, sfxHash, sndID, x, y, z, 0, 0, volume_offset);
+	RegisterSoundOffset(obj, nullptr, sfxName, sfxHash, sndID, x, y, z, 0, 0, volume_offset);
 }
 
 void RegisterSoundTime(uint32 obj, const char *sfxName, uint32 sfxHash, const char *sndID, int32 time, int8 volume_offset) {
 	const char *name;
 
 	if (obj == SPECIAL_SOUND)
-		name = NULL;
+		name = nullptr;
 	else
 		name = (const char *)(MS->objects->Fetch_items_name_by_number(obj));
 
@@ -1083,14 +1084,14 @@ void RegisterSoundTime(uint32 obj, const char *sfxName, uint32 sfxHash, const ch
 // for menus
 void RegisterMenuSound(const char *sfxName, uint32 sfxHash, int32 volume, int32 pan, int8 volume_offset) {
 	// volume is z of position
-	RegisterSoundOffset(SPECIAL_SOUND, NULL, sfxName, sfxHash, menuSoundID, (PXreal)pan, (PXreal)0, (PXreal)volume, 0, 0, volume_offset);
+	RegisterSoundOffset(SPECIAL_SOUND, nullptr, sfxName, sfxHash, menuSoundID, (PXreal)pan, (PXreal)0, (PXreal)volume, 0, 0, volume_offset);
 }
 
 // special sound
 // for in game (these are paused just like any other...
 void RegisterSoundSpecial(const char *sfxName, uint32 sfxHash, const char *sndID, int32 volume, int32 pan, int8 volume_offset) {
 	// volume is z of position
-	RegisterSoundOffset(SPECIAL_SOUND, NULL, sfxName, sfxHash, sndID, (PXreal)pan, (PXreal)0, (PXreal)volume, 0, 0, volume_offset);
+	RegisterSoundOffset(SPECIAL_SOUND, nullptr, sfxName, sfxHash, sndID, (PXreal)pan, (PXreal)0, (PXreal)volume, 0, 0, volume_offset);
 }
 
 void RemoveRegisteredSound(uint32 obj, const char *sndID) {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -73,6 +72,9 @@ CruPathfinderProcess::CruPathfinderProcess(Actor *actor, Item *target, int maxst
 	// TODO: check if flag already set? kill other pathfinders?
 	assert(!actor->hasActorFlags(Actor::ACT_PATHFINDING));
 	actor->setActorFlag(Actor::ACT_PATHFINDING);
+
+	if (actor->isInCombat() && actor->hasActorFlags(Actor::ACT_WEAPONREADY))
+		actor->doAnim(Animation::unreadyWeapon, dir_current);
 }
 
 CruPathfinderProcess::CruPathfinderProcess(Actor *actor, int32 x, int32 y, int32 z, int maxsteps, int stopdistance, bool turnatend) :
@@ -95,6 +97,9 @@ CruPathfinderProcess::CruPathfinderProcess(Actor *actor, int32 x, int32 y, int32
 	// TODO: check if flag already set? kill other pathfinders?
 	assert(!actor->hasActorFlags(Actor::ACT_PATHFINDING));
 	actor->setActorFlag(Actor::ACT_PATHFINDING);
+
+	if (actor->isInCombat() && actor->hasActorFlags(Actor::ACT_WEAPONREADY))
+		actor->doAnim(Animation::unreadyWeapon, dir_current);
 }
 
 CruPathfinderProcess::~CruPathfinderProcess() {
@@ -116,7 +121,7 @@ void CruPathfinderProcess::terminate() {
 			if (_targetItem == 0) {
 				destdir = Direction_GetWorldDir(_targetY - iy, _targetX - ix, dirmode_8dirs);
 			} else {
-				Item *target = getItem(_targetItem);
+				const Item *target = getItem(_targetItem);
 				if (target) {
 					int32 tx, ty, tz;
 					target->getLocationAbsolute(tx, ty, tz);
@@ -216,12 +221,10 @@ Direction CruPathfinderProcess::nextDirFromPoint(struct Point3 &npcpt) {
 		state._combat = npc->isInCombat();
 		animresult = npc->tryAnim(anim, _nextDir2, 0, &state);
 
-		// Note: this will never trigger in our code -
-		// "tryAnim" code seems to behave differently in original?
-		/*if (_solidObject && ((_result >> 1) & 1)) {
+		if (_solidObject && (animresult == Animation::SUCCESS)) {
 			_turnAtEnd = true;
 			return dir_invalid;
-		}*/
+		}
 
 		if (_stopDistance && (MAX(abs(_targetX - state._x), abs(_targetY - state._y)) <= _stopDistance)) {
 			_turnAtEnd = true;
@@ -247,7 +250,7 @@ Direction CruPathfinderProcess::nextDirFromPoint(struct Point3 &npcpt) {
 	bool is_controlled = World::get_instance()->getControlledNPCNum() == _itemNum;
 	if (npc->isInCombat() && !is_controlled) {
 		AttackProcess *attackproc = dynamic_cast<AttackProcess *>
-				(Kernel::get_instance()->findProcess(_itemNum, AttackProcess::ATTACK_PROCESS_TYPE));
+				(Kernel::get_instance()->findProcess(_itemNum, AttackProcess::ATTACK_PROC_TYPE));
 		if (attackproc) {
 			const Actor *target = getActor(attackproc->getTarget());
 			if (target && npc->isOnScreen() && npc->fireDistance(target, dirtotarget, 0, 0, 0)) {
@@ -278,6 +281,7 @@ void CruPathfinderProcess::run() {
 		return;
 	}
 
+	// Update target location if tracking to an item
 	if (_targetItem != 0 && _solidObject) {
 		Item *target = getItem(_targetItem);
 		if (target)
@@ -302,7 +306,7 @@ void CruPathfinderProcess::run() {
 	if (_nextDir == dir_invalid) {
 		_dir16Flag = true;
 	} else {
-	   if (_currentStep == _maxSteps) {
+	   if (_currentStep >= _maxSteps) {
 			terminate(); //0
 			return;
 		}

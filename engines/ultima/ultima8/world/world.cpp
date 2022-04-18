@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -39,6 +38,8 @@
 #include "ultima/ultima8/world/get_object.h"
 #include "ultima/ultima8/world/target_reticle_process.h"
 #include "ultima/ultima8/audio/audio_process.h"
+#include "ultima/ultima8/world/snap_process.h"
+#include "ultima/ultima8/graphics/main_shape_archive.h"
 
 namespace Ultima {
 namespace Ultima8 {
@@ -71,12 +72,15 @@ void World::clear() {
 	}
 	_maps.clear();
 
-	while (!_ethereal.empty())
-		_ethereal.pop_front();
+	_ethereal.clear();
 
 	if (_currentMap)
 		delete _currentMap;
 	_currentMap = nullptr;
+
+	_alertActive = false;
+	_controlledNPCNum = 1;
+	_vargasShield = 5000;
 }
 
 void World::reset() {
@@ -137,12 +141,17 @@ bool World::switchMap(uint32 newmap) {
 		if (desktop) desktop->CloseItemDependents();
 	}
 
-	// get rid of any remaining _ethereal items
+	// get rid of any remaining ethereal items
 	while (!_ethereal.empty()) {
 		uint16 eth = _ethereal.front();
 		_ethereal.pop_front();
 		Item *i = getItem(eth);
-		if (i) i->destroy();
+		if (i) {
+			if (i->getFlags() & Item::FLG_ETHEREAL)
+				i->destroy();
+			else
+				warning("Not destroying ethereal item %d - it doesn't think it's ethereal!", eth);
+		}
 	}
 
 	uint32 oldmap = _currentMap->getNum();
@@ -416,6 +425,15 @@ void World::setAlertActive(bool active)
 	assert(GAME_IS_CRUSADER);
 	_alertActive = active;
 
+	if (GAME_IS_REMORSE) {
+		setAlertActiveRemorse(active);
+	} else {
+		setAlertActiveRegret(active);
+	}
+}
+
+void World::setAlertActiveRemorse(bool active)
+{
 	// Replicate the behavior of the original game.
 	LOOPSCRIPT(script,
 		LS_OR(
@@ -433,6 +451,7 @@ void World::setAlertActive(bool active)
 	for (uint32 i = 0; i < itemlist.getSize(); i++) {
 		uint16 itemid = itemlist.getuint16(i);
 		Item *item = getItem(itemid);
+		assert(item);
 		int frame = item->getFrame();
 		if (_alertActive) {
 			if (item->getShape() == 0x477) {
@@ -452,20 +471,84 @@ void World::setAlertActive(bool active)
 	}
 }
 
+void World::setAlertActiveRegret(bool active)
+{
+	setAlertActiveRemorse(active);
+
+	LOOPSCRIPT(offscript, LS_OR(LS_SHAPE_EQUAL(0x660), LS_SHAPE_EQUAL(0x661)));
+	LOOPSCRIPT(onscript, LS_OR(LS_SHAPE_EQUAL(0x662), LS_SHAPE_EQUAL(0x663)));
+
+	const uint8 *script = active ? onscript : offscript;
+	// note: size should be the same, but just to be explicit.
+	int scriptlen = active ? sizeof(onscript) : sizeof(offscript);
+
+	UCList itemlist(2);
+	_world->getCurrentMap()->areaSearch(&itemlist, script, scriptlen,
+										nullptr, 0xffff, false);
+	for (uint32 i = 0; i < itemlist.getSize(); i++) {
+		uint16 itemid = itemlist.getuint16(i);
+		Item *item = getItem(itemid);
+		assert(item);
+		switch (item->getShape()) {
+			case 0x660:
+				item->setShape(0x663);
+				break;
+			case 0x661:
+				item->setShape(0x662);
+				break;
+			case 0x662:
+				item->setShape(0x661);
+				break;
+			case 0x663:
+				item->setShape(0x660);
+				break;
+			default:
+				warning("unexpected shape %d returned from search", item->getShape());
+				break;
+		}
+		item->setFrame(0);
+	}
+}
+
+void World::setGameDifficulty(uint8 difficulty) {
+   _difficulty = difficulty;
+   if (GAME_IS_REMORSE) {
+	   // HACK: Set ammo data for BA-40 in higher 2 difficulty levels
+	   // This would be better handled in the ini file somehow?
+	   const ShapeInfo *si = GameData::get_instance()->getMainShapes()->getShapeInfo(0x32E);
+	   if (si && si->_weaponInfo) {
+		   WeaponInfo *wi = si->_weaponInfo;
+		   wi->_clipSize = 20;
+		   if (difficulty > 1) {
+			   wi->_ammoShape = 0x33D;
+			   wi->_ammoType = 1;
+		   } else {
+			   wi->_ammoShape = 0;
+			   wi->_ammoType = 0;
+		   }
+	   }
+   }
+}
+
+
 void World::setControlledNPCNum(uint16 num) {
 	uint16 oldnpc = _controlledNPCNum;
 	_controlledNPCNum = num;
-	CameraProcess::SetCameraProcess(new CameraProcess(num));
 	Actor *previous = getActor(oldnpc);
 	if (previous && !previous->isDead() && previous->isInCombat()) {
 		previous->clearInCombat();
 	}
 
 	Actor *controlled = getActor(num);
-	if (controlled && num != 1) {
-		Kernel::get_instance()->killProcesses(num, Kernel::PROC_TYPE_ALL, true);
-		if (controlled->isInCombat())
-			controlled->clearInCombat();
+	if (controlled) {
+		if (num != 1) {
+			Kernel::get_instance()->killProcesses(num, Kernel::PROC_TYPE_ALL, true);
+			if (controlled->isInCombat())
+				controlled->clearInCombat();
+		}
+		int32 x, y, z;
+		controlled->getCentre(x, y, z);
+		CameraProcess::SetCameraProcess(new CameraProcess(x, y, z));
 	}
 
 	TargetReticleProcess *t = TargetReticleProcess::get_instance();

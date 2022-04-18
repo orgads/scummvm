@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -39,6 +38,7 @@ SdlWindow::SdlWindow() :
 #endif
 	_inputGrabState(false), _inputLockState(false)
 	{
+		memset(&grabRect, 0, sizeof(grabRect));
 
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 #elif SDL_VERSION_ATLEAST(1, 2, 10)
@@ -150,6 +150,9 @@ void SdlWindow::grabMouse(bool grab) {
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 	if (_window) {
 		SDL_SetWindowGrab(_window, grab ? SDL_TRUE : SDL_FALSE);
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+		SDL_SetWindowMouseRect(_window, grab ? &grabRect : NULL);
+#endif
 	}
 	_inputGrabState = grab;
 #else
@@ -160,6 +163,20 @@ void SdlWindow::grabMouse(bool grab) {
 		_inputGrabState = false;
 		if (!_inputLockState)
 			SDL_WM_GrabInput(SDL_GRAB_OFF);
+	}
+#endif
+}
+
+void SdlWindow::setMouseRect(const Common::Rect &rect) {
+	float dpiScale = getSdlDpiScalingFactor();
+	grabRect.x = (int)(rect.left / dpiScale + 0.5f);
+	grabRect.y = (int)(rect.top / dpiScale + 0.5f);
+	grabRect.w = (int)(rect.width() / dpiScale + 0.5f);
+	grabRect.h = (int)(rect.height() / dpiScale + 0.5f);
+
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+	if (_inputGrabState || _lastFlags & fullscreenMask) {
+		SDL_SetWindowMouseRect(_window, &grabRect);
 	}
 #endif
 }
@@ -197,6 +214,9 @@ bool SdlWindow::warpMouseInWindow(int x, int y) {
 	if (hasMouseFocus()) {
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 		if (_window) {
+			float dpiScale = getSdlDpiScalingFactor();
+			x = (int)(x / dpiScale + 0.5f);
+			y = (int)(y / dpiScale + 0.5f);
 			SDL_WarpMouseInWindow(_window, x, y);
 			return true;
 		}
@@ -241,6 +261,48 @@ Common::Rect SdlWindow::getDesktopResolution() {
 	return _desktopRes;
 }
 
+void SdlWindow::getDisplayDpi(float *dpi, float *defaultDpi) const {
+	const float systemDpi =
+#ifdef __APPLE__
+	72.0f;
+#elif defined(_WIN32)
+	96.0f;
+#else
+	90.0f; // ScummVM default
+#endif
+	if (defaultDpi)
+		*defaultDpi = systemDpi;
+
+	if (dpi) {
+#if SDL_VERSION_ATLEAST(2, 0, 4)
+		if (SDL_GetDisplayDPI(getDisplayIndex(), nullptr, dpi, nullptr) != 0) {
+			*dpi = systemDpi;
+		}
+#else
+		*dpi = systemDpi;
+#endif
+	}
+}
+
+float SdlWindow::getDpiScalingFactor() const {
+	float dpi, defaultDpi;
+	getDisplayDpi(&dpi, &defaultDpi);
+	debug(4, "dpi: %g default: %g", dpi, defaultDpi);
+	float ratio = dpi / defaultDpi;
+	return ratio;
+}
+
+float SdlWindow::getSdlDpiScalingFactor() const {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	int windowWidth, windowHeight;
+	SDL_GetWindowSize(getSDLWindow(), &windowWidth, &windowHeight);
+	int realWidth, realHeight;
+	SDL_GL_GetDrawableSize(getSDLWindow(), &realWidth, &realHeight);
+	return (float)realWidth / (float)windowWidth;
+#else
+	return 1.f;
+#endif
+}
 
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 SDL_Surface *copySDLSurface(SDL_Surface *src) {
@@ -352,6 +414,9 @@ bool SdlWindow::createOrUpdateWindow(int width, int height, uint32 flags) {
 
 	const bool shouldGrab = (flags & SDL_WINDOW_INPUT_GRABBED) || fullscreenFlags;
 	SDL_SetWindowGrab(_window, shouldGrab ? SDL_TRUE : SDL_FALSE);
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+	SDL_SetWindowMouseRect(_window, shouldGrab ? &grabRect : NULL);
+#endif
 
 	if (!_window) {
 		return false;

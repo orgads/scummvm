@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -306,6 +305,29 @@ static const AGOSGameDescription gameDescriptions[] = {
 				AD_LISTEND
 			},
 			Common::EN_ANY,
+			Common::kPlatformDOS,
+			ADGF_NO_FLAGS,
+			GUIO1(GUIO_NOSPEECH)
+		},
+
+		GType_ELVIRA1,
+		GID_ELVIRA1,
+		GF_OLD_BUNDLE
+	},
+
+	// Elvira 1 - English DOS Floppy with Czech patch(v1.08)
+	{
+		{
+			"elvira1",
+			"Floppy",
+
+			{
+				{ "gamepc",			GAME_BASEFILE,	"5e73b4a609fdd0c0db2f076b871a5d5b", 137655},
+				{ "icon.dat",		GAME_ICONFILE,	"fda48c9da7f3e72d0313e2f5f760fc45", 56448},
+				{ "tbllist",		GAME_TBLFILE,	"319f6b227c7822a551f57d24e70f8149", 368},
+				AD_LISTEND
+			},
+			Common::CS_CZE,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
 			GUIO1(GUIO_NOSPEECH)
@@ -658,6 +680,32 @@ static const AGOSGameDescription gameDescriptions[] = {
 				AD_LISTEND
 			},
 			Common::EN_ANY,
+			Common::kPlatformDOS,
+			ADGF_NO_FLAGS,
+			GUIO1(GUIO_NOSPEECH)
+		},
+
+		GType_ELVIRA2,
+		GID_ELVIRA2,
+		GF_OLD_BUNDLE
+	},
+
+	// Elvira 2 - English DOS Floppy with Czech patch
+	{
+		{
+			"elvira2",
+			"Floppy",
+
+			{
+				{ "gamepc",			GAME_BASEFILE,	"022536512981f1962276c0813a1351d8", 122729},
+				{ "icon.dat",		GAME_ICONFILE,	"83a7278bff55c82fbb3aef92981866c9", 54471},
+				{ "menus.dat",		GAME_MENUFILE,	"a2fdc88a77c8bdffec6b36cbeda4d955", 108},
+				{ "start",			GAME_RESTFILE,	"4d380a35ba941d03ee5084c71d20055b", 27876},
+				{ "stripped.txt",	GAME_STRFILE,	"c2533277b7ff11f5495967d55355ea17", 81},
+				{ "tbllist",		GAME_TBLFILE,	"8252660df0edbdbc3e6377e155bbd0c5", 284},
+				AD_LISTEND
+			},
+			Common::CS_CZE,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
 			GUIO1(GUIO_NOSPEECH)
@@ -1421,7 +1469,7 @@ static const AGOSGameDescription gameDescriptions[] = {
 				{ "tbllist",		GAME_TBLFILE,	"d198a80de2c59e4a0cd24b98814849e8", -1},
 				AD_LISTEND
 			},
-			Common::CZ_CZE,
+			Common::CS_CZE,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
 			GUIO1(GUIO_NOSPEECH)
@@ -1493,7 +1541,7 @@ static const AGOSGameDescription gameDescriptions[] = {
 				{ "tbllist",		GAME_TBLFILE,	"d198a80de2c59e4a0cd24b98814849e8", -1},
 				AD_LISTEND
 			},
-			Common::CZ_CZE,
+			Common::CS_CZE,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
 			GUIO1(GUIO_NOSPEECH)
@@ -1813,6 +1861,31 @@ static const AGOSGameDescription gameDescriptions[] = {
 				{ "stripped.txt",	GAME_STRFILE,	"9d31bef42db1a8abe4e9f368014df1d5", 252},
 				{ "tbllist",		GAME_TBLFILE,	"d198a80de2c59e4a0cd24b98814849e8", 711},
 				AD_LISTEND
+			},
+			Common::HE_ISR,
+			Common::kPlatformDOS,
+			ADGF_CD,
+			GUIO0()
+		},
+
+		GType_SIMON1,
+		GID_SIMON1,
+		GF_TALKIE
+	},
+
+	// Simon the Sorcerer 1 - Hebrew DOS CD - Fan Dub, make sure to delete SIMON.WAV if you have it
+	{
+		{
+			"simon1",
+			"CD, Fan Dub",
+
+			{
+				{ "simon.gme",		GAME_GMEFILE,	"19f57784a1b83d238870b3eac49cccc1", 6976776},
+				{ "icon.dat",		GAME_ICONFILE,	"22107c24dfb31b66ac503c28a6e20b19", 14361},
+				{ "gamepc",			GAME_BASEFILE,	"5bea08657999726d8332e96cda670591", 34615},
+				{ "stripped.txt",	GAME_STRFILE,	"9d31bef42db1a8abe4e9f368014df1d5", 252},
+				{ "tbllist",		GAME_TBLFILE,	"d198a80de2c59e4a0cd24b98814849e8", 711},
+				{ NULL, 0, NULL, 0}
 			},
 			Common::HE_ISR,
 			Common::kPlatformDOS,
@@ -2391,7 +2464,7 @@ static const AGOSGameDescription gameDescriptions[] = {
 				{ "tbllist",		GAME_TBLFILE,	"2082f8d02075e590300478853a91ffd9", -1},
 				AD_LISTEND
 			},
-			Common::CZ_CZE,
+			Common::CS_CZE,
 			Common::kPlatformWindows,
 			ADGF_CD,
 			GUIO0()
@@ -2668,7 +2741,7 @@ static const AGOSGameDescription gameDescriptions[] = {
 				{ "tbllist",		GAME_TBLFILE,	"2082f8d02075e590300478853a91ffd9", -1},
 				AD_LISTEND
 			},
-			Common::CZ_CZE,
+			Common::CS_CZE,
 			Common::kPlatformDOS,
 			ADGF_CD,
 			GUIO0()

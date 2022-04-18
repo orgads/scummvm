@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -64,13 +63,6 @@ bool PuzzleHiveMachine::init(const AsylumEvent &)  {
 	_rectIndex = -2;
 
 	getCursor()->show();
-
-	return true;
-}
-
-bool PuzzleHiveMachine::update(const AsylumEvent &)  {
-	updateScreen();
-	updateCursor();
 
 	return true;
 }
@@ -149,7 +141,6 @@ int32 PuzzleHiveMachine::findRect() {
 }
 
 void PuzzleHiveMachine::updateScreen() {
-	getScreen()->clear();
 	getScreen()->clearGraphicsInQueue();
 	getScreen()->addGraphicToQueue(getWorld()->graphicResourceIds[8], 0, Common::Point(0, 0), kDrawFlagNone, 0, 2);
 
@@ -195,9 +186,6 @@ void PuzzleHiveMachine::updateScreen() {
 	_frameIndex = (_frameIndex + 1) % GraphicResource::getFrameCount(_vm, getWorld()->graphicResourceIds[13]);
 	if (_counterKey)
 		_frameIndex1 = (_frameIndex1 + 1) % GraphicResource::getFrameCount(_vm, getWorld()->graphicResourceIds[18]);
-
-	getScreen()->drawGraphicsInQueue();
-	getScreen()->copyBackBufferToScreen();
 }
 
 void PuzzleHiveMachine::playSound() {

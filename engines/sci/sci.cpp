@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -43,6 +42,7 @@
 #include "sci/engine/script_patches.h"
 #include "sci/engine/selector.h"	// for SELECTOR
 #include "sci/engine/scriptdebug.h"
+#include "sci/engine/tts.h"
 
 #include "sci/sound/audio.h"
 #include "sci/sound/music.h"
@@ -130,6 +130,7 @@ SciEngine::SciEngine(OSystem *syst, const ADGameDescription *desc, SciGameId gam
 	_eventMan(nullptr),
 	_gameObjectAddress(),
 	_console(nullptr),
+	_tts(nullptr),
 	_rng("sci"),
 	_forceHiresGraphics(false) {
 
@@ -175,6 +176,12 @@ SciEngine::SciEngine(OSystem *syst, const ADGameDescription *desc, SciGameId gam
 
 	// Some releases (e.g. Pointsoft Torin) use a different patch directory name
 	SearchMan.addSubDirectoryMatching(gameDataDir, "patch");	// resource patches
+
+	// LSL5 uses the name "bonus" for the patch directory on disk 1.
+	// The installer would copy these patches to the root game directory.
+	if (_gameId == GID_LSL5) {
+		SearchMan.addSubDirectoryMatching(gameDataDir, "bonus"); // resource patches
+	}
 
 	switch (desc->language) {
 	case Common::DE_DEU:
@@ -247,6 +254,7 @@ SciEngine::~SciEngine() {
 	delete[] _opcode_formats;
 
 	delete _scriptPatcher;
+	delete _tts;
 	delete _resMan;	// should be deleted last
 	g_sci = nullptr;
 }
@@ -254,6 +262,8 @@ SciEngine::~SciEngine() {
 extern int showScummVMDialog(const Common::U32String &message, const Common::U32String &altButton = Common::U32String(), bool alignCenter = true);
 
 Common::Error SciEngine::run() {
+	_tts = new SciTTS();
+
 	_resMan = new ResourceManager();
 	_resMan->addAppropriateSources();
 	_resMan->init();
@@ -300,7 +310,7 @@ Common::Error SciEngine::run() {
 
 	_kernel = new Kernel(_resMan, segMan);
 	_features = new GameFeatures(segMan, _kernel);
-	_vocabulary = hasParser() ? new Vocabulary(_resMan, false) : NULL;
+	_vocabulary = hasParser() ? new Vocabulary(_resMan, false) : nullptr;
 
 	_gamestate = new EngineState(segMan);
 	_guestAdditions = new GuestAdditions(_gamestate, _features, _kernel);
@@ -515,7 +525,7 @@ void SciEngine::suggestDownloadGK2SubTitlesPatch() {
 		"- copy the content of GK2Subtitles\\SUBPATCH to the PATCHES subdirectory\n"
 		"- replace files with similar names\n"
 		"- restart the game\n"), altButton, false);
-	if (!result) {
+	if (result) {
 		char url[] = "http://www.sierrahelp.com/Files/Patches/GabrielKnight/GK2Subtitles.zip";
 		g_system->openUrl(url);
 	}
@@ -524,7 +534,7 @@ void SciEngine::suggestDownloadGK2SubTitlesPatch() {
 bool SciEngine::initGame() {
 	// Script 0 needs to be allocated here before anything else!
 	int script0Segment = _gamestate->_segMan->getScriptSegment(0, SCRIPT_GET_LOCK);
-	DataStack *stack = _gamestate->_segMan->allocateStack(VM_STACK_SIZE, NULL);
+	DataStack *stack = _gamestate->_segMan->allocateStack(VM_STACK_SIZE, nullptr);
 
 	_gamestate->_msgState = new MessageState(_gamestate->_segMan);
 	_gamestate->gcCountDown = GC_INTERVAL - 1;

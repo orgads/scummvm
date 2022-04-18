@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -155,11 +154,11 @@ static float linearToSrgb(float x) {
 static void multiplyColorWithAlpha(Graphics::Surface *source) {
 	assert(source->format == Gfx::Driver::getRGBAPixelFormat());
 
-	for (uint y = 0; y < source->h; y++) {
+	for (int y = 0; y < source->h; y++) {
 		const uint8 *src = (const uint8 *) source->getBasePtr(0, y);
 		uint8 *dst = (uint8 *) source->getBasePtr(0, y);
 
-		for (uint x = 0; x < source->w; x++) {
+		for (int x = 0; x < source->w; x++) {
 			uint8 a, r, g, b;
 			r = *src++;
 			g = *src++;
@@ -206,11 +205,11 @@ static void blendWithColor(Graphics::Surface *source, const Color &color) {
 	float sGL = srgbToLinear(color.g / 255.f);
 	float sBL = srgbToLinear(color.b / 255.f);
 
-	for (uint y = 0; y < source->h; y++) {
+	for (int y = 0; y < source->h; y++) {
 		const uint8 *src = (const uint8 *) source->getBasePtr(0, y);
 		uint8 *dst = (uint8 *) source->getBasePtr(0, y);
 
-		for (uint x = 0; x < source->w; x++) {
+		for (int x = 0; x < source->w; x++) {
 			uint8 a, r, g, b;
 			r = *src++;
 			g = *src++;
@@ -294,7 +293,7 @@ void VisualText::createTexture() {
 	multiplyColorWithAlpha(&surface);
 
 	// Create a texture from the surface
-	_texture = _gfx->createTexture(&surface);
+	_texture = _gfx->createBitmap(&surface);
 	_texture->setSamplingFilter(Gfx::Texture::kNearest);
 
 	surface.free();
@@ -310,7 +309,7 @@ void VisualText::createTexture() {
 		surface.fillRect(Common::Rect(surface.w, surface.h), bgColor);
 		multiplyColorWithAlpha(&surface);
 
-		_bgTexture = _gfx->createTexture(&surface);
+		_bgTexture = _gfx->createBitmap(&surface);
 
 		surface.free();
 	}

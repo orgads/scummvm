@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -52,7 +51,10 @@ CruPickupGump::CruPickupGump(const Item *item, int y, bool showCount) : Gump(0, 
 	const WeaponInfo *weaponInfo = item->getShapeInfo()->_weaponInfo;
 	if (weaponInfo) {
 		_itemShapeNo = item->getShape();
-		_q = item->getQuality();
+		if (item->getShapeInfo()->_family == ShapeInfo::SF_CRUAMMO)
+			_q = 1;
+		else
+			_q = item->getQuality();
 		_itemName = weaponInfo->_name;
 		_gumpShapeNo = weaponInfo->_displayGumpShape;
 		_gumpFrameNo = weaponInfo->_displayGumpFrame;
@@ -123,7 +125,7 @@ void CruPickupGump::InitGump(Gump *newparent, bool take_focus) {
 	itemgump->Move(ITEM_AREA_WIDTH / 2 - itemframe->_width / 2, _dims.height() / 2 - itemframe->_height / 2);
 }
 
-void CruPickupGump::updateForNewItem(const Item *item, bool showCount) {
+void CruPickupGump::updateForNewItem(const Item *item) {
 	assert(item);
 	assert(item->getShape() == _itemShapeNo);
 	TextWidget *oldtext = dynamic_cast<TextWidget *>(FindGump(&FindByIndex<COUNT_TEXT_INDEX>));
@@ -132,7 +134,8 @@ void CruPickupGump::updateForNewItem(const Item *item, bool showCount) {
 		oldtext->Close();
 	}
 
-	_showCount = showCount;
+	// Always show count for repeat objects.
+	_showCount = true;
 
 	// If we're updating the existing count, add 1 or special-case credits
 	if (_itemShapeNo == 0x4ed)

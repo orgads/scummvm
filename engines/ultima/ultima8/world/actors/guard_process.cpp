@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -57,21 +56,20 @@ void GuardProcess::run() {
 	if (!mainactor)
 		return;
 
-	int range = a->getRangeIfVisible(*mainactor);
-	if (!range) {
+	if (!a->canSeeControlledActor(false)) {
 		if (getRandom() % 2) {
 			DelayProcess *dp = new DelayProcess(30 * (1 + (getRandom() % 3)));
 			Kernel::get_instance()->addProcess(dp);
 			waitFor(dp);
-			return;
 		} else {
-			Animation::Sequence anim = (getRandom() % 2 ? Animation::unknownAnim30 : Animation::startRunLargeWeapon);
-			int animproc = a->doAnim(anim, dir_current);
+			Animation::Sequence anim = Animation::absAnim(getRandom() % 2 ? Animation::lookLeftCru : Animation::lookRightCru);
+			uint16 animproc = a->doAnim(anim, dir_current);
 			a->doAnimAfter(Animation::stand, dir_current, animproc);
 		}
 		return;
 	}
 
+	// Saw the silencer, go to combat.
 	a->setActivity(5);
 }
 

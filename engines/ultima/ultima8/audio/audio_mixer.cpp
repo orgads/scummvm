@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,15 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "ultima/ultima8/audio/audio_mixer.h"
 #include "ultima/ultima8/audio/audio_process.h"
 #include "ultima/ultima8/audio/u8_music_process.h"
-#include "ultima/ultima8/audio/remorse_music_process.h"
+#include "ultima/ultima8/audio/cru_music_process.h"
 #include "ultima/ultima8/audio/audio_channel.h"
 #include "ultima/ultima8/audio/midi_player.h"
 #include "ultima/ultima8/kernel/kernel.h"
@@ -59,7 +58,7 @@ void AudioMixer::createProcesses() {
 	if (GAME_IS_U8) {
 		kernel->addProcess(new U8MusicProcess(_midiPlayer));
 	} else if (GAME_IS_CRUSADER) {
-		kernel->addProcess(new RemorseMusicProcess());
+		kernel->addProcess(new CruMusicProcess());
 	}
 }
 
@@ -87,7 +86,7 @@ void AudioMixer::reset() {
 	Unlock();
 }
 
-int AudioMixer::playSample(AudioSample *sample, int loop, int priority, bool paused, uint32 pitch_shift, int lvol, int rvol, bool ambient) {
+int AudioMixer::playSample(AudioSample *sample, int loop, int priority, bool paused, bool isSpeech, uint32 pitch_shift, int lvol, int rvol, bool ambient) {
 	int lowest = -1;
 	int lowprior = 65536;
 
@@ -109,7 +108,7 @@ int AudioMixer::playSample(AudioSample *sample, int loop, int priority, bool pau
 	}
 
 	if (i != maxchan || lowprior < priority)
-		_channels[lowest]->playSample(sample, loop, priority, paused, pitch_shift, lvol, rvol);
+		_channels[lowest]->playSample(sample, loop, priority, paused, isSpeech, pitch_shift, lvol, rvol);
 	else
 		lowest = -1;
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -62,6 +61,7 @@ public:
 	// Savegames
 	void setDword455C78(bool state) { _dword_455C78 = state; }
 	void setDword455C80(bool state) { _dword_455C80 = state; }
+	void setLoadingDuringStartup()  { _loadingDuringStartup = true; }
 
 	bool isEditingSavegameName() { return _activeScreen == kMenuSaveGame && _isEditingSavegameName; };
 
@@ -116,6 +116,7 @@ private:
 	int32            _caretBlink;
 	int32            _startIndex;
 	int32            _creditsFrameIndex;
+	int32            _creditsNumSteps;
 	bool             _showMovie;
 	uint32           _iconFrames[12];
 
@@ -127,6 +128,7 @@ private:
 	// Savegames
 	Common::String _previousName;
 	int32 _prefixWidth;
+	bool _loadingDuringStartup;
 
 	/**
 	 * Setups menu screen
@@ -203,6 +205,11 @@ private:
 	bool music();
 	bool key(const AsylumEvent &evt);
 	bool click(const AsylumEvent &evt);
+
+	// Thumbnails
+	void adjustCoordinates(Common::Point &point);
+	bool hasThumbnail(int index);
+	void showThumbnail(int index);
 
 	// Update handlers
 	void updateNewGame();

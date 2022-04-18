@@ -13,8 +13,9 @@ amigaosdist: $(EXECUTABLE) $(PLUGINS)
 	cp ${srcdir}/dists/amigaos/scummvm_drawer.info $(patsubst %/,%,$(AMIGAOSPATH)).info
 	cp ${srcdir}/dists/amigaos/scummvm.info $(AMIGAOSPATH)/$(EXECUTABLE).info
 ifdef DIST_FILES_DOCS
-	cp -r ${srcdir}/doc/ $(AMIGAOSPATH)
+	makedir all $(AMIGAOSPATH)/doc
 	cp $(DIST_FILES_DOCS) $(AMIGAOSPATH)/doc
+	$(foreach lang, $(DIST_FILES_DOCS_languages), makedir all $(AMIGAOSPATH)/doc/$(lang); cp $(DIST_FILES_DOCS_$(lang)) $(AMIGAOSPATH)/doc/$(lang);)
 	# README.md must be in the current working directory
 	# when building out of tree.
 	cp ${srcdir}/README.md README.tmp
@@ -39,6 +40,10 @@ endif
 ifdef DIST_FILES_THEMES
 	makedir all $(AMIGAOSPATH)/themes
 	cp $(DIST_FILES_THEMES) $(AMIGAOSPATH)/themes
+endif
+ifneq ($(DIST_FILES_SHADERS),)
+	makedir all $(AMIGAOSPATH)/shaders
+	cp $(DIST_FILES_SHADERS) $(AMIGAOSPATH)/shaders
 endif
 	# Strip and copy engine plugins.
 ifdef DYNAMIC_MODULES

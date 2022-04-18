@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -53,7 +52,7 @@ _remora::_remora() {
 	m_nFlashCounter = 0;
 	m_bMainHeadingSet = FALSE8;
 	m_nCurrentPalette = 0;
-	m_pDisplayBuffer = NULL;
+	m_pDisplayBuffer = nullptr;
 
 	// Set initial zoom range and an initial zoom.
 	m_nMinZoom = REMORA_SCAN_ZOOM_HARD_LOWER;
@@ -80,7 +79,7 @@ void _remora::InitialiseRemora() {
 	m_bModeChanged = FALSE8;
 
 	// Clear any mega speech (there shouldn't be any though).
-	m_pcSpeechText = NULL;
+	m_pcSpeechText = nullptr;
 	m_nSpeechTimer = 0;
 
 	// Initially, the zoom is set at 1X and cannot be moved.  This might well change.
@@ -177,7 +176,7 @@ void _remora::DisplayCharacterSpeech(uint32 nHash) {
 		// Put the text in the buffer.
 		m_pcSpeechText = &pcText[1];
 	} else {
-		m_pcSpeechText = NULL;
+		m_pcSpeechText = nullptr;
 	}
 
 	// Initialise the counter for how int32 it will be displayed.
@@ -195,7 +194,7 @@ void _remora::SetCurrentZoom(uint32 nZoom) {
 }
 
 bool8 _remora::IsThisEmailWaiting(const char *pcEmailID) const {
-	if ((pcEmailID == NULL) || (strlen(m_pcEmailID) == 0))
+	if ((pcEmailID == nullptr) || (strlen(m_pcEmailID) == 0))
 		return (FALSE8);
 
 	if (strcmp(pcEmailID, m_pcEmailID))
@@ -872,7 +871,7 @@ void _remora::ClearAllText() {
 	m_nFirstLineToDraw = 0;
 
 	m_bScrollingRequired = FALSE8;
-	m_bScrolling = FALSE8; // these three need reseting so when we go to a new page we don't try scrolling off screen
+	m_bScrolling = FALSE8; // these three need resetting so when we go to a new page we don't try scrolling off screen
 	m_nStartYPixelOffset = 0;
 	m_eTextScroll = SCROLL_NONE;
 
@@ -880,7 +879,7 @@ void _remora::ClearAllText() {
 	m_bMainHeadingSet = FALSE8;
 
 	// These control the spoken text display.
-	m_pcSpeechText = NULL;
+	m_pcSpeechText = nullptr;
 	m_nSpeechTimer = 0;
 }
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -51,12 +50,12 @@ struct Swinger {
 
 
 void scene18_preload() {
-	g_nmi->_scene3 = 0;
+	g_nmi->_scene3 = nullptr;
 
 	for (SceneTagList::iterator s = g_nmi->_gameProject->_sceneTagList->begin(); s != g_nmi->_gameProject->_sceneTagList->end(); ++s) {
 		if (s->_sceneId == SC_18) {
 			g_nmi->_scene3 = s->_scene;
-			s->_scene = 0;
+			s->_scene = nullptr;
 
 			g_nmi->_scene3->getStaticANIObject1ById(ANI_WHIRLIGIG_18, -1)->freeMovementsPixelData();
 
@@ -292,7 +291,7 @@ void scene18_initScene1(Scene *sc) {
 
 	if (g_vars->scene18_enteredTrubaRight) {
 		if (sc->_sceneId == SC_19)
-			g_nmi->_aniMan2 = 0;
+			g_nmi->_aniMan2 = nullptr;
 		else
 			g_nmi->_aniMan2 = g_vars->scene18_swingers[g_vars->scene18_manWheelPosTo]->ani;
 	} else {
@@ -345,7 +344,7 @@ void scene18_initScene2(Scene *sc) {
 }
 
 void scene19_initScene2() {
-	g_nmi->_aniMan2 = 0;
+	g_nmi->_aniMan2 = nullptr;
 }
 
 int scene18_updateCursor() {
@@ -439,7 +438,7 @@ void sceneHandler18and19_showManJump() {
 		g_vars->scene18_enteredTrubaRight = false;
 
 		mq->setFlags(mq->getFlags() | 1);
-		mq->chain(0);
+		mq->chain(nullptr);
 	}
 
 	g_vars->scene18_swingers[g_vars->scene18_manWheelPos]->sflags = 1;

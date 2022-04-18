@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -55,13 +54,6 @@ using Shared::PBitmap;
 enum TintMethod {
 	TintReColourise = 0,
 	TintSpecifyMaximum = 1
-};
-
-enum VideoSkipType {
-	VideoSkipNone = 0,
-	VideoSkipEscape = 1,
-	VideoSkipAnyKey = 2,
-	VideoSkipKeyOrMouse = 3
 };
 
 // Sprite transformation
@@ -107,7 +99,7 @@ public:
 	// Gets if a graphics mode was initialized
 	virtual bool IsModeSet() const = 0;
 	// Set the size of the native image size
-	virtual bool SetNativeSize(const Size &src_size) = 0;
+	virtual bool SetNativeResolution(const GraphicResolution &native_res) = 0;
 	virtual bool IsNativeSizeValid() const = 0;
 	// Set game render frame and translation
 	virtual bool SetRenderFrame(const Rect &dst_rect) = 0;
@@ -133,6 +125,9 @@ public:
 	// Gets closest recommended bitmap format (currently - only color depth) for the given original format.
 	// Engine needs to have game bitmaps brought to the certain range of formats, easing conversion into the video bitmaps.
 	virtual int  GetCompatibleBitmapFormat(int color_depth) = 0;
+	// Creates a "raw" DDB, without pixel initialization
+	virtual IDriverDependantBitmap *CreateDDB(int width, int height, int color_depth, bool opaque = false) = 0;
+	// Creates DDB, initializes from the given bitmap
 	virtual IDriverDependantBitmap *CreateDDBFromBitmap(Shared::Bitmap *bitmap, bool hasAlpha, bool opaque = false) = 0;
 	virtual void UpdateDDBFromBitmap(IDriverDependantBitmap *bitmapToUpdate, Shared::Bitmap *bitmap, bool hasAlpha) = 0;
 	virtual void DestroyDDB(IDriverDependantBitmap *bitmap) = 0;
@@ -167,7 +162,7 @@ public:
 	// the final resolution, as opposed to drawing to native-resolution buffer
 	// and scaling to final frame. The effect may be that sprites that are
 	// drawn with additional fractional scaling will appear more detailed than
-	// the rest of the _GP(game). The effect is stronger for the low-res games being
+	// the rest of the game. The effect is stronger for the low-res games being
 	// rendered in the high-res mode.
 	virtual void RenderSpritesAtScreenResolution(bool enabled, int supersampling = 1) = 0;
 	// TODO: move fade-in/out/boxout functions out of the graphics driver!! make everything render through

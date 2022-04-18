@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,6 +24,7 @@
 #include "common/textconsole.h"
 #include "common/util.h"
 
+#include "graphics/macega.h"
 #include "graphics/palette.h"
 
 #include "scumm/resource.h"
@@ -46,7 +46,7 @@ uint8 *ScummEngine::getHEPaletteSlot(uint16 palSlot) {
 			return _hePalettes + _hePaletteSlot + 768;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 uint16 ScummEngine::get16BitColor(uint8 r, uint8 g, uint8 b) {
@@ -137,20 +137,6 @@ void ScummEngine::resetPalette() {
 		0xFF, 0x99, 0x99, 	0xFF, 0x55, 0xFF, 	0xFF, 0xFF, 0x77, 	0xFF, 0xFF, 0xFF
 	};
 
-	// Theoreticaly, it should be possible to get the palette from the
-	// game's "clut" reosurce. But when I try that, I still get the wrong
-	// colours. This table is based on what Basilisk II draws.
-
-// 6 = brown
-// 11 = bright cyan
-
-	static const byte tableMacPalette[] = {
-		0x00, 0x00, 0x00,	0x00, 0x00, 0xBE,	0x00, 0xBE, 0x00,	0x00, 0xBE, 0xBE,
-		0xBE, 0x00, 0x00,	0xBE, 0x00, 0xBE,	0xBE, 0x75, 0x00,	0xBE, 0xBE, 0xBE,
-		0x75, 0x75, 0x75,	0x75, 0x75, 0xFC,	0x75, 0xFC, 0x75,	0x75, 0xFC, 0xFC,
-		0xFC, 0x75, 0x75,	0xFC, 0x75, 0xFC,	0xFC, 0xFC, 0x75,	0xFC, 0xFC, 0xFC
-	};
-
 	static const byte tableEGAPalette[] = {
 		0x00, 0x00, 0x00, 	0x00, 0x00, 0xAA, 	0x00, 0xAA, 0x00, 	0x00, 0xAA, 0xAA,
 		0xAA, 0x00, 0x00, 	0xAA, 0x00, 0xAA, 	0xAA, 0x55, 0x00, 	0xAA, 0xAA, 0xAA,
@@ -228,6 +214,10 @@ void ScummEngine::resetPalette() {
 
 		switch (_renderMode) {
 		case Common::kRenderEGA:
+		case Common::kRenderMacintoshBW:
+			// Use EGA palette for MacintoshBW, because that makes
+			// white 0xFFFFFF there. The Mac EGA palette, would
+			// make it 0xFCFCFC.
 			setPaletteFromTable(tableEGAPalette, sizeof(tableEGAPalette) / 3);
 			break;
 
@@ -253,8 +243,8 @@ void ScummEngine::resetPalette() {
 		default:
 			if ((_game.platform == Common::kPlatformAmiga) || (_game.platform == Common::kPlatformAtariST))
 				setPaletteFromTable(tableAmigaPalette, sizeof(tableAmigaPalette) / 3);
-			else if (_game.id == GID_LOOM && _game.platform == Common::kPlatformMacintosh)
-				setPaletteFromTable(tableMacPalette, sizeof(tableMacPalette) / 3);
+			else if ((_game.id == GID_LOOM || _game.id == GID_INDY3) && _game.platform == Common::kPlatformMacintosh)
+				setPaletteFromTable(Graphics::macEGAPalette, sizeof(Graphics::macEGAPalette) / 3);
 			else
 				setPaletteFromTable(tableEGAPalette, sizeof(tableEGAPalette) / 3);
 		}
@@ -1355,16 +1345,16 @@ const byte *ScummEngine::findPalInPals(const byte *pal, int idx) {
 	uint32 size;
 
 	pal = findResource(MKTAG('W','R','A','P'), pal);
-	if (pal == NULL)
-		return NULL;
+	if (pal == nullptr)
+		return nullptr;
 
 	offs = findResourceData(MKTAG('O','F','F','S'), pal);
-	if (offs == NULL)
-		return NULL;
+	if (offs == nullptr)
+		return nullptr;
 
 	size = getResourceDataSize(offs) / 4;
 	if ((uint32)idx >= (uint32)size)
-		return NULL;
+		return nullptr;
 
 	return offs + READ_LE_UINT32(offs + idx * sizeof(uint32));
 }
@@ -1432,7 +1422,11 @@ void ScummEngine::updatePalette() {
 		for (i = _palDirtyMin; i <= _palDirtyMax; i++) {
 			byte *data;
 
-			if (_game.features & GF_SMALL_HEADER && _game.version > 2)
+			// In b/w Mac rendering mode, the shadow palette is
+			// handled by the renderer itself. See comment in
+			// mac_drawStripToScreen().
+
+			if (_game.features & GF_SMALL_HEADER && _game.version > 2 && _renderMode != Common::kRenderMacintoshBW)
 				data = _currentPalette + _shadowPalette[i] * 3;
 			else
 				data = _currentPalette + i * 3;

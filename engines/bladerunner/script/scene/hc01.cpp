@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -113,10 +112,13 @@ bool SceneScriptHC01::ClickedOnActor(int actorId) {
 			if (!Game_Flag_Query(kFlagHC01IzoTalk1)) {
 				Actor_Face_Actor(kActorIzo, kActorMcCoy, true);
 				if (_vm->_cutContent) {
-					Actor_Says_With_Pause(kActorIzo,  0, 0.2f, 13);
+					Actor_Says_With_Pause(kActorIzo, 0, 0.2f, 13);
+					Actor_Face_Actor(kActorMcCoy, kActorIzo, true);
+					Actor_Says_With_Pause(kActorIzo, 10, 0.2f, 13);
+				} else {
+					Actor_Says_With_Pause(kActorIzo, 10, 0.2f, 13);
+					Actor_Face_Actor(kActorMcCoy, kActorIzo, true);
 				}
-				Actor_Says_With_Pause(kActorIzo, 10, 0.2f, 13);
-				Actor_Face_Actor(kActorMcCoy, kActorIzo, true);
 				Actor_Says(kActorIzo, 20, 17);
 				Actor_Says(kActorMcCoy, 1035, 18);
 				Actor_Says_With_Pause(kActorIzo, 30, 0.2f, 17);
@@ -216,6 +218,7 @@ bool SceneScriptHC01::ClickedOn2DRegion(int region) {
 
 void SceneScriptHC01::SceneFrameAdvanced(int frame) {
 	Set_Fade_Color(1.0f, 1.0f, 1.0f);
+
 	if (frame >= 61
 	 && frame < 65
 	) {

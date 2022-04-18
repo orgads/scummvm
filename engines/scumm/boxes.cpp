@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -339,7 +338,7 @@ void ScummEngine::convertScaleTableToScaleSlot(int slot) {
 	float m, oldM;
 
 	// Do nothing if the given scale table doesn't exist
-	if (resptr == 0)
+	if (resptr == nullptr)
 		return;
 
 	if (resptr[0] == resptr[199]) {
@@ -453,12 +452,12 @@ byte ScummEngine::getNumBoxes() {
 Box *ScummEngine::getBoxBaseAddr(int box) {
 	byte *ptr = getResourceAddress(rtMatrix, 2);
 	if (!ptr || box == 255)
-		return NULL;
+		return nullptr;
 
 	// WORKAROUND: The NES version of Maniac Mansion attempts to set flags for boxes 2-4
 	// when there are only three boxes (0-2) when walking out to the garage.
 	if ((_game.id == GID_MANIAC) && (_game.platform == Common::kPlatformNES) && (box >= ptr[0]))
-		return NULL;
+		return nullptr;
 
 	// WORKAROUND: In "pass to adventure", the loom demo, when bobbin enters
 	// the tent to the elders, box = 2, but ptr[0] = 2 -> errors out.
@@ -542,13 +541,24 @@ bool ScummEngine::checkXYInBoxBounds(int boxnum, int x, int y) {
 	// Corner case: If the box is a simple line segment, we consider the
 	// point to be contained "in" (or rather, lying on) the line if it
 	// is very close to its projection to the line segment.
-	if ((box.ul == box.ur && box.lr == box.ll) ||
-		(box.ul == box.ll && box.ur == box.lr)) {
+	// Update: It can cause bugs like #13366 if used for games where this
+	// code isn't actually present in the original interpreter. I have
+	// checked disasm for LOOM FM-TOWNS and DOS EGA, ZAK FM-TOWNS, INDY3
+	// FM-TOWNS and DOS VGA and also LOOM DOS VGA (v4). MI2 does have the
+	// these lines, so that's probably the origin of our code. So it seems
+	// safe to assume that it does not belong in any game before SCUMM5.
+	// I have also checked ZAK DOS to verify that the earliy games don't
+	// even have/use the whole function checkXYInBoxBounds(), so we're
+	// doing that correctly.
+	if (_game.version > 4) {
+		if ((box.ul == box.ur && box.lr == box.ll) ||
+			(box.ul == box.ll && box.ur == box.lr)) {
 
-		Common::Point tmp;
-		tmp = closestPtOnLine(box.ul, box.lr, p);
-		if (p.sqrDist(tmp) <= 4)
-			return true;
+			Common::Point tmp;
+			tmp = closestPtOnLine(box.ul, box.lr, p);
+			if (p.sqrDist(tmp) <= 4)
+				return true;
+		}
 	}
 
 	// Finally, fall back to the classic algorithm to compute containment
@@ -1251,19 +1261,11 @@ void Actor_v3::findPathTowardsOld(byte box1, byte box2, byte finalBox, Common::P
 	p2.x = 32000;
 	p3.x = 32000;
 
-	// next box (box2) = final box?
 	if (box2 == finalBox) {
-		// In Indy3, the masks (= z-level) have to match, too -- needed for the
-		// 'maze' in the zeppelin (see bug #1778).
-		if (_vm->_game.id != GID_INDY3 || _vm->getMaskFromBox(box1) == _vm->getMaskFromBox(box2)) {
-			// Is the actor (x,y) between both gates?
-			if (compareSlope(_pos, _walkdata.dest, gateA[0]) !=
-					compareSlope(_pos, _walkdata.dest, gateB[0]) &&
-					compareSlope(_pos, _walkdata.dest, gateA[1]) !=
-					compareSlope(_pos, _walkdata.dest, gateB[1])) {
+		// Is the actor (x,y) between both gates?
+		if (compareSlope(_pos, _walkdata.dest, gateA[0]) !=	compareSlope(_pos, _walkdata.dest, gateB[0]) &&
+			compareSlope(_pos, _walkdata.dest, gateA[1]) !=	compareSlope(_pos, _walkdata.dest, gateB[1]))
 				return;
-			}
-		}
 	}
 
 	p3 = closestPtOnLine(gateA[1], gateB[1], _pos);

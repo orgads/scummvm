@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -178,17 +177,17 @@ NuvieIOBuffer *ConverseSpeech::load_speech(Std::string filename, uint16 sample_n
 
 inline sint16 ConverseSpeech::convert_sample(uint16 raw_sample) {
 	sint16 sample;
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-	sint16 temp_sample;
-#endif
 
 	if (raw_sample & 128)
 		sample = ((sint16)(abs(128 - raw_sample) * 256) ^ 0xffff)  + 1;
 	else
 		sample = raw_sample * 256;
 
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-	temp_sample = sample >> 8;
+// FIXME: Following code is for Big Endian sample conversion
+//        This was required for older libSDL audio output.
+//        May not be needed for ScummVM audio output?
+#if 0
+	sint16 temp_sample = sample >> 8;
 	temp_sample |= (sample & 0xff) << 8;
 	sample = temp_sample;
 #endif

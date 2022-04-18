@@ -7,10 +7,10 @@
  * Additional copyright for this file:
  * Copyright (C) 1995-1997 Presto Studios, Inc.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,8 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,9 +32,9 @@
 
 namespace Pegasus {
 
-Interface *g_interface = 0;
+Interface *g_interface = nullptr;
 
-Interface::Interface() : InputHandler(0), _interfaceNotification(kInterfaceNotificationID, (NotificationManager *)((PegasusEngine *)g_engine)),
+Interface::Interface() : InputHandler(nullptr), _interfaceNotification(kInterfaceNotificationID, (NotificationManager *)((PegasusEngine *)g_engine)),
 			_currentItemSpot(kCurrentItemSpotID), _currentBiochipSpot(kCurrentBiochipSpotID),
 			_background1(kInterface1ID), _background2(kInterface2ID), _background3(kInterface3ID),
 			_background4(kInterface4ID), _datePicture(kDateID), _inventoryPush(kInventoryPushID),
@@ -43,8 +42,8 @@ Interface::Interface() : InputHandler(0), _interfaceNotification(kInterfaceNotif
 			_inventoryPanel(kNoDisplayElement, (InputHandler *)((PegasusEngine *)g_engine), ((PegasusEngine *)g_engine)->getItemsInventory()),
 			_biochipPush(kBiochipPushID), _biochipLid(kBiochipLidID, kNoDisplayElement),
 			_biochipPanel(kNoDisplayElement, (InputHandler *)((PegasusEngine *)g_engine), ((PegasusEngine *)g_engine)->getBiochipsInventory()) {
-	g_energyMonitor = 0;
-	_previousHandler = 0;
+	g_energyMonitor = nullptr;
+	_previousHandler = nullptr;
 	_inventoryRaised = false;
 	_biochipRaised = false;
 	_playingEndMessage = false;
@@ -53,7 +52,7 @@ Interface::Interface() : InputHandler(0), _interfaceNotification(kInterfaceNotif
 
 Interface::~Interface() {
 	throwAwayInterface();
-	g_interface = 0;
+	g_interface = nullptr;
 }
 
 void Interface::throwAwayInterface() {
@@ -175,7 +174,7 @@ void Interface::validateInventoryPanel() {
 		_inventoryPanel.initInventoryImage(&_inventoryPush);
 		_inventoryPanel.moveElementTo(kInventoryPushLeft, kInventoryPushTop);
 		_inventoryPush.setSlideDirection(kSlideUpMask);
-		_inventoryPush.setInAndOutElements(&_inventoryPanel, 0);
+		_inventoryPush.setInAndOutElements(&_inventoryPanel, nullptr);
 		_inventoryPush.setDisplayOrder(kInventoryPushOrder);
 		_inventoryPush.startDisplaying();
 
@@ -225,7 +224,7 @@ void Interface::validateBiochipPanel() {
 		_biochipPanel.initInventoryImage(&_biochipPush);
 		_biochipPanel.moveElementTo(kBiochipPushLeft, kBiochipPushTop);
 		_biochipPush.setSlideDirection(kSlideUpMask);
-		_biochipPush.setInAndOutElements(&_biochipPanel, 0);
+		_biochipPush.setInAndOutElements(&_biochipPanel, nullptr);
 		_biochipPush.setDisplayOrder(kBiochipPushOrder);
 		_biochipPush.startDisplaying();
 

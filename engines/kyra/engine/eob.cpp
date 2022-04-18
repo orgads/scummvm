@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -161,16 +160,11 @@ Common::Error EoBEngine::init() {
 		assert(_txt);
 		_gui = new GUI_EoB_SegaCD(this);
 		assert(_gui);
-		_playFldPattern2 = new uint16[1040];
-		memset(_playFldPattern2, 0, 1040 * sizeof(uint16));
-		_tempPattern = new uint16[924];
-		memset(_tempPattern, 0, 924 * sizeof(uint16));
-		_shakeBackBuffer1 = new uint8[120 * 6];
-		memset(_shakeBackBuffer1, 0, 120 * 6);
-		_shakeBackBuffer2 = new uint8[179 * 6];
-		memset(_shakeBackBuffer2, 0, 179 * 6);
-		_compassData = new uint8[0x5000];
-		memset(_compassData, 0, 0x5000);
+		_playFldPattern2 = new uint16[1040]();
+		_tempPattern = new uint16[924]();
+		_shakeBackBuffer1 = new uint8[120 * 6]();
+		_shakeBackBuffer2 = new uint8[179 * 6]();
+		_compassData = new uint8[0x5000]();
 		_closeSpellbookAfterUse = false;
 	}
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -268,7 +267,7 @@
 	{
 		"ween",
 		"Demo",
-		AD_ENTRY1("intro.stk", "15fb91a1b9b09684b28ac75edf66e504"),
+		AD_ENTRY1s("intro.stk", "15fb91a1b9b09684b28ac75edf66e504", 2340230),
 		EN_USA,
 		kPlatformDOS,
 		ADGF_DEMO,
@@ -297,6 +296,20 @@
 		"ween",
 		"Demo",
 		AD_ENTRY1("intro.stk", "aca10b973c03ba8b8b2804f4e7029ece"),
+		EN_GRB,
+		kPlatformDOS,
+		ADGF_DEMO,
+		GUIO2(GUIO_NOSUBTITLES, GUIO_NOSPEECH)
+	},
+	kGameTypeWeen,
+	kFeaturesAdLib,
+	0, 0, 0
+},
+{
+	{
+		"ween",
+		"v1.2 Demo",
+		AD_ENTRY1s("intro.stk", "dcff8f3a7dd1f4c33fd94aa7659b7578", 2425477),
 		EN_GRB,
 		kPlatformDOS,
 		ADGF_DEMO,

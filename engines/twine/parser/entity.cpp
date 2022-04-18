@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -30,10 +29,10 @@ bool EntityData::loadBody(Common::SeekableReadStream &stream) {
 	body.index = stream.readByte();
 	const int32 pos = stream.pos();
 	uint8 size = stream.readByte();
-	body.bodyIndex = stream.readUint16LE();
+	body.bodyIndex = (int16)stream.readUint16LE();
 	body.actorBoundingBox.hasBoundingBox = stream.readByte();
 	if (body.actorBoundingBox.hasBoundingBox) {
-		if (stream.readByte() == ActionType::ACTION_ZV) {
+		if ((ActionType)stream.readByte() == ActionType::ACTION_ZV) {
 			body.actorBoundingBox.bbox.mins.x = stream.readSint16LE();
 			body.actorBoundingBox.bbox.mins.y = stream.readSint16LE();
 			body.actorBoundingBox.bbox.mins.z = stream.readSint16LE();
@@ -56,7 +55,7 @@ bool EntityData::loadAnim(Common::SeekableReadStream &stream) {
 	const uint8 numActions = stream.readByte();
 	for (uint8 i = 0U; i < numActions; ++i) {
 		EntityAnim::Action action;
-		action.type = stream.readByte();
+		action.type = (ActionType)stream.readByte();
 		switch (action.type) {
 		case ActionType::ACTION_HITTING:
 			action.animFrame = stream.readByte();
@@ -135,7 +134,7 @@ bool EntityData::loadAnim(Common::SeekableReadStream &stream) {
 			action.finalAngle = ToAngle(stream.readSint16LE());
 			action.strength = stream.readByte();
 			break;
-		case ACTION_UNKNOWN_21:
+		case ActionType::ACTION_THROW_3D_MAGIC:
 			action.animFrame = stream.readByte();
 			action.distanceX = stream.readSint16LE();
 			action.distanceY = stream.readSint16LE();
@@ -155,9 +154,13 @@ bool EntityData::loadAnim(Common::SeekableReadStream &stream) {
 	return !stream.err();
 }
 
-bool EntityData::loadFromStream(Common::SeekableReadStream &stream) {
+void EntityData::reset() {
 	_animations.clear();
 	_bodies.clear();
+}
+
+bool EntityData::loadFromStream(Common::SeekableReadStream &stream, bool lba1) {
+	reset();
 	do {
 		const uint8 opcode = stream.readByte();
 		if (opcode == 1) {

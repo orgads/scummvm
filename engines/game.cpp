@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,13 +15,13 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "engines/game.h"
 #include "common/gui_options.h"
+#include "common/punycode.h"
 #include "common/translation.h"
 
 
@@ -165,6 +165,19 @@ Common::U32String DetectionResults::generateUnknownGameReport(bool translate, ui
 	return ::generateUnknownGameReport(_detectedGames, translate, false, wordwrapAt);
 }
 
+// Sync with engines/advancedDetector.cpp
+static char flagsToMD5Prefix(uint32 flags) {
+	if (flags & kMD5MacResFork) {
+		if (flags & kMD5Tail)
+			return 'e';
+		return 'm';
+	}
+	if (flags & kMD5Tail)
+		return 't';
+
+	return 'f';
+}
+
 Common::U32String generateUnknownGameReport(const DetectedGames &detectedGames, bool translate, bool fullPath, uint32 wordwrapAt) {
 	assert(!detectedGames.empty());
 
@@ -211,7 +224,8 @@ Common::U32String generateUnknownGameReport(const DetectedGames &detectedGames, 
 
 		// Consolidate matched files across all engines and detection entries
 		for (FilePropertiesMap::const_iterator it = game.matchedFiles.begin(); it != game.matchedFiles.end(); it++) {
-			matchedFiles.setVal(it->_key, it->_value);
+			Common::String key = Common::String::format("%c:%s", flagsToMD5Prefix(it->_value.md5prop), it->_key.c_str());
+			matchedFiles.setVal(key, it->_value);
 		}
 	}
 
@@ -221,8 +235,18 @@ Common::U32String generateUnknownGameReport(const DetectedGames &detectedGames, 
 
 	report += Common::U32String("\n\n");
 
-	for (FilePropertiesMap::const_iterator file = matchedFiles.begin(); file != matchedFiles.end(); ++file)
-		report += Common::String::format("  {\"%s\", 0, \"%s\", %d},\n", file->_key.c_str(), file->_value.md5.c_str(), file->_value.size);
+	for (FilePropertiesMap::const_iterator file = matchedFiles.begin(); file != matchedFiles.end(); ++file) {
+		Common::String addon;
+
+		if (file->_value.md5prop & kMD5MacResFork)
+			addon += ", ADGF_MACRESFORK";
+		if (file->_value.md5prop & kMD5Tail)
+			addon += ", ADGF_TAILMD5";
+
+		report += Common::String::format("  {\"%s\", 0, \"%s\", %lld}%s,\n",
+			Common::punycode_encodefilename(Common::U32String(&file->_key.c_str()[2])).c_str(), // Skip the md5 prefix
+			file->_value.md5.c_str(), (long long)file->_value.size, addon.c_str());
+	}
 
 	report += Common::U32String("\n");
 

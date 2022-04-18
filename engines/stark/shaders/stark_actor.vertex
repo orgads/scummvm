@@ -31,7 +31,7 @@ uniform vec3 bonePosition[maxBones];
 uniform Light lights[maxLights];
 uniform vec3 ambientColor;
 uniform vec3 color;
-uniform bool textured;
+uniform UBOOL textured;
 
 vec4 eyePosition;
 vec3 eyeNormal;
@@ -60,12 +60,17 @@ vec3 directionalLight(vec3 direction, vec3 color) {
 
 vec3 spotLight(vec3 position, vec3 color, float falloffNear, float falloffFar, vec3 direction, float cosInnerAngle, float cosOuterAngle) {
 	vec3 vertexToLight = position - eyePosition.xyz;
+
+	float dist = length(vertexToLight);
+	float attn = clamp((falloffFar - dist) / max(0.001, falloffFar - falloffNear), 0.0, 1.0);
+
 	vertexToLight = normalize(vertexToLight);
+	float incidence = max(0.0, dot(eyeNormal, vertexToLight));
 
 	float cosAngle = max(0.0, dot(vertexToLight, -direction));
 	float cone = clamp((cosAngle - cosInnerAngle) / max(0.001, cosOuterAngle - cosInnerAngle), 0.0, 1.0);
 
-	return pointLight(position, color, falloffNear, falloffFar) * cone;
+	return color * attn * incidence * cone;
 }
 
 void main()
@@ -89,7 +94,7 @@ void main()
 	gl_Position = projectionMatrix * eyePosition;
 
 	// Set the initial vertex color
-	if (textured) {
+	if (UBOOL_TEST(textured)) {
 		Color = vec3(1.0);
 	} else {
 		Color = color;
@@ -105,7 +110,7 @@ void main()
 			lightColor += directionalLight(lights[i].direction, lights[i].color);
 		} else if (type == lightTypeSpot) {
 			lightColor += spotLight(lights[i].position.xyz, lights[i].color, lights[i].params.x, lights[i].params.y,
-									lights[i].direction, lights[i].params.z, lights[i].params.w);
+			                        lights[i].direction, lights[i].params.z, lights[i].params.w);
 		}
 	}
 

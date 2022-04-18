@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,15 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef AGS_PLUGINS_AGS_BLEND_AGS_BLEND_H
 #define AGS_PLUGINS_AGS_BLEND_AGS_BLEND_H
 
-#include "ags/plugins/plugin_base.h"
+#include "ags/plugins/ags_plugin.h"
 
 namespace AGS3 {
 namespace Plugins {
@@ -34,36 +33,35 @@ namespace AGSBlend {
  * Description: An AGS Plugin to allow true Alpha Blending
  */
 class AGSBlend : public PluginBase {
+	SCRIPT_HASH(AGSBlend)
 private:
-static IAGSEngine *_engine;
-private:
-static const char *AGS_GetPluginName();
-static void AGS_EngineStartup(IAGSEngine *lpEngine);
+	/**
+	 * Gets the alpha value at coords x,y
+	 */
+	void GetAlpha(ScriptMethodParams &params);
 
-private:
-/**
- * Gets the alpha value at coords x,y
- */
-static void GetAlpha(ScriptMethodParams &params);
+	/**
+	 * Sets the alpha value at coords x,y
+	 */
+	void PutAlpha(ScriptMethodParams &params);
 
-/**
- * Sets the alpha value at coords x,y
- */
-static void PutAlpha(ScriptMethodParams &params);
+	/**
+	 * Translates index from a 2D array to a 1D array
+	 */
+	int xytolocale(int x, int y, int width);
 
-/**
- * Translates index from a 2D array to a 1D array
- */
-static int xytolocale(int x, int y, int width);
-
-static void HighPass(ScriptMethodParams &params);
-static void Blur(ScriptMethodParams &params);
-static void DrawSprite(ScriptMethodParams &params);
-static void DrawAdd(ScriptMethodParams &params);
-static void DrawAlpha(ScriptMethodParams &params);
+	void HighPass(ScriptMethodParams &params);
+	void Blur(ScriptMethodParams &params);
+	void DrawSprite(ScriptMethodParams &params);
+	void DrawAdd(ScriptMethodParams &params);
+	void DrawAlpha(ScriptMethodParams &params);
 
 public:
-AGSBlend();
+	AGSBlend() : PluginBase() {}
+	virtual ~AGSBlend() {}
+
+	const char *AGS_GetPluginName() override;
+	void AGS_EngineStartup(IAGSEngine *lpEngine) override;
 };
 
 } // namespace AGSBlend

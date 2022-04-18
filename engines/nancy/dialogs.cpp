@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -99,7 +98,7 @@ CheatDialog::CheatDialog() : GUI::Dialog(20, 20, 600, 440) {
 
 	GUI::TabWidget *_tabs = new GUI::TabWidget(this, 0, 0, 600, 370);
 	new GUI::ButtonWidget(this, 420, 410, 60, 20, _("Cancel"), Common::U32String(), GUI::kCloseCmd);
-	new GUI::ButtonWidget(this, 520, 410, 60, 20, _("Ok"), Common::U32String(), GUI::kOKCmd);
+	new GUI::ButtonWidget(this, 520, 410, 60, 20, _("OK"), Common::U32String(), GUI::kOKCmd);
 
 	_tabs->addTab(_("General"), "Cheat.General");
 

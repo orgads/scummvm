@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -123,7 +122,7 @@ public:
 	*
 	* @return The current position indicator, or -1 if an error occurred.
 	 */
-	virtual int32 pos() const = 0;
+	virtual int64 pos() const = 0;
 
 	/**
 	 * @name Functions for writing data
@@ -320,7 +319,7 @@ public:
 	 *
 	 * @return True on success, false in case of a failure.
 	 */
-	virtual bool seek(int32 offset, int whence = SEEK_SET) = 0;
+	virtual bool seek(int64 offset, int whence = SEEK_SET) = 0;
 
 	/**
 	 * Obtain the current size of the stream, measured in bytes.
@@ -329,7 +328,7 @@ public:
 	 *
 	 * @return The size of the stream, or -1 if an error occurred.
 	 */
-	virtual int32 size() const = 0;
+	virtual int64 size() const = 0;
 };
 
 /**
@@ -670,7 +669,7 @@ public:
 	 *
 	 * @return The current position indicator, or -1 if an error occurred.
 	 */
-	virtual int32 pos() const = 0;
+	virtual int64 pos() const = 0;
 
 	/**
 	 * Obtain the total size of the stream, measured in bytes.
@@ -678,7 +677,7 @@ public:
 	 *
 	 * @return The size of the stream, or -1 if an error occurred.
 	 */
-	virtual int32 size() const = 0;
+	virtual int64 size() const = 0;
 
 	/**
 	 * Set the stream position indicator for the stream.
@@ -697,7 +696,7 @@ public:
 	 *
 	 * @return True on success, false in case of a failure.
 	 */
-	virtual bool seek(int32 offset, int whence = SEEK_SET) = 0;
+	virtual bool seek(int64 offset, int whence = SEEK_SET) = 0;
 
 	/**
 	 * Skip the given number of bytes in the stream.

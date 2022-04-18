@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "tinsel/actors.h"
@@ -25,7 +24,7 @@
 #include "tinsel/pcode.h"
 #include "tinsel/pid.h"
 #include "tinsel/polygons.h"
-#include "tinsel/rince.h"
+#include "tinsel/movers.h"
 #include "tinsel/sched.h"
 #include "common/serializer.h"
 #include "tinsel/tinsel.h"
@@ -42,7 +41,7 @@ namespace Tinsel {
 /** different types of polygon */
 enum POLY_TYPE {
 	POLY_PATH, POLY_NPATH, POLY_BLOCK, POLY_REFER, POLY_EFFECT,
-	POLY_EXIT, POLY_TAG, POLY_UNKNOWN
+	POLY_EXIT, POLY_TAG, POLY_SCALE
 };
 
 // Note 7/10/94, with adjacency reduction ANKHMAP max is 3, UNSEEN max is 4
@@ -108,7 +107,6 @@ struct POLYGON {
 	POLYGON *adjpaths[MAXADJ];
 
 };
-typedef POLYGON *PPOLYGON;
 
 #define MAXONROUTE 40
 
@@ -184,8 +182,8 @@ public:
 	int32 reel;			// } PATH and NPATH
 	int32 zFactor;		// }
 
-	int32 playfield;	// TinselV3
-	int32 unknown;		// TinselV3
+	int32 playfield;	// Noir field
+	int32 sceneId;		// Noir field
 
 protected:
 	int32 nodecount;		///<The number of nodes in this polygon
@@ -194,6 +192,10 @@ protected:
 
 	const int32 *nlistx;
 	const int32 *nlisty;
+
+	int32 vx[4]; // Noir field, only for scale polygon
+	int32 vy[4]; // Noir field, only for scale polygon
+	int32 vz[4]; // Noir field, only for scale polygon
 
 public:
 	SCNHANDLE hScript;	///< handle of code segment for polygon events
@@ -249,32 +251,54 @@ void Poly::nextPoly() {
 		yoff = nextLong(_pData);
 		id = nextLong(_pData);
 		if (TinselV3) {
-			warning("TODO: Complete implementation of Polygon loading for Noir");
-			unknown = nextLong(_pData);
+			sceneId = nextLong(_pData);
 			playfield = nextLong(_pData);
 		}
-		reftype = nextLong(_pData);
 	}
 
-	tagx = nextLong(_pData);
-	tagy = nextLong(_pData);
-	hTagtext = nextLong(_pData);
-	nodex = nextLong(_pData);
-	nodey = nextLong(_pData);
-	hFilm = nextLong(_pData);
+	// Noir is for scale polygons using union with some alignment
+	if (TinselV3 && type == POLY_SCALE) {
+		vx[0] = nextLong(_pData);
+		vx[1] = nextLong(_pData);
+		vx[2] = nextLong(_pData);
+		vx[3] = nextLong(_pData);
 
-	if (!TinselV2) {
-		reftype = nextLong(_pData);
-		id = nextLong(_pData);
+		vy[0] = nextLong(_pData);
+		vy[1] = nextLong(_pData);
+		vy[2] = nextLong(_pData);
+		vy[3] = nextLong(_pData);
+
+		vz[0] = nextLong(_pData);
+		vz[1] = nextLong(_pData);
+		vz[2] = nextLong(_pData);
+		vz[3] = nextLong(_pData);
+	} else {
+		if (TinselV2) {
+			reftype = nextLong(_pData);
+		}
+		tagx = nextLong(_pData);
+		tagy = nextLong(_pData);
+		hTagtext = nextLong(_pData);
+		nodex = nextLong(_pData);
+		nodey = nextLong(_pData);
+		hFilm = nextLong(_pData);
+
+		if (!TinselV2) {
+			reftype = nextLong(_pData);
+			id = nextLong(_pData);
+		}
+
+		scale1 = nextLong(_pData);
+		scale2 = nextLong(_pData);
+
+		if (TinselV2) {
+			level1 = nextLong(_pData);
+			level2 = nextLong(_pData);
+			bright1 = nextLong(_pData);
+		}
 	}
-
-	scale1 = nextLong(_pData);
-	scale2 = nextLong(_pData);
 
 	if (TinselV2) {
-		level1 = nextLong(_pData);
-		level2 = nextLong(_pData);
-		bright1 = nextLong(_pData);
 		bright2 = nextLong(_pData);
 	}
 
@@ -1334,7 +1358,7 @@ static int DistinctCorners(HPOLYGON hp1, HPOLYGON hp2) {
 /**
  * Returns true if the two paths are on the same level
  */
-static bool MatchingLevels(PPOLYGON p1, PPOLYGON p2) {
+static bool MatchingLevels(POLYGON *p1, POLYGON *p2) {
 	byte *pps = _vm->_handle->LockMem(pHandle); // All polygons
 	Poly pp1(pps, p1->pIndex);	// This polygon 1
 	Poly pp2(pps, p2->pIndex);	// This polygon 2
@@ -1356,7 +1380,7 @@ static void SetPathAdjacencies() {
 
 	// Reset them all
 	for (i1 = 0; i1 < noofPolys; i1++)
-		memset(Polys[i1]->adjpaths, 0, MAXADJ * sizeof(PPOLYGON));
+		memset(Polys[i1]->adjpaths, 0, MAXADJ * sizeof(POLYGON *));
 
 	// For each polygon..
 	for (i1 = 0; i1 < MAX_POLY-1; i1++) {
@@ -1593,13 +1617,10 @@ static void FiddlyBit(POLYGON *p) {
 /**
  * Allocate a POLYGON structure and reset it to default values
  */
-static PPOLYGON GetPolyEntry() {
-	int i;		// Loop counter
-	PPOLYGON p;
-
-	for (i = 0; i < MaxPolys; i++) {
+static POLYGON *GetPolyEntry() {
+	for (int i = 0; i < MaxPolys; i++) {
 		if (!Polys[i]) {
-			p = Polys[i] = &Polygons[i];
+			POLYGON *p = Polys[i] = &Polygons[i];
 
 			// What the hell, just clear it all out - it's safer
 			memset(p, 0, sizeof(POLYGON));
@@ -1615,15 +1636,14 @@ static PPOLYGON GetPolyEntry() {
  * Variation of  GetPolyEntry from Tinsel 1 that splits up getting a new
  * polygon structure from initializing it
  */
-static PPOLYGON CommonInits(PTYPE polyType, int pno, const Poly &ptp, bool bRestart) {
-	int i;
+static POLYGON * CommonInits(PTYPE polyType, int pno, const Poly &ptp, bool bRestart) {
 	HPOLYGON hp;
-	PPOLYGON p = GetPolyEntry();	// Obtain a slot
+	POLYGON *p = GetPolyEntry();	// Obtain a slot
 
 	p->polyType = polyType;			// Polygon type
 	p->pIndex = pno;
 
-	for (i = 0; i < 4; i++) {		// Polygon definition
+	for (int i = 0; i < 4; i++) {		// Polygon definition
 		p->cx[i] = (short)FROM_32(ptp.x[i]);
 		p->cy[i] = (short)FROM_32(ptp.y[i]);
 	}
@@ -1687,7 +1707,7 @@ static void InitExit(const Poly &ptp, int pno, bool bRestart) {
  * Initialize a PATH or NPATH polygon.
  */
 static void InitPath(const Poly &ptp, bool NodePath, int pno, bool bRestart) {
-	PPOLYGON p = CommonInits(PATH, pno, ptp, bRestart);
+	POLYGON *p = CommonInits(PATH, pno, ptp, bRestart);
 
 	p->subtype = NodePath ? NODE : NORMAL;
 
@@ -1708,7 +1728,7 @@ static void InitBlock(const Poly &ptp, int pno, bool bRestart) {
  * trying to walk through the actor you first thought of.
  * This is for dynamic blocking.
  */
-HPOLYGON InitExtraBlock(PMOVER ca, PMOVER ta) {
+HPOLYGON InitExtraBlock(MOVER *ca, MOVER *ta) {
 	int	caX, caY;	// Calling actor co-ords
 	int	taX, taY;	// Test actor co-ords
 	int	left, right;
@@ -1749,7 +1769,7 @@ static void InitEffect(const Poly &ptp, int pno, bool bRestart) {
  * Initialize a REFER polygon.
  */
 static void InitRefer(const Poly &ptp, int pno, bool bRestart) {
-	PPOLYGON p = CommonInits(REFER, pno, ptp, bRestart);
+	POLYGON *p = CommonInits(REFER, pno, ptp, bRestart);
 
 	p->subtype = FROM_32(ptp.reftype);	// Refer type
 }
@@ -1764,10 +1784,10 @@ static void InitTag(const Poly &ptp, int pno, bool bRestart) {
 
 
 /**
- * Initialize an unknown polygon.
+ * Initialize a scale polygon. Noir only.
  */
-static void InitUnknown(const Poly &ptp, int pno, bool bRestart) {
-	CommonInits(UNKNOWN, pno, ptp, bRestart);
+static void InitScale(const Poly &ptp, int pno, bool bRestart) {
+	CommonInits(SCALE, pno, ptp, bRestart);
 }
 
 
@@ -1802,8 +1822,8 @@ static void KillDeadPolygons() {
 				Polys[i]->polyType = EX_TAG;
 				break;
 
-			case UNKNOWN:
-				Polys[i]->polyType = EX_UNKNOWN;
+			case SCALE:
+				Polys[i]->polyType = EX_SCALE;
 				break;
 
 			default:
@@ -1882,8 +1902,8 @@ void InitPolygons(SCNHANDLE ph, int numPoly, bool bRestart) {
 				InitTag(ptp, i, bRestart);
 				break;
 
-			case POLY_UNKNOWN:
-				InitUnknown(ptp, i, bRestart);
+			case POLY_SCALE:
+				InitScale(ptp, i, bRestart);
 				break;
 
 			default:
@@ -1912,7 +1932,7 @@ void InitPolygons(SCNHANDLE ph, int numPoly, bool bRestart) {
 				if (Polys[i]->polyType == TAG){
 					if (TinselV3) {
 						Poly ptp(_vm->_handle->LockMem(pHandle), Polys[i]->pIndex);
-						if (ptp.unknown != -1) {
+						if (ptp.sceneId != -1) {
 							continue;
 						}
 					}

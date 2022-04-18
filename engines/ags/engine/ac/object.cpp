@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -40,8 +39,10 @@
 #include "ags/engine/main/game_run.h"
 #include "ags/engine/ac/route_finder.h"
 #include "ags/engine/gfx/graphics_driver.h"
+#include "ags/shared/ac/view.h"
 #include "ags/shared/gfx/bitmap.h"
 #include "ags/shared/gfx/gfx_def.h"
+#include "ags/shared/gui/gui_main.h"
 #include "ags/engine/script/runtime_script_value.h"
 #include "ags/engine/ac/dynobj/cc_object.h"
 #include "ags/engine/ac/move_list.h"
@@ -87,6 +88,16 @@ void Object_RemoveTint(ScriptObject *objj) {
 }
 
 void Object_SetView(ScriptObject *objj, int view, int loop, int frame) {
+	if (_GP(game).options[OPT_BASESCRIPTAPI] < kScriptAPI_v360) { // Previous version of SetView had negative loop and frame mean "use latest values"
+		auto &obj = _G(objs)[objj->id];
+		if (loop < 0) loop = obj.loop;
+		if (frame < 0) frame = obj.frame;
+		const int vidx = view - 1;
+		if (vidx < 0 || vidx >= _GP(game).numviews) quit("!Object_SetView: invalid view number used");
+		loop = Math::Clamp(loop, 0, (int)_GP(views)[vidx].numLoops - 1);
+		frame = Math::Clamp(frame, 0, (int)_GP(views)[vidx].loops[loop].numFrames - 1);
+	}
+
 	SetObjectFrame(objj->id, view, loop, frame);
 }
 
@@ -269,7 +280,14 @@ const char *Object_GetName_New(ScriptObject *objj) {
 	if (!is_valid_object(objj->id))
 		quit("!Object.Name: invalid object number");
 
-	return CreateNewScriptString(get_translation(_GP(thisroom).Objects[objj->id].Name.GetCStr()));
+	return CreateNewScriptString(get_translation(_G(croom)->obj[objj->id].name.GetCStr()));
+}
+
+void Object_SetName(ScriptObject *objj, const char *newName) {
+	if (!is_valid_object(objj->id))
+		quit("!Object.Name: invalid object number");
+	_G(croom)->obj[objj->id].name = newName;
+	GUI::MarkSpecialLabelsForUpdate(kLabelMacro_Overhotspot);
 }
 
 bool Object_IsInteractionAvailable(ScriptObject *oobj, int mood) {
@@ -292,9 +310,9 @@ void Object_Move(ScriptObject *objj, int x, int y, int speed, int blocking, int 
 	move_object(objj->id, x, y, speed, direct);
 
 	if ((blocking == BLOCKING) || (blocking == 1))
-		GameLoopUntilValueIsZero(&_G(objs)[objj->id].moving);
+		GameLoopUntilNotMoving(&_G(objs)[objj->id].moving);
 	else if ((blocking != IN_BACKGROUND) && (blocking != 0))
-		quit("Object.Move: invalid BLOCKING paramter");
+		quit("Object.Move: invalid BLOCKING parameter");
 }
 
 void Object_SetClickable(ScriptObject *objj, int clik) {
@@ -310,16 +328,19 @@ int Object_GetClickable(ScriptObject *objj) {
 	return 1;
 }
 
+void Object_SetManualScaling(ScriptObject *objj, bool on) {
+	if (on) _G(objs)[objj->id].flags &= ~OBJF_USEROOMSCALING;
+	else _G(objs)[objj->id].flags |= OBJF_USEROOMSCALING;
+	// clear the cache
+	_G(objcache)[objj->id].ywas = -9999;
+}
+
 void Object_SetIgnoreScaling(ScriptObject *objj, int newval) {
 	if (!is_valid_object(objj->id))
 		quit("!Object.IgnoreScaling: Invalid object specified");
-
-	_G(objs)[objj->id].flags &= ~OBJF_USEROOMSCALING;
-	if (!newval)
-		_G(objs)[objj->id].flags |= OBJF_USEROOMSCALING;
-
-	// clear the cache
-	_G(objcache)[objj->id].ywas = -9999;
+	if (newval)
+		_G(objs)[objj->id].zoom = 100; // compatibility, for before manual scaling existed
+	Object_SetManualScaling(objj, newval != 0);
 }
 
 int Object_GetIgnoreScaling(ScriptObject *objj) {
@@ -329,6 +350,22 @@ int Object_GetIgnoreScaling(ScriptObject *objj) {
 	if (_G(objs)[objj->id].flags & OBJF_USEROOMSCALING)
 		return 0;
 	return 1;
+}
+
+int Object_GetScaling(ScriptObject *objj) {
+	return _G(objs)[objj->id].zoom;
+}
+
+void Object_SetScaling(ScriptObject *objj, int zoomlevel) {
+	if ((_G(objs)[objj->id].flags & OBJF_USEROOMSCALING) != 0) {
+		debug_script_warn("Object.Scaling: cannot set property unless ManualScaling is enabled");
+		return;
+	}
+	int zoom_fixed = Math::Clamp(zoomlevel, 1, (int)(INT16_MAX)); // RoomObject.zoom is int16
+	if (zoomlevel != zoom_fixed)
+		debug_script_warn("Object.Scaling: scaling level must be between 1 and %d%%, asked for: %d",
+		(int)(INT16_MAX), zoomlevel);
+	_G(objs)[objj->id].zoom = zoom_fixed;
 }
 
 void Object_SetSolid(ScriptObject *objj, int solid) {
@@ -747,6 +784,10 @@ RuntimeScriptValue Sc_Object_GetLoop(void *self, const RuntimeScriptValue *param
 	API_OBJCALL_INT(ScriptObject, Object_GetLoop);
 }
 
+RuntimeScriptValue Sc_Object_SetManualScaling(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+	API_OBJCALL_VOID_PBOOL(ScriptObject, Object_SetManualScaling);
+}
+
 // int (ScriptObject *objj)
 RuntimeScriptValue Sc_Object_GetMoving(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_INT(ScriptObject, Object_GetMoving);
@@ -755,6 +796,18 @@ RuntimeScriptValue Sc_Object_GetMoving(void *self, const RuntimeScriptValue *par
 // const char* (ScriptObject *objj)
 RuntimeScriptValue Sc_Object_GetName_New(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_CONST_OBJCALL_OBJ(ScriptObject, const char, _GP(myScriptStringImpl), Object_GetName_New);
+}
+
+RuntimeScriptValue Sc_Object_SetName(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+	API_OBJCALL_VOID_POBJ(ScriptObject, Object_SetName, const char);
+}
+
+RuntimeScriptValue Sc_Object_GetScaling(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+	API_OBJCALL_INT(ScriptObject, Object_GetScaling);
+}
+
+RuntimeScriptValue Sc_Object_SetScaling(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+	API_OBJCALL_VOID_PINT(ScriptObject, Object_SetScaling);
 }
 
 // int (ScriptObject *objj)
@@ -858,8 +911,13 @@ void RegisterObjectAPI() {
 	ccAddExternalObjectFunction("Object::get_IgnoreWalkbehinds", Sc_Object_GetIgnoreWalkbehinds);
 	ccAddExternalObjectFunction("Object::set_IgnoreWalkbehinds", Sc_Object_SetIgnoreWalkbehinds);
 	ccAddExternalObjectFunction("Object::get_Loop", Sc_Object_GetLoop);
+	ccAddExternalObjectFunction("Object::get_ManualScaling", Sc_Object_GetIgnoreScaling);
+	ccAddExternalObjectFunction("Object::set_ManualScaling", Sc_Object_SetManualScaling);
 	ccAddExternalObjectFunction("Object::get_Moving", Sc_Object_GetMoving);
 	ccAddExternalObjectFunction("Object::get_Name", Sc_Object_GetName_New);
+	ccAddExternalObjectFunction("Object::set_Name", Sc_Object_SetName);
+	ccAddExternalObjectFunction("Object::get_Scaling", Sc_Object_GetScaling);
+	ccAddExternalObjectFunction("Object::set_Scaling", Sc_Object_SetScaling);
 	ccAddExternalObjectFunction("Object::get_Solid", Sc_Object_GetSolid);
 	ccAddExternalObjectFunction("Object::set_Solid", Sc_Object_SetSolid);
 	ccAddExternalObjectFunction("Object::get_Transparency", Sc_Object_GetTransparency);
@@ -881,57 +939,6 @@ void RegisterObjectAPI() {
 	ccAddExternalObjectFunction("Object::get_TintRed", Sc_Object_GetTintRed);
 	ccAddExternalObjectFunction("Object::get_TintSaturation", Sc_Object_GetTintSaturation);
 	ccAddExternalObjectFunction("Object::get_TintLuminance", Sc_Object_GetTintLuminance);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("Object::Animate^5", (void *)Object_Animate);
-	ccAddExternalFunctionForPlugin("Object::IsCollidingWithObject^1", (void *)Object_IsCollidingWithObject);
-	ccAddExternalFunctionForPlugin("Object::GetName^1", (void *)Object_GetName);
-	ccAddExternalFunctionForPlugin("Object::GetProperty^1", (void *)Object_GetProperty);
-	ccAddExternalFunctionForPlugin("Object::GetPropertyText^2", (void *)Object_GetPropertyText);
-	ccAddExternalFunctionForPlugin("Object::GetTextProperty^1", (void *)Object_GetTextProperty);
-	ccAddExternalFunctionForPlugin("Object::MergeIntoBackground^0", (void *)Object_MergeIntoBackground);
-	ccAddExternalFunctionForPlugin("Object::Move^5", (void *)Object_Move);
-	ccAddExternalFunctionForPlugin("Object::RemoveTint^0", (void *)Object_RemoveTint);
-	ccAddExternalFunctionForPlugin("Object::RunInteraction^1", (void *)Object_RunInteraction);
-	ccAddExternalFunctionForPlugin("Object::SetPosition^2", (void *)Object_SetPosition);
-	ccAddExternalFunctionForPlugin("Object::SetView^3", (void *)Object_SetView);
-	ccAddExternalFunctionForPlugin("Object::StopAnimating^0", (void *)Object_StopAnimating);
-	ccAddExternalFunctionForPlugin("Object::StopMoving^0", (void *)Object_StopMoving);
-	ccAddExternalFunctionForPlugin("Object::Tint^5", (void *)Object_Tint);
-	ccAddExternalFunctionForPlugin("Object::GetAtRoomXY^2", (void *)GetObjectAtRoom);
-	ccAddExternalFunctionForPlugin("Object::GetAtScreenXY^2", (void *)GetObjectAtScreen);
-	ccAddExternalFunctionForPlugin("Object::get_Animating", (void *)Object_GetAnimating);
-	ccAddExternalFunctionForPlugin("Object::get_Baseline", (void *)Object_GetBaseline);
-	ccAddExternalFunctionForPlugin("Object::set_Baseline", (void *)Object_SetBaseline);
-	ccAddExternalFunctionForPlugin("Object::get_BlockingHeight", (void *)Object_GetBlockingHeight);
-	ccAddExternalFunctionForPlugin("Object::set_BlockingHeight", (void *)Object_SetBlockingHeight);
-	ccAddExternalFunctionForPlugin("Object::get_BlockingWidth", (void *)Object_GetBlockingWidth);
-	ccAddExternalFunctionForPlugin("Object::set_BlockingWidth", (void *)Object_SetBlockingWidth);
-	ccAddExternalFunctionForPlugin("Object::get_Clickable", (void *)Object_GetClickable);
-	ccAddExternalFunctionForPlugin("Object::set_Clickable", (void *)Object_SetClickable);
-	ccAddExternalFunctionForPlugin("Object::get_Frame", (void *)Object_GetFrame);
-	ccAddExternalFunctionForPlugin("Object::get_Graphic", (void *)Object_GetGraphic);
-	ccAddExternalFunctionForPlugin("Object::set_Graphic", (void *)Object_SetGraphic);
-	ccAddExternalFunctionForPlugin("Object::get_ID", (void *)Object_GetID);
-	ccAddExternalFunctionForPlugin("Object::get_IgnoreScaling", (void *)Object_GetIgnoreScaling);
-	ccAddExternalFunctionForPlugin("Object::set_IgnoreScaling", (void *)Object_SetIgnoreScaling);
-	ccAddExternalFunctionForPlugin("Object::get_IgnoreWalkbehinds", (void *)Object_GetIgnoreWalkbehinds);
-	ccAddExternalFunctionForPlugin("Object::set_IgnoreWalkbehinds", (void *)Object_SetIgnoreWalkbehinds);
-	ccAddExternalFunctionForPlugin("Object::get_Loop", (void *)Object_GetLoop);
-	ccAddExternalFunctionForPlugin("Object::get_Moving", (void *)Object_GetMoving);
-	ccAddExternalFunctionForPlugin("Object::get_Name", (void *)Object_GetName_New);
-	ccAddExternalFunctionForPlugin("Object::get_Solid", (void *)Object_GetSolid);
-	ccAddExternalFunctionForPlugin("Object::set_Solid", (void *)Object_SetSolid);
-	ccAddExternalFunctionForPlugin("Object::get_Transparency", (void *)Object_GetTransparency);
-	ccAddExternalFunctionForPlugin("Object::set_Transparency", (void *)Object_SetTransparency);
-	ccAddExternalFunctionForPlugin("Object::get_View", (void *)Object_GetView);
-	ccAddExternalFunctionForPlugin("Object::get_Visible", (void *)Object_GetVisible);
-	ccAddExternalFunctionForPlugin("Object::set_Visible", (void *)Object_SetVisible);
-	ccAddExternalFunctionForPlugin("Object::get_X", (void *)Object_GetX);
-	ccAddExternalFunctionForPlugin("Object::set_X", (void *)Object_SetX);
-	ccAddExternalFunctionForPlugin("Object::get_Y", (void *)Object_GetY);
-	ccAddExternalFunctionForPlugin("Object::set_Y", (void *)Object_SetY);
 }
 
 } // namespace AGS3

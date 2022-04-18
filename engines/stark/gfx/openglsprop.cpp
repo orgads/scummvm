@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,7 +27,7 @@
 #include "engines/stark/scene.h"
 #include "engines/stark/services/services.h"
 
-#if defined(USE_GLES2) || defined(USE_OPENGL_SHADERS)
+#if defined(USE_OPENGL_SHADERS)
 
 #include "graphics/opengl/shader.h"
 
@@ -65,15 +64,13 @@ void OpenGLSPropRenderer::render(const Math::Vector3d &position, float direction
 	Math::Matrix4 projection = StarkScene->getProjectionMatrix();
 
 	Math::Matrix4 modelViewMatrix = view * model;
-	modelViewMatrix.transpose(); // OpenGL expects matrices transposed when compared to ScummVM's
+	modelViewMatrix.transpose(); // OpenGL expects matrices transposed
 
 	Math::Matrix4 projectionMatrix = projection;
-	projectionMatrix.transpose(); // OpenGL expects matrices transposed when compared to ScummVM's
+	projectionMatrix.transpose(); // OpenGL expects matrices transposed
 
 	Math::Matrix4 normalMatrix = modelViewMatrix;
 	normalMatrix.invertAffineOrthonormal();
-	//normalMatrix.transpose(); // OpenGL expects matrices transposed when compared to ScummVM's
-	//normalMatrix.transpose(); // No need to transpose twice in a row
 
 	_shader->enableVertexAttribute("position", _faceVBO, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), 0);
 	_shader->enableVertexAttribute("normal", _faceVBO, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), 12);
@@ -193,4 +190,4 @@ void OpenGLSPropRenderer::setLightArrayUniform(const LightEntryArray &lights) {
 } // End of namespace Gfx
 } // End of namespace Stark
 
-#endif // defined(USE_GLES2) || defined(USE_OPENGL_SHADERS)
+#endif // defined(USE_OPENGL_SHADERS)

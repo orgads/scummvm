@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -220,7 +219,7 @@ __mode_return _player::Player_press_fire_button() {
 
 		// play gun sound
 		if (MS->logic_structs[player_id]->sfxVars[GUNSHOT_SFX_VAR] != 0)
-			RegisterSound(player_id, NULL, MS->logic_structs[player_id]->sfxVars[GUNSHOT_SFX_VAR], gunDesc,
+			RegisterSound(player_id, nullptr, MS->logic_structs[player_id]->sfxVars[GUNSHOT_SFX_VAR], gunDesc,
 			              (int8)127); // have to use full version so we can give hash instead of string
 		else
 			RegisterSound(player_id, defaultGunSfx, gunDesc); // use small version as we have string not hash
@@ -249,7 +248,7 @@ __mode_return _player::Player_press_fire_button() {
 		} else {
 			// no hit play ricochet sound
 			if (MS->logic_structs[player_id]->sfxVars[RICOCHET_SFX_VAR] != 0)
-				RegisterSound(player_id, NULL, MS->logic_structs[player_id]->sfxVars[RICOCHET_SFX_VAR], ricochetDesc,
+				RegisterSound(player_id, nullptr, MS->logic_structs[player_id]->sfxVars[RICOCHET_SFX_VAR], ricochetDesc,
 				              (int8)127); // have to use full version so we can give hash instead of string
 			else
 				RegisterSound(player_id, defaultRicochetSfx, ricochetDesc); // use small version as we have string not hash
@@ -453,7 +452,7 @@ mcodeFunctionReturnCodes _game_session::fn_player(int32 &, int32 *) {
 	if (!L->looping) {
 		L->anim_pc = 0; // reset for when we are coming straight back in after a context re-run has changed the logic unexpectedly
 		L->looping = TRUE8;
-		M->cur_parent = 0; // force a reset - if players routes first cycle then the player barriers are never brought in
+		M->cur_parent = nullptr; // force a reset - if players routes first cycle then the player barriers are never brought in
 	}
 
 	// run player user, control and animation logic
@@ -1350,7 +1349,7 @@ __mode_return _player::Process_strike() {
 	// check for the hit frame
 	// The animation will have made the INT marker visible on the frame designated to be the "hit" frame
 	// Get the current frame from the anim
-	PXframe *currentFrame = NULL;
+	PXframe *currentFrame = nullptr;
 	// Note the weird = NULL & then setting it removes GCC warnings
 	currentFrame = PXFrameEnOfAnim(log->anim_pc, pAnim);
 
@@ -2905,7 +2904,7 @@ void _player::Set_player_id(uint32 id) {
 	MS->Prepare_megas_route_barriers(TRUE8);
 
 	// reset pointer to player parent barrier box
-	MS->logic_structs[id]->mega->cur_parent = NULL;
+	MS->logic_structs[id]->mega->cur_parent = nullptr;
 
 	crouch = FALSE8; // not crouching
 
@@ -3155,7 +3154,7 @@ void _game_session::Restart_player() {
 	ob->SetIntegerVariable(var_num, MAX_HITS); // another 10 hits
 
 	L->logic_level = 0; // restart
-	L->logic_ref[1] = 0;
+	L->logic_ref[1] = nullptr;
 
 	M->dead = 0; // not dead!!!
 

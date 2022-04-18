@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -30,11 +29,13 @@ namespace MacVenture {
 #define ADGF_DEFAULT (ADGF_DROPLANGUAGE|ADGF_DROPPLATFORM|ADGF_MACRESFORK|ADGF_UNSTABLE)
 
 #define BASEGAME(n, v, f, md5, s) {n, v, AD_ENTRY1s(f, md5, s), Common::EN_ANY, Common::kPlatformMacintosh, ADGF_DEFAULT, GUIO1(GUIO_NOMIDI)}
+#define BASEDEMO(n, v, f, md5, s) {n, v, AD_ENTRY1s(f, md5, s), Common::EN_ANY, Common::kPlatformMacintosh, ADGF_DEFAULT|ADGF_DEMO, GUIO1(GUIO_NOMIDI)}
 
 static const ADGameDescription gameDescriptions[] = {
-	BASEGAME("shadowgate", "Zojoi Rerelease", "Shadowgate.bin", "ebbfbcbf93938bd2900cb0c0213b19ad", 68974), // Zojoi Rerelease
-	BASEGAME("deja_vu", "Zojoi Rerelease", "Deja Vu.bin", "5e9f5a8e3c8eb29ed02b34ae5937354f", 69034), // Zojoi Rerelease
-	BASEGAME("deja_vu2", "Zojoi Rerelease", "Lost in Las Vegas.bin", "8f8e1d8d41f577ee0fbc03847969af0d", 66520), // Zojoi Rerelease
+	BASEGAME("shadowgate", "Zojoi Rerelease", "Shadowgate", "ebbfbcbf93938bd2900cb0c0213b19ad", 68718), // Zojoi Rerelease
+	BASEGAME("deja_vu", "Zojoi Rerelease", "Deja Vu", "5e9f5a8e3c8eb29ed02b34ae5937354f", 68778), // Zojoi Rerelease
+	BASEGAME("deja_vu2", "Zojoi Rerelease", "Lost in Las Vegas", "8f8e1d8d41f577ee0fbc03847969af0d", 66264), // Zojoi Rerelease
+	BASEDEMO("uninvited", "Demo", "Uninvited Demo", "e53adca77d773dca926f61faac68df86", 53119),
 	AD_TABLE_END_MARKER
 };
 
@@ -55,7 +56,8 @@ static const PlainGameDescriptor macventureGames[] = {
 	{ "shadowgate", "Shadowgate" },
 	{ "deja_vu", "Deja Vu"},
 	{ "deja_vu2", "Deja Vu II"},
-	{ 0, 0 }
+	{ "uninvited", "Uninvited."},
+	{ nullptr, nullptr }
 };
 
 namespace MacVenture {

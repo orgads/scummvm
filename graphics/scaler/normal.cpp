@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,22 +15,10 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "graphics/scaler/normal.h"
-
-NormalPlugin::NormalPlugin() {
-	_factor = 1;
-	_factors.push_back(1);
-#ifdef USE_SCALERS
-	_factors.push_back(2);
-	_factors.push_back(3);
-	_factors.push_back(4);
-	_factors.push_back(5);
-#endif
-}
 
 #ifdef USE_SCALERS
 
@@ -217,7 +205,7 @@ void Normal5x(const uint8 *srcPtr, uint32 srcPitch, uint8 *dstPtr, uint32 dstPit
 }
 #endif
 
-void NormalPlugin::scaleIntern(const uint8 *srcPtr, uint32 srcPitch,
+void NormalScaler::scaleIntern(const uint8 *srcPtr, uint32 srcPitch,
 							uint8 *dstPtr, uint32 dstPitch, int width, int height, int x, int y) {
 #ifdef USE_SCALERS
 	if (_format.bytesPerPixel == 2) {
@@ -259,7 +247,7 @@ void NormalPlugin::scaleIntern(const uint8 *srcPtr, uint32 srcPitch,
 #endif
 }
 
-uint NormalPlugin::increaseFactor() {
+uint NormalScaler::increaseFactor() {
 #ifdef USE_SCALERS
 	if (_factor < 5)
 		setFactor(_factor + 1);
@@ -267,12 +255,39 @@ uint NormalPlugin::increaseFactor() {
 	return _factor;
 }
 
-uint NormalPlugin::decreaseFactor() {
+uint NormalScaler::decreaseFactor() {
 #ifdef USE_SCALERS
 	if (_factor > 1)
 		setFactor(_factor - 1);
 #endif
 	return _factor;
+}
+
+
+class NormalPlugin final : public ScalerPluginObject {
+public:
+	NormalPlugin();
+
+	Scaler *createInstance(const Graphics::PixelFormat &format) const override;
+
+	bool canDrawCursor() const override { return true; }
+	uint extraPixels() const override { return 0; }
+	const char *getName() const override;
+	const char *getPrettyName() const override;
+};
+
+NormalPlugin::NormalPlugin() {
+	_factors.push_back(1);
+#ifdef USE_SCALERS
+	_factors.push_back(2);
+	_factors.push_back(3);
+	_factors.push_back(4);
+	_factors.push_back(5);
+#endif
+}
+
+Scaler *NormalPlugin::createInstance(const Graphics::PixelFormat &format) const {
+	return new NormalScaler(format);
 }
 
 const char *NormalPlugin::getName() const {

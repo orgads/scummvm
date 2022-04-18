@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -40,28 +39,22 @@ namespace AGS3 {
 using AGS::Shared::Bitmap;
 using AGS::Shared::Graphics;
 
-
-
-
-
-
-
 int ViewFrame_GetFlipped(ScriptViewFrame *svf) {
-	if (_G(views)[svf->view].loops[svf->loop].frames[svf->frame].flags & VFLG_FLIPSPRITE)
+	if (_GP(views)[svf->view].loops[svf->loop].frames[svf->frame].flags & VFLG_FLIPSPRITE)
 		return 1;
 	return 0;
 }
 
 int ViewFrame_GetGraphic(ScriptViewFrame *svf) {
-	return _G(views)[svf->view].loops[svf->loop].frames[svf->frame].pic;
+	return _GP(views)[svf->view].loops[svf->loop].frames[svf->frame].pic;
 }
 
 void ViewFrame_SetGraphic(ScriptViewFrame *svf, int newPic) {
-	_G(views)[svf->view].loops[svf->loop].frames[svf->frame].pic = newPic;
+	_GP(views)[svf->view].loops[svf->loop].frames[svf->frame].pic = newPic;
 }
 
 ScriptAudioClip *ViewFrame_GetLinkedAudio(ScriptViewFrame *svf) {
-	int soundIndex = _G(views)[svf->view].loops[svf->loop].frames[svf->frame].sound;
+	int soundIndex = _GP(views)[svf->view].loops[svf->loop].frames[svf->frame].sound;
 	if (soundIndex < 0)
 		return nullptr;
 
@@ -73,31 +66,31 @@ void ViewFrame_SetLinkedAudio(ScriptViewFrame *svf, ScriptAudioClip *clip) {
 	if (clip != nullptr)
 		newSoundIndex = clip->id;
 
-	_G(views)[svf->view].loops[svf->loop].frames[svf->frame].sound = newSoundIndex;
+	_GP(views)[svf->view].loops[svf->loop].frames[svf->frame].sound = newSoundIndex;
 }
 
 int ViewFrame_GetSound(ScriptViewFrame *svf) {
 	// convert audio clip to old-style sound number
-	return get_old_style_number_for_sound(_G(views)[svf->view].loops[svf->loop].frames[svf->frame].sound);
+	return get_old_style_number_for_sound(_GP(views)[svf->view].loops[svf->loop].frames[svf->frame].sound);
 }
 
 void ViewFrame_SetSound(ScriptViewFrame *svf, int newSound) {
 	if (newSound < 1) {
-		_G(views)[svf->view].loops[svf->loop].frames[svf->frame].audioclip = -1;
+		_GP(views)[svf->view].loops[svf->loop].frames[svf->frame].audioclip = -1;
 	} else {
 		// convert sound number to audio clip
 		ScriptAudioClip *clip = GetAudioClipForOldStyleNumber(_GP(game), false, newSound);
 		if (clip == nullptr)
 			quitprintf("!SetFrameSound: audio clip aSound%d not found", newSound);
 
-		_G(views)[svf->view].loops[svf->loop].frames[svf->frame].sound =
+		_GP(views)[svf->view].loops[svf->loop].frames[svf->frame].sound =
 			_GP(game).IsLegacyAudioSystem() ? newSound : clip->id;
-		_G(views)[svf->view].loops[svf->loop].frames[svf->frame].audioclip = clip->id;
+		_GP(views)[svf->view].loops[svf->loop].frames[svf->frame].audioclip = clip->id;
 	}
 }
 
 int ViewFrame_GetSpeed(ScriptViewFrame *svf) {
-	return _G(views)[svf->view].loops[svf->loop].frames[svf->frame].speed;
+	return _GP(views)[svf->view].loops[svf->loop].frames[svf->frame].speed;
 }
 
 int ViewFrame_GetView(ScriptViewFrame *svf) {
@@ -118,9 +111,9 @@ void precache_view(int view) {
 	if (view < 0)
 		return;
 
-	for (int i = 0; i < _G(views)[view].numLoops; i++) {
-		for (int j = 0; j < _G(views)[view].loops[i].numFrames; j++)
-			_GP(spriteset).Precache(_G(views)[view].loops[i].frames[j].pic);
+	for (int i = 0; i < _GP(views)[view].numLoops; i++) {
+		for (int j = 0; j < _GP(views)[view].loops[i].numFrames; j++)
+			_GP(spriteset).Precache(_GP(views)[view].loops[i].frames[j].pic);
 	}
 }
 
@@ -130,8 +123,8 @@ void CheckViewFrame(int view, int loop, int frame, int sound_volume) {
 	ScriptAudioChannel *channel = nullptr;
 	if (_GP(game).IsLegacyAudioSystem()) {
 		// sound field contains legacy sound num, so we also need an actual clip index
-		const int sound = _G(views)[view].loops[loop].frames[frame].sound;
-		int &clip_id = _G(views)[view].loops[loop].frames[frame].audioclip;
+		const int sound = _GP(views)[view].loops[loop].frames[frame].sound;
+		int &clip_id = _GP(views)[view].loops[loop].frames[frame].audioclip;
 		if (sound > 0) {
 			if (clip_id < 0) {
 				ScriptAudioClip *clip = GetAudioClipForOldStyleNumber(_GP(game), false, sound);
@@ -142,16 +135,16 @@ void CheckViewFrame(int view, int loop, int frame, int sound_volume) {
 			channel = play_audio_clip_by_index(clip_id);
 		}
 	} else {
-		if (_G(views)[view].loops[loop].frames[frame].sound >= 0) {
+		if (_GP(views)[view].loops[loop].frames[frame].sound >= 0) {
 			// play this sound (eg. footstep)
-			channel = play_audio_clip_by_index(_G(views)[view].loops[loop].frames[frame].sound);
+			channel = play_audio_clip_by_index(_GP(views)[view].loops[loop].frames[frame].sound);
 		}
 	}
 	if (sound_volume != SCR_NO_VALUE && channel != nullptr) {
-		AudioChannelsLock lock;
-		auto *ch = lock.GetChannel(channel->id);
+		auto *ch = AudioChans::GetChannel(channel->id);
+
 		if (ch)
-			ch->set_volume_percent(ch->get_volume() * sound_volume / 100);
+			ch->set_volume100(ch->get_volume100() * sound_volume / 100);
 	}
 }
 
@@ -250,20 +243,6 @@ void RegisterViewFrameAPI() {
 	ccAddExternalObjectFunction("ViewFrame::set_Sound", Sc_ViewFrame_SetSound);
 	ccAddExternalObjectFunction("ViewFrame::get_Speed", Sc_ViewFrame_GetSpeed);
 	ccAddExternalObjectFunction("ViewFrame::get_View", Sc_ViewFrame_GetView);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("ViewFrame::get_Flipped", (void *)ViewFrame_GetFlipped);
-	ccAddExternalFunctionForPlugin("ViewFrame::get_Frame", (void *)ViewFrame_GetFrame);
-	ccAddExternalFunctionForPlugin("ViewFrame::get_Graphic", (void *)ViewFrame_GetGraphic);
-	ccAddExternalFunctionForPlugin("ViewFrame::set_Graphic", (void *)ViewFrame_SetGraphic);
-	ccAddExternalFunctionForPlugin("ViewFrame::get_LinkedAudio", (void *)ViewFrame_GetLinkedAudio);
-	ccAddExternalFunctionForPlugin("ViewFrame::set_LinkedAudio", (void *)ViewFrame_SetLinkedAudio);
-	ccAddExternalFunctionForPlugin("ViewFrame::get_Loop", (void *)ViewFrame_GetLoop);
-	ccAddExternalFunctionForPlugin("ViewFrame::get_Sound", (void *)ViewFrame_GetSound);
-	ccAddExternalFunctionForPlugin("ViewFrame::set_Sound", (void *)ViewFrame_SetSound);
-	ccAddExternalFunctionForPlugin("ViewFrame::get_Speed", (void *)ViewFrame_GetSpeed);
-	ccAddExternalFunctionForPlugin("ViewFrame::get_View", (void *)ViewFrame_GetView);
 }
 
 } // namespace AGS3

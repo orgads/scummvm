@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -69,29 +68,15 @@ namespace AGSSpriteFont {
 
 #pragma endregion
 
-IAGSEngine *AGSSpriteFont::_engine;
-SpriteFontRenderer *AGSSpriteFont::_fontRenderer;
-VariableWidthSpriteFontRenderer *AGSSpriteFont::_vWidthRenderer;
-
 #define STRINGIFY(s) STRINGIFY_X(s)
 #define STRINGIFY_X(s) #s
-
-AGSSpriteFont::AGSSpriteFont() : PluginBase() {
-	_engine = nullptr;
-	_fontRenderer = nullptr;
-	_vWidthRenderer = nullptr;
-
-	DLL_METHOD(AGS_GetPluginName);
-	DLL_METHOD(AGS_EngineStartup);
-	DLL_METHOD(AGS_EngineShutdown);
-}
 
 const char *AGSSpriteFont::AGS_GetPluginName() {
 	return "AGSSpriteFont";
 }
 
 void AGSSpriteFont::AGS_EngineStartup(IAGSEngine *engine) {
-	_engine = engine;
+	PluginBase::AGS_EngineStartup(engine);
 
 	if (_fontRenderer == nullptr) {
 		_engine->PrintDebugConsole("AGSSpriteFont: Init fixed width renderer");
@@ -105,13 +90,13 @@ void AGSSpriteFont::AGS_EngineStartup(IAGSEngine *engine) {
 	if (_engine->version < MIN_ENGINE_VERSION)
 		_engine->AbortGame("Plugin needs engine version " STRINGIFY(MIN_ENGINE_VERSION) " or newer.");
 
-	//register functions
+	// Register functions
 	_engine->PrintDebugConsole("AGSSpriteFont: Register functions");
-	SCRIPT_METHOD(SetSpriteFont);
-	SCRIPT_METHOD(SetVariableSpriteFont);
-	SCRIPT_METHOD(SetGlyph);
-	SCRIPT_METHOD(SetSpacing);
-	SCRIPT_METHOD(SetLineHeightAdjust);
+	SCRIPT_METHOD(SetSpriteFont, AGSSpriteFont::SetSpriteFont);
+	SCRIPT_METHOD(SetVariableSpriteFont, AGSSpriteFont::SetVariableSpriteFont);
+	SCRIPT_METHOD(SetGlyph, AGSSpriteFont::SetGlyph);
+	SCRIPT_METHOD(SetSpacing, AGSSpriteFont::SetSpacing);
+	SCRIPT_METHOD(SetLineHeightAdjust, AGSSpriteFont::SetLineHeightAdjust);
 }
 
 void AGSSpriteFont::AGS_EngineShutdown() {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -84,7 +83,7 @@
 #ifdef ENABLE_WME3D
 #include "graphics/renderer.h"
 #include "engines/util.h"
-#if defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS) || defined(USE_GLES2)
+#if defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS)
 #include "graphics/opengl/context.h"
 #endif
 #endif
@@ -503,61 +502,60 @@ bool BaseGame::initialize1() {
 bool BaseGame::initialize2() { // we know whether we are going to be accelerated
 #ifdef ENABLE_WME3D
 	Common::String rendererConfig = ConfMan.get("renderer");
-	Graphics::RendererType desiredRendererType = Graphics::parseRendererTypeCode(rendererConfig);
-	Graphics::RendererType matchingRendererType = Graphics::getBestMatchingAvailableRendererType(desiredRendererType);
+	Graphics::RendererType desiredRendererType = Graphics::Renderer::parseTypeCode(rendererConfig);
+	uint32 availableRendererTypes = Graphics::Renderer::getAvailableTypes();
 
-	if (!_playing3DGame && (desiredRendererType == Graphics::kRendererTypeTinyGL || desiredRendererType == Graphics::kRendererTypeDefault)) {
-		_renderer = makeOSystemRenderer(this);
-		if (_renderer == nullptr) {
-			return STATUS_FAILED;
-		}
-		return STATUS_OK;
-	}
-
-#if defined(USE_OPENGL_GAME) || defined(USE_OPENGL_SHADERS) || defined(USE_GLES2)
-	initGraphics3d(_settings->getResWidth(), _settings->getResHeight());
-	bool backendCapableOpenGL = g_system->hasFeature(OSystem::kFeatureOpenGLForGame);
-#endif
-
+	availableRendererTypes &=
 #if defined(USE_OPENGL_GAME)
-	// Check the OpenGL context actually supports shaders
-	if (backendCapableOpenGL && matchingRendererType == Graphics::kRendererTypeOpenGLShaders && !OpenGLContext.shadersSupported) {
-		matchingRendererType = Graphics::kRendererTypeOpenGL;
-	}
+			Graphics::kRendererTypeOpenGL |
 #endif
+#if defined(USE_OPENGL_SHADERS)
+			Graphics::kRendererTypeOpenGLShaders |
+#endif
+#if defined(USE_TINYGL)
+			Graphics::kRendererTypeTinyGL |
+#endif
+			0;
 
-	if (matchingRendererType != desiredRendererType && desiredRendererType != Graphics::kRendererTypeDefault) {
-		// Display a warning if unable to use the desired renderer
-		warning("Unable to create a '%s' renderer", rendererConfig.c_str());
+	/* When playing 2D, TinyGL is not really TinyGL but software and is always available */
+	if (!_playing3DGame) {
+		availableRendererTypes |= Graphics::kRendererTypeTinyGL;
 	}
 
-#if defined(USE_OPENGL_SHADERS) || defined(USE_GLES2)
-	if (backendCapableOpenGL && matchingRendererType == Graphics::kRendererTypeOpenGLShaders) {
+	Graphics::RendererType matchingRendererType = Graphics::Renderer::getBestMatchingType(desiredRendererType, availableRendererTypes);
+
+ #if defined(USE_OPENGL_SHADERS)
+	if (matchingRendererType == Graphics::kRendererTypeOpenGLShaders) {
+		initGraphics3d(_settings->getResWidth(), _settings->getResHeight());
 		_renderer3D = makeOpenGL3DShaderRenderer(this);
 	}
-#endif // defined(USE_GLES2) || defined(USE_OPENGL_SHADERS)
-#if defined(USE_OPENGL_GAME)
-	if (backendCapableOpenGL && matchingRendererType == Graphics::kRendererTypeOpenGL) {
+ #endif // defined(USE_OPENGL_SHADERS)
+ #if defined(USE_OPENGL_GAME)
+	if (matchingRendererType == Graphics::kRendererTypeOpenGL) {
+		initGraphics3d(_settings->getResWidth(), _settings->getResHeight());
 		_renderer3D = makeOpenGL3DRenderer(this);
 	}
-#endif // defined(USE_OPENGL)
-	if (_playing3DGame && matchingRendererType == Graphics::kRendererTypeTinyGL) {
-		_renderer3D = nullptr;// TODO: makeTinyGL3DRenderer(this);
-		error("3D software renderered is not supported yet");
+ #endif // defined(USE_OPENGL)
+	if (matchingRendererType == Graphics::kRendererTypeTinyGL) {
+		if (_playing3DGame) {
+			_renderer3D = nullptr;// TODO: makeTinyGL3DRenderer(this);
+			error("3D software renderered is not supported yet");
+		}
 	}
 	_renderer = _renderer3D;
-#if !defined(USE_OPENGL_GAME) && !defined(USE_OPENGL_SHADERS) && !defined(USE_GLES2)
-	if (!_playing3DGame && !_renderer3D)
+
+	if (!_renderer && !_playing3DGame) {
 		_renderer = makeOSystemRenderer(this);
-#endif
+	}
 #else
 	_renderer = makeOSystemRenderer(this);
 #endif
+
 	if (_renderer == nullptr) {
 		return STATUS_FAILED;
+	} else {
+		return STATUS_OK;
 	}
-
-	return STATUS_OK;
 }
 
 
@@ -1898,15 +1896,18 @@ bool BaseGame::scCallMethod(ScScript *script, ScStack *stack, ScStack *thisStack
 	//////////////////////////////////////////////////////////////////////////
 	else if (strcmp(name, "SetSavingScreen") == 0) {
 		stack->correctParams(3);
-		ScValue *val = stack->pop();
+		/* ScValue *val = */stack->pop();
 		int saveImageX = stack->pop()->getInt();
 		int saveImageY = stack->pop()->getInt();
 
+		// FIXME: Dead code or bug?
+#if 0
 		if (val->isNULL()) {
 			_renderer->setSaveImage(NULL, saveImageX, saveImageY);
 		} else {
+#endif
 			_renderer->setSaveImage(NULL, saveImageX, saveImageY);
-		}
+		//}
 		stack->pushNULL();
 		return STATUS_OK;
 	}
@@ -2835,10 +2836,10 @@ ScValue *BaseGame::scGetProperty(const Common::String &name) {
 	//////////////////////////////////////////////////////////////////////////
 	else if (name == "SystemLanguage") {
 		switch (Common::parseLanguage(ConfMan.get("language"))) {
-		case Common::CZ_CZE:
+		case Common::CS_CZE:
 			_scValue->setString("czech");
 			break;
-		case Common::DA_DAN:
+		case Common::DA_DNK:
 			_scValue->setString("danish");
 			break;
 		case Common::DE_DEU:
@@ -2853,7 +2854,7 @@ ScValue *BaseGame::scGetProperty(const Common::String &name) {
 		case Common::FR_FRA:
 			_scValue->setString("french");
 			break;
-		case Common::GR_GRE:
+		case Common::EL_GRC:
 			_scValue->setString("greek");
 			break;
 		case Common::HU_HUN:
@@ -2877,7 +2878,7 @@ ScValue *BaseGame::scGetProperty(const Common::String &name) {
 		case Common::PT_BRA:
 			_scValue->setString("brazilian");
 			break;
-		case Common::PT_POR:
+		case Common::PT_PRT:
 			_scValue->setString("portuguese");
 			break;
 		case Common::PL_POL:
@@ -2892,7 +2893,7 @@ ScValue *BaseGame::scGetProperty(const Common::String &name) {
 		case Common::UA_UKR:
 			_scValue->setString("ukrainian");
 			break;
-		case Common::ZH_CNA:
+		case Common::ZH_CHN:
 			_scValue->setString("schinese");
 			break;
 		case Common::ZH_TWN:

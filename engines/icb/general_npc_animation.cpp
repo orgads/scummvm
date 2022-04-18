@@ -1,7 +1,7 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
  * Additional copyright for this file:
@@ -9,10 +9,10 @@
  * This code is based on source code created by Revolution Software,
  * used with permission.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,8 +20,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -374,7 +373,6 @@ void _game_session::Animate_turn_to_pan(__mega_set_names anim_type, uint32 speed
 	// snap pan
 	// restore x,z
 
-	PXreal xnext, znext;
 	uint32 next_pc, info_pc;
 	PXfloat this_pan_change;
 
@@ -460,8 +458,9 @@ void _game_session::Animate_turn_to_pan(__mega_set_names anim_type, uint32 speed
 	// Note, assumes current frame hasn't changed i.e L->info_pc is same
 	currentFrame->markers[ORG_POS].GetXYZ(&x1, &unused, &z1);
 
-	xnext = x2 - x1;
-	znext = z2 - z1;
+	// FIXME: xnext and znext are not used currently...
+	//PXreal xnext = x2 - x1;
+	//PXreal znext = z2 - z1;
 
 	// update pc
 	L->anim_pc = next_pc; // allready computed
@@ -474,11 +473,12 @@ void _game_session::Animate_turn_to_pan(__mega_set_names anim_type, uint32 speed
 
 	L->pan_adjust = pan;
 
+	// FIXME: ang, cang and sang are not used currently...
 	// calculate the new x and z coordinate from this frames motion offset
 	// do the z and x together
-	PXfloat ang = (L->pan - L->pan_adjust) * TWO_PI;
-	PXfloat cang = (PXfloat)PXcos(ang);
-	PXfloat sang = (PXfloat)PXsin(ang);
+	// PXfloat ang = (L->pan - L->pan_adjust) * TWO_PI;
+	//PXfloat cang = (PXfloat)PXcos(ang);
+	//PXfloat sang = (PXfloat)PXsin(ang);
 
 	// FIXME: x and z are not used currently...
 	//PXreal x = M->actor_xyz.x + PXfloat2PXreal(xnext * cang + znext * sang);

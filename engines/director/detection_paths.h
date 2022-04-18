@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -27,7 +26,6 @@ namespace Director {
 
 const char *directoryGlobs[] = {
 	"install",
-	"l_zone",
 	"win_data",						// L-ZONE
 	"data",
 	"gadget",						// Gadget
@@ -55,9 +53,18 @@ const char *directoryGlobs[] = {
 	"assets",						// Barbie Nail Designer
 	"fjpc",							// Forestia Jr
 	"movies",						// Mulle Meck (Gary Gadget) series
+	"winroot",
+	"setup",
+	"program files",
+	"tohd",
+	"terzio",
+	"flugzeuge bauen",
+	"willyhau",
+	"willyraumschiff",				// Willy Werkel (Mulle Meck) series
 	"demos",						// Headbone samplers
 	"blender",						// Blender CD-ROM magazines
 	"bilder",
+	"elk1",							// Blinky Bill Kindergarten
 	"endsoung",
 	"gerhelp",
 	"gervideo",
@@ -89,6 +96,7 @@ const char *directoryGlobs[] = {
 	"p2media",
 	"p3media",
 	"annat",						// Pettson & Findus
+	"bb",							// Blinky Bill
 	"fctdata",
 	"fct",					   		// Felix the Cat
 	"dayfiles",
@@ -101,11 +109,87 @@ const char *directoryGlobs[] = {
 	"deutsch",
 	"francais",						// Rename from Français
 	"italiano",						// Virtual Tourism Paris
-	"please copy to hd. G3",		// Rename from HDにｺﾋﾟｰして下さい。G3
+	"xn--HD-g73avcj4g7a5726ctwzw3ca1i6i",	   // HDにｺﾋﾟｰして下さい
+	"xn--HDG2-rw3c5o2dpa9kzb2170dd4tzyda5j4k", // HDにｺﾋﾟｰして下さい。G2
+	"xn--HDG3-rw3c5o2dpa9kzb2170dd4tzyda5j4k", // HDにｺﾋﾟｰして下さい。G3
 	"_files_",						// The Gate
 	"popup",						// Pop Up Computer
 	"alpha",						// Interactive Alphabet
 	"technik",						// Glasklar Technology Interactive
+	"badday",
+	"copy to hdd",					// Rename from HDDにコピーしてください
+	"bdm",
+	"dkyasp",						// Bad Day on the Midway Japanese
+	"win_demo",
+	"file",
+	"mfile",
+	"movie",						// Teichiku demos
+	"install_mac",
+	"install_win",
+	"copyto_hd",					// Incarnatia
+	"alcohol 101",
+	"audio",
+	"print",
+	"vids",							// Alcohol 101
+	"dir_data",						// Garage
+	"cd extra",
+	"catalog",						// Sarah McLachlan ECD (NettMedia)
+	"hd",							// Grammar Playtime
+	"scr",
+	"scr_mov",						// Cardcaptor Sakura screen savers
+	"dicfiles",						// Time Blazers series
+	"docs",							// Enhanced CDs
+	"anim",							// 1 vs 100 (Mindscape)
+	"lingo expo",					// D4 sample movies
+	"main",							// Meet MediaBand
+	"toinstall",					// Jönssonligan series
+	"pingucd",
+	"instdata",						// Pingu
+	"bellinin bikinit",				// Bellini 3 (Finnish)
+	"put me on your desktop",		// Betty Page
+	"abc",							// Alphabet Train
+	"123",							// Ktar Alarkam
+	"vlaams",
+	"ned",							// I Spy School Days (Dutch)
+	"fl1",
+	"flipper",						// Flipper games (Yoram Gross)
+	"cipdemo",
+	"cipher",						// Jewels of the Oracle
+	"gems",							// Gems of Darkness / Jewels II
+	"corel cd home",
+	"the cassandra galleries",		// Cassandra Galleries
+	"nnnn",							// Nikolai Toy Makers
+	"knights",						// Nikolai's Knights
+	"birdmpc",						// Bird's Life
+	"nemcina",						// Německá gramatika
+	"hdfiles",
+	"creator",						// Get a Head series
+	"32bit",
+	"sd",
+	"mac install",
+	"slam dunk typing",
+	"typing",						// Slam Dunk Typing
+	"ceremony",
+	"copytohd",						// Ceremony of Innocence
+	"app",							// Rodney's Wonder Window
+	"settings",						// Saguaro & the City
+	"xn--t8jo8k",					// Perfect Blue screen savers
+	"maccurio",
+	"wincurio",						// Curio City
+	"a.d.a.m. the inside story 1.1", // ADAM
+	"nine month miracle 1.0",		// Nine Month Miracle
+	"_setup",
+	"bin",
+	"adam resources",				// ADAM Software Products
+	"material",						// NY Yankees Yearbook
+	"NAV",
+	"SSWARLCK",						// Spaceship Warlock (Windows)
+	"InsMilo",						// Milo and the Magical Stones
+	"dir",
+	"CHRISTMAS PRESENT",			// Christmas Present
+	"Subotnick Hummingbirds",		// All My Hummingbirds Have Alibis
+	"Silly Noisy House Folder",		// A Silly Noisy House
+	"Installer Files",				// Encarta '95
 	0
 };
 

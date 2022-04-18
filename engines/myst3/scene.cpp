@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,8 +27,6 @@
 #include "engines/myst3/myst3.h"
 #include "engines/myst3/node.h"
 #include "engines/myst3/state.h"
-
-#include "graphics/colormasks.h"
 
 #include "math/vector2d.h"
 
@@ -106,12 +103,12 @@ void Scene::drawSunspotFlare(const SunSpot &s) {
 	Common::Rect frame = Common::Rect(Renderer::kOriginalWidth, Renderer::kFrameHeight);
 
 	uint8 a = (uint8)(s.intensity * s.radius);
-	uint8 r, g, b;
-	Graphics::colorToRGB< Graphics::ColorMasks<888> >(s.color, r, g, b);
-	uint32 color = Graphics::ARGBToColor< Graphics::ColorMasks<8888> >(a, r, g, b);
+	uint8 r = (s.color >> 16) & 0xFF;
+	uint8 g = (s.color >>  8) & 0xFF;
+	uint8 b = (s.color >>  0) & 0xFF;
 
 	_vm->_gfx->selectTargetWindow(this, false, true);
-	_vm->_gfx->drawRect2D(frame, color);
+	_vm->_gfx->drawRect2D(frame, a, r, g, b);
 }
 
 

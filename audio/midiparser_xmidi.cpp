@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -83,7 +82,7 @@ protected:
 
 	void parseNextEvent(EventInfo &info) override;
 
-	virtual void resetTracking() override {
+	void resetTracking() override {
 		MidiParser::resetTracking();
 		_loopCount = -1;
 	}
@@ -95,7 +94,7 @@ public:
 	MidiParser_XMIDI(XMidiCallbackProc proc, void *data, int8 source = -1) :
 			_callbackProc(proc),
 			_callbackData(data),
-			_newTimbreListDriver(0),
+			_newTimbreListDriver(nullptr),
 			_source(source),
 			_loopCount(-1) {
 		memset(_loop, 0, sizeof(_loop));
@@ -130,14 +129,14 @@ bool MidiParser_XMIDI::hasJumpIndex(uint8 index) {
 	if (_activeTrack >= _numTracks)
 		return false;
 
-	return index < MAXIMUM_TRACK_BRANCHES && _trackBranches[_activeTrack][index] != 0;
+	return index < MAXIMUM_TRACK_BRANCHES && _trackBranches[_activeTrack][index] != nullptr;
 }
 
 bool MidiParser_XMIDI::jumpToIndex(uint8 index, bool stopNotes) {
 	if (_activeTrack >= _numTracks || _pause)
 		return false;
 
-	if (index >= MAXIMUM_TRACK_BRANCHES || _trackBranches[_activeTrack][index] == 0) {
+	if (index >= MAXIMUM_TRACK_BRANCHES || _trackBranches[_activeTrack][index] == nullptr) {
 		warning("MidiParser-XMIDI: jumpToIndex called with invalid sequence branch index %x", index);
 		return false;
 	}

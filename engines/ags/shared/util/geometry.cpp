@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,20 +15,14 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "ags/shared/util/geometry.h"
 #include "ags/lib/std/algorithm.h"
-//include <cmath>
 
 namespace AGS3 {
-//namespace AGS
-//{
-//namespace Common
-//{
 
 bool AreRectsIntersecting(const Rect &r1, const Rect &r2) { // NOTE: remember that in AGS Y axis is pointed downwards
 	return r1.Left <= r2.Right && r1.Right >= r2.Left &&
@@ -50,7 +44,7 @@ float DistanceBetween(const Rect &r1, const Rect &r2) {
 	);
 	int inner_width = std::max(0, rect_outer.GetWidth() - r1.GetWidth() - r2.GetWidth());
 	int inner_height = std::max(0, rect_outer.GetHeight() - r1.GetHeight() - r2.GetHeight());
-	return std::sqrt((inner_width ^ 2) + (inner_height ^ 2));
+	return static_cast<float>(std::sqrt((inner_width ^ 2) + (inner_height ^ 2)));
 }
 
 Size ProportionalStretch(int dest_w, int dest_h, int item_w, int item_h) {
@@ -125,6 +119,4 @@ Rect PlaceInRect(const Rect &place, const Rect &item, const RectPlacement &place
 	}
 }
 
-//} // namespace Common
-//} // namespace AGS
 } // namespace AGS3

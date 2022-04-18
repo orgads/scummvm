@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -100,10 +99,18 @@ void GravityProcess::run() {
 	int32 ix, iy, iz;
 	item->getLocation(ix, iy, iz);
 
-	if (iz < -1000) {
-		// Shouldn't happen as item should always hit the floor.
+	//
+	// Shouldn't go very negative as item should always hit the floor.
+	//
+	// Slight hack here because Mordea falls through the floor when she
+	// wakes up - set a value big enough that the next event can happen
+	// before we destroy the actor.
+	//
+	if (iz < -5000) {
 		warning("Item %d fell too far, stopping GravityProcess", _itemNum);
 		terminate();
+		_itemNum = 0;
+		item->destroy();
 		return;
 	}
 
@@ -166,7 +173,7 @@ void GravityProcess::run() {
 				int approx_v = ABS(_xSpeed) + ABS(_ySpeed) + _zSpeed;
 
 				// Apply an impulse on the x/y plane in a random direction
-				// in a 180 degree pie around the orginal vector in x/y
+				// in a 180 degree pie around the original vector in x/y
 				double heading_r = atan2((double)_ySpeed, (double)_xSpeed);
 				double deltah_r = static_cast<double>(getRandom())
 				                  * M_PI / U8_RAND_MAX - M_PI / 2;
@@ -345,8 +352,8 @@ void GravityProcess::actorFallStoppedCru(Actor *actor, int height) {
 		 lastanim != Animation::kneelCombatRollRight &&
 		 lastanim != Animation::run &&
 		 lastanim != Animation::jumpForward &&
-		 lastanim != Animation::unknownAnim30 &&
-		 lastanim != Animation::brightKneelAndFireLargeWeapon)) {
+		 lastanim != Animation::combatRunSmallWeapon &&
+		 lastanim != Animation::combatRunLargeWeapon)) {
 		// play land animation, overriding other animations
 		kernel->killProcesses(_itemNum, ActorAnimProcess::ACTOR_ANIM_PROC_TYPE, false); // CONSTANT!
 		ProcId lpid = actor->doAnim(Animation::jumpLanding, dir_current);

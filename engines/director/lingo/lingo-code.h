@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -56,17 +55,17 @@ void c_starts();
 
 void c_intersects();
 void c_within();
-Datum chunkRef(ChunkType type, int startChunk, int endChunk, const Datum &src, bool returnLast = false);
+Datum chunkRef(ChunkType type, int startChunk, int endChunk, const Datum &src);
 Datum lastChunk(ChunkType type, const Datum &src);
 Datum readChunkRef(const Datum &src);
 void c_of();
-void c_charOf();
+void c_charToOfRef();
 void c_charToOf();
-void c_itemOf();
+void c_itemToOfRef();
 void c_itemToOf();
-void c_lineOf();
+void c_lineToOfRef();
 void c_lineToOf();
-void c_wordOf();
+void c_wordToOfRef();
 void c_wordToOf();
 
 void c_constpush();
@@ -76,7 +75,15 @@ void c_floatpush();
 void c_stringpush();
 void c_symbolpush();
 void c_namepush();
+void c_varrefpush();
+void c_globalrefpush();
+void c_localrefpush();
+void c_proprefpush();
 void c_varpush();
+void c_globalinit();
+void c_globalpush();
+void c_localpush();
+void c_proppush();
 void c_argcpush();
 void c_argcnoretpush();
 void c_arraypush();
@@ -85,8 +92,6 @@ void c_stackpeek();
 void c_stackdrop();
 void c_assign();
 bool verify(const Symbol &s);
-void c_eval();
-void c_setImmediate();
 
 void c_swap();
 
@@ -125,15 +130,12 @@ void c_procret();
 
 void c_mci();
 void c_mciwait();
-void c_goto();
-void c_gotoloop();
-void c_gotonext();
-void c_gotoprevious();
-
-void c_play();
 
 void c_open();
+void c_delete();
 void c_hilite();
+void c_field();
+void c_fieldref();
 
 // custom instructions for testing
 void c_asserterror();
@@ -147,7 +149,7 @@ void cb_unk2();
 // bytecode-related instructions
 void cb_call();
 void cb_delete();
-void cb_field();
+void cb_hilite();
 void cb_globalassign();
 void cb_globalpush();
 void cb_list();

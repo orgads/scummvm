@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -96,13 +95,29 @@
 
 namespace Scumm {
 
-Player_V3M::Player_V3M(ScummEngine *scumm, Audio::Mixer *mixer)
-	: Player_Mac(scumm, mixer, 5, 0x1E, true) {
+Player_V3M::Player_V3M(ScummEngine *scumm, Audio::Mixer *mixer, bool lowQuality)
+	: Player_Mac(scumm, mixer, 5, lowQuality ? 01 : 0x1E, true) {
 	assert(_vm->_game.id == GID_LOOM);
 
-	// Channel 0 seems to be what was played on low-end macs, that couldn't
-	// handle multi-channel music and play the game at the same time. I'm
-	// not sure if stream 4 is ever used, but let's use it just in case.
+	// This is guesswork, but there are five music channels.
+	//
+	// Channel 0 seems to be a one-voice arrangement of the melody,
+	// presumably intended for low-end Macs. So that is used for the
+	// low-quality music.
+	//
+	// Channels 1-4 are the full arrangement of the melody, so that is what
+	// is used by default. Channel 4 never seems to be used - in fact, most
+	// of the time it uses the "silent" instrument, but we include it
+	// anyway, just in case.
+	//
+	// I wish I could hear this on real hardware, because Mac emulation is
+	// still a bit wonky here. But the low quality music seems to be close
+	// to what I hear in Mini vMac, when emulating an old black and white
+	// Mac, and the standard music is close to what I hear in Basilisk II.
+	//
+	// The original could further degrade the sound quality by playing it
+	// through the Mac synth instead of using digitized instruments, but
+	// we don't support that at all.
 }
 
 bool Player_V3M::loadMusic(const byte *ptr) {
@@ -124,8 +139,7 @@ bool Player_V3M::loadMusic(const byte *ptr) {
 		return false;
 	}
 
-	uint i;
-	for (i = 0; i < 5; i++) {
+	for (int i = 0; i < 5; i++) {
 		int instrument = READ_BE_UINT16(ptr + 20 + 2 * i);
 		int offset = READ_BE_UINT16(ptr + 30 + 2 * i);
 

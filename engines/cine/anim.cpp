@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -217,8 +216,8 @@ int16 fixAnimDataTableEndFrame(int entry, int16 startFrame, int16 endFrame) {
 	}
 }
 
-AnimData::AnimData() : _width(0), _height(0), _bpp(0), _var1(0), _data(NULL),
-	_mask(NULL), _fileIdx(-1), _frameIdx(-1), _realWidth(0), _size(0) {
+AnimData::AnimData() : _width(0), _height(0), _bpp(0), _var1(0), _data(nullptr),
+	_mask(nullptr), _fileIdx(-1), _frameIdx(-1), _realWidth(0), _size(0) {
 
 	memset(_name, 0, sizeof(_name));
 }
@@ -228,7 +227,7 @@ AnimData::AnimData() : _width(0), _height(0), _bpp(0), _var1(0), _data(NULL),
  */
 AnimData::AnimData(const AnimData &src) : _width(src._width),
 	_height(src._height), _bpp(src._bpp), _var1(src._var1),
-	_data(NULL), _mask(NULL), _fileIdx(src._fileIdx),
+	_data(nullptr), _mask(nullptr), _fileIdx(src._fileIdx),
 	_frameIdx(src._frameIdx), _realWidth(src._realWidth), _size(src._size) {
 
 	if (src._data) {
@@ -314,8 +313,8 @@ void AnimData::load(byte *d, int type, uint16 w, uint16 h, int16 file,
 	_width = w * 2;
 	_height = h;
 	_var1 = _width >> 3;
-	_data = NULL;
-	_mask = NULL;
+	_data = nullptr;
+	_mask = nullptr;
 	_fileIdx = file;
 	_frameIdx = frame;
 	memset(_name, 0, sizeof(_name));
@@ -396,8 +395,8 @@ void AnimData::clear() {
 	_height = 0;
 	_bpp = 0;
 	_var1 = 0;
-	_data = NULL;
-	_mask = NULL;
+	_data = nullptr;
+	_mask = nullptr;
 	_fileIdx = -1;
 	_frameIdx = -1;
 	memset(_name, 0, sizeof(_name));
@@ -413,8 +412,8 @@ void AnimData::save(Common::OutSaveFile &fHandle) const {
 	fHandle.writeUint16BE(_var1);
 	fHandle.writeUint16BE(_bpp);
 	fHandle.writeUint16BE(_height);
-	fHandle.writeUint32BE(_data != NULL); // _data
-	fHandle.writeUint32BE(_mask != NULL); // _mask
+	fHandle.writeUint32BE(_data != nullptr); // _data
+	fHandle.writeUint32BE(_mask != nullptr); // _mask
 	fHandle.writeUint16BE(_fileIdx);
 	fHandle.writeUint16BE(_frameIdx);
 	fHandle.write(_name, sizeof(_name));

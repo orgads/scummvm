@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -34,8 +33,7 @@ namespace Shared {
 
 FileStream::FileStream(const String &file_name, FileOpenMode open_mode, FileWorkMode work_mode,
                        DataEndianess stream_endianess)
-	: DataStream(stream_endianess), _writeBuffer(DisposeAfterUse::YES),
-	  _workMode(work_mode), _openMode(open_mode), _file(nullptr), _outSave(nullptr) {
+		: DataStream(stream_endianess), _workMode(work_mode), _file(nullptr) {
 	Open(file_name, open_mode, work_mode);
 }
 
@@ -48,15 +46,7 @@ bool FileStream::HasErrors() const {
 }
 
 void FileStream::Close() {
-	if (_outSave) {
-		_outSave->write(_writeBuffer.getData(), _writeBuffer.size());
-		_outSave->finalize();
-		delete _outSave;
-
-	} else if (_file) {
-		delete _file;
-	}
-
+	delete _file;
 	_file = nullptr;
 }
 
@@ -78,15 +68,11 @@ bool FileStream::EOS() const {
 }
 
 soff_t FileStream::GetLength() const {
-	if (IsValid()) {
-		soff_t pos = (soff_t)ags_ftell(_file);
-		ags_fseek(_file, 0, SEEK_END);
-		soff_t end = (soff_t)ags_ftell(_file);
-		ags_fseek(_file, pos, SEEK_SET);
-		return end;
-	}
-
-	return 0;
+	soff_t pos = (soff_t)ags_ftell(_file);
+	ags_fseek(_file, 0, SEEK_END);
+	soff_t end = (soff_t)ags_ftell(_file);
+	ags_fseek(_file, pos, SEEK_SET);
+	return end;
 }
 
 soff_t FileStream::GetPosition() const {
@@ -150,10 +136,6 @@ int32_t FileStream::WriteByte(uint8_t val) {
 }
 
 bool FileStream::Seek(soff_t offset, StreamSeek origin) {
-	if (!_file) {
-		return false;
-	}
-
 	int stdclib_origin;
 	switch (origin) {
 	case kSeekBegin:
@@ -176,25 +158,28 @@ bool FileStream::Seek(soff_t offset, StreamSeek origin) {
 void FileStream::Open(const String &file_name, FileOpenMode open_mode, FileWorkMode work_mode) {
 	if (open_mode == kFile_Open) {
 		if (!file_name.CompareLeftNoCase(SAVE_FOLDER_PREFIX)) {
-			_file = g_system->getSavefileManager()->openForLoading(
-			            file_name.GetCStr() + strlen(SAVE_FOLDER_PREFIX));
+			String saveName = getSaveName(file_name);
+			_file = g_system->getSavefileManager()->openForLoading(saveName);
 
 		} else {
 			// First try to open file in game folder
 			Common::File *f = new Common::File();
-			if (!f->open(getFSNode(file_name.GetCStr()))) {
+			Common::FSNode fsNode = getFSNode(file_name.GetCStr());
+
+			if (fsNode.exists() && f->open(fsNode)) {
+				_file = f;
+			} else {
 				delete f;
 				_file = nullptr;
-			} else {
-				_file = f;
 			}
 		}
 
 	} else {
+		String saveName;
 
 		if (!file_name.CompareLeftNoCase(SAVE_FOLDER_PREFIX)) {
-			_outSave = g_system->getSavefileManager()->openForSaving(
-			               file_name.GetCStr() + strlen(SAVE_FOLDER_PREFIX), false);
+			saveName = getSaveName(file_name);
+
 		} else {
 			Common::String fname = file_name;
 			if (fname.hasPrefix("./"))
@@ -204,16 +189,52 @@ void FileStream::Open(const String &file_name, FileOpenMode open_mode, FileWorkM
 			else if (fname.findFirstOf('/') != Common::String::npos)
 				error("Invalid attempt to create file - %s", fname.c_str());
 
-			_outSave = g_system->getSavefileManager()->openForSaving(fname, false);
+			saveName = fname;
 		}
 
-		if (!_outSave)
-			error("Invalid attempt to create file - %s", file_name.GetCStr());
+		_file = openForWriting(saveName, open_mode, work_mode);
 
-		// Any data written has to first go through the memory stream buffer,
-		// since the savegame code uses Seeks, which OutSaveFile doesn't support
-		_file = &_writeBuffer;
+		if (!_file)
+			error("Invalid attempt to create file - %s", file_name.GetCStr());
 	}
+}
+
+
+String FileStream::getSaveName(const String &filename) {
+	return String(filename.GetCStr() + strlen(SAVE_FOLDER_PREFIX));
+}
+
+Common::OutSaveFile *FileStream::openForWriting(const String &saveName, FileOpenMode open_mode, FileWorkMode work_mode) {
+	assert(open_mode != kFile_Open);
+
+	if (work_mode == kFile_Read || work_mode == kFile_ReadWrite)
+		// In the original these modes result in [aw]+b, which seems to result
+		// in a file with arbitrary reading, but writing always appending
+		warning("FileOpen: independent read/write positions not supported");
+
+	Common::InSaveFile *existing = nullptr;
+	if (open_mode == kFile_Create &&
+		(existing = g_system->getSavefileManager()->openForLoading(saveName)) != nullptr) {
+		// kFile_Create mode allows opening existing files for read/write.
+		// Since ScummVM doesn't support this via the save file manager,
+		// we need to do a bit of a hack and load the existing contents,
+		// then recreate the file and write out the contents so that further
+		// writes will be possible without affecting the old data
+		size_t fileSize = existing->size();
+		byte *data = new byte[fileSize];
+		existing->read(data, fileSize);
+		delete existing;
+
+		Common::OutSaveFile *out = g_system->getSavefileManager()->openForSaving(saveName, false);
+		assert(out);
+
+		out->write(data, fileSize);
+		delete[] data;
+
+		return out;
+	}
+
+	return g_system->getSavefileManager()->openForSaving(saveName, false);
 }
 
 } // namespace Shared

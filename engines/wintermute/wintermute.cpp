@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,7 +30,6 @@
 #include "common/tokenizer.h"
 #include "common/translation.h"
 
-#include "engines/util.h"
 #include "engines/wintermute/ad/ad_game.h"
 #include "engines/wintermute/wintermute.h"
 #include "engines/wintermute/debugger.h"
@@ -102,21 +100,6 @@ bool WintermuteEngine::hasFeature(EngineFeature f) const {
 }
 
 Common::Error WintermuteEngine::run() {
-	// Initialize graphics using following:
-	Graphics::PixelFormat format(4, 8, 8, 8, 8, 24, 16, 8, 0);
-	if (_gameDescription->adDesc.flags & GF_LOWSPEC_ASSETS) {
-		initGraphics(320, 240, &format);
-#ifdef ENABLE_FOXTAIL
-	} else if (BaseEngine::isFoxTailCheck(_gameDescription->targetExecutable)) {
-		initGraphics(640, 360, &format);
-#endif
-	} else {
-		initGraphics(800, 600, &format);
-	}
-	if (g_system->getScreenFormat() != format) {
-		return Common::kUnsupportedColorMode;
-	}
-
 	// Create debugger console. It requires GFX to be initialized
 	_dbgController = new DebuggerController(this);
 	_debugger = new Console(this);
@@ -195,7 +178,7 @@ int WintermuteEngine::init() {
 	#ifndef ENABLE_WME3D
 	// check if game require 3D capabilities
 	if (instance.getFlags() & GF_3D) {
-		GUI::MessageDialog dialog(_("This game requires 3D capabilities that are out ScummVM scope. As such, it"
+		GUI::MessageDialog dialog(_("This game requires 3D capabilities, which is not compiled in. As such, it"
 			" is likely to be unplayable totally or partially."), _("Start anyway"), _("Cancel"));
 		if (dialog.runModal() != GUI::kMessageOK) {
 			delete _game;

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -82,7 +81,7 @@ inline const char *ScriptVSprintf(char *buffer, size_t buf_length, const char *f
 	return RuntimeScriptValue()
 
 //-----------------------------------------------------------------------------
-// Calls to ScriptSprintf
+// Calls to ScriptSprintf with automatic translation
 
 #define API_SCALL_SCRIPT_SPRINTF(FUNCTION, PARAM_COUNT) \
 	ASSERT_PARAM_COUNT(FUNCTION, PARAM_COUNT); \
@@ -93,6 +92,15 @@ inline const char *ScriptVSprintf(char *buffer, size_t buf_length, const char *f
 	ASSERT_OBJ_PARAM_COUNT(METHOD, PARAM_COUNT); \
 	char ScSfBuffer[STD_BUFFER_SIZE]; \
 	const char *scsf_buffer = ScriptSprintf(ScSfBuffer, STD_BUFFER_SIZE, get_translation(params[PARAM_COUNT - 1].Ptr), params + PARAM_COUNT, param_count - PARAM_COUNT)
+
+//-----------------------------------------------------------------------------
+// Calls to ScriptSprintf without translation
+
+#define API_SCALL_SCRIPT_SPRINTF_PURE(FUNCTION, PARAM_COUNT) \
+    ASSERT_PARAM_COUNT(FUNCTION, PARAM_COUNT); \
+    char ScSfBuffer[STD_BUFFER_SIZE]; \
+    const char *scsf_buffer = ScriptSprintf(ScSfBuffer, STD_BUFFER_SIZE, params[PARAM_COUNT - 1].Ptr, params + PARAM_COUNT, param_count - PARAM_COUNT)
+
 
 //-----------------------------------------------------------------------------
 // Calls to ScriptSprintfV (unsafe plugin variant)
@@ -272,9 +280,13 @@ inline const char *ScriptVSprintf(char *buffer, size_t buf_length, const char *f
 #define API_SCALL_BOOL(FUNCTION) \
 	return RuntimeScriptValue().SetInt32AsBool(FUNCTION())
 
-#define API_SCALL_BOOL_OBJ(FUNCTION, P1CLASS) \
+#define API_SCALL_BOOL_POBJ(FUNCTION, P1CLASS) \
 	ASSERT_PARAM_COUNT(FUNCTION, 1); \
 	return RuntimeScriptValue().SetInt32AsBool(FUNCTION((P1CLASS*)params[0].Ptr))
+
+#define API_SCALL_BOOL_PINT(FUNCTION) \
+    ASSERT_PARAM_COUNT(FUNCTION, 1); \
+    return RuntimeScriptValue().SetInt32AsBool(FUNCTION(params[0].IValue))
 
 #define API_SCALL_BOOL_POBJ_PINT(FUNCTION, P1CLASS) \
 	ASSERT_PARAM_COUNT(FUNCTION, 2); \

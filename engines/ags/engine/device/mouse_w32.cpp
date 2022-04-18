@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -40,7 +39,7 @@ enum {
 	NONE = -1, LEFT = 0, RIGHT = 1, MIDDLE = 2
 };
 
-static const int MB_ARRAY[3] = { 1, 2, 4 };
+// static const int MB_ARRAY[3] = { 1, 2, 4 };
 
 void mgetgraphpos() {
 	// TODO: review and possibly rewrite whole thing;
@@ -192,11 +191,16 @@ float Mouse::GetSpeed() {
 }
 
 void Mouse::UpdateGraphicArea() {
-	// TODO
+	Mouse::ControlRect = _GP(GameScaling).ScaleRange(_GP(play).GetMainViewport());
+	Debug::Printf("Mouse cursor graphic area: (%d,%d)-(%d,%d) (%dx%d)",
+		Mouse::ControlRect.Left, Mouse::ControlRect.Top, Mouse::ControlRect.Right, Mouse::ControlRect.Bottom,
+		Mouse::ControlRect.GetWidth(), Mouse::ControlRect.GetHeight());
 }
 
 void Mouse::SetMovementControl(bool flag) {
-	// TODO
+	ControlEnabled = false;
+	warning("movement control not supported, mouse control can't be enabled");
+	ags_clear_mouse_movement();
 }
 
 } // namespace AGS3

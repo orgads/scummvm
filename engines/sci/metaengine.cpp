@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -32,6 +31,9 @@
 #include "graphics/surface.h"
 
 #include "sci/sci.h"
+#include "sci/dialogs.h"
+#include "sci/engine/features.h"
+#include "sci/engine/guest_additions.h"
 #include "sci/engine/kernel.h"
 #include "sci/engine/savegame.h"
 #include "sci/engine/script.h"
@@ -281,7 +283,10 @@ public:
 
 	// A fallback detection method. This is not ideal as all detection lives in MetaEngine, but
 	// here fb detection has many engine dependencies.
-	virtual ADDetectedGame fallbackDetectExtern(uint md5Bytes, const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const override;
+	ADDetectedGame fallbackDetectExtern(uint md5Bytes, const FileMap &allFiles, const Common::FSList &fslist, ADDetectedGameExtraInfo **extra) const override;
+
+	void registerDefaultSettings(const Common::String &target) const override;
+	GUI::OptionsContainerWidget *buildEngineOptionsWidgetDynamic(GUI::GuiObject *boss, const Common::String &name, const Common::String &target) const override;
 };
 
 Common::Error SciMetaEngine::createInstance(OSystem *syst, Engine **engine, const ADGameDescription *desc) const {
@@ -310,21 +315,15 @@ bool SciMetaEngine::hasFeature(MetaEngineFeature f) const {
 		(f == kSavesSupportMetaInfo) ||
 		(f == kSavesSupportThumbnail) ||
 		(f == kSavesSupportCreationDate) ||
+		(f == kSimpleSavesNames) ||
 		(f == kSavesSupportPlayTime);
 }
 
 bool SciEngine::hasFeature(EngineFeature f) const {
 	return
 		(f == kSupportsReturnToLauncher) ||
-		(f == kSupportsLoadingDuringRuntime); // ||
-		//(f == kSupportsSavingDuringRuntime);
-		// We can't allow saving through ScummVM menu, because
-		//  a) lots of games don't like saving everywhere (e.g. castle of dr. brain)
-		//  b) some games even dont allow saving in certain rooms (e.g. lsl6)
-		//  c) somehow some games even get mad when doing this (execstackbase was 1 all of a sudden in lsl3)
-		//  d) for sci0/sci01 games we should at least wait till status bar got drawn, although this may not be enough
-		// we can't make sure that the scripts are fine with us saving at a specific location, doing so may work sometimes
-		//  and some other times it won't work.
+		(f == kSupportsLoadingDuringRuntime) ||
+		(f == kSupportsSavingDuringRuntime);
 }
 
 SaveStateList SciMetaEngine::listSaves(const char *target) const {
@@ -351,14 +350,10 @@ SaveStateList SciMetaEngine::listSaves(const char *target) const {
 					delete in;
 					continue;
 				}
-				SaveStateDescriptor descriptor(slotNr, meta.name);
+				SaveStateDescriptor descriptor(this, slotNr, meta.name);
 
-				if (slotNr == 0) {
-					// ScummVM auto-save slot
-					descriptor.setWriteProtectedFlag(true);
+				if (descriptor.isAutosave()) {
 					hasAutosave = true;
-				} else {
-					descriptor.setWriteProtectedFlag(false);
 				}
 
 				saveList.push_back(descriptor);
@@ -368,7 +363,7 @@ SaveStateList SciMetaEngine::listSaves(const char *target) const {
 	}
 
 	if (!hasAutosave) {
-		SaveStateDescriptor descriptor(0, _("(Autosave)"));
+		SaveStateDescriptor descriptor(this, 0, _("(Autosave)"));
 		descriptor.setLocked(true);
 		saveList.push_back(descriptor);
 	}
@@ -381,16 +376,7 @@ SaveStateList SciMetaEngine::listSaves(const char *target) const {
 SaveStateDescriptor SciMetaEngine::querySaveMetaInfos(const char *target, int slotNr) const {
 	const Common::String fileName = Common::String::format("%s.%03d", target, slotNr);
 	Common::InSaveFile *in = g_system->getSavefileManager()->openForLoading(fileName);
-	SaveStateDescriptor descriptor(slotNr, "");
-
-	if (slotNr == 0) {
-		// ScummVM auto-save slot
-		descriptor.setWriteProtectedFlag(true);
-		descriptor.setDeletableFlag(false);
-	} else {
-		descriptor.setWriteProtectedFlag(false);
-		descriptor.setDeletableFlag(true);
-	}
+	SaveStateDescriptor descriptor(this, slotNr, "");
 
 	if (in) {
 		SavegameMetadata meta;
@@ -454,10 +440,8 @@ Common::Error SciEngine::loadGameState(int slot) {
 
 Common::Error SciEngine::saveGameState(int slot, const Common::String &desc, bool isAutosave) {
 	const char *version = "";
-	if (gamestate_save(_gamestate, slot, desc, version)) {
-		return Common::kNoError;
-	}
-	return Common::kWritingFailed;
+	g_sci->_soundCmd->pauseAll(false); // unpause music (we can't have it paused during save)
+	return gamestate_save(_gamestate, slot, desc, version) ? Common::kNoError : Common::kWritingFailed;
 }
 
 bool SciEngine::canLoadGameStateCurrently() {
@@ -476,8 +460,10 @@ bool SciEngine::canLoadGameStateCurrently() {
 }
 
 bool SciEngine::canSaveGameStateCurrently() {
-	// see comment about kSupportsSavingDuringRuntime in SciEngine::hasFeature
-	return false;
+	return
+		_features->canSaveFromGMM() &&
+		!_gamestate->executionStackBase &&
+		_guestAdditions->userHasControl();
 }
 
 } // End of namespace Sci
@@ -516,7 +502,7 @@ static char s_fallbackGameIdBuf[256];
 static ADGameDescription s_fallbackDesc = {
 	"",
 	"",
-	AD_ENTRY1(0, 0), // This should always be AD_ENTRY1(0, 0) in the fallback descriptor
+	AD_ENTRY1(nullptr, nullptr), // This should always be AD_ENTRY1(0, 0) in the fallback descriptor
 	Common::UNK_LANG,
 	Common::kPlatformDOS,
 	ADGF_NO_FLAGS,
@@ -716,6 +702,18 @@ ADDetectedGame SciMetaEngine::fallbackDetectExtern(uint md5Bytes, const FileMap 
 	constructFallbackDetectionEntry(gameId, platform, sciVersion, language, gameViews == kViewEga, isCD, isDemo);
 
 	return ADDetectedGame(&s_fallbackDesc);
+}
+
+void SciMetaEngine::registerDefaultSettings(const Common::String &target) const {
+	for (const ADExtraGuiOptionsMap *entry = optionsList; entry->guioFlag; ++entry)
+		ConfMan.registerDefault(entry->option.configOption, entry->option.defaultState);
+
+	for (const PopUpOptionsMap *entry = popUpOptionsList; entry->guioFlag; ++entry)
+		ConfMan.registerDefault(entry->configOption, entry->defaultState);
+}
+
+GUI::OptionsContainerWidget *SciMetaEngine::buildEngineOptionsWidgetDynamic(GUI::GuiObject *boss, const Common::String &name, const Common::String &target) const {
+	return new OptionsWidget(boss, name, target);
 }
 
 } // End of namespace Sci

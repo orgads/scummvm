@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -549,7 +548,7 @@ int AgiEngine::loadGame(const Common::String &fileName, bool checkId) {
 
 	// Those are not serialized
 	for (i = 0; i < MAX_CONTROLLERS; i++) {
-		_game.controllerOccured[i] = false;
+		_game.controllerOccurred[i] = false;
 	}
 
 	if (saveVersion >= 7) {
@@ -753,8 +752,7 @@ int AgiEngine::loadGame(const Common::String &fileName, bool checkId) {
 	// copy everything over (we should probably only copy over the remaining parts of the screen w/o play screen
 	_gfx->copyDisplayToScreen();
 
-	// Sync volume settings from ScummVM system settings, so that VM volume variable is overwritten
-	setVolumeViaSystemSetting();
+	applyVolumeToMixer();
 
 	return errOK;
 }
@@ -977,7 +975,7 @@ bool AgiEngine::loadGameDialog() {
 // If we fail, return false, so that the regular saved game dialog is called
 // Original AGI was limited to 12 saves, we are effectively limited to 100 saves at the moment.
 //
-// btw. this also means that entering an existant name in Mixed Up Mother Goose will effectively overwrite
+// btw. this also means that entering an existent name in Mixed Up Mother Goose will effectively overwrite
 // that saved game. This is also what original AGI did.
 bool AgiEngine::saveGameAutomatic() {
 	int16 automaticSaveGameSlotId = 0;

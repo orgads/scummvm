@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,6 +23,7 @@
 #define AUDIO_MT32GM_H
 
 #include "audio/mididrv.h"
+#include "audio/mididrv_ms.h"
 #include "common/mutex.h"
 #include "common/queue.h"
 
@@ -60,18 +60,12 @@
  *   or override the mapMT32InstrumentToGM and mapGMInstrumentToMT32 functions
  *   for more advanced mapping algorithms.
  *
- * - User volume settings
- *   The driver will scale the MIDI channel volume using the user specified
- *   volume settings. Just call syncSoundSettings when the user has changed the
- *   volume settings. Set the USER_VOLUME_SCALING property to false to disable
- *   this functionality.
- *
  * - Reverse stereo
  *   If the game has MIDI data with reversed stereo compared to the targeted
  *   output device, set the MIDI_DATA_REVERSE_PANNING property to reverse
  *   stereo. The driver wil automatically reverse stereo when MT-32 data is
  *   sent to a GM/GS device or the other way around.
-  *
+ *
  * - Correct Roland GS bank and drumkit selects
  *   Some games' MIDI data relies on a feature of the Roland SC-55 MIDI module
  *	 which automatically corrects invalid bank selects and drumkit program
@@ -88,19 +82,18 @@
  *   necessary amount of time for the MIDI device to process the message.
  *   Use clearSysExQueue to remove all messages from the queue, in case device
  *   initialization has to be aborted.
-*
+ *
  * - Multiple MIDI sources
  *   If the game plays multiple streams of MIDI data at the same time, each
  *   stream can be marked with a source number. This enables the following
- *   features:
+ *   feature:
  *   - Channel mapping
  *     If multiple sources use the same MIDI channels, the driver can map the
  *	   data channels to different output channels to avoid conflicts. Use
  *	   allocateSourceChannels to allocate output channels to a source. The
  *	   data channels are automatically mapped to the allocated output channels
  *	   during playback. The allocated channels are freed when the source is
- *	   deinitialized; this is done automatically when an End Of Track MIDI event
- *	   is received, or manually by calling deinitSource.
+ *	   deinitialized.
  *	   If you only have one source of MIDI data or the sources do not use
  *	   conflicting channels, you do not need to allocate channels - the channels
  *	   in the MIDI data will be used directly. If you do use this feature, you
@@ -114,42 +107,9 @@
  *	   using the allocateChannel function and MidiChannel objects. These two
  *	   methods are not coordinated in any way, so don't use both at the same
  *	   time.
- *	 - Music/SFX volume
- *	   Using setSourceType a MIDI source can be designated as music or sound
- *	   effects. The driver will then apply the appropriate user volume setting
- *	   to the MIDI channel volume. This setting sticks after deinitializing a
- *	   source, so if you use the same source numbers for the same types of MIDI
- *	   data, you don't need to set the source type repeatedly. The default setup
- *	   is music for source 0 and SFX for sources 1 and higher.
- *	 - Source volume
- *	   If the game changes the volume of the MIDI playback, you can use
- *	   setSourceVolume to set the volume level for a source. The driver will
- *	   then adjust the current MIDI channel volume and any received MIDI volume
- *	   controller messages. Use setSourceNeutralVolume to set the neutral volume
- *	   for a source (MIDI volume is not changed when source volume is at this
- *	   level; if it is lower or higher, MIDI volume is reduced or increased).
- *	 - Volume fading
- *	   If the game needs to gradually change the volume of the MIDI playback
- *	   (typically for a fade-out), you can use the startFade function. You can
- *	   check the status of the fade using isFading, and abort a fade using
- *	   abortFade. An active fade is automatically aborted when the fading source
- *	   is deinitialized.
- *	   The fading functionality uses the source volume, so you should not set
- *	   this while a fade is active. After the fade the source volume will remain
- *	   at the target level, so if you perform f.e. a fade-out, the source volume
- *	   will remain at 0. If you want to start playback again using this source,
- *	   use setSourceVolume to set the correct playback volume.
- *	   Note that when you stop MIDI playback, notes will not be immediately
- *	   silent but will gradually die out ("release"). So if you fade out a
- *	   source, stop playback, and immediately reset the source volume, the
- *	   note release will be audible. It is recommended to wait about 0.5s
- *	   before resetting the source volume.
  */
-class MidiDriver_MT32GM : public MidiDriver {
+class MidiDriver_MT32GM : public MidiDriver_Multisource {
 public:
-	static const uint8 MAXIMUM_SOURCES = 10;
-	static const uint16 DEFAULT_SOURCE_NEUTRAL_VOLUME = 255;
-
 	static const byte MT32_DEFAULT_INSTRUMENTS[8];
 	static const byte MT32_DEFAULT_PANNING[8];
 	static const uint8 MT32_DEFAULT_CHANNEL_VOLUME = 98;
@@ -157,25 +117,13 @@ public:
 	// Map for correcting Roland GS drumkit numbers.
 	static const uint8 GS_DRUMKIT_FALLBACK_MAP[128];
 
+	static const uint8 MT32_DISPLAY_NUM_CHARS = 20;
+	static const uint32 MT32_DISPLAY_MEMORY_ADDRESS = 0x20 << 14;
+
 protected:
 	static const uint8 MAXIMUM_MT32_ACTIVE_NOTES = 48;
 	static const uint8 MAXIMUM_GM_ACTIVE_NOTES = 96;
 
-	// Timeout between updates of the channel volume for fades (25ms)
-	static const uint16 FADING_DELAY = 25 * 1000;
-
-public:
-	enum SourceType {
-		SOURCE_TYPE_UNDEFINED,
-		SOURCE_TYPE_MUSIC,
-		SOURCE_TYPE_SFX
-	};
-
-	enum FadeAbortType {
-		FADE_ABORT_TYPE_END_VOLUME,
-		FADE_ABORT_TYPE_CURRENT_VOLUME,
-		FADE_ABORT_TYPE_START_VOLUME
-	};
 protected:
 	/**
 	 * This stores the values of the MIDI controllers for
@@ -193,6 +141,7 @@ protected:
 		byte program;
 		// The Roland GS instrument bank
 		byte instrumentBank;
+		byte channelPressure;
 
 		byte modulation;
 		// The volume specified by the MIDI data
@@ -204,17 +153,24 @@ protected:
 		byte expression;
 		bool sustain;
 
+		// The currently selected Registered Parameter Number
+		uint16 rpn;
+		byte pitchBendSensitivity;
+
 		MidiChannelControlData() : source(-1),
 			sourceVolumeApplied(false),
 			pitchWheel(MIDI_PITCH_BEND_DEFAULT),
 			program(0),
 			instrumentBank(0),
+			channelPressure(0),
 			modulation(0),
 			volume(0),
 			scaledVolume(0),
-			panPosition(0x40),
-			expression(0x7F),
-			sustain(false) { }
+			panPosition(MIDI_PANNING_DEFAULT),
+			expression(MIDI_EXPRESSION_DEFAULT),
+			sustain(false),
+			rpn(MIDI_RPN_NULL),
+			pitchBendSensitivity(0) { }
 	};
 
 	/**
@@ -289,6 +245,11 @@ protected:
 	};
 
 public:
+	// Callback hooked up to the driver wrapped by the MIDI driver
+	// object. Executes onTimer and the external callback set by
+	// the setTimerCallback function.
+	static void timerCallback(void *data);
+
 	MidiDriver_MT32GM(MusicType midiType);
 	~MidiDriver_MT32GM();
 
@@ -341,45 +302,6 @@ public:
 
 	void stopAllNotes(bool stopSustainedNotes = false) override;
 	/**
-	 * Starts a fade for all sources.
-	 * See the source-specific startFade function for more information.
-	 */
-	void startFade(uint16 duration, uint16 targetVolume);
-	/**
-	 * Starts a fade for a source. This will linearly increase or decrease the
-	 * volume of the MIDI channels used by the source to the specified target
-	 * value over the specified length of time.
-	 *
-	 * @param source The source to fade
-	 * @param duration The fade duration in ms
-	 * @param targetVolume The volume at the end of the fade
-	 */
-	void startFade(uint8 source, uint16 duration, uint16 targetVolume);
-	/**
-	 * Aborts any active fades for all sources.
-	 * See the source-specific abortFade function for more information.
-	 */
-	void abortFade(FadeAbortType abortType = FADE_ABORT_TYPE_END_VOLUME);
-	/**
-	 * Aborts an active fade for a source. Depending on the abort type, the
-	 * volume will remain at the current value or be set to the start or end
-	 * volume. If there is no active fade for the specified source, this
-	 * function does nothing.
-	 *
-	 * @param source The source that should have its fade aborted
-	 * @param abortType How to set the volume when aborting the fade (default:
-	 * set to the target fade volume).
-	 */
-	void abortFade(uint8 source, FadeAbortType abortType = FADE_ABORT_TYPE_END_VOLUME);
-	/**
-	 * Returns true if any source has an active fade.
-	 */
-	bool isFading();
-	/**
-	 * Returns true if the specified source has an active fade.
-	 */
-	bool isFading(uint8 source);
-	/**
 	 * Removes all SysEx messages in the SysEx queue.
 	 */
 	void clearSysExQueue();
@@ -409,49 +331,7 @@ public:
 	 * Deinitializes a source. This will abort active fades, free any output
 	 * channels allocated to the source and stop active notes.
 	 */
-	virtual void deinitSource(uint8 source);
-	/**
-	 * Sets the type for all sources (music or SFX).
-	 */
-	void setSourceType(SourceType type);
-	/**
-	 * Sets the type for a specific sources (music or SFX).
-	 */
-	void setSourceType(uint8 source, SourceType type);
-	/**
-	 * Sets the volume for all sources.
-	 */
-	void setSourceVolume(uint16 volume);
-	/**
-	 * Sets the volume for this source. The volume values in the MIDI data sent
-	 * by this source will be scaled by the source volume.
-	 */
-	virtual void setSourceVolume(uint8 source, uint16 volume);
-	void setSourceNeutralVolume(uint16 volume);
-	/**
-	 * Sets the neutral volume for this source. If the source volume is at this
-	 * level, the volume values in the MIDI data sent by this source will not
-	 * be changed. At source volumes below or above this value, the MIDI volume
-	 * values will be decreased or increased accordingly.
-	 */
-	void setSourceNeutralVolume(uint8 source, uint16 volume);
-	/**
-	 * Applies the user volume settings to the MIDI driver. MIDI channel volumes
-	 * will be scaled using the user volume.
-	 * This function must be called by the engine when the user has changed the
-	 * volume settings.
-	 */
-	void syncSoundSettings();
-
-	void setTimerCallback(void *timer_param, Common::TimerManager::TimerProc timer_proc) override {
-		_timer_param = timer_param;
-		_timer_proc = timer_proc;
-	}
-	/**
-	 * Runs the MIDI driver's timer related functionality. Will update volume
-	 * fades and sends messages from the SysEx queue if necessary.
-	 */
-	virtual void onTimer();
+	void deinitSource(uint8 source) override;
 
 protected:
 	/**
@@ -498,6 +378,22 @@ protected:
 	virtual void processEvent(int8 source, uint32 b, uint8 outputChannel,
 		MidiChannelControlData &controlData, bool channelLockedByOtherSource = false);
 	/**
+	 * Applies the controller default settings to the specified output channel
+	 * for the specified source.
+	 * This will set all default values specified on _controllerDefaults on the
+	 * channel except sustain, which is set by deinitSource.
+	 * 
+	 * @param source The source triggering the default settings
+	 * @param controlData The control data set to use when setting the defaults
+	 * @param outputChannel The output channel on which the defaults should be
+	 * set
+	 * @param channelLockedByOtherSource True if the output channel is locked
+	 * by another source. This will prevent the defaults from actually being
+	 * sent to the MIDI device, but controlData will be updated. Default is
+	 * false.
+	 */
+	virtual void applyControllerDefaults(uint8 source, MidiChannelControlData &controlData, uint8 outputChannel, bool channelLockedByOtherSource);
+	/**
 	 * Processes a note on or off MIDI event.
 	 * This will apply source volume if necessary, update the active note
 	 * registration and send the event to the MIDI device.
@@ -509,6 +405,20 @@ protected:
 	 */
 	virtual void noteOnOff(byte outputChannel, byte command, byte note, byte velocity,
 		int8 source, MidiChannelControlData &controlData);
+	/**
+	 * Processes a polyphonic aftertouch MIDI event.
+	 * This implementation will just send the event to the MIDI device.
+	 * 
+	 * @param outputChannel The MIDI output channel for the event
+	 * @param note The note on which aftertouch should be applied
+	 * @param pressure The amount of pressure which should be applied
+	 * @param source The source of the event
+	 * @param controlData The control data set for the MIDI channel
+	 * @param channelLockedByOtherSource True if the output channel is locked
+	 * by another source. Default is false.
+	 */
+	virtual void polyAftertouch(byte outputChannel, byte note, byte pressure,
+		int8 source, MidiChannelControlData &controlData, bool channelLockedByOtherSource = false);
 	/**
 	 * Process a control change MIDI event.
 	 * This will update the specified control data set and apply other
@@ -536,6 +446,36 @@ protected:
 	 */
 	virtual void programChange(byte outputChannel, byte patchId, int8 source,
 		MidiChannelControlData &controlData, bool channelLockedByOtherSource = false);
+	/**
+	 * Processes a channel aftertouch MIDI event.
+	 * This whil update the specified control data set and send the event to
+	 * the MIDI device.
+	 * 
+	 * @param outputChannel The MIDI output channel for the event
+	 * @param pressure The amount of pressure which should be applied
+	 * @param source The source of the event
+	 * @param controlData The control data set for the MIDI channel
+	 * @param channelLockedByOtherSource True if the output channel is locked
+	 * by another source. Default is false.
+	 */
+	virtual void channelAftertouch(byte outputChannel, byte pressure, int8 source,
+		MidiChannelControlData &controlData, bool channelLockedByOtherSource = false);
+	/**
+	 * Processes a pitch bend MIDI event.
+	 * This whil update the specified control data set and send the event to
+	 * the MIDI device.
+	 * 
+	 * @param outputChannel The MIDI output channel for the event
+	 * @param pitchBendLsb The pitch bend LSB
+	 * @param pitchBendMsb The pitch bend MSB
+	 * @param source The source of the event
+	 * @param controlData The control data set for the MIDI channel
+	 * @param channelLockedByOtherSource True if the output channel is locked
+	 * by another source. Default is false.
+	 */
+	virtual void pitchBend(byte outputChannel, uint8 pitchBendLsb, uint8 pitchBendMsb,
+		int8 source, MidiChannelControlData &controlData, bool channelLockedByOtherSource = false);
+
 	/**
 	 * Adds a note to the active note registration.
 	 */
@@ -577,11 +517,6 @@ protected:
 	byte correctInstrumentBank(byte outputChannel, byte patchId);
 
 	/**
-	 * Processes active fades and sets new volume values if necessary.
-	 */
-	void updateFading();
-
-	/**
 	 * Returns the MIDI output channel mapped to the specified data channel.
 	 * If the data channel has not been mapped yet, a new mapping to one of the
 	 * output channels available to the source will be created.
@@ -592,7 +527,14 @@ protected:
 	*/
 	virtual int8 mapSourceChannel(uint8 source, uint8 dataChannel);
 
-	Common::Mutex _fadingMutex; // For operations on fades
+	void applySourceVolume(uint8 source) override;
+	void stopAllNotes(uint8 source, uint8 channel) override;
+	/**
+	 * Runs the MIDI driver's timer related functionality. Will update volume
+	 * fades and sends messages from the SysEx queue if necessary.
+	 */
+	void onTimer() override;
+
 	Common::Mutex _allocationMutex; // For operations on MIDI channel allocation
 	Common::Mutex _activeNotesMutex; // For operations on active notes registration
 
@@ -616,26 +558,18 @@ protected:
 	// True if GS percussion channel volume should be scaled to match MT-32 volume.
 	bool _scaleGSPercussionVolumeToMT32;
 
-	// True if the driver should scale MIDI channel volume to the user specified
-	// volume settings.
-	bool _userVolumeScaling;
-
-	// User volume settings
-	uint16 _userMusicVolume;
-	uint16 _userSfxVolume;
-	bool _userMute;
-
 	// True if this MIDI driver has been opened.
 	bool _isOpen;
 	// Bitmask of the MIDI channels in use by the output device.
 	uint16 _outputChannelMask;
 	int _baseFreq;
-	uint32 _timerRate;
 
 	// stores the controller values for each MIDI channel
 	MidiChannelControlData *_controlData[MIDI_CHANNEL_COUNT];
-
-	MidiSource _sources[MAXIMUM_SOURCES];
+	// The mapping of MIDI data channels to output channels for each source.
+	int8 _channelMap[MAXIMUM_SOURCES][MIDI_CHANNEL_COUNT];
+	// Bitmask specifying which MIDI channels are available for use by each source.
+	uint16 _availableChannels[MAXIMUM_SOURCES];
 
 	// Maps used for MT-32 <> GM instrument mapping. Set these to an alternate
 	// 128 byte array to customize the mapping.
@@ -646,9 +580,6 @@ protected:
 	// Active note registration
 	ActiveNote *_activeNotes;
 
-	// The number of microseconds to wait before the next fading step.
-	uint16 _fadeDelay;
-
 	// The current number of microseconds that have to elapse before the next
 	// SysEx message can be sent.
 	uint32 _sysExDelay;
@@ -656,21 +587,6 @@ protected:
 	Common::Queue<SysExData> _sysExQueue;
 	// Mutex for write access to the SysEx queue.
 	Common::Mutex _sysExQueueMutex;
-
-	// External timer callback
-	void *_timer_param;
-	Common::TimerManager::TimerProc _timer_proc;
-
-public:
-	// Callback hooked up to the driver wrapped by the MIDI driver
-	// object. Executes onTimer and the external callback set by
-	// the setTimerCallback function.
-	static void timerCallback(void *data) {
-		MidiDriver_MT32GM *driver = (MidiDriver_MT32GM *)data;
-		driver->onTimer();
-		if (driver->_timer_proc && driver->_timer_param)
-			driver->_timer_proc(driver->_timer_param);
-	}
 };
 /** @} */
 #endif

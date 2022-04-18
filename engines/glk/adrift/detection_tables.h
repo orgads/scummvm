@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -32,6 +31,7 @@ const PlainGameDescriptor ADRIFT_GAME_LIST[] = {
 
 	// English Games
 	{ "3monkeys", "Three Monkeys, One Cage" },
+	{ "adventurestrikes", "Adventure Strikes When You Least Expect It" },
 	{ "akron", "Akron" },
 	{ "albridgemanor", "Albridge Manor" },
 	{ "ascot", "The Ascot" },
@@ -41,7 +41,7 @@ const PlainGameDescriptor ADRIFT_GAME_LIST[] = {
 	{ "barneysproblem", "Barney's Problem" },
 	{ "beanstalk", "Beanstalk the and Jack" },
 	{ "beerisntenough", "When Beer Isn't Enough" },
-	{ "caveofwonders", "Cave of Wondors" },
+	{ "caveofwonders", "Cave of Wonders" },
 	{ "circusmenagerie", "Menagerie!" },
 	{ "cityInfear", "City In Fear" },
 	{ "coloromcadrift", "Color of Milk Coffee" },
@@ -265,6 +265,9 @@ const PlainGameDescriptor ADRIFT_GAME_LIST[] = {
 	{ "iadcprivateeye", "Private Eye" },
 	{ "iadcblood", "Fire in the Blood" },
 
+	// ADRIFT Hourglass Comp 2006
+	{ "ahc3minutes", "3 Minutes to Live" },
+
 	{ nullptr, nullptr }
 };
 
@@ -301,6 +304,7 @@ const PlainGameDescriptor ADRIFT5_GAME_LIST[] = {
 const GlkDetectionEntry ADRIFT_GAMES[] = {
 	// English Games
 	DT_ENTRY0("3monkeys", "dec34c282511b1eadfe231dbbb49f625", 79286),
+	DT_ENTRY0("adventurestrikes", "f5e18081fd6ec4955ed0665aee8580de", 3770),
 	DT_ENTRY0("akron", "2461ceeef3ef1eac15a2051a549b4402", 22258),
 	DT_ENTRY0("albridgemanor", "268003e454c4ade042d593af8397a490", 31353),
 	DT_ENTRY0("ascot", "01ed200d7aec907aa84ad4007c5b296b", 24494),
@@ -580,6 +584,9 @@ const GlkDetectionEntry ADRIFT_GAMES[] = {
 	DT_ENTRY0("iadchub", "c3224b3d6c55997056ea195ba4ebb60a", 24610),
 	DT_ENTRY0("iadcprivateeye", "3076b9f11acf2b1e377a31cd1a11c323", 236323),
 	DT_ENTRY0("iadcblood", "775404faa0d7973c1df537bd423a45d3", 100201),
+
+	// ADRIFT Hourglass Comp 2006
+	DT_ENTRY0("ahc3minutes", "0313370bb74005525ec96580f146d286", 13232),
 
 	DT_END_MARKER
 };

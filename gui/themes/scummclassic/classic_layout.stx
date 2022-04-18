@@ -5,10 +5,10 @@
  - are too numerous to list here. Please refer to the COPYRIGHT
  - file distributed with this source distribution.
  -
- - This program is free software; you can redistribute it and/or
- - modify it under the terms of the GNU General Public License
- - as published by the Free Software Foundation; either version 2
- - of the License, or (at your option) any later version.
+ - This program is free software: you can redistribute it and/or modify
+ - it under the terms of the GNU General Public License as published by
+ - the Free Software Foundation, either version 3 of the License, or
+ - (at your option) any later version.
  -
  - This program is distributed in the hope that it will be useful,
  - but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,8 +16,7 @@
  - GNU General Public License for more details.
  -
  - You should have received a copy of the GNU General Public License
- - along with this program; if not, write to the Free Software
- - Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ - along with this program.  If not, see <http://www.gnu.org/licenses/>.
  -
  -->
 <layout_info resolution = 'y>399'>
@@ -56,9 +55,16 @@
 
 		<def var = 'DropdownButton.Width' value = '17' scalable = 'yes'/>
 
+		<def var = 'Checkbox.Spacing' value = '15' scalable = 'yes'/>
+		<def var = 'Radiobutton.Spacing' value = '15' scalable = 'yes'/>
+		<def var = 'GridSupported' value = '0'/>
+
 		<widget name = 'OptionsLabel'
 				size = '120, Globals.Line.Height'
 				textalign = 'end'
+		/>
+		<widget name = 'ShortOptionsLabel'
+				size = '60, Globals.Line.Height'
 		/>
 		<widget name = 'SmallLabel'
 				size = '24, Globals.Line.Height'
@@ -70,10 +76,6 @@
 				size = '200, Globals.Line.Height'
 		/>
 
-		<widget name = 'ShortOptionsLabel'
-				size = '60, Globals.Line.Height'
-		/>
-
 		<widget name = 'Button'
 				size = '108, 24'
 		/>
@@ -83,6 +85,9 @@
 
 		<widget name = 'Slider'
 				size = '128, 18'
+		/>
+		<widget name = 'WideSlider'
+				size = '-1, 18'
 		/>
 		<widget name = 'PopUp'
 				size = '-1, 19'
@@ -146,6 +151,14 @@
 				<widget name = 'SearchClearButton'
 						height = 'Globals.Line.Height'
 						width = 'Globals.Line.Height'
+				/>
+				<widget name = 'laGroupPopupDesc'
+						type = 'OptionsLabel'
+						textalign = 'end'
+				/>
+				<widget name = 'laGroupPopup'
+						width = '150'
+						type = 'PopUp'
 				/>
 				<space />
 			</layout>
@@ -254,13 +267,7 @@
 
 	<dialog name = 'GlobalOptions_Control' overlays = 'Dialog.GlobalOptions.TabWidget'>
 		<layout type = 'vertical' padding = '16, 16, 16, 16' spacing = '8'>
-			<widget name = 'grOnScreenCheckbox'
-					type = 'Checkbox'
-			/>
 			<widget name = 'grTouchpadCheckbox'
-					type = 'Checkbox'
-			/>
-			<widget name = 'grSwapMenuAndBackBtnsCheckbox'
 					type = 'Checkbox'
 			/>
 			<layout type = 'horizontal' padding = '0, 0, 0, 0' spacing = '10'>
@@ -330,6 +337,17 @@
 						type = 'OptionsLabel'
 				/>
 				<widget name = 'grStretchModePopup'
+						type = 'PopUp'
+				/>
+			</layout>
+			<layout type = 'horizontal' padding = '0, 0, 0, 0' spacing = '10' align = 'center'>
+				<widget name = 'grScalerPopupDesc'
+						type = 'OptionsLabel'
+				/>
+				<widget name = 'grScalerPopup'
+						type = 'PopUp'
+				/>
+				<widget name = 'grScaleFactorPopup'
 						type = 'PopUp'
 				/>
 			</layout>
@@ -563,6 +581,18 @@
 				/>
 			</layout>
 			<layout type = 'horizontal' padding = '0, 0, 0, 0' spacing = '10' align = 'center'>
+				<widget name = 'IconButton'
+						type = 'Button'
+				/>
+				<widget name = 'IconPath'
+						height = 'Globals.Line.Height'
+				/>
+				<widget name = 'IconPathClearButton'
+						height = 'Globals.Line.Height'
+						width = 'Globals.Line.Height'
+				/>
+			</layout>
+			<layout type = 'horizontal' padding = '0, 0, 0, 0' spacing = '10' align = 'center'>
 				<widget name = 'ExtraButton'
 						type = 'Button'
 				/>
@@ -574,7 +604,7 @@
 						width = 'Globals.Line.Height'
 				/>
 			</layout>
-			<layout type = 'horizontal' padding = '0, 0, 0, 0' spacing = '16'>
+			<layout type = 'horizontal' padding = '0, 0, 0, 0' spacing = '10' align = 'center'>
 				<widget name = 'PluginsButton'
 						type = 'Button'
 				/>
@@ -587,6 +617,15 @@
 				/>
 			</layout>
 			<widget name = 'ConfigPath' height = 'Globals.Line.Height' />
+			<layout type = 'horizontal' padding = '0, 0, 0, 0' spacing = '10' align = 'center'>
+				<widget name = 'BrowserPath'
+						height = 'Globals.Line.Height'
+				/>
+				<widget name = 'BrowserPathClearButton'
+						height = 'Globals.Line.Height'
+						width = 'Globals.Line.Height'
+				/>
+			</layout>
 		</layout>
 	</dialog>
 
@@ -659,6 +698,11 @@
 				/>
 			</layout>
 			<layout type = 'horizontal' padding = '0, 0, 0, 0' spacing = '10' align = 'center'>
+				<widget name = 'DiscordRpc'
+						type = 'Checkbox'
+				/>
+			</layout>
+			<layout type = 'horizontal' padding = '0, 0, 0, 0' spacing = '10' align = 'center'>
 				<widget name = 'UpdatesPopupDesc'
 						type = 'OptionsLabel'
 				/>
@@ -669,6 +713,9 @@
 						type = 'Button'
 				/>
 			</layout>
+			<widget name = 'UpdateIconsButton'
+					type = 'Button'
+			/>
 		</layout>
 	</dialog>
 
@@ -857,7 +904,42 @@
 		</layout>
 	</dialog>
 
-	<dialog name = 'GlobalOptions_Cloud_DownloadDialog' overlays = 'Dialog.GlobalOptions'>
+	<dialog name = 'GlobalOptions_DownloadIconsDialog' overlays = 'Dialog.GlobalOptions' shading = 'dim'>
+		<layout type = 'vertical' padding = '16, 16, 16, 8' spacing = '8'>
+			<widget name = 'StatusText'
+					height = 'Globals.Line.Height'
+			/>
+			<widget name = 'ErrorText'
+					height = 'Globals.Line.Height'
+			/>
+			<widget name = 'ProgressBar'
+					height = 'Globals.Button.Height'
+			/>
+			<space size = '1'/>
+			<widget name = 'PercentText'
+					height = 'Globals.Line.Height'
+					textalign = 'center'
+			/>
+			<widget name = 'DownloadSize'
+					height = 'Globals.Line.Height'
+			/>
+			<widget name = 'DownloadSpeed'
+					height = 'Globals.Line.Height'
+			/>
+			<space/>
+			<layout type = 'horizontal' padding = '0, 0, 0, 0' spacing = '10'>
+				<widget name = 'MainButton'
+						type = 'Button'
+				/>
+				<space/>
+				<widget name = 'CloseButton'
+						type = 'Button'
+				/>
+			</layout>
+		</layout>
+	</dialog>
+
+	<dialog name = 'GlobalOptions_Cloud_DownloadDialog' overlays = 'Dialog.GlobalOptions' shading = 'dim'>
 		<layout type = 'vertical' padding = '16, 16, 16, 8' spacing = '8'>
 			<widget name = 'RemoteDirectory'
 					height = 'Globals.Line.Height'
@@ -892,7 +974,7 @@
 		</layout>
 	</dialog>
 
-	<dialog name = 'GlobalOptions_Cloud_ConnectionWizard' overlays = 'Dialog.GlobalOptions'>
+	<dialog name = 'GlobalOptions_Cloud_ConnectionWizard' overlays = 'Dialog.GlobalOptions' shading = 'dim'>
 		<layout type = 'vertical' padding = '0, 0, 0, 0'>
 			<widget name = 'Container'/>
 		</layout>
@@ -1125,6 +1207,7 @@
 						type = 'PopUp'
 				/>
 			</layout>
+			<widget name = 'Container'/>
 		</layout>
 	</dialog>
 
@@ -1162,12 +1245,6 @@
 						height = 'Globals.Line.Height'
 				/>
 			</layout>
-		</layout>
-	</dialog>
-
-	<dialog name = 'GameOptions_Engine' overlays = 'Dialog.GameOptions.TabWidget'>
-		<layout type = 'vertical' padding = '0, 0, 0, 0'>
-			<widget name = 'Container'/>
 		</layout>
 	</dialog>
 

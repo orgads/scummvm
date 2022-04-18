@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -135,6 +134,14 @@ void ScummEngine::parseEvent(Common::Event event) {
 			_keyPressed = event.kbd;
 		}
 
+		// HACK: Because we use ASCII values here, it's necessary to
+		// remap keypad keys to always have a corresponding ASCII value.
+		// Normally, keypad keys would only have an ASCII value when
+		// NumLock is enabled. This fixes fighting in Indy 3 (Trac #11227)
+		if (_keyPressed.keycode >= Common::KEYCODE_KP0 && _keyPressed.keycode <= Common::KEYCODE_KP9) {
+			_keyPressed.ascii = (_keyPressed.keycode - Common::KEYCODE_KP0) + '0';
+		}
+
 		// FIXME: We are using ASCII values to index the _keyDownMap here,
 		// yet later one code which checks _keyDownMap will use KEYCODEs
 		// to do so. That is, we are mixing ascii and keycode values here,
@@ -150,6 +157,14 @@ void ScummEngine::parseEvent(Common::Event event) {
 		break;
 
 	case Common::EVENT_KEYUP:
+		// HACK: Because we use ASCII values here, it's necessary to
+		// remap keypad keys to always have a corresponding ASCII value.
+		// Normally, keypad keys would only have an ASCII value when
+		// NumLock is enabled. This fixes fighting in Indy 3 (Trac #11227)
+		if (_keyPressed.keycode >= Common::KEYCODE_KP0 && _keyPressed.keycode <= Common::KEYCODE_KP9) {
+			_keyPressed.ascii = (_keyPressed.keycode - Common::KEYCODE_KP0) + '0';
+		}
+
 		if (event.kbd.ascii >= 512) {
 			debugC(DEBUG_GENERAL, "keyPressed > 512 (%d)", event.kbd.ascii);
 		} else {
@@ -483,10 +498,10 @@ void ScummEngine_v2::processKeyboard(Common::KeyState lastKeyHit) {
 	if (lastKeyHit.keycode == Common::KEYCODE_F5 && lastKeyHit.hasFlags(Common::KBD_ALT)) {
 		prepareSavegame();
 		if (_game.id == GID_MANIAC && _game.version == 0) {
-			runScript(2, 0, 0, 0);
+			runScript(2, 0, 0, nullptr);
 		}
 		if (_game.id == GID_MANIAC &&_game.platform == Common::kPlatformNES) {
-			runScript(163, 0, 0, 0);
+			runScript(163, 0, 0, nullptr);
 		}
 	}
 
@@ -544,12 +559,12 @@ void ScummEngine::processKeyboard(Common::KeyState lastKeyHit) {
 
 	if (mainmenuKeyEnabled && (lastKeyHit.keycode == Common::KEYCODE_F5 && lastKeyHit.hasFlags(0))) {
 		if (VAR_SAVELOAD_SCRIPT != 0xFF && _currentRoom != 0)
-			runScript(VAR(VAR_SAVELOAD_SCRIPT), 0, 0, 0);
+			runScript(VAR(VAR_SAVELOAD_SCRIPT), 0, 0, nullptr);
 
 		openMainMenuDialog();		// Display global main menu
 
 		if (VAR_SAVELOAD_SCRIPT2 != 0xFF && _currentRoom != 0)
-			runScript(VAR(VAR_SAVELOAD_SCRIPT2), 0, 0, 0);
+			runScript(VAR(VAR_SAVELOAD_SCRIPT2), 0, 0, nullptr);
 
 	} else if (restartKeyEnabled && (lastKeyHit.keycode == Common::KEYCODE_F8 && lastKeyHit.hasFlags(0))) {
 		confirmRestartDialog();
@@ -619,6 +634,16 @@ void ScummEngine::processKeyboard(Common::KeyState lastKeyHit) {
 		    lastKeyHit.keycode <= Common::KEYCODE_F9) {
 			_mouseAndKeyboardStat = lastKeyHit.keycode - Common::KEYCODE_F1 + 315;
 
+		} else if (lastKeyHit.flags & Common::KBD_CTRL && _game.version >= 3 && _game.version <= 7 &&
+				   (lastKeyHit.keycode >= Common::KEYCODE_a && lastKeyHit.keycode <= Common::KEYCODE_z)) {
+			// Some games (at least their DOS variants)
+			// expect Ctrl+A, B, C, etc. to generate codes 1, 2, 3, etc.
+			//
+			// This is used for several settings in the "ultimate talkie" versions of
+			// Monkey Island 1 and 2. Monkey Island 1 also uses it for Ctrl+W to immediately
+			// win the game. On other games, Ctrl+I shows the inventory, Ctrl+V shows version
+			// information. On The Dig Ctrl+B makes Boston display his muscles.
+			_mouseAndKeyboardStat = lastKeyHit.keycode & 0x1f;
 		} else if (_game.id == GID_MONKEY2 && (lastKeyHit.flags & Common::KBD_ALT)) {
 			// Handle KBD_ALT combos in MI2. We know that the result must be 273 for Alt-W
 			// because that's what MI2 looks for in its "instant win" cheat.

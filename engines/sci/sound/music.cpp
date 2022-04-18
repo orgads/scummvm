@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -47,9 +46,9 @@ SciMusic::SciMusic(SciVersion soundVersion, bool useDigitalSFX)
 	_playList.reserve(10);
 
 	for (int i = 0; i < 16; i++) {
-		_usedChannel[i] = 0;
+		_usedChannel[i] = nullptr;
 		_channelRemap[i] = -1;
-		_channelMap[i]._song = 0;
+		_channelMap[i]._song = nullptr;
 		_channelMap[i]._channel = -1;
 	}
 
@@ -151,9 +150,9 @@ void SciMusic::init() {
 	} else {
 		if (g_sci->getGameId() == GID_FUNSEEKER ||
 			(g_sci->getGameId() == GID_GK2 && g_sci->isDemo())) {
-			// HACK: The Fun Seeker's Guide demo doesn't have patch 3 and the version
-			// of the Adlib driver (adl.drv) that it includes is unsupported. That demo
-			// doesn't have any sound anyway, so this shouldn't be fatal.
+			// Disable checks for required audio drivers in certain demos
+			// which contain no sound - in this case, we can proceed
+			// without actually initializing the MIDI driver.
 		} else {
 			const char *missingFiles = _pMidiDrv->reportMissingFiles();
 			if (missingFiles) {
@@ -183,7 +182,7 @@ void SciMusic::init() {
 	if (getSciVersion() <= SCI_VERSION_0_LATE)
 		_globalReverb = _pMidiDrv->getReverb();	// Init global reverb for SCI0
 
-	_currentlyPlayingSample = NULL;
+	_currentlyPlayingSample = nullptr;
 	_timeCounter = 0;
 	_needsRemap = false;
 }
@@ -316,7 +315,7 @@ MusicEntry *SciMusic::getSlot(reg_t obj) {
 			return *i;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 MusicEntry *SciMusic::getFirstSlotWithStatus(SoundStatus status) {
@@ -324,7 +323,7 @@ MusicEntry *SciMusic::getFirstSlotWithStatus(SoundStatus status) {
 		if ((*i)->status == status)
 			return *i;
 	}
-	return 0;
+	return nullptr;
 }
 
 void SciMusic::setGlobalReverb(int8 reverb) {
@@ -375,7 +374,7 @@ void SciMusic::soundInitSnd(MusicEntry *pSnd) {
 	// since they will no longer be valid.
 	for (int i = 0; i < 16; ++i) {
 		if (_channelMap[i]._song == pSnd) {
-			_channelMap[i]._song = 0;
+			_channelMap[i]._song = nullptr;
 			_channelMap[i]._channel = -1;
 		}
 	}
@@ -429,7 +428,7 @@ void SciMusic::soundInitSnd(MusicEntry *pSnd) {
 								size, track->digitalSampleRate, flags, DisposeAfterUse::NO);
 			assert(pSnd->pStreamAud);
 			delete pSnd->pLoopStream;
-			pSnd->pLoopStream = 0;
+			pSnd->pLoopStream = nullptr;
 			pSnd->soundType = Audio::Mixer::kSFXSoundType;
 			pSnd->hCurrentAud = Audio::SoundHandle();
 			pSnd->playBed = false;
@@ -439,7 +438,7 @@ void SciMusic::soundInitSnd(MusicEntry *pSnd) {
 			// play MIDI track
 			Common::StackLock lock(_mutex);
 			pSnd->soundType = Audio::Mixer::kMusicSoundType;
-			if (pSnd->pMidiParser == NULL) {
+			if (pSnd->pMidiParser == nullptr) {
 				pSnd->pMidiParser = new MidiParser_SCI(_soundVersion, this);
 				pSnd->pMidiParser->setMidiDriver(_pMidiDrv);
 				pSnd->pMidiParser->setTimerRate(_dwTempo);
@@ -523,7 +522,7 @@ void SciMusic::soundPlay(MusicEntry *pSnd, bool restoring) {
 
 	uint playListCount = _playList.size();
 	uint playListNo = playListCount;
-	MusicEntry *alreadyPlaying = NULL;
+	MusicEntry *alreadyPlaying = nullptr;
 
 	// searching if sound is already in _playList
 	for (uint i = 0; i < playListCount; i++) {
@@ -662,7 +661,7 @@ void SciMusic::soundStop(MusicEntry *pSnd) {
 		} else {
 #endif
 			if (_currentlyPlayingSample == pSnd)
-				_currentlyPlayingSample = NULL;
+				_currentlyPlayingSample = nullptr;
 			_pMixer->stopHandle(pSnd->hCurrentAud);
 #ifdef ENABLE_SCI32
 		}
@@ -723,7 +722,7 @@ void SciMusic::soundKill(MusicEntry *pSnd) {
 		pSnd->pMidiParser->unloadMusic();
 		pSnd->pMidiParser->mainThreadEnd();
 		delete pSnd->pMidiParser;
-		pSnd->pMidiParser = NULL;
+		pSnd->pMidiParser = nullptr;
 	}
 
 	_mutex.unlock();
@@ -736,16 +735,16 @@ void SciMusic::soundKill(MusicEntry *pSnd) {
 #endif
 			if (_currentlyPlayingSample == pSnd) {
 				// Forget about this sound, in case it was currently playing
-				_currentlyPlayingSample = NULL;
+				_currentlyPlayingSample = nullptr;
 			}
 			_pMixer->stopHandle(pSnd->hCurrentAud);
 #ifdef ENABLE_SCI32
 		}
 #endif
 		delete pSnd->pStreamAud;
-		pSnd->pStreamAud = NULL;
+		pSnd->pStreamAud = nullptr;
 		delete pSnd->pLoopStream;
-		pSnd->pLoopStream = 0;
+		pSnd->pLoopStream = nullptr;
 		pSnd->isSample = false;
 	}
 
@@ -933,8 +932,10 @@ void SciMusic::printSongInfo(reg_t obj, Console *con) {
 MusicEntry::MusicEntry() {
 	soundObj = NULL_REG;
 
-	soundRes = 0;
+	soundRes = nullptr;
 	resourceId = 0;
+
+	time = 0;
 
 	dataInc = 0;
 	ticker = 0;
@@ -960,9 +961,9 @@ MusicEntry::MusicEntry() {
 
 	soundType = Audio::Mixer::kMusicSoundType;
 
-	pStreamAud = 0;
-	pLoopStream = 0;
-	pMidiParser = 0;
+	pStreamAud = nullptr;
+	pLoopStream = nullptr;
+	pMidiParser = nullptr;
 	isSample = false;
 
 	for (int i = 0; i < 16; ++i) {
@@ -1055,7 +1056,7 @@ void ChannelRemapping::swap(int i, int j) {
 void ChannelRemapping::evict(int i) {
 	_freeVoices += _voices[i];
 
-	_map[i]._song = 0;
+	_map[i]._song = nullptr;
 	_map[i]._channel = -1;
 	_prio[i] = 0;
 	_voices[i] = 0;
@@ -1064,7 +1065,7 @@ void ChannelRemapping::evict(int i) {
 
 void ChannelRemapping::clear() {
 	for (int i = 0; i < 16; ++i) {
-		_map[i]._song = 0;
+		_map[i]._song = nullptr;
 		_map[i]._channel = -1;
 		_prio[i] = 0;
 		_voices[i] = 0;
@@ -1116,7 +1117,7 @@ void SciMusic::remapChannels(bool mainThread) {
 	// Save current map, and then start from an empty map
 	for (int i = 0; i < 16; ++i) {
 		currentMap[i] = _channelMap[i];
-		_channelMap[i]._song = 0;
+		_channelMap[i]._song = nullptr;
 		_channelMap[i]._channel = -1;
 	}
 
@@ -1182,7 +1183,7 @@ void SciMusic::remapChannels(bool mainThread) {
 		}
 
 		_channelMap[i] = map->_map[i];
-		map->_map[i]._song = 0; // mark as done
+		map->_map[i]._song = nullptr; // mark as done
 
 		// If this channel was not yet mapped to the device, reset it
 		if (currentMap[i] != _channelMap[i]) {
@@ -1215,7 +1216,7 @@ void SciMusic::remapChannels(bool mainThread) {
 			if (map->_map[i] == currentMap[j]) {
 				// found it
 				_channelMap[j] = map->_map[i];
-				map->_map[i]._song = 0; // mark as done
+				map->_map[i]._song = nullptr; // mark as done
 #ifdef DEBUG_REMAP
 				debug(" Keeping song %d, channel %d on device channel %d", songIndex, _channelMap[j]._channel, j);
 #endif
@@ -1238,9 +1239,9 @@ void SciMusic::remapChannels(bool mainThread) {
 		}
 
 		for (int j = _driverLastChannel; j >= _driverFirstChannel; --j) {
-			if (_channelMap[j]._song == 0) {
+			if (_channelMap[j]._song == nullptr) {
 				_channelMap[j] = map->_map[i];
-				map->_map[i]._song = 0;
+				map->_map[i]._song = nullptr;
 #ifdef DEBUG_REMAP
 				debug(" Mapping song %d, channel %d to device channel %d", songIndex, _channelMap[j]._channel, j);
 #endif
@@ -1335,7 +1336,7 @@ ChannelRemapping *SciMusic::determineChannelMap() {
 			// our target
 			int devChannel = -1;
 
-			if (dontRemap && map->_map[c]._song == 0) {
+			if (dontRemap && map->_map[c]._song == nullptr) {
 				// unremappable channel, with channel still free
 				devChannel = c;
 			}

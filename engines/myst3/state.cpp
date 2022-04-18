@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -517,8 +516,8 @@ Graphics::Surface *GameState::resizeThumbnail(Graphics::Surface *big, uint width
 	small->create(width, height, big->format);
 
 	uint32 *dst = (uint32 *)small->getPixels();
-	for (uint i = 0; i < small->h; i++) {
-		for (uint j = 0; j < small->w; j++) {
+	for (int i = 0; i < small->h; i++) {
+		for (int j = 0; j < small->w; j++) {
 			uint32 srcX = big->w * j / small->w;
 			uint32 srcY = big->h * i / small->h;
 			uint32 *src = (uint32 *)big->getBasePtr(srcX, srcY);
@@ -537,7 +536,7 @@ void GameState::newGame() {
 }
 
 Common::Error GameState::load(Common::InSaveFile *saveFile) {
-	Common::Serializer s = Common::Serializer(saveFile, 0);
+	Common::Serializer s = Common::Serializer(saveFile, nullptr);
 	Common::Error loadError = _data.syncWithSaveGame(s);
 
 	_data.gameRunning = true;
@@ -550,7 +549,7 @@ Common::Error GameState::load(Common::InSaveFile *saveFile) {
 }
 
 Common::Error GameState::save(Common::OutSaveFile *saveFile, const Common::String &description, const Graphics::Surface *thumbnail, bool isAutosave) {
-	Common::Serializer s = Common::Serializer(0, saveFile);
+	Common::Serializer s = Common::Serializer(nullptr, saveFile);
 
 	// Update save creation info
 	TimeDate t;

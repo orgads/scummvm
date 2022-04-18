@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -67,7 +66,7 @@ char G_os_gamename[OSFNMAX];
 int os_init(int *argc, char *argv[], const char *prompt,
 			char *buf, int bufsiz)
 {
-	mainwin = g_vm->glk_window_open(0, 0, 0, wintype_TextBuffer, 0);
+	mainwin = g_vm->glk_window_open(nullptr, 0, 0, wintype_TextBuffer, 0);
 	if (!mainwin)
 		error("fatal: could not open window!\n");
 
@@ -90,7 +89,7 @@ int os_init(int *argc, char *argv[], const char *prompt,
 		statusbg = 0;
 
 	/* close statuswin; reopened on request */
-	g_vm->glk_window_close(statuswin, 0);
+	g_vm->glk_window_close(statuswin, nullptr);
 
 	statuswin = nullptr;
 
@@ -318,7 +317,7 @@ void os_status(int stat)
 
 	if (stat == 1)
 	{
-		if (statuswin == NULL)
+		if (statuswin == nullptr)
 		{
 			g_vm->glk_stylehint_set(wintype_TextGrid, style_User1, stylehint_ReverseColor, 1);
 			statuswin = g_vm->glk_window_open(mainwin,
@@ -366,7 +365,7 @@ static void os_status_redraw(void) {
 	if (!statuswin)
 		return;
 
-	g_vm->glk_window_get_size(statuswin, &wid, NULL);
+	g_vm->glk_window_get_size(statuswin, &wid, nullptr);
 	div = wid - strlen(rbuf) - 3;
 
 	sprintf(fmt, " %%%ds %%s ", - (int)div);
@@ -532,7 +531,7 @@ int os_askfile(const char *prompt, char *fname_buf, int fname_buf_len,
 		gusage = fileusage_Data;
 
 	fileref = g_vm->glk_fileref_create_by_prompt(gusage, (FileMode)gprompt, 0);
-	if (fileref == NULL)
+	if (fileref == nullptr)
 		return OS_AFE_CANCEL;
 
 	strcpy(fname_buf, g_vm->garglk_fileref_get_name(fileref));

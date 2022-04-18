@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,37 +15,36 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef AGS_PLUGINS_AGS_AGI_AGS_AGI_H
 #define AGS_PLUGINS_AGS_AGI_AGS_AGI_H
 
-#include "ags/plugins/plugin_base.h"
+#include "ags/plugins/ags_plugin.h"
 
 namespace AGS3 {
 namespace Plugins {
 namespace AGSAgi {
 
 class AGSAgi : public PluginBase {
+	SCRIPT_HASH(AGSAgi)
 private:
-	static IAGSEngine *_engine;
-	static int _enabled;
-	static int _scaling_mode;
+	int _enabled = 0;
+	int _scaling_mode = 0;
 
 private:
-	static const char *AGS_GetPluginName();
-	static void AGS_EngineStartup(IAGSEngine *engine);
-
-private:
-	static void SetAGIScalingMode(ScriptMethodParams &params);
-	static void GetAGIScalingMode(ScriptMethodParams &params);
-	static void UseAGIScaling(ScriptMethodParams &params);
+	void SetAGIScalingMode(ScriptMethodParams &params);
+	void GetAGIScalingMode(ScriptMethodParams &params);
+	void UseAGIScaling(ScriptMethodParams &params);
 
 public:
-	AGSAgi();
+	AGSAgi() : PluginBase() {}
+	virtual ~AGSAgi() {}
+
+	const char *AGS_GetPluginName() override;
+	void AGS_EngineStartup(IAGSEngine *engine) override;
 };
 
 } // namespace AGSAgi

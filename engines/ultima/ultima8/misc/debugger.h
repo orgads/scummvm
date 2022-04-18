@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -41,7 +40,7 @@ public:
 	ConsoleStream() : Common::WriteStream(), _precision(dec) {
 	}
 
-	int32 pos() const override {
+	int64 pos() const override {
 		return 0;
 	}
 
@@ -125,9 +124,6 @@ extern console_err_ostream<char> *pperr;
  * Debugger base class
  */
 class Debugger : public Shared::Debugger {
-public:
-	typedef Common::String ArgsType;
-	typedef Std::vector<ArgsType> ArgvType;
 private:
 	// Standard Output Stream Object
 	console_ostream<char> _strOut;
@@ -177,6 +173,16 @@ private:
 	bool cmdStartAttack(int argc, const char **argv);
 	bool cmdStopAttack(int argc, const char **argv);
 
+	// One-shot Avatar mover commands
+	bool cmdShortJump(int argc, const char **argv);
+	bool cmdStepLeft(int argc, const char **argv);
+	bool cmdStepRight(int argc, const char **argv);
+	bool cmdStepForward(int argc, const char **argv);
+	bool cmdStepBack(int argc, const char **argv);
+	bool cmdRollLeft(int argc, const char **argv);
+	bool cmdRollRight(int argc, const char **argv);
+	bool cmdToggleCrouch(int argc, const char **argv);
+
 	bool cmdCameraOnAvatar(int argc, const char **argv);
 
 	// Audio Process
@@ -197,6 +203,7 @@ private:
 	bool cmdStopHighlightItems(int argc, const char **argv);
 	bool cmdToggleHighlightItems(int argc, const char **argv);
 	bool cmdDumpMap(int argc, const char **argvv);
+	bool cmdDumpAllMaps(int argc, const char **argv);
 	bool cmdIncrementSortOrder(int argc, const char **argv);
 	bool cmdDecrementSortOrder(int argc, const char **argv);
 
@@ -225,6 +232,7 @@ private:
 	bool cmdUseMedikit(int argc, const char **argv);
 	bool cmdUseEnergyCube(int argc, const char **argv);
 	bool cmdDetonateBomb(int argc, const char **argv);
+	bool cmdDropWeapon(int argc, const char **argv);
 	bool cmdStartSelection(int argc, const char **argv);
 	bool cmdUseSelection(int argc, const char **argv);
 	bool cmdGrabItems(int argc, const char **argv);
@@ -276,12 +284,14 @@ private:
 	bool cmdVisualDebugPathfinder(int argc, const char **argv);
 #endif
 
+	void dumpCurrentMap(); // helper function
+
 public:
 	Debugger();
 	~Debugger() override;
 
-	void executeCommand(const ArgsType &args);
-	void executeCommand(const ArgvType &argv);
+	void executeCommand(const Common::String &args);
+	void executeCommand(const Common::Array<Common::String> &argv);
 };
 
 extern Debugger *g_debugger;

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -52,11 +51,7 @@ class String;
  * The presence of \0 characters in the string will cause undefined
  * behavior in some operations.
  */
-#ifdef USE_CXX11
 typedef char32_t u32char_type_t;
-#else
-typedef uint32 u32char_type_t;
-#endif
 
 class U32String : public BaseString<u32char_type_t> {
 public:
@@ -71,11 +66,9 @@ public:
 	/** Construct a new string containing exactly @p len characters read from address @p str. */
 	U32String(const value_type *str, uint32 len) : BaseString<u32char_type_t>(str, len) {}
 
-#ifdef USE_CXX11
 	explicit U32String(const uint32 *str) : BaseString<u32char_type_t>((const value_type *) str) {}
 	U32String(const uint32 *str, uint32 len) : BaseString<u32char_type_t>((const value_type *) str, len) {}
 	U32String(const uint32 *beginP, const uint32 *endP) : BaseString<u32char_type_t>((const value_type *) beginP, (const value_type *) endP) {}
-#endif
 
 	/** Construct a new string containing the characters between @p beginP (including) and @p endP (excluding). */
 	U32String(const value_type *beginP, const value_type *endP) : BaseString<u32char_type_t>(beginP, endP) {}
@@ -94,6 +87,9 @@ public:
 
 	/** Construct a copy of the given string. */
 	U32String(const String &str, CodePage page = kUtf8);
+
+	/** Construct a string consisting of the given character. */
+	explicit U32String(value_type c);
 
 	/** Assign a given string to this string. */
 	U32String &operator=(const U32String &str);
@@ -199,6 +195,18 @@ U32String operator+(const U32String &x, const U32String &y);
 
 /** Append the given @p y character to the given @p x string. */
 U32String operator+(const U32String &x, U32String::value_type y);
+
+/**
+ * Converts string with all non-printable characters properly escaped
+ * with use of C++ escape sequences.
+ * Unlike the String version, this does not escape characters with
+ * codepoints > 127.
+ *
+ * @param src The source string.
+ * @param keepNewLines Whether keep newlines or convert them to '\n', default: true.
+ * @return The converted string.
+ */
+U32String toPrintable(const U32String &src, bool keepNewLines = true);
 
 /** @} */
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -426,6 +425,49 @@ bool SmackerDecoder::rewind() {
 	// And seek back to where the first frame begins
 	_fileStream->seek(_firstFrameStart);
 	return true;
+}
+
+void SmackerDecoder::forceSeekToFrame(uint frame) {
+	uint seekFrame;
+	if (frame >= 10)
+		seekFrame = MAX<uint>(frame - 10, 0);
+	else
+		seekFrame = 0;
+
+	if (!isVideoLoaded())
+		return;
+
+	if (seekFrame >= getFrameCount())
+		return;
+
+	if (!rewind())
+		return;
+
+	stopAudio();
+	SmackerVideoTrack *videoTrack = (SmackerVideoTrack *)getTrack(0);
+	uint32 startPos = _fileStream->pos();
+	uint32 offset = 0;
+	for (uint32 i = 0; i < seekFrame; i++) {
+		videoTrack->increaseCurFrame();
+		// Frames with palette data contain palette entries which use
+		// the previous palette as their base. Therefore, we need to
+		// parse all palette entries up to the requested frame
+		if (_frameTypes[videoTrack->getCurFrame()] & 1) {
+			_fileStream->seek(startPos + offset, SEEK_SET);
+			videoTrack->unpackPalette(_fileStream);
+		}
+		offset += _frameSizes[i] & ~3;
+	}
+
+	if (!_fileStream->seek(startPos + offset, SEEK_SET))
+		return;
+
+	while (getCurFrame() < (int)frame) {
+		decodeNextFrame();
+	}
+
+	_lastTimeChange = videoTrack->getFrameTime(frame);
+	_startTime = g_system->getMillis() - (_lastTimeChange.msecs() / getRate()).toInt();
 }
 
 void SmackerDecoder::readNextPacket() {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -286,7 +285,7 @@ int16 SystemUI::figureOutAutomaticSaveGameSlot(const char *automaticSaveDescript
 
 	// Walk through saved game slots
 	// check, if description matches and return the slot
-	// if no match can be found, return the first non-existant slot
+	// if no match can be found, return the first non-existent slot
 	// if all slots exist, return -1
 	figureOutAutomaticSavedGameSlot(automaticSaveDescription, matchedGameSlotId, freshGameSlotId);
 
@@ -294,7 +293,7 @@ int16 SystemUI::figureOutAutomaticSaveGameSlot(const char *automaticSaveDescript
 		return matchedGameSlotId; // return matched slot
 
 	if (freshGameSlotId >= 0)
-		return freshGameSlotId; // return first non-existant slot
+		return freshGameSlotId; // return first non-existent slot
 
 	return -1; // no slots exist, not match found
 }
@@ -304,7 +303,7 @@ int16 SystemUI::figureOutAutomaticRestoreGameSlot(const char *automaticSaveDescr
 	int16 freshGameSlotId   = -1;
 
 	// Fill saved game slot cache
-	readSavedGameSlots(true, false); // filter non-existant/invalid saves, also don't include auto-save slot
+	readSavedGameSlots(true, false); // filter non-existent/invalid saves, also don't include auto-save slot
 
 	// Walk through saved game slots
 	// check, if description matches and return the slot. Otherwise return -1

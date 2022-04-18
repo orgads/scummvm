@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -49,8 +48,8 @@ GfxPaint16::GfxPaint16(ResourceManager *resMan, SegManager *segMan, GfxCache *ca
 	  _transitions(transitions), _audio(audio), _EGAdrawingVisualize(false) {
 
 	// _animate and _text16 will be initialized later on
-	_animate = NULL;
-	_text16 = NULL;
+	_animate = nullptr;
+	_text16 = nullptr;
 }
 
 GfxPaint16::~GfxPaint16() {
@@ -145,7 +144,7 @@ void GfxPaint16::drawHiresCelAndShow(GuiResourceId viewId, int16 loopNo, int16 c
 			// need to get coordinates from upscaledHiresHandle. I'm not sure if
 			// this is what we are supposed to do or if there is some other bug
 			// that actually makes coordinates to be 0 in the first place.
-			byte *memoryPtr = NULL;
+			byte *memoryPtr = nullptr;
 			memoryPtr = _segMan->getHunkPointer(upscaledHiresHandle);
 			if (memoryPtr) {
 				Common::Rect upscaledHiresRect;
@@ -350,7 +349,7 @@ reg_t GfxPaint16::bitsSave(const Common::Rect &rect, byte screenMask) {
 }
 
 void GfxPaint16::bitsGetRect(reg_t memoryHandle, Common::Rect *destRect) {
-	byte *memoryPtr = NULL;
+	byte *memoryPtr = nullptr;
 
 	if (!memoryHandle.isNull()) {
 		memoryPtr = _segMan->getHunkPointer(memoryHandle);
@@ -362,7 +361,7 @@ void GfxPaint16::bitsGetRect(reg_t memoryHandle, Common::Rect *destRect) {
 }
 
 void GfxPaint16::bitsRestore(reg_t memoryHandle) {
-	byte *memoryPtr = NULL;
+	byte *memoryPtr = nullptr;
 
 	if (!memoryHandle.isNull()) {
 		memoryPtr = _segMan->getHunkPointer(memoryHandle);

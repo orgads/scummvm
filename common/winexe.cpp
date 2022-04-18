@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -123,37 +122,46 @@ bool WinResources::loadFromCompressedEXE(const String &fileName) {
 	file.readByte(); // file name character change
 	uint32 unpackedLength = file.readUint32LE();
 
-	byte *window = new byte[0x1000];
+	byte *window = new byte[0x1000]();
 	int pos = 0x1000 - 16;
-	memset(window, 0x20, 0x1000); // Initialize to all spaces
 
 	byte *unpackedData = (byte *)malloc(unpackedLength);
 	assert(unpackedData);
 	byte *dataPos = unpackedData;
 
+	uint32 remaining = unpackedLength;
+
 	// Apply simple LZSS decompression
 	for (;;) {
 		byte controlByte = file.readByte();
 
-		if (file.eos())
+		if (remaining == 0 || file.eos())
 			break;
 
 		for (byte i = 0; i < 8; i++) {
 			if (controlByte & (1 << i)) {
 				*dataPos++ = window[pos++] = file.readByte();
 				pos &= 0xFFF;
+				if (--remaining == 0)
+					break;
 			} else {
 				int matchPos = file.readByte();
 				int matchLen = file.readByte();
 				matchPos |= (matchLen & 0xF0) << 4;
 				matchLen = (matchLen & 0xF) + 3;
+				if ((uint32)matchLen > remaining)
+					matchLen = remaining;
+				remaining -= matchLen;
+
 				while (matchLen--) {
 					*dataPos++ = window[pos++] = window[matchPos++];
 					pos &= 0xFFF;
 					matchPos &= 0xFFF;
 				}
-			}
 
+				if (remaining == 0)
+					break;
+			}
 		}
 	}
 
@@ -184,67 +192,38 @@ WinResources *WinResources::createFromEXE(const String &fileName) {
 	return nullptr;
 }
 
-WinResources::VersionInfo *WinResources::parseVersionInfo(SeekableReadStream *res) {
-	VersionInfo *info = new VersionInfo;
+WinResources *WinResources::createFromEXE(SeekableReadStream *stream) {
+	WinResources *exe;
 
-	while (res->pos() < res->size() && !res->eos()) {
-		while (res->pos() % 4 && !res->eos()) // Pad to 4
-			res->readByte();
-
-		/* uint16 len = */ res->readUint16LE();
-		uint16 valLen = res->readUint16LE();
-		uint16 type = res->readUint16LE();
-		uint16 c;
-
-		Common::U32String key;
-		while ((c = res->readUint16LE()) != 0 && !res->eos())
-			key += c;
-
-		while (res->pos() % 4 && !res->eos()) // Pad to 4
-			res->readByte();
-
-		if (res->eos())
-			break;
-
-		if (type != 0) {	// text
-			Common::U32String value;
-			for (int j = 0; j < valLen; j++)
-				value += res->readUint16LE();
-
-			info->hash.setVal(key.encode(), value);
-		} else {
-			if (key == "VS_VERSION_INFO") {
-				// Signature check
-				if (res->readUint32LE() != 0xFEEF04BD)
-					return info;
-
-				res->readUint32LE(); // struct version
-
-				// The versions are stored a bit weird
-				info->fileVersion[1] = res->readUint16LE();
-				info->fileVersion[0] = res->readUint16LE();
-				info->fileVersion[3] = res->readUint16LE();
-				info->fileVersion[2] = res->readUint16LE();
-				info->productVersion[1] = res->readUint16LE();
-				info->productVersion[0] = res->readUint16LE();
-				info->productVersion[3] = res->readUint16LE();
-				info->productVersion[2] = res->readUint16LE();
-
-				info->fileFlagsMask = res->readUint32LE();
-				info->fileFlags = res->readUint32LE();
-				info->fileOS = res->readUint32LE();
-				info->fileType = res->readUint32LE();
-				info->fileSubtype = res->readUint32LE();
-				info->fileDate[0] = res->readUint32LE();
-				info->fileDate[1] = res->readUint32LE();
-
-				info->hash.setVal("File:", Common::String::format("%d.%d.%d.%d", info->fileVersion[0], info->fileVersion[1], info->fileVersion[2], info->fileVersion[3]));
-				info->hash.setVal("Prod:", Common::String::format("%d.%d.%d.%d", info->productVersion[0], info->productVersion[1], info->productVersion[2], info->productVersion[3]));
-			}
-		}
+	// First try loading via the NE code
+	stream->seek(0);
+	exe = new Common::NEResources();
+	if (exe->loadFromEXE(stream, DisposeAfterUse::NO)) {
+		return exe;
 	}
+	delete exe;
 
-	return info;
+	// Then try loading via the PE code
+	stream->seek(0);
+	exe = new Common::PEResources();
+	if (exe->loadFromEXE(stream, DisposeAfterUse::NO)) {
+		return exe;
+	}
+	delete exe;
+
+	return nullptr;
+}
+
+WinResources::VersionInfo *WinResources::getVersionResource(const WinResourceID &id) {
+		VersionInfo *info = nullptr;
+
+		SeekableReadStream *res = getResource(kWinVersion, id);
+		if (res) {
+			info = parseVersionInfo(res);
+			delete res;
+		}
+
+		return info;
 }
 
 WinResources::VersionInfo::VersionInfo() {
@@ -256,6 +235,38 @@ WinResources::VersionInfo::VersionInfo() {
 	fileType = 0;
 	fileSubtype = 0;
 	fileDate[0] = fileDate[1] = 0;
+}
+
+
+bool WinResources::VersionInfo::readVSVersionInfo(SeekableReadStream *res) {
+	// Signature check
+	if (res->readUint32LE() != 0xFEEF04BD)
+		return false;
+
+	res->readUint32LE(); // struct version
+
+	// The versions are stored a bit weird
+	fileVersion[1] = res->readUint16LE();
+	fileVersion[0] = res->readUint16LE();
+	fileVersion[3] = res->readUint16LE();
+	fileVersion[2] = res->readUint16LE();
+	productVersion[1] = res->readUint16LE();
+	productVersion[0] = res->readUint16LE();
+	productVersion[3] = res->readUint16LE();
+	productVersion[2] = res->readUint16LE();
+
+	fileFlagsMask = res->readUint32LE();
+	fileFlags = res->readUint32LE();
+	fileOS = res->readUint32LE();
+	fileType = res->readUint32LE();
+	fileSubtype = res->readUint32LE();
+	fileDate[0] = res->readUint32LE();
+	fileDate[1] = res->readUint32LE();
+
+	hash.setVal("File:", Common::U32String::format("%d.%d.%d.%d", fileVersion[0], fileVersion[1], fileVersion[2], fileVersion[3]));
+	hash.setVal("Prod:", Common::U32String::format("%d.%d.%d.%d", productVersion[0], productVersion[1], productVersion[2], productVersion[3]));
+
+	return true;
 }
 
 } // End of namespace Common

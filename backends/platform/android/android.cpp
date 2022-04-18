@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -41,6 +40,7 @@
 // for the Android port
 #define FORBIDDEN_SYMBOL_EXCEPTION_printf
 
+#include <EGL/egl.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/system_properties.h>
@@ -54,6 +54,7 @@
 #include "common/mutex.h"
 #include "common/events.h"
 #include "common/config-manager.h"
+#include "graphics/cursorman.h"
 
 #include "backends/audiocd/default/default-audiocd.h"
 #include "backends/events/default/default-events.h"
@@ -65,9 +66,10 @@
 #include "backends/keymapper/keymapper-defaults.h"
 #include "backends/keymapper/standard-actions.h"
 
+#include "backends/graphics/android/android-graphics.h"
+#include "backends/graphics3d/android/android-graphics3d.h"
 #include "backends/platform/android/jni-android.h"
 #include "backends/platform/android/android.h"
-#include "backends/platform/android/graphics.h"
 
 const char *android_log_tag = "ScummVM";
 
@@ -86,6 +88,42 @@ extern "C" {
 								"Assertion failure: '%s' in %s:%d (%s)",
 								 expr, file, line, func);
 	}
+}
+
+#ifdef ANDROID_DEBUG_GL
+static const char *getGlErrStr(GLenum error) {
+	switch (error) {
+	case GL_INVALID_ENUM:
+		return "GL_INVALID_ENUM";
+	case GL_INVALID_VALUE:
+		return "GL_INVALID_VALUE";
+	case GL_INVALID_OPERATION:
+		return "GL_INVALID_OPERATION";
+	case GL_STACK_OVERFLOW:
+		return "GL_STACK_OVERFLOW";
+	case GL_STACK_UNDERFLOW:
+		return "GL_STACK_UNDERFLOW";
+	case GL_OUT_OF_MEMORY:
+		return "GL_OUT_OF_MEMORY";
+	}
+
+	static char buf[40];
+	snprintf(buf, sizeof(buf), "(Unknown GL error code 0x%x)", error);
+
+	return buf;
+}
+
+void checkGlError(const char *expr, const char *file, int line) {
+	GLenum error = glGetError();
+
+	if (error != GL_NO_ERROR)
+		LOGE("GL ERROR: %s on %s (%s:%d)", getGlErrStr(error), expr, file, line);
+}
+#endif
+
+void *androidGLgetProcAddress(const char *name) {
+	// This exists since Android 2.3 (API Level 9)
+	return (void *)eglGetProcAddress(name);
 }
 
 OSystem_Android::OSystem_Android(int audio_sample_rate, int audio_buffer_size) :
@@ -148,6 +186,9 @@ OSystem_Android::~OSystem_Android() {
 
 	delete _savefileManager;
 	_savefileManager = 0;
+
+	// Uninitialize surface now to avoid it to be done later when touch controls are destroyed
+	dynamic_cast<AndroidCommonGraphics *>(_graphicsManager)->deinitSurface();
 }
 
 void *OSystem_Android::timerThreadFunc(void *arg) {
@@ -400,6 +441,14 @@ void OSystem_Android::initBackend() {
 		ConfMan.set("browser_lastpath", "/");
 	}
 
+	if (!ConfMan.hasKey("gui_scale")) {
+		// Until a proper scale detection is done (especially post PR https://github.com/scummvm/scummvm/pull/3264/commits/8646dfca329b6fbfdba65e0dc0802feb1382dab2),
+		// set scale by default to large, if not set, and then let the user set it manually from the launcher -> Options -> Misc tab
+		// Otherwise the screen may default to very tiny and indiscernible text and be barely usable.
+		// TODO We need a proper scale detection for Android, see: (float) AndroidGraphicsManager::getHiDPIScreenFactor() in android/graphics.cpp
+		ConfMan.setInt("gui_scale", 125); // "Large" (see gui/options.cpp and guiBaseValues[])
+	}
+
 	// BUG: "transient" ConfMan settings get nuked by the options
 	// screen. Passing the savepath in this way makes it stick
 	// (via ConfMan.registerDefault() which is called from DefaultSaveFileManager constructor (backends/saves/default/default-saves.cpp))
@@ -417,14 +466,16 @@ void OSystem_Android::initBackend() {
 	// TODO remove the debug message eventually
 	LOGD("Setting DefaultSaveFileManager path to: %s", ConfMan.get("savepath").c_str());
 
-	_mutexManager = new PthreadMutexManager();
 	_timerManager = new DefaultTimerManager();
 
 	_event_queue_lock = new Common::Mutex();
 
 	gettimeofday(&_startTime, 0);
 
-	_mixer = new Audio::MixerImpl(_audio_sample_rate);
+	// The division by four happens because the Mixer stores the size in frame units
+	// instead of bytes; this means that, since we have audio in stereo (2 channels)
+	// with a word size of 16 bit (2 bytes), we have to divide the effective size by 4.
+	_mixer = new Audio::MixerImpl(_audio_sample_rate, _audio_buffer_size / 4);
 	_mixer->setReady(true);
 
 	_timer_thread_exit = false;
@@ -452,10 +503,14 @@ bool OSystem_Android::hasFeature(Feature f) {
 		return false;
 	if (f == kFeatureVirtualKeyboard ||
 			f == kFeatureOpenUrl ||
-			f == kFeatureClipboardSupport ||
-	                f == OSystem::kFeatureHiDPI) {
+			f == kFeatureClipboardSupport) {
 		return true;
 	}
+	/* Even if we are using the 2D graphics manager,
+	 * we are at one initGraphics3d call of supporting GLES2 */
+	if (f == kFeatureOpenGLForGame) return true;
+	/* GLES2 always supports shaders */
+	if (f == kFeatureShadersForGame) return true;
 	return ModularGraphicsBackend::hasFeature(f);
 }
 
@@ -477,8 +532,6 @@ bool OSystem_Android::getFeatureState(Feature f) {
 	switch (f) {
 	case kFeatureVirtualKeyboard:
 		return _virtkeybd_on;
-	case OSystem::kFeatureHiDPI:
-		return true;
 	default:
 		return ModularGraphicsBackend::getFeatureState(f);
 	}
@@ -554,6 +607,10 @@ void OSystem_Android::delayMillis(uint msecs) {
 	usleep(msecs * 1000);
 }
 
+Common::MutexInternal *OSystem_Android::createMutex() {
+	return createPthreadMutexInternal();
+}
+
 void OSystem_Android::quit() {
 	ENTER();
 
@@ -575,7 +632,7 @@ Audio::Mixer *OSystem_Android::getMixer() {
 	return _mixer;
 }
 
-void OSystem_Android::getTimeAndDate(TimeDate &td) const {
+void OSystem_Android::getTimeAndDate(TimeDate &td, bool skipRecord) const {
 	struct tm tm;
 	const time_t curTime = time(0);
 
@@ -647,6 +704,93 @@ Common::String OSystem_Android::getSystemProperty(const char *name) const {
 	int len = __system_property_get(name, value);
 
 	return Common::String(value, len);
+}
+
+const OSystem::GraphicsMode *OSystem_Android::getSupportedGraphicsModes() const {
+	// We only support one mode
+	static const OSystem::GraphicsMode s_supportedGraphicsModes[] = {
+		{ "default", "Default", 0 },
+		{ 0, 0, 0 },
+	};
+
+	return s_supportedGraphicsModes;
+}
+
+int OSystem_Android::getDefaultGraphicsMode() const {
+	// We only support one mode
+	return 0;
+}
+
+bool OSystem_Android::setGraphicsMode(int mode, uint flags) {
+	bool render3d = flags & OSystem::kGfxModeRender3d;
+
+	// Very hacky way to set up the old graphics manager state, in case we
+	// switch from SDL->OpenGL or OpenGL->SDL.
+	//
+	// This is a probably temporary workaround to fix bugs like #5799
+	// "SDL/OpenGL: Crash when switching renderer backend".
+	//
+	// It's also used to restore state from 3D to 2D GFX manager
+	AndroidCommonGraphics *androidGraphicsManager = dynamic_cast<AndroidCommonGraphics *>(_graphicsManager);
+	AndroidCommonGraphics::State gfxManagerState = androidGraphicsManager->getState();
+	bool supports3D = _graphicsManager->hasFeature(kFeatureOpenGLForGame);
+
+	bool switchedManager = false;
+
+	// If the new mode and the current mode are not from the same graphics
+	// manager, delete and create the new mode graphics manager
+	debug(5, "requesting 3D: %d, supporting 3D: %d", render3d, supports3D);
+	if (render3d && !supports3D) {
+		debug(5, "switching to 3D graphics");
+		delete _graphicsManager;
+		AndroidGraphics3dManager *manager = new AndroidGraphics3dManager();
+		_graphicsManager = manager;
+		androidGraphicsManager = manager;
+		switchedManager = true;
+	} else if (!render3d && supports3D) {
+		debug(5, "switching to 2D graphics");
+		delete _graphicsManager;
+		AndroidGraphicsManager *manager = new AndroidGraphicsManager();
+		_graphicsManager = manager;
+		androidGraphicsManager = manager;
+		switchedManager = true;
+	}
+
+	if (switchedManager) {
+		// Setup the graphics mode and size first
+		// This is needed so that we can check the supported pixel formats when
+		// restoring the state.
+		_graphicsManager->beginGFXTransaction();
+		if (!_graphicsManager->setGraphicsMode(mode, flags))
+			return false;
+		_graphicsManager->initSize(gfxManagerState.screenWidth, gfxManagerState.screenHeight);
+		_graphicsManager->endGFXTransaction();
+
+		// This failing will probably have bad consequences...
+		if (!androidGraphicsManager->setState(gfxManagerState)) {
+			return false;
+		}
+
+		// Next setup the cursor again
+		CursorMan.pushCursor(0, 0, 0, 0, 0, 0);
+		CursorMan.popCursor();
+
+		// Next setup cursor palette if needed
+		if (_graphicsManager->getFeatureState(kFeatureCursorPalette)) {
+			CursorMan.pushCursorPalette(0, 0, 0);
+			CursorMan.popCursorPalette();
+		}
+
+		_graphicsManager->beginGFXTransaction();
+		return true;
+	} else {
+		return _graphicsManager->setGraphicsMode(mode, flags);
+	}
+}
+
+int OSystem_Android::getGraphicsMode() const {
+	// We only support one mode
+	return 0;
 }
 
 #endif

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -29,6 +28,7 @@
 #include "engines/engine.h"
 #include "graphics/managed_surface.h"
 #include "video/smk_decoder.h"
+#include "graphics/palette.h"
 
 #include "private/grammar.h"
 
@@ -167,11 +167,12 @@ public:
 	void initFuncs();
 
 	// User input
-	void selectPauseMovie(Common::Point);
+	void selectPauseGame(Common::Point);
 	void selectMask(Common::Point);
 	void selectExit(Common::Point);
 	void selectLoadGame(Common::Point);
 	void selectSaveGame(Common::Point);
+	void resumeGame();
 
 	// Cursors
 	bool cursorPauseMovie(Common::Point);
@@ -198,9 +199,11 @@ public:
 	void playVideo(const Common::String &);
 	void skipVideo();
 
-	Graphics::Surface *decodeImage(const Common::String &file);
+	Graphics::Surface *decodeImage(const Common::String &file, byte **palette);
+	//byte *decodePalette(const Common::String &name);
+	void remapImage(uint16 ncolors, const Graphics::Surface *oldImage, const byte *oldPalette, Graphics::Surface *newImage, const byte *currentPalette);
 	void loadImage(const Common::String &file, int x, int y);
-	void drawScreenFrame();
+	void drawScreenFrame(const byte *videoPalette);
 
 	// Cursors
 	void changeCursor(const Common::String &);
@@ -211,12 +214,16 @@ public:
 	Graphics::ManagedSurface *_compositeSurface;
 	Graphics::Surface *loadMask(const Common::String &, int, int, bool);
 	void drawMask(Graphics::Surface *);
+	void fillRect(uint32, Common::Rect);
 	bool inMask(Graphics::Surface *, Common::Point);
 	uint32 _transparentColor;
-	Common::Rect screenRect;
+	Common::Rect _screenRect;
 	Common::String _framePath;
-	Graphics::Surface *_frame;
+	Graphics::Surface *_frameImage;
+	Graphics::Surface *_mframeImage;
+	byte *_framePalette;
 	Common::String _nextVS;
+	Common::String _currentVS;
 	Common::Point _origin;
 	void drawScreen();
 
@@ -231,6 +238,7 @@ public:
 	Common::String getPoliceBustFromMOSetting();
 	Common::String getAlternateGameVariable();
 	Common::String getPoliceIndexVariable();
+	Common::String getWallSafeValueVariable();
 
 	// movies
 	Common::String _nextMovie;
@@ -312,6 +320,17 @@ public:
 	void selectPoliceRadioArea(Common::Point);
 	void selectPhoneArea(Common::Point);
 	void checkPhoneCall();
+
+	// Safe
+	uint32 _safeColor;
+	Common::String _safeNumberPath;
+	MaskInfo _safeDigitArea[3];
+	Common::Rect _safeDigitRect[3];
+	uint32 _safeDigit[3];
+
+	bool selectSafeDigit(Common::Point);
+	void addSafeDigit(uint32, Common::Rect*);
+	void renderSafeDigit(uint32);
 
 	// Random values
 	bool getRandomBool(uint);

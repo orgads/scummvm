@@ -6,10 +6,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,8 +17,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -65,11 +64,20 @@ public:
 	virtual bool        CanWrite() const = 0;
 	virtual bool        CanSeek() const = 0;
 
+	// Reads number of bytes in the provided buffer
 	virtual size_t      Read(void *buffer, size_t size) = 0;
+	// ReadByte conforms to fgetc behavior:
+	// - if stream is valid, then returns an *unsigned char* packed in the int
+	// - if EOS, then returns -1
 	virtual int32_t     ReadByte() = 0;
+	// Writes number of bytes from the provided buffer
 	virtual size_t      Write(const void *buffer, size_t size) = 0;
+	// WriteByte conforms to fputc behavior:
+	// - on success, returns the unsigned char packed in the int
+	// - on failure, returns -1
 	virtual int32_t     WriteByte(uint8_t b) = 0;
 
+	// Convenience methods for reading values of particular size
 	virtual int8_t      ReadInt8() = 0;
 	virtual int16_t     ReadInt16() = 0;
 	virtual int32_t     ReadInt32() = 0;
@@ -81,6 +89,7 @@ public:
 	virtual size_t      ReadArrayOfInt32(int32_t *buffer, size_t count) = 0;
 	virtual size_t      ReadArrayOfInt64(int64_t *buffer, size_t count) = 0;
 
+	// Convenience methods for writing values of particular size
 	virtual size_t      WriteInt8(int8_t val) = 0;
 	virtual size_t      WriteInt16(int16_t val) = 0;
 	virtual size_t      WriteInt32(int32_t val) = 0;

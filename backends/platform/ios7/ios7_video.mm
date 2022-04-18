@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,7 +24,6 @@
 
 #include "backends/platform/ios7/ios7_video.h"
 
-#include "graphics/colormasks.h"
 #include "backends/platform/ios7/ios7_app_delegate.h"
 
 static int g_needsScreenUpdate = 0;
@@ -210,7 +208,7 @@ uint getSizeNextPOT(uint size) {
 	_overlayCoords[2].x = 0; _overlayCoords[2].y = 0; _overlayCoords[2].u = 0; _overlayCoords[2].v = v;
 	_overlayCoords[3].x = 0; _overlayCoords[3].y = 0; _overlayCoords[3].u = u; _overlayCoords[3].v = v;
 
-	_videoContext.overlayTexture.create((uint16) overlayTextureWidthPOT, (uint16) overlayTextureHeightPOT, Graphics::createPixelFormat<5551>());
+	_videoContext.overlayTexture.create((uint16) overlayTextureWidthPOT, (uint16) overlayTextureHeightPOT, Graphics::PixelFormat(2, 5, 5, 5, 1, 11, 6, 1, 0));
 }
 
 - (void)deleteFramebuffer {
@@ -606,7 +604,7 @@ uint getSizeNextPOT(uint size) {
 	_gameScreenCoords[1].u = _gameScreenCoords[3].u = _videoContext.screenWidth / (GLfloat)screenTexWidth;
 	_gameScreenCoords[2].v = _gameScreenCoords[3].v = _videoContext.screenHeight / (GLfloat)screenTexHeight;
 
-	_videoContext.screenTexture.create((uint16) screenTexWidth, (uint16) screenTexHeight, Graphics::createPixelFormat<565>());
+	_videoContext.screenTexture.create((uint16) screenTexWidth, (uint16) screenTexHeight, Graphics::PixelFormat(2, 5, 6, 5, 0, 11, 5, 0, 0));
 }
 
 - (void)initSurface {
@@ -699,7 +697,7 @@ uint getSizeNextPOT(uint size) {
 
 	[self setViewTransformation];
 	[self updateMouseCursorScaling];
-    [self adjustViewFrameForSafeArea];
+	[self adjustViewFrameForSafeArea];
 }
 
 #ifndef __has_builtin
@@ -714,23 +712,23 @@ uint getSizeNextPOT(uint size) {
 	// available when running on iOS 11+ if it has been compiled on iOS 11+
 #ifdef __IPHONE_11_0
 #if __has_builtin(__builtin_available)
-    if ( @available(iOS 11,*) ) {
+	if ( @available(iOS 11,*) ) {
 #else
-    if ( [[[UIApplication sharedApplication] keyWindow] respondsToSelector:@selector(safeAreaInsets)] ) {
+	if ( [[[UIApplication sharedApplication] keyWindow] respondsToSelector:@selector(safeAreaInsets)] ) {
 #endif
-        CGRect screenSize = [[UIScreen mainScreen] bounds];
-        UIEdgeInsets inset = [[[UIApplication sharedApplication] keyWindow] safeAreaInsets];
-        UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
-        CGRect newFrame = screenSize;
-        if ( orientation == UIInterfaceOrientationPortrait ) {
-            newFrame = CGRectMake(screenSize.origin.x, screenSize.origin.y + inset.top, screenSize.size.width, screenSize.size.height - inset.top);
-        } else if ( orientation == UIInterfaceOrientationLandscapeLeft ) {
-            newFrame = CGRectMake(screenSize.origin.x, screenSize.origin.y, screenSize.size.width - inset.right, screenSize.size.height);
-        } else if ( orientation == UIInterfaceOrientationLandscapeRight ) {
-            newFrame = CGRectMake(screenSize.origin.x + inset.left, screenSize.origin.y, screenSize.size.width - inset.left, screenSize.size.height);
-        }
-        self.frame = newFrame;
-    }
+		CGRect screenSize = [[UIScreen mainScreen] bounds];
+		UIEdgeInsets inset = [[[UIApplication sharedApplication] keyWindow] safeAreaInsets];
+		UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
+		CGRect newFrame = screenSize;
+		if ( orientation == UIInterfaceOrientationPortrait ) {
+			newFrame = CGRectMake(screenSize.origin.x, screenSize.origin.y + inset.top, screenSize.size.width, screenSize.size.height - inset.top);
+		} else if ( orientation == UIInterfaceOrientationLandscapeLeft ) {
+			newFrame = CGRectMake(screenSize.origin.x, screenSize.origin.y, screenSize.size.width - inset.right, screenSize.size.height);
+		} else if ( orientation == UIInterfaceOrientationLandscapeRight ) {
+			newFrame = CGRectMake(screenSize.origin.x + inset.left, screenSize.origin.y, screenSize.size.width - inset.left, screenSize.size.height);
+		}
+		self.frame = newFrame;
+	}
 #endif
 }
 
@@ -815,12 +813,12 @@ uint getSizeNextPOT(uint size) {
 - (void)deviceOrientationChanged:(UIDeviceOrientation)orientation {
 	[self addEvent:InternalEvent(kInputOrientationChanged, orientation, 0)];
 
-  BOOL isLandscape = (self.bounds.size.width > self.bounds.size.height);
-  if (isLandscape) {
-    [self hideKeyboard];
-  } else {
-    [self showKeyboard];
-  }
+	BOOL isLandscape = (self.bounds.size.width > self.bounds.size.height);
+	if (isLandscape) {
+		[self hideKeyboard];
+	} else {
+		[self showKeyboard];
+	}
 }
 
 - (void)showKeyboard {

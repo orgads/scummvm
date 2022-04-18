@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -56,11 +55,11 @@ void sys_get_desktop_modes(std::vector<AGS::Engine::DisplayMode> &dms);
 //
 struct SDL_Window;
 // Create a new single game window.
-SDL_Window *sys_window_create(const char *window_title, int w, int h, bool windowed, int ex_flags = 0);
+SDL_Window *sys_window_create(const char *window_title, int w, int h, AGS::Engine::WindowMode mode, int ex_flags = 0);
 // Returns current game window, if one exists, or null.
 SDL_Window *sys_get_window();
 // Sets current window style, does nothing if window was not created.
-void sys_window_set_style(bool windowed);
+void sys_window_set_style(AGS::Engine::WindowMode mode, int ex_flags = 0);
 // Set new window size; optionally center new window on screen
 bool sys_window_set_size(int w, int h, bool center);
 // Shows or hides system cursor when it's in the game window

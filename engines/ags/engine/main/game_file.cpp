@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,33 +23,33 @@
 // Game data file management
 //
 
-#include "ags/engine/main/main_header.h"
-#include "ags/engine/main/game_file.h"
 #include "ags/shared/ac/common.h"
 #include "ags/engine/ac/character.h"
 #include "ags/engine/ac/character_cache.h"
 #include "ags/shared/ac/dialog_topic.h"
 #include "ags/engine/ac/draw.h"
 #include "ags/engine/ac/game.h"
+#include "ags/engine/ac/game_setup.h"
 #include "ags/shared/ac/game_setup_struct.h"
 #include "ags/engine/ac/game_state.h"
 #include "ags/shared/ac/game_struct_defines.h"
 #include "ags/engine/ac/gui.h"
 #include "ags/engine/ac/view_frame.h"
+#include "ags/shared/core/asset_manager.h"
 #include "ags/engine/debugging/debug_log.h"
 #include "ags/shared/debugging/out.h"
+#include "ags/engine/game/game_init.h"
+#include "ags/shared/game/main_game_file.h"
+#include "ags/shared/gfx/bitmap.h"
+#include "ags/engine/gfx/blender.h"
 #include "ags/shared/gui/gui_label.h"
 #include "ags/engine/main/main.h"
 #include "ags/engine/platform/base/ags_platform_driver.h"
-#include "ags/shared/util/stream.h"
-#include "ags/shared/gfx/bitmap.h"
-#include "ags/engine/gfx/blender.h"
-#include "ags/shared/core/asset_manager.h"
-#include "ags/shared/util/aligned_stream.h"
-#include "ags/engine/ac/game_setup.h"
-#include "ags/shared/game/main_game_file.h"
-#include "ags/engine/game/game_init.h"
+#include "ags/shared/script/cc_error.h"
 #include "ags/engine/script/script.h"
+#include "ags/shared/util/aligned_stream.h"
+#include "ags/shared/util/stream.h"
+#include "ags/shared/util/text_stream_reader.h"
 #include "ags/globals.h"
 
 namespace AGS3 {
@@ -117,13 +116,66 @@ HError preload_game_data() {
 	return HError::None();
 }
 
+static inline HError MakeScriptLoadError(const char *name) {
+	return new Error(String::FromFormat(
+		"Failed to load a script module: %s", name),
+		_G(ccErrorString));
+}
+
+// Looks up for the game scripts available as separate assets.
+// These are optional, so no error is raised if some of these are not found.
+// For those that do exist, reads them and replaces any scripts of same kind
+// in the already loaded game data.
+HError LoadGameScripts(LoadedGameEntities &ents, GameDataVersion data_ver) {
+	// Global script 
+	std::unique_ptr<Stream> in(_GP(AssetMgr)->OpenAsset("GlobalScript.o"));
+	if (in) {
+		PScript script(ccScript::CreateFromStream(in.get()));
+		if (!script)
+			return MakeScriptLoadError("GlobalScript.o");
+		ents.GlobalScript = script;
+	}
+	// Dialog script
+	in.reset(_GP(AssetMgr)->OpenAsset("DialogScript.o"));
+	if (in) {
+		PScript script(ccScript::CreateFromStream(in.get()));
+		if (!script)
+			return MakeScriptLoadError("DialogScript.o");
+		ents.DialogScript = script;
+	}
+	// Script modules
+	// First load a modules list
+	std::vector<String> modules;
+	in.reset(_GP(AssetMgr)->OpenAsset("ScriptModules.lst"));
+	if (in) {
+		TextStreamReader reader(in.get());
+		in.release(); // TextStreamReader got it
+		while (!reader.EOS())
+			modules.push_back(reader.ReadLine());
+	}
+	if (modules.size() > ents.ScriptModules.size())
+		ents.ScriptModules.resize(modules.size());
+	// Now run by the list and try loading everything
+	for (size_t i = 0; i < modules.size(); ++i) {
+		in.reset(_GP(AssetMgr)->OpenAsset(modules[i]));
+		if (in) {
+			PScript script(ccScript::CreateFromStream(in.get()));
+			if (!script)
+				return MakeScriptLoadError(modules[i].GetCStr());
+			ents.ScriptModules[i] = script;
+		}
+	}
+	return HError::None();
+}
+
 HError load_game_file() {
 	MainGameSource src;
-	LoadedGameEntities ents(_GP(game), _G(dialog), _G(views));
-	HGameFileError load_err = OpenMainGameFileFromDefaultAsset(src);
-	if (load_err) {
-		load_err = ReadGameData(ents, src.InputStream.get(), src.DataVersion);
-		if (load_err) {
+	LoadedGameEntities ents(_GP(game), _G(dialog));
+	HError err = (HError)OpenMainGameFileFromDefaultAsset(src);
+	if (err) {
+		err = (HError)ReadGameData(ents, src.InputStream.get(), src.DataVersion);
+		src.InputStream.reset();
+		if (err) {
 			// Upscale mode -- for old games that supported it.
 			// NOTE: this must be done before UpdateGameData, or resolution-dependant
 			// adjustments won't be applied correctly.
@@ -134,14 +186,18 @@ HError load_game_file() {
 					_GP(game).SetGameResolution(kGameResolution_640x480);
 			}
 
-			load_err = UpdateGameData(ents, src.DataVersion);
+			err = (HError)UpdateGameData(ents, src.DataVersion);
 		}
 	}
-	if (!load_err)
-		return (HError)load_err;
-	HGameInitError init_err = InitGameState(ents, src.DataVersion);
-	if (!init_err)
-		return (HError)init_err;
+
+	if (!err)
+		return err;
+	err = LoadGameScripts(ents, src.DataVersion);
+	if (!err)
+		return err;
+	err = (HError)InitGameState(ents, src.DataVersion);
+	if (!err)
+		return err;
 	return HError::None();
 }
 

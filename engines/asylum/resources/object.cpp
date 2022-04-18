@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -115,6 +114,10 @@ void Object::load(Common::SeekableReadStream *stream) {
 		_randomResourceIds[i] = (ResourceId)stream->readSint32LE();
 
 	_soundResourceId = (ResourceId)stream->readSint32LE();
+
+	if (_vm->checkGameVersion("Demo"))
+		return;
+
 	_field_6A4       = (ActorDirection)stream->readSint32LE();
 }
 
@@ -428,8 +431,8 @@ void Object::playSounds() {
 		} else {
 			Common::Rect rect = GraphicResource::getFrameRect(_vm, _resourceId, _frameIndex);
 
-			point.x = (int16)(x + (rect.width()  * 2));
-			point.y = (int16)(x + (rect.height() * 2));
+			point.x = (int16)(x + (rect.width()  / 2));
+			point.y = (int16)(y + (rect.height() / 2));
 		}
 	}
 
@@ -457,6 +460,7 @@ void Object::playSounds() {
 				getSound()->setVolume(item->resourceId, volume);
 			} else {
 				getSound()->stop(item->resourceId);
+				item->resourceId = kResourceNone;
 			}
 		}
 	}

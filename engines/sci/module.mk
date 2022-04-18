@@ -2,6 +2,7 @@ MODULE := engines/sci
 
 MODULE_OBJS := \
 	console.o \
+	dialogs.o \
 	event.o \
 	metaengine.o \
 	sci.o \
@@ -36,8 +37,8 @@ MODULE_OBJS := \
 	engine/segment.o \
 	engine/state.o \
 	engine/static_selectors.o \
+	engine/tts.o \
 	engine/vm.o \
-	engine/vm_hooks.o \
 	engine/vm_types.o \
 	engine/workarounds.o \
 	graphics/animate.o \

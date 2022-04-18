@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,15 +15,16 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef STARK_UI_DIALOG_BOX_H
 #define STARK_UI_DIALOG_BOX_H
 
+#include "engines/stark/stark.h"
 #include "engines/stark/ui/window.h"
+#include "engines/stark/visual/text.h"
 
 #include "common/keyboard.h"
 #include "common/scummsys.h"
@@ -47,7 +48,7 @@ class VisualText;
  */
 class DialogBox : public Window {
 public:
-	DialogBox(Gfx::Driver *gfx, Cursor *cursor);
+	DialogBox(StarkEngine *vm, Gfx::Driver *gfx, Cursor *cursor);
 	~DialogBox() override;
 
 	/** Make the dialog visible with the specified message */
@@ -68,12 +69,14 @@ protected:
 	void onClick(const Common::Point &pos) override;
 
 private:
-	static Graphics::Surface *loadBackground();
+	Graphics::Surface *loadBackground();
 	static void drawBevel(Graphics::Surface *surface, const Common::Rect &rect);
 	static Common::Rect centerRect(const Common::Rect &container, const Common::Rect &size);
 
 	void freeForeground();
 	void recomputeLayout();
+
+	StarkEngine *_vm;
 
 	Gfx::SurfaceRenderer *_surfaceRenderer;
 	Gfx::Texture *_backgroundTexture;
@@ -86,6 +89,8 @@ private:
 	Common::Rect _confirmButtonRect;
 	Common::Rect _cancelButtonRect;
 	Common::Rect _messageRect;
+
+	const Color _textColor = Color(0xFF, 0xFF, 0xFF);
 
 	ConfirmCallback *_confirmCallback;
 };

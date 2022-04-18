@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -30,7 +29,7 @@
 #include "engines/stark/gfx/opengls.h"
 #include "engines/stark/gfx/texture.h"
 
-#if defined(USE_GLES2) || defined(USE_OPENGL_SHADERS)
+#if defined(USE_OPENGL_SHADERS)
 
 #include "graphics/opengl/shader.h"
 
@@ -71,15 +70,13 @@ void OpenGLSActorRenderer::render(const Math::Vector3d &position, float directio
 	Math::Matrix4 projection = StarkScene->getProjectionMatrix();
 
 	Math::Matrix4 modelViewMatrix = view * model;
-	modelViewMatrix.transpose(); // OpenGL expects matrices transposed when compared to ScummVM's
+	modelViewMatrix.transpose(); // OpenGL expects matrices transposed
 
 	Math::Matrix4 projectionMatrix = projection;
-	projectionMatrix.transpose(); // OpenGL expects matrices transposed when compared to ScummVM's
+	projectionMatrix.transpose(); // OpenGL expects matrices transposed
 
 	Math::Matrix4 normalMatrix = modelViewMatrix;
 	normalMatrix.invertAffineOrthonormal();
-	//normalMatrix.transpose(); // OpenGL expects matrices transposed when compared to ScummVM's
-	//normalMatrix.transpose(); // No need to transpose twice in a row
 
 	_shader->enableVertexAttribute("position1", _faceVBO, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), 0);
 	_shader->enableVertexAttribute("position2", _faceVBO, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), 12);
@@ -120,9 +117,9 @@ void OpenGLSActorRenderer::render(const Math::Vector3d &position, float directio
 
 	_shader->unbind();
 
-	if (_castsShadow
-	        && StarkScene->shouldRenderShadows()
-	        && StarkSettings->getBoolSetting(Settings::kShadow)) {
+	if (_castsShadow &&
+	    StarkScene->shouldRenderShadows() &&
+	    StarkSettings->getBoolSetting(Settings::kShadow)) {
 		glEnable(GL_BLEND);
 		glEnable(GL_STENCIL_TEST);
 
@@ -309,8 +306,8 @@ void OpenGLSActorRenderer::setLightArrayUniform(const LightEntryArray &lights) {
 	}
 }
 
-void OpenGLSActorRenderer::setShadowUniform(const LightEntryArray &lights,
-		const Math::Vector3d &actorPosition, Math::Matrix3 worldToModelRot) {
+void OpenGLSActorRenderer::setShadowUniform(const LightEntryArray &lights, const Math::Vector3d &actorPosition,
+                                            Math::Matrix3 worldToModelRot) {
 	Math::Vector3d sumDirection;
 	bool hasLight = false;
 
@@ -365,8 +362,8 @@ void OpenGLSActorRenderer::setShadowUniform(const LightEntryArray &lights,
 	_shadowShader->setUniform("lightDirection", sumDirection);
 }
 
-bool OpenGLSActorRenderer::getPointLightContribution(LightEntry *light,
-		const Math::Vector3d &actorPosition, Math::Vector3d &direction, float weight) {
+bool OpenGLSActorRenderer::getPointLightContribution(LightEntry *light, const Math::Vector3d &actorPosition,
+                                                     Math::Vector3d &direction, float weight) {
 	float distance = light->position.getDistanceTo(actorPosition);
 
 	if (distance > light->falloffFar) {
@@ -411,14 +408,14 @@ bool OpenGLSActorRenderer::getDirectionalLightContribution(LightEntry *light, Ma
 	return true;
 }
 
-bool OpenGLSActorRenderer::getSpotLightContribution(LightEntry *light,
-		const Math::Vector3d &actorPosition, Math::Vector3d &direction) {
+bool OpenGLSActorRenderer::getSpotLightContribution(LightEntry *light, const Math::Vector3d &actorPosition,
+                                                    Math::Vector3d &direction) {
 	Math::Vector3d lightToActor = actorPosition - light->position;
 	lightToActor.normalize();
 
 	float cosAngle = MAX(0.0f, lightToActor.dotProduct(light->direction));
 	float cone = (cosAngle - light->innerConeAngle.getCosine()) /
-			MAX(0.001f, light->outerConeAngle.getCosine() - light->innerConeAngle.getCosine());
+	             MAX(0.001f, light->outerConeAngle.getCosine() - light->innerConeAngle.getCosine());
 	cone = CLIP(cone, 0.0f, 1.0f);
 
 	if (cone <= 0) {
@@ -431,4 +428,4 @@ bool OpenGLSActorRenderer::getSpotLightContribution(LightEntry *light,
 } // End of namespace Gfx
 } // End of namespace Stark
 
-#endif // defined(USE_GLES2) || defined(USE_OPENGL_SHADERS)
+#endif // defined(USE_OPENGL_SHADERS)

@@ -4,9 +4,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -49,15 +48,10 @@ void View::syncGame(Serializer &s) {
 
 /*------------------------------------------------------------------*/
 
-Weather::Weather() : _mIsSnow(false) {
+Weather::Weather(bool IsSnow, int32 &scrWidth, int32 &scrHeight, IAGSEngine *&engine) :
+		_mIsSnow(IsSnow), _screenWidth(scrWidth), _screenHeight(scrHeight), _engine(engine) {
 	Initialize();
 }
-
-Weather::Weather(bool IsSnow) : _mIsSnow(IsSnow) {
-	Initialize();
-}
-
-Weather::~Weather() {}
 
 void Weather::Update() {
 	if (_mTargetAmount > _mAmount)
@@ -251,12 +245,6 @@ void Weather::InitializeParticles() {
 }
 
 void Weather::SetDriftRange(int min_value, int max_value) {
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%d %s %d %d\n", (int)mIsSnow, "SetDriftRange", min_value, max_value);
-	_engine->PrintDebugConsole(buffer);
-#endif
-
 	ClipToRange(min_value, 0, 100);
 	ClipToRange(max_value, 0, 100);
 
@@ -272,12 +260,6 @@ void Weather::SetDriftRange(int min_value, int max_value) {
 }
 
 void Weather::SetDriftSpeed(int min_value, int max_value) {
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%d %s %d %d\n", (int)mIsSnow, "SetDriftSpeed", min_value, max_value);
-	_engine->PrintDebugConsole(buffer);
-#endif
-
 	ClipToRange(min_value, 0, 200);
 	ClipToRange(max_value, 0, 200);
 
@@ -293,24 +275,12 @@ void Weather::SetDriftSpeed(int min_value, int max_value) {
 }
 
 void Weather::ChangeAmount(int amount) {
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%d %s %d\n", (int)mIsSnow, "ChangeAmount", amount);
-	_engine->PrintDebugConsole(buffer);
-#endif
-
 	ClipToRange(amount, 0, 1000);
 
 	_mTargetAmount = amount;
 }
 
 void Weather::SetView(int kind_id, int event, int view, int loop) {
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%d %s %d %d %d %d\n", (int)mIsSnow, "SetView", kind_id, event, view, loop);
-	_engine->PrintDebugConsole(buffer);
-#endif
-
 	AGSViewFrame *view_frame = _engine->GetViewFrame(view, loop, 0);
 	_mViews[kind_id].bitmap = _engine->GetSpriteGraphic(view_frame->pic);
 	_mViews[kind_id].is_default = false;
@@ -322,12 +292,6 @@ void Weather::SetView(int kind_id, int event, int view, int loop) {
 }
 
 void Weather::SetDefaultView(int view, int loop) {
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%d %s %d %d\n", (int)mIsSnow, "SetDefaultView", view, loop);
-	_engine->PrintDebugConsole(buffer);
-#endif
-
 	AGSViewFrame *view_frame = _engine->GetViewFrame(view, loop, 0);
 	BITMAP *bitmap = _engine->GetSpriteGraphic(view_frame->pic);
 
@@ -344,12 +308,6 @@ void Weather::SetDefaultView(int view, int loop) {
 }
 
 void Weather::SetTransparency(int min_value, int max_value) {
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%d %s %d %d\n", (int)mIsSnow, "SetTransparency", min_value, max_value);
-	_engine->PrintDebugConsole(buffer);
-#endif
-
 	ClipToRange(min_value, 0, 100);
 	ClipToRange(max_value, 0, 100);
 
@@ -369,24 +327,12 @@ void Weather::SetTransparency(int min_value, int max_value) {
 }
 
 void Weather::SetWindSpeed(int value) {
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%d %s %d\n", (int)mIsSnow, "SetWindSpeed", value);
-	_engine->PrintDebugConsole(buffer);
-#endif
-
 	ClipToRange(value, -200, 200);
 
 	_mWindSpeed = (float)value / 20.0f;
 }
 
 void Weather::SetBaseline(int top, int bottom) {
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%d %s %d %d\n", (int)mIsSnow, "SetBaseline", top, bottom);
-	_engine->PrintDebugConsole(buffer);
-#endif
-
 	if (_screenHeight > 0) {
 		ClipToRange(top, 0, _screenHeight);
 		ClipToRange(bottom, 0, _screenHeight);
@@ -404,12 +350,6 @@ void Weather::SetBaseline(int top, int bottom) {
 }
 
 void Weather::SetAmount(int amount) {
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%d %s %d\n", (int)mIsSnow, "SetAmount", amount);
-	_engine->PrintDebugConsole(buffer);
-#endif
-
 	ClipToRange(amount, 0, 1000);
 
 	_mAmount = _mTargetAmount = amount;
@@ -418,12 +358,6 @@ void Weather::SetAmount(int amount) {
 }
 
 void Weather::SetFallSpeed(int min_value, int max_value) {
-#ifdef DEBUG
-	char buffer[200];
-	sprintf(buffer, "%d %s %d %d\n", (int)mIsSnow, "SetFallSpeed", min_value, max_value);
-	_engine->PrintDebugConsole(buffer);
-#endif
-
 	ClipToRange(min_value, 0, 1000);
 	ClipToRange(max_value, 0, 1000);
 

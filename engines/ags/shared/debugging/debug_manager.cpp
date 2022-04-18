@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -100,6 +99,7 @@ DebugManager::DebugManager() {
 	// Add hardcoded groups
 	RegisterGroup(DebugGroup(DebugGroupID(kDbgGroup_Main, "main"), ""));
 	RegisterGroup(DebugGroup(DebugGroupID(kDbgGroup_Game, "game"), "Game"));
+	RegisterGroup(DebugGroup(DebugGroupID(kDbgGroup_Script, "script"), "Script"));
 	RegisterGroup(DebugGroup(DebugGroupID(kDbgGroup_SprCache, "sprcache"), "Sprite cache"));
 	RegisterGroup(DebugGroup(DebugGroupID(kDbgGroup_ManObj, "manobj"), "Managed obj"));
 	_firstFreeGroupID = _groups.size();
@@ -137,8 +137,9 @@ DebugGroup DebugManager::RegisterGroup(const String &id, const String &out_name)
 }
 
 void DebugManager::RegisterGroup(const DebugGroup &group) {
-	_groups.push_back(group);
-	_groupByStrLookup[group.UID.SID] = group.UID;
+	if (_groups.size() <= group.UID.ID)
+		_groups.resize(group.UID.ID + 1);
+	_groups[group.UID.ID] = group;	_groupByStrLookup[group.UID.SID] = group.UID;
 }
 
 PDebugOutput DebugManager::RegisterOutput(const String &id, IOutputHandler *handler, MessageType def_verbosity, bool enabled) {

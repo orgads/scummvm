@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -515,7 +514,7 @@ void Window::playTransition(uint16 transDuration, uint8 transArea, uint8 transCh
 		_composeSurface->blitFrom(*blitFrom, rfrom, Common::Point(rto.left, rto.top));
 
 		g_system->delayMillis(t.stepDuration);
-		if (processQuitEvent(true)) {
+		if (_vm->processEvents(true)) {
 			exitTransition(&nextFrame, clipRect);
 			break;
 		}
@@ -531,6 +530,11 @@ void Window::playTransition(uint16 transDuration, uint8 transArea, uint8 transCh
 
 		g_lingo->executePerFrameHook(t.frame, i);
 	}
+
+	// re-render the surface to clean the tracks when of transitions
+	render(true, _composeSurface);
+	_contentIsDirty = true;
+	g_director->draw();
 }
 
 static int getLog2(int n) {
@@ -709,7 +713,7 @@ void Window::dissolveTrans(TransParams &t, Common::Rect &clipRect, Graphics::Man
 
 		g_lingo->executePerFrameHook(t.frame, i + 1);
 
-		if (processQuitEvent(true)) {
+		if (_vm->processEvents(true)) {
 			exitTransition(nextFrame, clipRect);
 			break;
 		}
@@ -812,7 +816,7 @@ void Window::dissolvePatternsTrans(TransParams &t, Common::Rect &clipRect, Graph
 
 		g_lingo->executePerFrameHook(t.frame, i + 1);
 
-		if (processQuitEvent(true)) {
+		if (_vm->processEvents(true)) {
 			exitTransition(nextFrame, clipRect);
 			break;
 		}
@@ -987,7 +991,7 @@ void Window::transMultiPass(TransParams &t, Common::Rect &clipRect, Graphics::Ma
 
 		g_system->delayMillis(t.stepDuration);
 
-		if (processQuitEvent(true)) {
+		if (_vm->processEvents(true)) {
 			exitTransition(nextFrame, clipRect);
 			break;
 		}
@@ -1034,7 +1038,7 @@ void Window::transZoom(TransParams &t, Common::Rect &clipRect, Graphics::Managed
 
 		g_system->delayMillis(t.stepDuration);
 
-		if (processQuitEvent(true)) {
+		if (_vm->processEvents(true)) {
 			exitTransition(nextFrame, clipRect);
 			break;
 		}
@@ -1052,21 +1056,26 @@ void Window::initTransParams(TransParams &t, Common::Rect &clipRect) {
 		h = (h + 1) >> 1;
 	}
 
+	// If we requested fast transitions, speed everything up
+	// Ensure the chunksize isn't larger than the amount of pixels.
+	if (debugChannelSet(-1, kDebugFast))
+		t.chunkSize = MIN((uint) m, t.chunkSize*16);
+
 	switch (transProps[t.type].dir) {
 	case kTransDirHorizontal:
-		t.steps = w / t.chunkSize;
+		t.steps = MAX(w / t.chunkSize, (uint)1);
 		t.xStepSize = w / t.steps;
 		t.xpos = w % t.steps;
 		break;
 
 	case kTransDirVertical:
-		t.steps = h / t.chunkSize;
+		t.steps = MAX(h / t.chunkSize, (uint)1);
 		t.yStepSize = h / t.steps;
 		t.ypos = h % t.steps;
 		break;
 
 	case kTransDirBoth:
-		t.steps = m / t.chunkSize;
+		t.steps = MAX(m / t.chunkSize, (uint)1);
 
 		t.xStepSize = w / t.steps;
 		t.xpos = w % t.steps;

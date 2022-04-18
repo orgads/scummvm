@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -67,7 +66,6 @@ Menu::Menu(AsylumEngine *vm): _vm(vm) {
 	_dword_456288 = 0;
 	_caretBlink = 0;
 	_startIndex = 0;
-	_creditsFrameIndex = 0;
 	_showMovie = false;
 	memset(&_iconFrames, 0, sizeof(_iconFrames));
 
@@ -78,6 +76,24 @@ Menu::Menu(AsylumEngine *vm): _vm(vm) {
 
 	// Savegames
 	_prefixWidth = 0;
+	_loadingDuringStartup = false;
+
+	// Credits
+	_creditsFrameIndex = 0;
+	switch (_vm->getLanguage()) {
+	default:
+	case Common::EN_ANY:
+		_creditsNumSteps = 8688;
+		break;
+
+	case Common::DE_DEU:
+		_creditsNumSteps = 6840;
+		break;
+
+	case Common::FR_FRA:
+		_creditsNumSteps = 6384;
+		break;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -202,7 +218,7 @@ void Menu::stopTestSounds() {
 }
 
 void Menu::adjustMasterVolume(int32 delta) const {
-	int32 *volume = NULL;
+	int32 *volume = nullptr;
 	int32 volumeIndex = 1;
 
 	do {
@@ -352,10 +368,11 @@ bool Menu::init() {
 			//  - initialize game structures (this is done in classes constructors)
 			getSaveLoad()->loadMoviesViewed();
 
-			_showMovie = true;
+			_showMovie = !_loadingDuringStartup;
 
 			// Play start video
-			getVideo()->play(0, this);
+			if (!_loadingDuringStartup)
+				getVideo()->play(0, this);
 
 			// If no savegame is present, start the game directly
 			if (!getSaveLoad()->hasSavegames()) {
@@ -717,8 +734,63 @@ void Menu::updateNewGame() {
 	getText()->draw(MAKE_RESOURCE(kResourcePackText, 1323));
 }
 
+void Menu::adjustCoordinates(Common::Point &point) {
+	if (!g_system->isOverlayVisible())
+		return;
+
+	point.x *= 640.0 / g_system->getOverlayWidth();
+	point.y *= 480.0 / g_system->getOverlayHeight();
+}
+
+bool Menu::hasThumbnail(int index) {
+	if (getSaveLoad()->hasSavegame(index + _startIndex))
+		return _vm->getMetaEngine()->querySaveMetaInfos(_vm->getTargetName().c_str(), index + _startIndex).getThumbnail();
+
+	return false;
+}
+
+void Menu::showThumbnail(int index) {
+	SaveStateDescriptor desc = _vm->getMetaEngine()->querySaveMetaInfos(_vm->getTargetName().c_str(), index + _startIndex);
+	const Graphics::Surface *thumbnail = desc.getThumbnail();
+
+	int x, y;
+	int overlayWidth  = g_system->getOverlayWidth(),
+		overlayHeight = g_system->getOverlayHeight();
+	Graphics::PixelFormat overlayFormat = g_system->getOverlayFormat();
+	Graphics::Surface overlay, *thumbnail1;
+
+	x = (index < 6 ? 150 : 470)  * overlayWidth  / 640;
+	y = (179 + (index % 6) * 29) * overlayHeight / 480;
+
+	overlay.create(overlayWidth, overlayHeight, overlayFormat);
+	if (!g_system->hasFeature(OSystem::kFeatureOverlaySupportsAlpha)) {
+		Graphics::Surface *screen = getScreen()->getSurface().convertTo(overlayFormat, getScreen()->getPalette());
+		if (screen->w != overlayWidth || screen->h != overlayHeight) {
+			Graphics::Surface *screen1 = screen->scale(overlayWidth, overlayHeight);
+			overlay.copyRectToSurface(screen1->getPixels(), screen1->pitch, 0, 0, screen1->w, screen1->h);
+			screen1->free();
+			delete screen1;
+		} else {
+			overlay.copyRectToSurface(screen->getPixels(), screen->pitch, 0, 0, 640, 480);
+		}
+		screen->free();
+		delete screen;
+	}
+
+	thumbnail1 = thumbnail->convertTo(overlayFormat);
+	overlay.copyRectToSurface(thumbnail1->getPixels(), thumbnail1->pitch, x, y, thumbnail1->w, thumbnail1->h);
+
+	g_system->copyRectToOverlay(overlay.getPixels(), overlay.pitch, 0, 0, overlay.w, overlay.h);
+	g_system->showOverlay();
+
+	overlay.free();
+	thumbnail1->free();
+	delete thumbnail1;
+}
+
 void Menu::updateLoadGame() {
 	Common::Point cursor = getCursor()->position();
+	adjustCoordinates(cursor);
 
 	char text[100];
 
@@ -752,6 +824,7 @@ void Menu::updateLoadGame() {
 	getText()->loadFont(kFontYellow);
 	getText()->drawCentered(Common::Point(10, 100), 620, MAKE_RESOURCE(kResourcePackText, 1325));
 
+	int current = -1;
 	if (_dword_455C78) {
 		getText()->drawCentered(Common::Point(10,      190), 620, MAKE_RESOURCE(kResourcePackText, 1332));
 		getText()->drawCentered(Common::Point(10, 190 + 29), 620, MAKE_RESOURCE(kResourcePackText, 1333));
@@ -777,10 +850,13 @@ void Menu::updateLoadGame() {
 			snprintf((char *)&text, sizeof(text), "%d. %s", index + _startIndex + 1, getSaveLoad()->getName((uint32)(index + _startIndex)).c_str());
 
 			if (cursor.x < 30 || cursor.x > (30 + getText()->getWidth((char *)&text))
-			 || cursor.y < y  || cursor.y > (y + 24))
+			 || cursor.y < y  || cursor.y > (y + 24)) {
 				getText()->loadFont(kFontYellow);
-			else
+			} else {
 				getText()->loadFont(kFontBlue);
+				if (hasThumbnail(index))
+					current = index;
+			}
 
 			getText()->setPosition(Common::Point(30, y));
 			getText()->draw((char *)&text);
@@ -797,10 +873,13 @@ void Menu::updateLoadGame() {
 			snprintf((char *)&text, sizeof(text), "%d. %s", index + _startIndex + 1, getSaveLoad()->getName((uint32)(index + _startIndex)).c_str());
 
 			if (cursor.x < 350 || cursor.x > (350 + getText()->getWidth((char *)&text))
-				|| cursor.y < y   || cursor.y > (y + 24))
+				|| cursor.y < y   || cursor.y > (y + 24)) {
 				getText()->loadFont(kFontYellow);
-			else
+			} else {
 				getText()->loadFont(kFontBlue);
+				if (hasThumbnail(index))
+					current = index;
+			}
 
 			getText()->setPosition(Common::Point(350, y));
 			getText()->draw((char *)&text);
@@ -841,6 +920,11 @@ void Menu::updateLoadGame() {
 
 	getText()->setPosition(Common::Point(550, 340));
 	getText()->draw(MAKE_RESOURCE(kResourcePackText, 1327));
+
+	if (current == -1)
+		g_system->hideOverlay();
+	else
+		showThumbnail(current);
 }
 
 void Menu::updateSaveGame() {
@@ -1228,7 +1312,7 @@ void Menu::updateViewMovies() {
 	snprintf((char *)&text2, sizeof(text2), getText()->get(MAKE_RESOURCE(kResourcePackText, 1357)), getSharedData()->cdNumber);
 	getText()->drawCentered(Common::Point(10, 100), 620, text2);
 
-	strcpy((char *)&text, getText()->get(MAKE_RESOURCE(kResourcePackText, 1359 + _movieIndex)));
+	Common::strlcpy((char *)&text, getText()->get(MAKE_RESOURCE(kResourcePackText, 1359 + _movieIndex)), sizeof(text));
 	snprintf((char *)&text2, sizeof(text2), getText()->get(MAKE_RESOURCE(kResourcePackText, 1356)), moviesCd[_movieIndex]);
 	strcat((char *)&text, (char *)&text2);
 	getText()->drawCentered(Common::Point(10, 134), 620, text);
@@ -1309,7 +1393,7 @@ void Menu::updateAudioOptions() {
 		getText()->setPosition(Common::Point(sizeMinus + 360, (int16)(29 * volumeIndex + 150)));
 		getText()->draw("+");
 
-		switch(volumeIndex) {
+		switch (volumeIndex) {
 		default:
 			break;
 
@@ -1525,7 +1609,7 @@ void Menu::updateShowCredits() {
 
 		step += 24;
 		++index;
-	} while (step < 8688);
+	} while (step < _creditsNumSteps);
 
 	if (_vm->isGameFlagSet(kGameFlagFinishGame)) {
 		if (!_dword_455D4C && !getSound()->isPlaying(MAKE_RESOURCE(kResourcePackShared, 56))) {
@@ -1536,7 +1620,7 @@ void Menu::updateShowCredits() {
 	}
 
 	_startIndex -= 2;
-	if (_startIndex < -8712)   // 8688 + 24
+	if (_startIndex < -(_creditsNumSteps + 24))
 		closeCredits();
 }
 
@@ -1562,6 +1646,9 @@ void Menu::clickNewGame() {
 
 void Menu::clickLoadGame() {
 	Common::Point cursor = getCursor()->position();
+	adjustCoordinates(cursor);
+
+	g_system->hideOverlay();
 
 	if (_dword_455C80) {
 		if (cursor.x < 247 || cursor.x > (247 + getText()->getWidth(MAKE_RESOURCE(kResourcePackText, 1330)))
@@ -1570,7 +1657,7 @@ void Menu::clickLoadGame() {
 			 && cursor.y >= 273 && cursor.y <= (273 + 24))
 				_dword_455C80 = false;
 		} else {
-			_vm->startGame(getSaveLoad()->getScenePack(), AsylumEngine::kStartGameLoad);
+			(void)_vm->startGame(getSaveLoad()->getScenePack(), AsylumEngine::kStartGameLoad);
 		}
 		return;
 	}

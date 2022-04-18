@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -102,9 +101,9 @@ void ScummEngine::loadCJKFont() {
 		_2byteFontPtr[0] = 0xFF;
 	} else if (_language == Common::KO_KOR ||
 			   (_game.version >= 7 && (_language == Common::JA_JPN || _language == Common::ZH_TWN)) ||
-			   (_game.version >= 3 && _language == Common::ZH_CNA)) {
+			   (_game.version >= 3 && _language == Common::ZH_CHN)) {
 		int numChar = 0;
-		const char *fontFile = NULL;
+		const char *fontFile = nullptr;
 
 		switch (_language) {
 		case Common::KO_KOR:
@@ -120,7 +119,7 @@ void ScummEngine::loadCJKFont() {
 			fontFile = "chinese.fnt";
 			numChar = 13630;
 			break;
-		case Common::ZH_CNA:
+		case Common::ZH_CHN:
 			if (_game.id == GID_FT || _game.id == GID_LOOM || _game.id == GID_INDY3 ||
 				_game.id == GID_INDY4 || _game.id == GID_MONKEY || _game.id == GID_MONKEY2 ||
 				_game.id == GID_TENTACLE) {
@@ -153,7 +152,7 @@ void ScummEngine::loadCJKFont() {
 				_2byteHeight = 15;
 				_newLineCharacter = 0x21;
 				break;
-			case Common::ZH_CNA:
+			case Common::ZH_CHN:
 				_2byteWidth = 12;
 				_2byteHeight = 12;
 				_newLineCharacter = 0x21;
@@ -185,13 +184,13 @@ void ScummEngine::loadKorFont() {
 	if (_useMultiFont) {
 		debug("Loading Korean Multi Font System");
 		_numLoadedFont = 0;
-		_2byteFontPtr = NULL;
+		_2byteFontPtr = nullptr;
 		_2byteWidth = 0;
 		_2byteHeight = 0;
 		for (int i = 0; i < 20; i++) {
 			char fontFile[256];
 			snprintf(fontFile, sizeof(fontFile), "korean%02d.fnt", i);
-			_2byteMultiFontPtr[i] = NULL;
+			_2byteMultiFontPtr[i] = nullptr;
 			if (fp.open(fontFile)) {
 				_numLoadedFont++;
 				fp.readByte();
@@ -204,7 +203,7 @@ void ScummEngine::loadKorFont() {
 				warning("#%d, size %d, height =%d", i, fontSize, _2byteMultiHeight[i]);
 				fp.read(_2byteMultiFontPtr[i], fontSize);
 				fp.close();
-				if (_2byteFontPtr == NULL) {	// for non-initialized Smushplayer drawChar
+				if (_2byteFontPtr == nullptr) {	// for non-initialized Smushplayer drawChar
 					_2byteFontPtr = _2byteMultiFontPtr[i];
 					_2byteWidth = _2byteMultiWidth[i];
 					_2byteHeight = _2byteMultiHeight[i];
@@ -238,7 +237,7 @@ void ScummEngine::loadKorFont() {
 
 byte *ScummEngine::get2byteCharPtr(int idx) {
 	if (_game.platform == Common::kPlatformFMTowns || _game.platform == Common::kPlatformPCEngine)
-		return 0;
+		return nullptr;
 
 	switch (_language) {
 	case Common::KO_KOR:
@@ -251,7 +250,7 @@ byte *ScummEngine::get2byteCharPtr(int idx) {
 				int charsetId = 5;
 				int numChar = 1413;
 				byte *charsetPtr = getResourceAddress(rtCharset, charsetId);
-				if (charsetPtr == 0)
+				if (charsetPtr == nullptr)
 					error("ScummEngine::get2byteCharPtr: charset %d not found", charsetId);
 				memcpy(_2byteFontPtr, charsetPtr + 46, _2byteWidth * _2byteHeight * numChar / 8);
 			}
@@ -299,7 +298,7 @@ byte *ScummEngine::get2byteCharPtr(int idx) {
 
 			return _2byteFontPtr + base;
 		}
-	case Common::ZH_CNA:
+	case Common::ZH_CHN:
 		idx = ((idx % 256) - 0xa1)* 94  + ((idx / 256) - 0xa1);
 		break;
 	default:
@@ -349,7 +348,7 @@ void CharsetRendererCommon::setCurID(int32 id) {
 	_curId = id;
 
 	_fontPtr = _vm->getResourceAddress(rtCharset, id);
-	if (_fontPtr == 0)
+	if (_fontPtr == nullptr)
 		error("CharsetRendererCommon::setCurID: charset %d not found", id);
 
 	if (_vm->_game.version == 4)
@@ -398,7 +397,7 @@ void CharsetRendererV3::setCurID(int32 id) {
 	_curId = id;
 
 	_fontPtr = _vm->getResourceAddress(rtCharset, id);
-	if (_fontPtr == 0)
+	if (_fontPtr == nullptr)
 		error("CharsetRendererCommon::setCurID: charset %d not found", id);
 
 	_bytesPerPixel = 1;
@@ -434,7 +433,7 @@ void CharsetRendererV3::setCurID(int32 id) {
 	}
 }
 
-int CharsetRendererCommon::getFontHeight() {
+int CharsetRendererCommon::getFontHeight() const {
 	if (_vm->_useCJKMode)
 		return MAX(_vm->_2byteHeight + 1, _fontHeight);
 	else
@@ -442,7 +441,7 @@ int CharsetRendererCommon::getFontHeight() {
 }
 
 // do spacing for variable width old-style font
-int CharsetRendererClassic::getCharWidth(uint16 chr) {
+int CharsetRendererClassic::getCharWidth(uint16 chr) const {
 	int spacing = 0;
 
 	if (_vm->_useCJKMode && chr >= 0x80)
@@ -457,15 +456,13 @@ int CharsetRendererClassic::getCharWidth(uint16 chr) {
 
 int CharsetRenderer::getStringWidth(int arg, const byte *text) {
 	int pos = 0;
-	int width = 1;
+	int width = (_vm->_game.id == GID_FT) ? 0 : 1;
 	int chr;
 	int oldID = getCurID();
 	int code = (_vm->_game.heversion >= 80) ? 127 : 64;
 
 	while ((chr = text[pos++]) != 0) {
-		if (_vm->_game.version == 7 && chr == _vm->_newLineCharacter)
-			continue;
-		else if (chr == '\n' || chr == '\r' || chr == _vm->_newLineCharacter)
+		if (chr == '\n' || chr == '\r' || chr == _vm->_newLineCharacter)
 			break;
 
 		if (_vm->_game.heversion >= 72) {
@@ -482,7 +479,7 @@ int CharsetRenderer::getStringWidth(int arg, const byte *text) {
 					break;
 			}
 		} else {
-			if (chr == '@' && !(_vm->_game.id == GID_CMI && _vm->_language == Common::ZH_TWN))
+			if (chr == '@')
 				continue;
 			if (chr == 255 || (_vm->_game.version <= 6 && chr == 254)) {
 				chr = text[pos++];
@@ -491,8 +488,7 @@ int CharsetRenderer::getStringWidth(int arg, const byte *text) {
 				if (chr == 8) { // 'Verb on next line'
 					if (arg == 1)
 						break;
-					while (text[pos++] == ' ')
-					;
+					while (text[pos++] == ' ') {}
 					continue;
 				}
 				if (chr == 10 || chr == 21 || chr == 12 || chr == 13) {
@@ -506,16 +502,6 @@ int CharsetRenderer::getStringWidth(int arg, const byte *text) {
 					pos += 2;
 					setCurID(set);
 					continue;
-				}
-			}
-
-			// Some localizations may override colors
-			// See credits in Chinese COMI
-			if (_vm->_game.id == GID_CMI && _vm->_language == Common::ZH_TWN &&
-			    chr == '^' && pos == 1) {
-				if (text[pos] == 'c') {
-					pos += 4;
-					chr = text[pos++];
 				}
 			}
 		}
@@ -684,7 +670,7 @@ void CharsetRenderer::addLinebreaks(int a, byte *str, int pos, int maxwidth) {
 	setCurID(oldID);
 }
 
-int CharsetRendererV3::getCharWidth(uint16 chr) {
+int CharsetRendererV3::getCharWidth(uint16 chr) const {
 	int spacing = 0;
 
 	if (_vm->_useCJKMode && (chr & 0x80))
@@ -699,11 +685,7 @@ int CharsetRendererV3::getCharWidth(uint16 chr) {
 void CharsetRendererPC::enableShadow(bool enable) {
 	_shadowColor = 0;
 	_enableShadow = enable;
-
-	if (_vm->_game.version >= 7 && _vm->_useCJKMode)
-		_shadowType = kHorizontalShadowType;
-	else
-		_shadowType = kNormalShadowType;
+	_shadowType = kNormalShadowType;
 }
 
 void CharsetRendererPC::drawBits1(Graphics::Surface &dest, int x, int y, const byte *src, int drawTop, int width, int height) {
@@ -852,7 +834,7 @@ void CharsetRendererV3::printChar(int chr, bool ignoreCharsetMask) {
 
 	assertRange(0, _curId, _vm->_numCharsets - 1, "charset");
 
-	if ((vs = _vm->findVirtScreen(_top)) == NULL) {
+	if ((vs = _vm->findVirtScreen(_top)) == nullptr) {
 		warning("findVirtScreen(%d) failed, therefore printChar cannot print '%c'", _top, chr);
 		return;
 	}
@@ -992,7 +974,7 @@ void CharsetRendererClassic::printChar(int chr, bool ignoreCharsetMask) {
 
 	assertRange(1, _curId, _vm->_numCharsets - 1, "charset");
 
-	if ((vs = _vm->findVirtScreen(_top)) == NULL && (vs = _vm->findVirtScreen(_top + getFontHeight())) == NULL)
+	if ((vs = _vm->findVirtScreen(_top)) == nullptr && (vs = _vm->findVirtScreen(_top + getFontHeight())) == nullptr)
 		return;
 
 	if (chr == '@')
@@ -1089,7 +1071,7 @@ void CharsetRendererClassic::printChar(int chr, bool ignoreCharsetMask) {
 
 void CharsetRendererClassic::printCharIntern(bool is2byte, const byte *charPtr, int origWidth, int origHeight, int width, int height, VirtScreen *vs, bool ignoreCharsetMask) {
 	byte *dstPtr;
-	byte *back = NULL;
+	byte *back = nullptr;
 	int drawTop = _top - vs->topline;
 
 	if ((_vm->_game.heversion >= 71 && _bytesPerPixel >= 8) || (_vm->_game.heversion >= 90 && _bytesPerPixel == 0)) {
@@ -1186,9 +1168,6 @@ void CharsetRendererClassic::printCharIntern(bool is2byte, const byte *charPtr, 
 bool CharsetRendererClassic::prepareDraw(uint16 chr) {
 	bool is2byte = (chr >= 256 && _vm->_useCJKMode);
 	if (is2byte) {
-		if (_vm->_game.version >= 7)
-			enableShadow(true);
-
 		_charPtr = _vm->get2byteCharPtr(chr);
 		_width = _origWidth = _vm->_2byteWidth;
 		_height = _origHeight = _vm->_2byteHeight;
@@ -1253,7 +1232,7 @@ void CharsetRendererClassic::drawBitsN(const Graphics::Surface &s, byte *dst, co
 	// Indy4 Amiga always uses the room or verb palette map to match colors to
 	// the currently setup palette, thus we need to select it over here too.
 	// Done like the original interpreter.
-	byte *amigaMap = 0;
+	byte *amigaMap = nullptr;
 	if (_vm->_game.platform == Common::kPlatformAmiga && _vm->_game.id == GID_INDY4) {
 		if (_drawScreen == kVerbVirtScreen)
 			amigaMap = _vm->_verbPalette;
@@ -1286,7 +1265,7 @@ void CharsetRendererClassic::drawBitsN(const Graphics::Surface &s, byte *dst, co
 CharsetRendererTownsV3::CharsetRendererTownsV3(ScummEngine *vm) : CharsetRendererV3(vm), _sjisCurChar(0) {
 }
 
-int CharsetRendererTownsV3::getCharWidth(uint16 chr) {
+int CharsetRendererTownsV3::getCharWidth(uint16 chr) const {
 	if (_vm->isScummvmKorTarget()) {
 		return CharsetRendererV3::getCharWidth(chr);
 	}
@@ -1306,7 +1285,7 @@ int CharsetRendererTownsV3::getCharWidth(uint16 chr) {
 	return spacing;
 }
 
-int CharsetRendererTownsV3::getFontHeight() {
+int CharsetRendererTownsV3::getFontHeight() const {
 	if (_vm->isScummvmKorTarget()) {
 		return CharsetRendererV3::getFontHeight();
 	}
@@ -1339,7 +1318,7 @@ void CharsetRendererTownsV3::drawBits1(Graphics::Surface &dest, int x, int y, co
 	}
 
 	if (y + height > dest.h)
-		error("Trying to draw below screen boundries");
+		error("Trying to draw below screen boundaries");
 
 #ifndef DISABLE_TOWNS_DUAL_LAYER_MODE
 #ifdef USE_RGB_COLOR
@@ -1516,7 +1495,22 @@ void CharsetRendererPCE::setDrawCharIntern(uint16 chr) {
 CharsetRendererMac::CharsetRendererMac(ScummEngine *vm, const Common::String &fontFile)
 	 : CharsetRendererCommon(vm) {
 
+	// The original Macintosh interpreter didn't use the correct spacing
+	// between characters for some of the text, e.g. the Grail Diary. This
+	// appears to have been because of rounding errors, and was apparently
+	// fixed in Loom. Enabling this allows ScummVM to draw the text more
+	// correctly, at the cost of not matching the original quite as well.
+	// (At the time of writing, there are still cases, at least in Loom,
+	// where text isn't correctly positioned.)
+
+	_correctFontSpacing = _vm->_game.id == GID_LOOM || _vm->_enableEnhancements;
 	_pad = false;
+	_glyphSurface = nullptr;
+
+	// Indy 3 provides an "Indy" font in two sizes, 9 and 12, which are
+	// used for the text boxes. The smaller font can be used for a
+	// headline. The rest of the Mac GUI seems to use a system font, but
+	// that is not implemented.
 
 	// As far as I can tell, Loom uses only font size 13 for in-game text.
 	// The font is also provided in sizes 9 and 12, and it's possible that
@@ -1536,45 +1530,150 @@ CharsetRendererMac::CharsetRendererMac(ScummEngine *vm, const Common::String &fo
 	// 60 is an upside-down note, i.e. the one used for c'.
 	// 95 is a used for the rest of the notes.
 
-	if (_vm->_game.id == GID_LOOM) {
-		Common::MacResManager resource;
-		resource.open(fontFile);
+	Common::MacResManager resource;
+	resource.open(fontFile);
 
-		uint16 fontId = 0;
+	Common::String fontFamilyName = (_vm->_game.id == GID_LOOM) ? "Loom" : "Indy";
 
-		Common::SeekableReadStream *fond = resource.getResource(MKTAG('F', 'O', 'N', 'D'), "Loom");
-		Graphics::MacFontFamily fontFamily;
+	Common::SeekableReadStream *fond = resource.getResource(MKTAG('F', 'O', 'N', 'D'), fontFamilyName);
 
-		if (fond) {
-			if (fontFamily.load(*fond)) {
-				Common::Array<Graphics::MacFontFamily::AsscEntry> *assoc = fontFamily.getAssocTable();
-				for (uint i = 0; i < assoc->size(); i++) {
-					if ((*assoc)[i]._fontSize == 13) {
-						fontId = (*assoc)[i]._fontID;
-						break;
-					}
-				}
-			}
-			delete fond;
+	if (!fond)
+		return;
+
+	Graphics::MacFontFamily fontFamily;
+	if (!fontFamily.load(*fond)) {
+		delete fond;
+		return;
+	}
+
+	Common::Array<Graphics::MacFontFamily::AsscEntry> *assoc = fontFamily.getAssocTable();
+	for (uint i = 0; i < assoc->size(); i++) {
+		int fontId = -1;
+		int fontSize = (*assoc)[i]._fontSize;
+
+		if (_vm->_game.id == GID_INDY3) {
+			if (fontSize == 9)
+				fontId = 1;
+			else if (fontSize == 12)
+				fontId = 0;
+		} else {
+			if (fontSize == 13)
+				fontId = 0;
+		}
+		if (fontId != -1) {
+			Common::SeekableReadStream *font = resource.getResource(MKTAG('F', 'O', 'N', 'T'), (*assoc)[i]._fontID);
+			_macFonts[fontId].loadFont(*font, &fontFamily, fontSize, 0);
+			delete font;
+		}
+	}
+
+	delete fond;
+
+	if (_vm->_renderMode == Common::kRenderMacintoshBW) {
+		int numFonts = (_vm->_game.id == GID_INDY3) ? 2 : 1;
+		int maxHeight = -1;
+		int maxWidth = -1;
+
+		for (int i = 0; i < numFonts; i++) {
+			maxHeight = MAX(maxHeight, _macFonts[i].getFontHeight());
+			maxWidth = MAX(maxWidth, _macFonts[i].getMaxCharWidth());
 		}
 
-		assert(fontId);
-
-		Common::SeekableReadStream *font = resource.getResource(MKTAG('F', 'O', 'N', 'T'), fontId);
-		_macFont.loadFont(*font, &fontFamily, 13, 0);
-		delete font;
+		_glyphSurface = new Graphics::Surface();
+		_glyphSurface->create(maxWidth, maxHeight, Graphics::PixelFormat::createFormatCLUT8());
 	}
 }
 
-int CharsetRendererMac::getFontHeight() {
-	return _macFont.getFontHeight() / 2;
+CharsetRendererMac::~CharsetRendererMac() {
+	if (_glyphSurface) {
+		_glyphSurface->free();
+		delete _glyphSurface;
+	}
 }
 
-int CharsetRendererMac::getCharWidth(uint16 chr) {
-	return _macFont.getCharWidth(chr) / 2;
+void CharsetRendererMac::setCurID(int32 id) {
+	if  (id == -1)
+		return;
+
+	// Indiana Jones and the Last Crusade uses font id 1 in a number of
+	// places. In the DOS version, this is a bolder font than font 0, but
+	// by the looks of it the Mac version uses the same font for both
+	// cases. In ScummVM, we match id 0 and 1 to font 0 and id 2 (which is
+	// only used to print the text box caption) to font 1.
+	if (_vm->_game.id == GID_INDY3) {
+		if (id == 1) {
+			id = 0;
+		} else if (id == 2) {
+			id = 1;
+		}
+	}
+
+	int maxId = (_vm->_game.id == GID_LOOM) ? 0 : 1;
+
+	if (id > maxId) {
+		warning("CharsetRendererMac::setCurID(%d) - invalid charset", id);
+		id = 0;
+	}
+
+	_curId = id;
+}
+
+int CharsetRendererMac::getStringWidth(int arg, const byte *text) {
+	int pos = 0;
+	int width = 0;
+	int chr;
+
+	while ((chr = text[pos++]) != 0) {
+		// The only control codes I've seen in use are line breaks in
+		// Loom. In Indy 3, I haven't seen anything at all like it.
+		if (chr == 255) {
+			chr = text[pos++];
+			if (chr == 1) // 'Newline'
+				break;
+			warning("getStringWidth: Unexpected escape sequence %d", chr);
+		} else {
+			width += getDrawWidthIntern(chr);
+		}
+	}
+
+	return width / 2;
+}
+
+int CharsetRendererMac::getDrawWidthIntern(uint16 chr) const {
+	return _macFonts[_curId].getCharWidth(chr);
+}
+
+// HACK: Usually, we want the approximate width and height in the unscaled
+//       graphics resolution. But for font 1 in Indiana Jones and the Last
+//       crusade we want the actual dimensions for drawing the text boxes.
+
+int CharsetRendererMac::getFontHeight() const {
+	int height = _macFonts[_curId].getFontHeight();
+
+        // If we ever need the height for font 1 in Last Crusade (we don't at
+	// the moment), we need the actual height.
+	if (_curId == 0 || _vm->_game.id != GID_INDY3)
+		height /= 2;
+
+	return height;
+}
+
+int CharsetRendererMac::getCharWidth(uint16 chr) const {
+	int width = getDrawWidthIntern(chr);
+
+	// For font 1 in Last Crusade, we want the real width. It is used for
+	// text box titles, which are drawn outside the normal font rendering.
+	if (_curId == 0 || _vm->_game.id != GID_INDY3)
+		width /= 2;
+
+	return width;
 }
 
 void CharsetRendererMac::printChar(int chr, bool ignoreCharsetMask) {
+	// This function does most of the heavy lifting printing the game
+	// text. It's the only function that needs to be able to handle
+	// disabled text.
+
 	// If this is the beginning of a line, assume the position will be
 	// correct without any padding.
 
@@ -1584,7 +1683,7 @@ void CharsetRendererMac::printChar(int chr, bool ignoreCharsetMask) {
 
 	VirtScreen *vs;
 
-	if ((vs = _vm->findVirtScreen(_top)) == NULL) {
+	if ((vs = _vm->findVirtScreen(_top)) == nullptr) {
 		warning("findVirtScreen(%d) failed, therefore printChar cannot print '%c'", _top, chr);
 		return;
 	}
@@ -1608,11 +1707,6 @@ void CharsetRendererMac::printChar(int chr, bool ignoreCharsetMask) {
 	bool enableShadow = _enableShadow;
 	int color = _color;
 
-	// Shadowing is a bit of guesswork. It doesn't look like it's using
-	// the Mac's built-in form of shadowed text (which, as I recall it,
-	// never looked particularly good anyway). This seems to match the
-	// original look for normal text.
-
 	// HACK: Notes and their names should always be drawn with a shadow.
 	//       Actually, this doesn't quite match the original but I can't
 	//       figure out what the original does here. The "c" looks like
@@ -1623,8 +1717,10 @@ void CharsetRendererMac::printChar(int chr, bool ignoreCharsetMask) {
 	//       shadowing at all. I'll just keep it like this for now,
 	//       because it makes the notes stand out a bit better.
 
-	if ((chr >= 16 && chr <= 23) || chr == 60 || chr == 95) {
-		enableShadow = true;
+	if (_vm->_game.id == GID_LOOM) {
+		if ((chr >= 16 && chr <= 23) || chr == 60 || chr == 95) {
+			enableShadow = true;
+		}
 	}
 
 	// HACK: Apparently, note names are never drawn in light gray. Only
@@ -1633,10 +1729,17 @@ void CharsetRendererMac::printChar(int chr, bool ignoreCharsetMask) {
 	//       light gray note names, because apparently the game never
 	//       changes them back to light gray once the draft is done?
 
-	if (chr >= 16 && chr <= 23 && _color == 7)
-		color = 15;
+	if (_vm->_game.id == GID_LOOM) {
+		if (chr >= 16 && chr <= 23 && _color == 7)
+			color = 15;
+	}
 
-	printCharInternal(chr, color, enableShadow, macLeft, macTop);
+	bool drawToTextBox = (vs->number == kTextVirtScreen && _vm->_game.id == GID_INDY3);
+
+	if (drawToTextBox)
+		printCharToTextBox(chr, color, macLeft, macTop);
+	else
+		printCharInternal(chr, color, enableShadow, macLeft, macTop);
 
 	// HACK: The way we combine high and low resolution graphics means
 	//       that sometimes, when a note name is drawn on the distaff, the
@@ -1650,27 +1753,40 @@ void CharsetRendererMac::printChar(int chr, bool ignoreCharsetMask) {
 	//       Note that this will not affect the Practice Mode box, since
 	//       this note names are drawn by drawChar(), not printChar().
 
-	if (chr >= 16 && chr <= 23) {
-		int xOffset[] = { 16, 14, 12, 8, 6, 2, 0, 8 };
+	if (_vm->_game.id == GID_LOOM) {
+		if (chr >= 16 && chr <= 23) {
+			int xOffset[] = { 16, 14, 12, 8, 6, 2, 0, 8 };
 
-		int note = (chr == 23) ? 60 : 95;
-		printCharInternal(note, -1, enableShadow, macLeft + 18, macTop + xOffset[chr - 16]);
+			int note = (chr == 23) ? 60 : 95;
+			printCharInternal(note, -1, enableShadow, macLeft + 18, macTop + xOffset[chr - 16]);
+		}
 	}
 
 	// Mark the virtual screen as dirty, using downscaled coordinates.
 
-	int left, right, top, bottom;
+	int left, right, top, bottom, width;
+
+	width = getDrawWidthIntern(chr);
+
+	// HACK: Indiana Jones and the Last Crusade uses incorrect spacing
+	// betweeen letters. Note that this incorrect spacing does not extend
+	// to the text boxes, nor does it seem to be used when figuring out
+	// the width of a string (e.g. to center text on screen). It is,
+	// however, used for things like the Grail Diary.
+
+	if (!_correctFontSpacing && !drawToTextBox && (width & 1))
+		width++;
 
 	if (enableShadow) {
 		left = macLeft / 2;
-		right = (macLeft + _macFont.getCharWidth(chr) + 3) / 2;
+		right = (macLeft + width + 3) / 2;
 		top = macTop / 2;
-		bottom = (macTop + _macFont.getFontHeight() + 3) / 2;
+		bottom = (macTop + _macFonts[_curId].getFontHeight() + 3) / 2;
 	} else {
 		left = (macLeft + 1) / 2;
-		right = (macLeft + _macFont.getCharWidth(chr) + 1) / 2;
+		right = (macLeft + width + 1) / 2;
 		top = (macTop + 1) / 2;
-		bottom = (macTop + _macFont.getFontHeight() + 1) / 2;
+		bottom = (macTop + _macFonts[_curId].getFontHeight() + 1) / 2;
 	}
 
 	if (_firstChar) {
@@ -1688,7 +1804,8 @@ void CharsetRendererMac::printChar(int chr, bool ignoreCharsetMask) {
 			_str.bottom = bottom;
 	}
 
-	_vm->markRectAsDirty(vs->number, left, right, top - vs->topline, bottom - vs->topline);
+	if (!drawToTextBox)
+		_vm->markRectAsDirty(vs->number, left, right, top - vs->topline, bottom - vs->topline);
 
 	if (!ignoreCharsetMask) {
 		_hasMask = true;
@@ -1698,7 +1815,7 @@ void CharsetRendererMac::printChar(int chr, bool ignoreCharsetMask) {
 	// The next character may have to be adjusted to compensate for
 	// rounding errors.
 
-	macLeft += _macFont.getCharWidth(chr);
+	macLeft += width;
 	if (macLeft & 1)
 		_pad = true;
 
@@ -1706,27 +1823,125 @@ void CharsetRendererMac::printChar(int chr, bool ignoreCharsetMask) {
 	_lastTop = _top;
 }
 
-void CharsetRendererMac::printCharInternal(int chr, int color, bool shadow, int x, int y) {
-	if (shadow) {
-		_macFont.drawChar(&_vm->_textSurface, chr, x + 2, y, 0);
-		_macFont.drawChar(&_vm->_textSurface, chr, x, y + 2, 0);
-		_macFont.drawChar(&_vm->_textSurface, chr, x + 3, y + 3, 0);
+byte CharsetRendererMac::getTextColor() {
+	if (_vm->_renderMode == Common::kRenderMacintoshBW) {
+		// White and black can be rendered as is, and 8 is the color
+		// used for disabled text (verbs in Indy 3, notes in Loom).
+		// Everything else should be white.
 
-		if (color != -1) {
-			_macFont.drawChar(_vm->_macScreen, chr, x + 2, y, _shadowColor);
-			_macFont.drawChar(_vm->_macScreen, chr, x, y + 2, _shadowColor);
-			_macFont.drawChar(_vm->_macScreen, chr, x + 3, y + 3, _shadowColor);
+		if (_color == 0 || _color == 15 || _color == 8)
+			return _color;
+		return 15;
+	}
+	return _color;
+}
+
+byte CharsetRendererMac::getTextShadowColor() {
+	if (_vm->_renderMode == Common::kRenderMacintoshBW) {
+		if (getTextColor() == 0)
+			return 15;
+		return 0;
+	}
+	return _shadowColor;
+}
+
+void CharsetRendererMac::printCharInternal(int chr, int color, bool shadow, int x, int y) {
+	if (_vm->_game.id == GID_LOOM) {
+		x++;
+		y++;
+	}
+
+	if (shadow) {
+		byte shadowColor = getTextShadowColor();
+
+		if (_vm->_game.id == GID_LOOM) {
+			// Shadowing is a bit of guesswork. It doesn't look
+			// like it's using the Mac's built-in form of shadowed
+			// text (which, as I recall it, never looked
+			// particularly good anyway). This seems to match the
+			// original look for normal text.
+
+			_macFonts[_curId].drawChar(&_vm->_textSurface, chr, x + 1, y - 1, 0);
+			_macFonts[_curId].drawChar(&_vm->_textSurface, chr, x - 1, y + 1, 0);
+			_macFonts[_curId].drawChar(&_vm->_textSurface, chr, x + 2, y + 2, 0);
+
+			if (color != -1) {
+				_macFonts[_curId].drawChar(_vm->_macScreen, chr, x + 1, y - 1, shadowColor);
+				_macFonts[_curId].drawChar(_vm->_macScreen, chr, x - 1, y + 1, shadowColor);
+				_macFonts[_curId].drawChar(_vm->_macScreen, chr, x + 2, y + 2, shadowColor);
+			}
+		} else {
+			// Indy 3 uses simpler shadowing, and doesn't need the
+			// "draw only on text surface" hack.
+
+			_macFonts[_curId].drawChar(&_vm->_textSurface, chr, x + 1, y + 1, 0);
+			_macFonts[_curId].drawChar(_vm->_macScreen, chr, x + 1, y + 1, shadowColor);
 		}
 	}
 
-	_macFont.drawChar(&_vm->_textSurface, chr, x + 1, y + 1, 0);
+	_macFonts[_curId].drawChar(&_vm->_textSurface, chr, x, y, 0);
 
-	if (color != -1)
-		_macFont.drawChar(_vm->_macScreen, chr, x + 1, y + 1, color);
+	if (color != -1) {
+		color = getTextColor();
+
+		if (_vm->_renderMode == Common::kRenderMacintoshBW && color != 0 && color != 15) {
+			_glyphSurface->fillRect(Common::Rect(_glyphSurface->w, _glyphSurface->h), 0);
+			_macFonts[_curId].drawChar(_glyphSurface, chr, 0, 0, 15);
+
+			byte *src = (byte *)_glyphSurface->getBasePtr(0, 0);
+			byte *dst = (byte *)_vm->_macScreen->getBasePtr(x, y);
+
+			for (int h = 0; h < _glyphSurface->h; h++) {
+				bool pixel = ((y + h + 1) & 1) == 0;
+
+				for (int w = 0; w < _glyphSurface->w; w++) {
+					if (src[w]) {
+						if (pixel)
+							dst[w] = 15;
+						else
+							dst[w] = 0;
+					}
+					pixel = !pixel;
+				}
+				src += _glyphSurface->pitch;
+				dst += _vm->_macScreen->pitch;
+			}
+		} else {
+			_macFonts[_curId].drawChar(_vm->_macScreen, chr, x, y, color);
+		}
+	}
+}
+
+void CharsetRendererMac::printCharToTextBox(int chr, int color, int x, int y) {
+	// This function handles printing most of the text in the text boxes
+	// in Indiana Jones and the last crusade. In black and white mode, all
+	// text is white. Text is never disabled.
+
+	if (_vm->_renderMode == Common::kRenderMacintoshBW)
+		color = 15;
+
+	// Since we're working with unscaled coordinates most of the time, the
+	// lines of the text box weren't spaced quite as much as in the
+	// original. I thought no one would notice, but I was wrong. This is
+	// the best way I can think of to fix that.
+
+	if (y > 0)
+		y = 17;
+
+	_macFonts[_curId].drawChar(_vm->_macIndy3TextBox, chr, x + 5, y + 11, color);
 }
 
 void CharsetRendererMac::drawChar(int chr, Graphics::Surface &s, int x, int y) {
-	_macFont.drawChar(&s, chr, x, y, _color);
+	// This function is used for drawing most of the text outside of what
+	// the game scripts request. It's used for the text box captions in
+	// Indiana Jones and the Last Crusade, and for the practice mode box
+	// in Loom.
+	int color = _color;
+
+	if (_vm->_renderMode == Common::kRenderMacintoshBW)
+		color = 15;
+
+	_macFonts[_curId].drawChar(&s, chr, x, y, color);
 }
 
 void CharsetRendererMac::setColor(byte color) {
@@ -1734,17 +1949,96 @@ void CharsetRendererMac::setColor(byte color) {
 	_enableShadow = false;
 	_shadowColor = 0;
 
-	if (_vm->_game.id == GID_LOOM) {
-		_enableShadow = ((color & 0xF0) != 0);
-		// Anything outside the ordinary palette should be fine.
-		_shadowColor = 255;
-		_color &= 0x0F;
-	}
+	_enableShadow = ((color & 0xF0) != 0);
+	// Anything outside the ordinary palette should be fine.
+	_shadowColor = 255;
+	_color &= 0x0F;
 }
 
 #ifdef ENABLE_SCUMM_7_8
-CharsetRendererNut::CharsetRendererNut(ScummEngine *vm)
-	 : CharsetRenderer(vm) {
+CharsetRendererV7::CharsetRendererV7(ScummEngine *vm) : CharsetRendererClassic(vm),
+	_spacing(vm->_useCJKMode && vm->_language != Common::JA_JPN ? 1 : 0),
+	_direction(vm->_language == Common::HE_ISR ? -1 : 1),
+	_newStyle(vm->_useCJKMode) {
+}
+
+int CharsetRendererV7::draw2byte(byte *buffer, Common::Rect &clipRect, int x, int y, int pitch, int16 col, uint16 chr) {
+	// I am aware of not doing anything with the clipRect here, but I currently see no need to upgrade the old rendering with that.
+	const byte *src = _vm->get2byteCharPtr(chr);
+	buffer += (y * pitch + x);
+	_origWidth = _vm->_2byteWidth;
+	_origHeight = _vm->_2byteHeight;
+	uint8 bits = 0;
+	pitch -= _origWidth;
+	while (_origHeight--) {
+		for (x = 0; x < _origWidth; ++x) {
+			if ((x % 8) == 0)
+				bits = *src++;
+			if (bits & revBitMask(x % 8)) {
+				buffer[0] = col;
+				buffer[1] = _shadowColor;
+			}
+			buffer++;
+		}
+		buffer += pitch;
+	}
+	return _origWidth + _spacing;
+}
+
+int CharsetRendererV7::drawChar(byte *buffer, Common::Rect &clipRect, int x, int y, int pitch, int16 col, TextStyleFlags flags, byte chr) {
+	if (!prepareDraw(chr))
+		return 0;
+
+	_width = getCharWidth(chr);
+
+	if (_direction < 0)
+		x -= _width;
+
+	int width = MIN(_origWidth, clipRect.right - x);
+	int height = MIN(_origHeight, clipRect.bottom - y);
+
+	_vm->_charsetColorMap[1] = col;
+	byte *cmap = _vm->_charsetColorMap;
+	const byte *src = _charPtr;
+	byte *dst = buffer + (y + _offsY) * pitch + x;
+	uint8 bpp = *_fontPtr;
+	byte bits = *src++;
+	byte numbits = 8;
+	pitch -= _origWidth;
+
+	while (height--) {
+		for (int dx = x; dx < x + _origWidth; ++dx) {
+			byte color = (bits >> (8 - bpp)) & 0xFF;
+			if (color && dx >= 0 && dx < x + width && y >= 0)
+				*dst = cmap[color];
+			dst++;
+			bits <<= bpp;
+			numbits -= bpp;
+			if (numbits == 0) {
+				bits = *src++;
+				numbits = 8;
+			}
+		}
+		dst += pitch;
+		++y;
+	}
+
+	return _direction * width;
+}
+
+
+int CharsetRendererV7::getCharWidth(uint16 chr) const {
+	if ((chr & 0x80) && _vm->_useCJKMode)
+		return _vm->_2byteWidth + _spacing;
+
+	int offs = READ_LE_UINT32(_fontPtr + (chr & 0xFF) * 4 + 4);
+	// SCUMM7 does not use the "kerning" from _fontPtr[offs + 2] here (compare CharsetRendererClassic::getCharWidth()
+	// to see the difference. Verfied from disasm and comparison with DOSBox (hard to notice, but e. g. the 'a' character
+	// used to be too narrow by 1 pixel, so all lines containing that character were slightly off).
+	return offs ? _fontPtr[offs] : 0;
+}
+
+CharsetRendererNut::CharsetRendererNut(ScummEngine *vm) : CharsetRenderer(vm) {
 	_current = 0;
 
 	for (int i = 0; i < 5; i++) {
@@ -1774,89 +2068,36 @@ void CharsetRendererNut::setCurID(int32 id) {
 	assert(_current);
 }
 
-int CharsetRendererNut::getCharHeight(byte chr) {
-	assert(_current);
-	return _current->getCharHeight(chr);
+int CharsetRendererNut::setFont(int id) {
+	int old = _curId;
+	if (id >= 0)
+		setCurID(id);
+	return old;
 }
 
-int CharsetRendererNut::getCharWidth(uint16 chr) {
+int CharsetRendererNut::getCharHeight(uint16 chr) const {
 	assert(_current);
-	return _current->getCharWidth(chr);
+	return _current->getCharHeight(chr & 0xFF);
 }
 
-int CharsetRendererNut::getFontHeight() {
-	// FIXME / TODO: how to implement this properly???
+int CharsetRendererNut::getCharWidth(uint16 chr) const {
 	assert(_current);
-	return _current->getCharHeight('|');
+	return _current->getCharWidth(chr & 0xFF);
 }
 
-void CharsetRendererNut::printChar(int chr, bool ignoreCharsetMask) {
-	Common::Rect shadow;
-
+int CharsetRendererNut::getFontHeight() const {
 	assert(_current);
-	if (chr == '@')
-		return;
+	return _current->getFontHeight();
+}
 
-	shadow.left = _left;
-	shadow.top = _top;
+int CharsetRendererNut::draw2byte(byte *buffer, Common::Rect &clipRect, int x, int y, int pitch, int16 col, uint16 chr) {
+	assert(_current);
+	return _current->draw2byte(buffer, clipRect, x, y, pitch, col, chr);
+}
 
-	if (_firstChar) {
-		_str.left = (shadow.left >= 0) ? shadow.left : 0;
-		_str.top = (shadow.top >= 0) ? shadow.top : 0;
-		_str.right = _str.left;
-		_str.bottom = _str.top;
-		_firstChar = false;
-	}
-
-	int width = _current->getCharWidth(chr);
-	int height = _current->getCharHeight(chr);
-
-	bool is2byte = chr >= 256 && _vm->_useCJKMode;
-	if (is2byte) {
-		width = _vm->_2byteWidth;
-		if (_vm->_game.id == GID_CMI)
-			height++; // One extra pixel for the shadow
-	}
-
-	shadow.right = _left + width;
-	shadow.bottom = _top + height;
-
-	Graphics::Surface s;
-	if (!ignoreCharsetMask) {
-		_hasMask = true;
-		_textScreenID = kMainVirtScreen;
-	}
-
-	int drawTop = _top;
-	if (ignoreCharsetMask) {
-		VirtScreen *vs = &_vm->_virtscr[kMainVirtScreen];
-		s = *vs;
-		s.setPixels(vs->getPixels(0, 0));
-	} else {
-		s = _vm->_textSurface;
-		drawTop -= _vm->_screenTop;
-	}
-
-	if (chr >= 256 && _vm->_useCJKMode)
-		_current->draw2byte(s, chr, _left, drawTop, _color);
-	else
-		_current->drawChar(s, (byte)chr, _left, drawTop, _color);
-	_vm->markRectAsDirty(kMainVirtScreen, shadow);
-
-	if (_str.left > _left)
-		_str.left = _left;
-
-	// Original keeps glyph width and character dimensions separately
-	if ((_vm->_language == Common::ZH_TWN || _vm->_language == Common::KO_KOR) && is2byte)
-		width++;
-
-	_left += width;
-
-	if (_str.right < shadow.right)
-		_str.right = shadow.right;
-
-	if (_str.bottom < shadow.bottom)
-		_str.bottom = shadow.bottom;
+int CharsetRendererNut::drawChar(byte *buffer, Common::Rect &clipRect, int x, int y, int pitch, int16 col, TextStyleFlags flags, byte chr) {
+	assert(_current);
+	return _current->drawChar(buffer, clipRect, x, y, pitch, col, flags, chr);
 }
 #endif
 
@@ -1873,7 +2114,7 @@ void CharsetRendererNES::printChar(int chr, bool ignoreCharsetMask) {
 	if (_top == 0)
 		_top = 16;
 
-	if ((vs = _vm->findVirtScreen(_top)) == NULL)
+	if ((vs = _vm->findVirtScreen(_top)) == nullptr)
 		return;
 
 	if (chr == '@')
@@ -1940,9 +2181,10 @@ void CharsetRendererNES::drawChar(int chr, Graphics::Surface &s, int x, int y) {
 #ifdef USE_RGB_COLOR
 #ifndef DISABLE_TOWNS_DUAL_LAYER_MODE
 CharsetRendererTownsClassic::CharsetRendererTownsClassic(ScummEngine *vm) : CharsetRendererClassic(vm), _sjisCurChar(0) {
+	assert(vm->_game.platform == Common::kPlatformFMTowns);
 }
 
-int CharsetRendererTownsClassic::getCharWidth(uint16 chr) {
+int CharsetRendererTownsClassic::getCharWidth(uint16 chr) const {
 	int spacing = 0;
 
 	if (_vm->_useCJKMode) {
@@ -1974,7 +2216,7 @@ int CharsetRendererTownsClassic::getCharWidth(uint16 chr) {
 	return spacing;
 }
 
-int CharsetRendererTownsClassic::getFontHeight() {
+int CharsetRendererTownsClassic::getFontHeight() const {
 	static const uint8 sjisFontHeightM1[] = { 0, 8, 9, 8, 9, 8, 9, 0, 0, 0 };
 	static const uint8 sjisFontHeightM2[] = { 0, 8, 9, 9, 9, 8, 9, 9, 9, 8 };
 	static const uint8 sjisFontHeightI4[] = { 0, 8, 9, 9, 9, 8, 8, 8, 8, 8 };
@@ -2001,11 +2243,9 @@ void CharsetRendererTownsClassic::drawBitsN(const Graphics::Surface&, byte *dst,
 	assert(bpp == 1 || bpp == 2 || bpp == 4 || bpp == 8);
 	bits = *src++;
 	numbits = 8;
-	byte *cmap = _vm->_charsetColorMap;
+	byte *cmap = _vm->_townsCharsetColorMap;
 	byte *dst2 = dst;
 
-	if (_vm->_game.platform == Common::kPlatformFMTowns)
-		cmap = _vm->_townsCharsetColorMap;
 	if (scale2x) {
 		dst2 += _vm->_textSurface.pitch;
 		pitch <<= 1;
@@ -2043,7 +2283,7 @@ bool CharsetRendererTownsClassic::prepareDraw(uint16 chr) {
 	processCharsetColors();
 	bool noSjis = false;
 
-	if (_vm->_game.platform == Common::kPlatformFMTowns && _vm->_useCJKMode) {
+	if (_vm->_useCJKMode) {
 		if ((chr & 0x00ff) == 0x00fd) {
 			chr >>= 8;
 			noSjis = true;
@@ -2052,7 +2292,7 @@ bool CharsetRendererTownsClassic::prepareDraw(uint16 chr) {
 
 	if (useFontRomCharacter(chr) && !noSjis) {
 		setupShadowMode();
-		_charPtr = 0;
+		_charPtr = nullptr;
 		_sjisCurChar = chr;
 
 		_width = getCharWidth(chr);
@@ -2098,7 +2338,7 @@ void CharsetRendererTownsClassic::setupShadowMode() {
 	_vm->_cjkFont->toggleFlippedMode((_vm->_game.id == GID_MONKEY || _vm->_game.id == GID_MONKEY2) && _curId == 3);
 }
 
-bool CharsetRendererTownsClassic::useFontRomCharacter(uint16 chr) {
+bool CharsetRendererTownsClassic::useFontRomCharacter(uint16 chr) const {
 	if (!_vm->_useCJKMode)
 		return false;
 

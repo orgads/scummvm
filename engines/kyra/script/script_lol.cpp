@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -1464,9 +1463,9 @@ int LoLEngine::olol_checkForCertainPartyMember(EMCState *script) {
 }
 
 int LoLEngine::olol_printMessage(EMCState *script) {
-	debugC(3, kDebugLevelScriptFuncs, "LoLEngine::olol_printMessage(%p) (%d, %d, %d, %d, %d, %d, %d, %d, %d, %d)", (const void *)script, stackPos(0), stackPos(1), stackPos(2), stackPos(3), stackPos(4), stackPos(5), stackPos(6), stackPos(7), stackPos(8), stackPos(9));
-	int snd = stackPos(2);
-	_txt->printMessage(stackPos(0), getLangString(stackPos(1)), stackPos(3), stackPos(4), stackPos(5), stackPos(6), stackPos(7), stackPos(8), stackPos(9));
+	debugC(3, kDebugLevelScriptFuncs, "LoLEngine::olol_printMessage(%p) (%d, %d, %d, %d, %d, %d, %d, %d, %d, %d)", (const void *)script, safeStackPos(0), safeStackPos(1), safeStackPos(2), safeStackPos(3), safeStackPos(4), safeStackPos(5), safeStackPos(6), safeStackPos(7), safeStackPos(8), safeStackPos(9));
+	int snd = safeStackPos(2);
+	_txt->printMessage(safeStackPos(0), getLangString(safeStackPos(1)), safeStackPos(3), safeStackPos(4), safeStackPos(5), safeStackPos(6), safeStackPos(7), safeStackPos(8), safeStackPos(9));
 
 	if (snd >= 0)
 		snd_playSoundEffect(snd, -1);
@@ -1839,11 +1838,12 @@ int LoLEngine::olol_assignCustomSfx(EMCState *script) {
 	if (!c || i > 250)
 		return 0;
 
-	uint16 t = READ_LE_UINT16(&_ingameSoundIndex[i << 1]);
+	uint16 t = _ingameSoundIndex[i << 1];
 	if (t == 0xFFFF)
 		return 0;
 
-	strcpy(_ingameSoundList[t], c);
+	assert(t < _ingameSoundListSize);
+	_ingameSoundList[t] = c;
 
 	return 0;
 }

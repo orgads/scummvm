@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -51,9 +50,7 @@ Widget::Widget(GuiObject *boss, const Common::String &name, const Common::U32Str
 }
 
 void Widget::init() {
-	// Insert into the widget list of the boss
-	_next = _boss->_firstWidget;
-	_boss->_firstWidget = this;
+	_next = _boss->addChild(this);
 	_needsRedraw = true;
 }
 
@@ -95,6 +92,7 @@ void Widget::markAsDirty() {
 }
 
 void Widget::draw() {
+	Common::Rect oldClip;
 	if (!isVisible() || !_boss->isVisible())
 		return;
 
@@ -105,7 +103,9 @@ void Widget::draw() {
 		_x = getAbsX();
 		_y = getAbsY();
 
-		Common::Rect oldClip = g_gui.theme()->swapClipRect(_boss->getClipRect());
+		Common::Rect activeRect = g_gui.theme()->getClipRect();
+		Common::Rect clip = _boss->getClipRect().findIntersectingRect(activeRect);
+		oldClip = g_gui.theme()->swapClipRect(clip);
 
 		if (g_gui.useRTL()) {
 			_x = g_system->getOverlayWidth() - _x - _w;
@@ -117,10 +117,8 @@ void Widget::draw() {
 				_x = _x + g_gui.getOverlayOffset();
 			}
 
-			Common::Rect r = _boss->getClipRect();
-			r.moveTo(_x, r.top);
-
-			g_gui.theme()->swapClipRect(r);
+			clip.moveTo(_x, clip.top);
+			g_gui.theme()->swapClipRect(clip);
 		}
 
 		// Draw border
@@ -136,7 +134,6 @@ void Widget::draw() {
 		// Now perform the actual widget draw
 		drawWidget();
 
-		g_gui.theme()->swapClipRect(oldClip);
 
 		// Restore x/y
 		if (_flags & WIDGET_BORDER) {
@@ -157,6 +154,9 @@ void Widget::draw() {
 	while (w) {
 		w->draw();
 		w = w->_next;
+	}
+	if (!oldClip.isEmpty()) {
+		g_gui.theme()->swapClipRect(oldClip);
 	}
 }
 
@@ -285,22 +285,24 @@ void Widget::read(const Common::U32String &str) {
 
 #pragma mark -
 
-StaticTextWidget::StaticTextWidget(GuiObject *boss, int x, int y, int w, int h, const Common::U32String &text, Graphics::TextAlign align, const Common::U32String &tooltip, ThemeEngine::FontStyle font, Common::Language lang)
+StaticTextWidget::StaticTextWidget(GuiObject *boss, int x, int y, int w, int h, const Common::U32String &text, Graphics::TextAlign align, const Common::U32String &tooltip, ThemeEngine::FontStyle font, Common::Language lang, bool useEllipsis)
 	: Widget(boss, x, y, w, h, tooltip) {
 	setFlags(WIDGET_ENABLED);
 	_type = kStaticTextWidget;
 	_label = text;
 	_align = Graphics::convertTextAlignH(align, g_gui.useRTL() && _useRTL);
 	setFont(font, lang);
+	_useEllipsis = useEllipsis;
 }
 
-StaticTextWidget::StaticTextWidget(GuiObject *boss, const Common::String &name, const Common::U32String &text, const Common::U32String &tooltip, ThemeEngine::FontStyle font, Common::Language lang)
+StaticTextWidget::StaticTextWidget(GuiObject *boss, const Common::String &name, const Common::U32String &text, const Common::U32String &tooltip, ThemeEngine::FontStyle font, Common::Language lang, bool useEllipsis)
 	: Widget(boss, name, tooltip) {
 	setFlags(WIDGET_ENABLED | WIDGET_CLEARBG);
 	_type = kStaticTextWidget;
 	_label = text;
 	_align = Graphics::convertTextAlignH(g_gui.xmlEval()->getWidgetTextHAlign(name), g_gui.useRTL() && _useRTL);
 	setFont(font, lang);
+	_useEllipsis = useEllipsis;
 }
 
 void StaticTextWidget::setValue(int value) {
@@ -328,7 +330,7 @@ void StaticTextWidget::setAlign(Graphics::TextAlign align) {
 void StaticTextWidget::drawWidget() {
 	g_gui.theme()->drawText(
 			Common::Rect(_x, _y, _x + _w, _y + _h),
-			_label, _state, _align, ThemeEngine::kTextInversionNone, 0, true, _font
+			_label, _state, _align, ThemeEngine::kTextInversionNone, 0, _useEllipsis, _font
 	);
 }
 
@@ -541,7 +543,7 @@ void DropdownButtonWidget::drawWidget() {
 
 #pragma mark -
 
-const Graphics::ManagedSurface *scaleGfx(const Graphics::ManagedSurface *gfx, int w, int h) {
+const Graphics::ManagedSurface *scaleGfx(const Graphics::ManagedSurface *gfx, int w, int h, bool filtering) {
 	int nw = w, nh = h;
 
 	// Maintain aspect ratio
@@ -553,7 +555,7 @@ const Graphics::ManagedSurface *scaleGfx(const Graphics::ManagedSurface *gfx, in
 	else
 		nw = gfx->w * yRatio;
 
-	if ((nw == w && nh == h) || (nw == gfx->w && nh == gfx->h))
+	if (nw == gfx->w && nh == gfx->h)
 		return gfx;
 
 	w = nw;
@@ -561,7 +563,7 @@ const Graphics::ManagedSurface *scaleGfx(const Graphics::ManagedSurface *gfx, in
 
 	Graphics::ManagedSurface tmp(*gfx);
 
-	const Graphics::ManagedSurface *tmp2 = new Graphics::ManagedSurface(tmp.surfacePtr()->scale(w, h, false));
+	const Graphics::ManagedSurface *tmp2 = new Graphics::ManagedSurface(tmp.surfacePtr()->scale(w, h, filtering));
 	tmp.free();
 
 	return tmp2;
@@ -598,6 +600,9 @@ void PicButtonWidget::setGfx(const Graphics::ManagedSurface *gfx, int statenum, 
 		return;
 	}
 
+	if (!isVisible() || !_boss->isVisible())
+		return;
+
 	float sf = g_gui.getScaleFactor();
 	if (scale && sf != 1.0) {
 		Graphics::Surface *tmp2 = gfx->rawSurface().scale(gfx->w * sf, gfx->h * sf, false);
@@ -624,6 +629,11 @@ void PicButtonWidget::setGfxFromTheme(const char *name, int statenum, bool scale
 }
 
 void PicButtonWidget::setGfx(int w, int h, int r, int g, int b, int statenum) {
+	_gfx[statenum].free();
+
+	if (!isVisible() || !_boss->isVisible())
+		return;
+
 	if (w == -1)
 		w = _w;
 	if (h == -1)
@@ -631,7 +641,6 @@ void PicButtonWidget::setGfx(int w, int h, int r, int g, int b, int statenum) {
 
 	const Graphics::PixelFormat &requiredFormat = g_gui.theme()->getPixelFormat();
 
-	_gfx[statenum].free();
 	_gfx[statenum].create(w, h, requiredFormat);
 	_gfx[statenum].fillRect(Common::Rect(0, 0, w, h), _gfx[statenum].format.RGBToColor(r, g, b));
 }
@@ -668,18 +677,21 @@ CheckboxWidget::CheckboxWidget(GuiObject *boss, int x, int y, int w, int h, cons
 	: ButtonWidget(boss, x, y, w, h, label, tooltip, cmd, hotkey), _state(false) {
 	setFlags(WIDGET_ENABLED);
 	_type = kCheckboxWidget;
+	_spacing = g_gui.xmlEval()->getVar("Globals.Checkbox.Spacing", 15);
 }
 
 CheckboxWidget::CheckboxWidget(GuiObject *boss, const Common::String &name, const Common::U32String &label, const Common::U32String &tooltip, uint32 cmd, uint8 hotkey)
 	: ButtonWidget(boss, name, label, tooltip, cmd, hotkey), _state(false) {
 	setFlags(WIDGET_ENABLED);
 	_type = kCheckboxWidget;
+	_spacing = g_gui.xmlEval()->getVar("Globals.Checkbox.Spacing", 15);
 }
 
 void CheckboxWidget::handleMouseUp(int x, int y, int button, int clickCount) {
 	if (isEnabled() && _duringPress && x >= 0 && x < _w && y >= 0 && y < _h) {
 		toggleState();
 	}
+	setUnpressedState();
 	_duringPress = false;
 }
 
@@ -693,7 +705,7 @@ void CheckboxWidget::setState(bool state) {
 }
 
 void CheckboxWidget::drawWidget() {
-	g_gui.theme()->drawCheckbox(Common::Rect(_x, _y, _x + _w, _y + _h), _label, _state, Widget::_state, (g_gui.useRTL() && _useRTL));
+	g_gui.theme()->drawCheckbox(Common::Rect(_x, _y, _x + _w, _y + _h), _spacing, _label, _state, Widget::_state, (g_gui.useRTL() && _useRTL));
 }
 
 #pragma mark -
@@ -731,6 +743,7 @@ RadiobuttonWidget::RadiobuttonWidget(GuiObject *boss, int x, int y, int w, int h
 	setFlags(WIDGET_ENABLED);
 	_type = kRadiobuttonWidget;
 	_group->addButton(this);
+	_spacing = g_gui.xmlEval()->getVar("Globals.Radiobutton.Spacing", 15);
 }
 
 RadiobuttonWidget::RadiobuttonWidget(GuiObject *boss, const Common::String &name, RadiobuttonGroup *group, int value, const Common::U32String &label, const Common::U32String &tooltip, uint8 hotkey)
@@ -738,12 +751,14 @@ RadiobuttonWidget::RadiobuttonWidget(GuiObject *boss, const Common::String &name
 	setFlags(WIDGET_ENABLED);
 	_type = kRadiobuttonWidget;
 	_group->addButton(this);
+	_spacing = g_gui.xmlEval()->getVar("Globals.Radiobutton.Spacing", 15);
 }
 
 void RadiobuttonWidget::handleMouseUp(int x, int y, int button, int clickCount) {
 	if (isEnabled() && _duringPress && x >= 0 && x < _w && y >= 0 && y < _h) {
 		toggleState();
 	}
+	setUnpressedState();
 	_duringPress = false;
 }
 
@@ -762,7 +777,7 @@ void RadiobuttonWidget::setState(bool state, bool setGroup) {
 }
 
 void RadiobuttonWidget::drawWidget() {
-	g_gui.theme()->drawRadiobutton(Common::Rect(_x, _y, _x + _w, _y + _h), _label, _state, Widget::_state, (g_gui.useRTL() && _useRTL));
+	g_gui.theme()->drawRadiobutton(Common::Rect(_x, _y, _x + _w, _y + _h), _spacing, _label, _state, Widget::_state, (g_gui.useRTL() && _useRTL));
 }
 
 #pragma mark -
@@ -880,6 +895,9 @@ void GraphicsWidget::setGfx(const Graphics::ManagedSurface *gfx, bool scale) {
 		return;
 	}
 
+	if (!isVisible() || !_boss->isVisible())
+		return;
+
 	float sf = g_gui.getScaleFactor();
 	if (scale && sf != 1.0) {
 		_w = gfx->w * sf;
@@ -906,6 +924,11 @@ void GraphicsWidget::setGfx(const Graphics::Surface *gfx, bool scale) {
 }
 
 void GraphicsWidget::setGfx(int w, int h, int r, int g, int b) {
+	_gfx.free();
+
+	if (!isVisible() || !_boss->isVisible())
+		return;
+
 	if (w == -1)
 		w = _w;
 	if (h == -1)
@@ -913,7 +936,6 @@ void GraphicsWidget::setGfx(int w, int h, int r, int g, int b) {
 
 	const Graphics::PixelFormat &requiredFormat = g_gui.theme()->getPixelFormat();
 
-	_gfx.free();
 	_gfx.create(w, h, requiredFormat);
 	_gfx.fillRect(Common::Rect(0, 0, w, h), _gfx.format.RGBToColor(r, g, b));
 }
@@ -1022,10 +1044,15 @@ void OptionsContainerWidget::reflowLayout() {
 	}
 
 	Widget *w = _firstWidget;
+	int16 minY = getAbsY();
+	int maxY = minY + _h;
 	while (w) {
 		w->reflowLayout();
+		minY = MIN(minY, w->getAbsY());
+		maxY = MAX(maxY, w->getAbsY() + w->getHeight());
 		w = w->next();
 	}
+	_h = maxY - minY;
 }
 
 bool OptionsContainerWidget::containsWidget(Widget *widget) const {

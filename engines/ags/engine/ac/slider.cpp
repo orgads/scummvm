@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -196,21 +195,6 @@ void RegisterSliderAPI() {
 	ccAddExternalObjectFunction("Slider::set_Min", Sc_Slider_SetMin);
 	ccAddExternalObjectFunction("Slider::get_Value", Sc_Slider_GetValue);
 	ccAddExternalObjectFunction("Slider::set_Value", Sc_Slider_SetValue);
-
-	/* ----------------------- Registering unsafe exports for plugins -----------------------*/
-
-	ccAddExternalFunctionForPlugin("Slider::get_BackgroundGraphic", (void *)Slider_GetBackgroundGraphic);
-	ccAddExternalFunctionForPlugin("Slider::set_BackgroundGraphic", (void *)Slider_SetBackgroundGraphic);
-	ccAddExternalFunctionForPlugin("Slider::get_HandleGraphic", (void *)Slider_GetHandleGraphic);
-	ccAddExternalFunctionForPlugin("Slider::set_HandleGraphic", (void *)Slider_SetHandleGraphic);
-	ccAddExternalFunctionForPlugin("Slider::get_HandleOffset", (void *)Slider_GetHandleOffset);
-	ccAddExternalFunctionForPlugin("Slider::set_HandleOffset", (void *)Slider_SetHandleOffset);
-	ccAddExternalFunctionForPlugin("Slider::get_Max", (void *)Slider_GetMax);
-	ccAddExternalFunctionForPlugin("Slider::set_Max", (void *)Slider_SetMax);
-	ccAddExternalFunctionForPlugin("Slider::get_Min", (void *)Slider_GetMin);
-	ccAddExternalFunctionForPlugin("Slider::set_Min", (void *)Slider_SetMin);
-	ccAddExternalFunctionForPlugin("Slider::get_Value", (void *)Slider_GetValue);
-	ccAddExternalFunctionForPlugin("Slider::set_Value", (void *)Slider_SetValue);
 }
 
 } // namespace AGS3

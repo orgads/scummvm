@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -37,50 +36,23 @@ MacButton::MacButton(MacButtonType buttonType, TextAlign textAlignment, MacWidge
 	MacText(parent, x, y, w, h, wm, s, macFont, fgcolor, bgcolor, w, textAlignment), _pd(Graphics::MacPlotData(_composeSurface, nullptr, &_wm->getPatterns(), 1, 0, 0, 1, 0, true)) {
 
 	_buttonType = buttonType;
-	_invertInner = false;
-	_checkBoxType = 0;
-
-	switch (buttonType) {
-	case kCheckBox:
-		_alignOffset.x += 16;
-		_dims.right += 16;
-		break;
-	case kRound:
-		_alignOffset.x += 2;
-		_alignOffset.y += 2;
-		_dims.right += 2;
-		_dims.bottom += 4;
-		break;
-	case kRadio:
-		_alignOffset.x += 16;
-		_dims.right += 16;
-		break;
-	}
-
-	_composeSurface->create(_dims.width(), _dims.height(), _wm->_pixelformat);
-	_composeSurface->clear(_bgcolor);
+	init();
 }
 
-MacButton::MacButton(MacButtonType buttonType, TextAlign textAlignment, MacWidget *parent, int x, int y, int w, int h, MacWindowManager *wm, const Common::String &s, const MacFont *macFont, int fgcolor, int bgcolor, Common::CodePage encodeType) :
-	MacText(parent, x, y, w, h, wm, s, macFont, fgcolor, bgcolor, w, textAlignment, 0, 0, 0, 0, 0, encodeType), _pd(Graphics::MacPlotData(_composeSurface, nullptr, &_wm->getPatterns(), 1, 0, 0, 1, 0, true)) {
-
-	_buttonType = buttonType;
+void MacButton::init() {
 	_invertInner = false;
 	_checkBoxType = 0;
+	_checkBoxAccess = 0;
 
-	switch (buttonType) {
+	switch (_buttonType) {
 	case kCheckBox:
-		_alignOffset.x += 16;
 		_dims.right += 16;
 		break;
 	case kRound:
-		_alignOffset.x += 2;
-		_alignOffset.y += 2;
-		_dims.right += 2;
+		_dims.right += 4;
 		_dims.bottom += 4;
 		break;
 	case kRadio:
-		_alignOffset.x += 16;
 		_dims.right += 16;
 		break;
 	}
@@ -196,7 +168,7 @@ bool MacButton::draw(ManagedSurface *g, bool forceRedraw) {
 	if (!MacButton::draw(forceRedraw))
 		return false;
 
-	g->transBlitFrom(*_composeSurface, _composeSurface->getBounds(), Common::Point(_dims.left - 2, _dims.top - 2), _wm->_colorGreen2);
+	g->transBlitFrom(*_composeSurface, _composeSurface->getBounds(), Common::Point(_dims.left, _dims.top), _wm->_colorGreen2);
 
 	return true;
 }
@@ -207,18 +179,37 @@ bool MacButton::processEvent(Common::Event &event) {
 		if (_wm->_mouseDown) {
 			if (_wm->_mode & kWMModeButtonDialogStyle)
 				return true;
-			else if (!_dims.contains(_wm->_lastClickPos))
-				return false;
+			else if (!_wm->_hilitingWidget)
+				return true;
+			// hovered widget in macwindow will help us set the button status to non-active.
+			// so we only care about setting active here is ok.
 
 			setActive(true);
 		}
 		break;
 	case Common::EVENT_LBUTTONDOWN:
 		setActive(true);
+		_wm->_hilitingWidget = true;
 		break;
 	case Common::EVENT_LBUTTONUP:
 		setActive(false);
-		_invertInner = !_invertInner;
+
+		switch (_checkBoxAccess) {
+		case 0:
+			_invertInner = !_invertInner;
+			break;
+		case 1:
+			_invertInner = true;
+			break;
+		case 2:
+			// no op, type 2 will prevent user from setting checkboxes
+			break;
+		default:
+			warning("MacButton::processEvent can not handle checkBoxAccess with type %d", _checkBoxAccess);
+			break;
+		}
+
+		_wm->_hilitingWidget = false;
 		break;
 	default:
 		warning("MacButton:: processEvent: Event not handled");
@@ -226,8 +217,24 @@ bool MacButton::processEvent(Common::Event &event) {
 	return false;
 }
 
+// we won't have the text with _border and _gutter in macbutton now.
+// so for the override of calculateOffset, we are passing the border and gutter which depends on buttonType
+// maybe we can cache this for optimization
 Common::Point MacButton::calculateOffset() {
-	return Common::Point(_alignOffset.x + _border + _gutter, _alignOffset.y + _border + _gutter/2);
+	int x = 0, y = 0;
+	switch (_buttonType) {
+	case kCheckBox:
+		x = 16;
+		break;
+	case kRound:
+		x = 2;
+		y = 2;
+		break;
+	case kRadio:
+		x = 16;
+		break;
+	}
+	return Common::Point(x, y);
 }
 
 } // End of namespace Graphics

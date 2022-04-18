@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -484,6 +483,10 @@ void KIAScript::SCRIPT_KIA_DLL_Play_Clue_Asset_Script(int notUsed, int clueId) {
 	case kClueDektorasCard:
 		KIA_Play_Slice_Model(kModelAnimationDektorasCard);
 		break;
+	case kClueCrazysInvolvement:
+		// RESTORED CONTENT
+		KIA_Play_Slice_Model(kModelAnimationLetter);
+		break;
 	case kClueGrigoriansNote:
 		KIA_Play_Slice_Model(kModelAnimationGrigoriansNote);
 		break;
@@ -840,14 +843,15 @@ void KIAScript::SCRIPT_KIA_DLL_Play_Clue_Asset_Script(int notUsed, int clueId) {
 		KIA_Play_Actor_Dialogue(kActorSteele, 3470);
 		KIA_Play_Actor_Dialogue(kActorGrigorian, 1300);
 		KIA_Play_Actor_Dialogue(kActorGrigorian, 1310);
-		if (_vm->_cutContent
-		    && (_vm->_language == Common::ES_ESP
-		        || _vm->_language == Common::IT_ITA)
-		) {
-			//
-			// in ITA and ESP the 3490 quote is the second half of the sentence starting in previous quote (3480)
+		if (_vm->_cutContent) {
+			KIA_Play_Actor_Dialogue(kActorSteele, 3260); // And eliminating the glitches...
 			KIA_Play_Actor_Dialogue(kActorSteele, 3480);
-			KIA_Play_Actor_Dialogue(kActorSteele, 3490);
+		    if (_vm->_language == Common::ES_ESP
+		        || _vm->_language == Common::IT_ITA) {
+				//
+				// in ITA and ESP the 3490 quote is the second half of the sentence starting in previous quote (3480)
+				KIA_Play_Actor_Dialogue(kActorSteele, 3490);
+			}
 		} else {
 			// the 3490 quote is *BOOP* in the ENG and DEU versions
 			// the 3490 quote is also redundant in FRA version, since it's only the first half of the previous quote (3480)

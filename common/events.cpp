@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -71,6 +70,8 @@ void EventDispatcher::dispatch() {
 	dispatchPoll();
 
 	for (List<SourceEntry>::iterator i = _sources.begin(); i != _sources.end(); ++i) {
+		if (i->ignore)
+			continue;
 		while (i->source->pollEvent(event)) {
 			// We only try to process the events via the setup event mapper, when
 			// we have a setup mapper and when the event source allows mapping.
@@ -102,6 +103,8 @@ void EventDispatcher::clearEvents() {
 	Event event;
 
 	for (List<SourceEntry>::iterator i = _sources.begin(); i != _sources.end(); ++i) {
+		if (i->ignore)
+			continue;
 		while (i->source->pollEvent(event)) {}
 	}
 }
@@ -117,6 +120,7 @@ void EventDispatcher::registerSource(EventSource *source, bool autoFree) {
 
 	newEntry.source = source;
 	newEntry.autoFree = autoFree;
+	newEntry.ignore = false;
 
 	_sources.push_back(newEntry);
 }
@@ -130,6 +134,12 @@ void EventDispatcher::unregisterSource(EventSource *source) {
 			_sources.erase(i);
 			return;
 		}
+	}
+}
+
+void EventDispatcher::ignoreSources(bool ignore) {
+	for (List<SourceEntry>::iterator i = _sources.begin(); i != _sources.end(); ++i) {
+		i->ignore = ignore;
 	}
 }
 

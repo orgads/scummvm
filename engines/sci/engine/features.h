@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -267,6 +266,21 @@ public:
 	PseudoMouseAbilityType detectPseudoMouseAbility();
 
 	bool useEarlyGetLongestTextCalculations() const;
+
+	/**
+	 * Several SCI1.1 Macintosh games have empty strings for almost all of the
+	 * object names in the script resources.
+	 *
+	 * @return true if the game's object names aren't empty strings.
+	 */
+	bool hasScriptObjectNames() const;
+
+	/**
+	 * Returns if the game can be saved via the GMM.
+	 * Saving via the GMM doesn't work as expected in
+	 * games which don't follow the normal saving scheme.
+	*/
+	bool canSaveFromGMM() const;
 
 private:
 	reg_t getDetectionAddr(const Common::String &objName, Selector slc, int methodNum = -1);

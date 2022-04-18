@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -42,7 +41,7 @@ class AVFDecoder : public Video::VideoDecoder {
 public:
 	virtual ~AVFDecoder();
 
-	virtual bool loadStream(Common::SeekableReadStream *stream) override;
+	bool loadStream(Common::SeekableReadStream *stream) override;
 	const Graphics::Surface *decodeFrame(uint frameNr);
 	void addFrameTime(const uint16 timeToAdd);
 
@@ -53,21 +52,21 @@ private:
 		AVFVideoTrack(Common::SeekableReadStream *stream, uint32 chunkFileFormat);
 		virtual ~AVFVideoTrack();
 
-		virtual uint16 getWidth() const override { return _width; }
-		virtual uint16 getHeight() const override { return _height; }
-		virtual Graphics::PixelFormat getPixelFormat() const override { return _pixelFormat; }
-		virtual int getCurFrame() const override { return _curFrame; }
-		virtual int getFrameCount() const override { return _frameCount; }
-		virtual bool isSeekable() const override { return true; }
-		virtual bool seek(const Audio::Timestamp &time) override;
-		virtual bool setReverse(bool reverse) override;
-		virtual bool isReversed() const override { return _reversed; }
-		virtual bool endOfTrack() const override;
-		virtual const Graphics::Surface *decodeNextFrame() override;
+		uint16 getWidth() const override { return _width; }
+		uint16 getHeight() const override { return _height; }
+		Graphics::PixelFormat getPixelFormat() const override { return _pixelFormat; }
+		int getCurFrame() const override { return _curFrame; }
+		int getFrameCount() const override { return _frameCount; }
+		bool isSeekable() const override { return true; }
+		bool seek(const Audio::Timestamp &time) override;
+		bool setReverse(bool reverse) override;
+		bool isReversed() const override { return _reversed; }
+		bool endOfTrack() const override;
+		const Graphics::Surface *decodeNextFrame() override;
 		const Graphics::Surface *decodeFrame(uint frameNr);
 
 	protected:
-		virtual Common::Rational getFrameRate() const override { return Common::Rational(1000, _frameTime); }
+		Common::Rational getFrameRate() const override { return Common::Rational(1000, _frameTime); }
 
 	private:
 		struct ChunkInfo {

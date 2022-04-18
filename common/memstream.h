@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -75,10 +74,10 @@ public:
 	bool eos() const { return _eos; }
 	void clearErr() { _eos = false; }
 
-	int32 pos() const { return _pos; }
-	int32 size() const { return _size; }
+	int64 pos() const { return _pos; }
+	int64 size() const { return _size; }
 
-	bool seek(int32 offs, int whence = SEEK_SET);
+	bool seek(int64 offs, int whence = SEEK_SET);
 };
 
 
@@ -91,10 +90,10 @@ public:
 	MemoryReadStreamEndian(const byte *buf, uint32 len, bool bigEndian, DisposeAfterUse::Flag disposeMemory = DisposeAfterUse::NO)
 		: MemoryReadStream(buf, len, disposeMemory), SeekableReadStreamEndian(bigEndian), ReadStreamEndian(bigEndian) {}
 
-	int32 pos() const override { return MemoryReadStream::pos(); }
-	int32 size() const override { return MemoryReadStream::size(); }
+	int64 pos() const override { return MemoryReadStream::pos(); }
+	int64 size() const override { return MemoryReadStream::size(); }
 
-	bool seek(int32 offs, int whence = SEEK_SET) override { return MemoryReadStream::seek(offs, whence); }
+	bool seek(int64 offs, int whence = SEEK_SET) override { return MemoryReadStream::seek(offs, whence); }
 
 	bool skip(uint32 offset) override { return MemoryReadStream::seek(offset, SEEK_CUR); }
 };
@@ -126,13 +125,13 @@ public:
 		return dataSize;
 	}
 
-	virtual int32 pos() const override { return _pos; }
-	virtual int32 size() const override { return _bufSize; }
+	int64 pos() const override { return _pos; }
+	int64 size() const override { return _bufSize; }
 
-	virtual bool err() const override { return _err; }
-	virtual void clearErr() override { _err = false; }
+	bool err() const override { return _err; }
+	void clearErr() override { _err = false; }
 
-	virtual bool seek(int32 offset, int whence = SEEK_SET) override { return false; }
+	bool seek(int64 offset, int whence = SEEK_SET) override { return false; }
 };
 
 /**
@@ -144,7 +143,7 @@ private:
 public:
 	SeekableMemoryWriteStream(byte *buf, uint32 len) : MemoryWriteStream(buf, len), _ptrOrig(buf) {}
 
-	virtual bool seek(int32 offset, int whence = SEEK_SET) override {
+	bool seek(int64 offset, int whence = SEEK_SET) override {
 		switch (whence) {
 		case SEEK_END:
 			// SEEK_END works just like SEEK_SET, only 'reversed',
@@ -186,13 +185,13 @@ protected:
 	uint32 _pos;
 	DisposeAfterUse::Flag _disposeMemory;
 
-	void ensureCapacity(uint32 new_len) {
-		if (new_len <= _capacity)
+	void ensureCapacity(uint32 capacity) {
+		if (capacity <= _capacity)
 			return;
 
 		byte *old_data = _data;
 
-		_capacity = MAX(new_len + 32, _capacity * 2);
+		_capacity = capacity;
 		_data = (byte *)malloc(_capacity);
 		_ptr = _data + _pos;
 
@@ -201,8 +200,16 @@ protected:
 			memcpy(_data, old_data, _size);
 			free(old_data);
 		}
+	}
 
-		_size = new_len;
+	/** Round up capacity to the next power of 2.
+	  * A minimal capacity of 8 is used.
+	  */
+	static size_t roundUpCapacity(size_t capacity) {
+		size_t capa = 8;
+		while (capa < capacity)
+			capa <<= 1;
+		return capa;
 	}
 public:
 	explicit MemoryWriteStreamDynamic(DisposeAfterUse::Flag disposeMemory) : _capacity(0), _size(0), _ptr(nullptr), _data(nullptr), _pos(0), _disposeMemory(disposeMemory) {}
@@ -213,7 +220,9 @@ public:
 	}
 
 	uint32 write(const void *dataPtr, uint32 dataSize) override {
-		ensureCapacity(_pos + dataSize);
+		if ((_pos + dataSize) >= _capacity)
+			ensureCapacity(roundUpCapacity(_pos + dataSize));
+
 		memcpy(_ptr, dataPtr, dataSize);
 		_ptr += dataSize;
 		_pos += dataSize;
@@ -222,12 +231,12 @@ public:
 		return dataSize;
 	}
 
-	virtual int32 pos() const override { return _pos; }
-	virtual int32 size() const override { return _size; }
+	int64 pos() const override { return _pos; }
+	int64 size() const override { return _size; }
 
 	byte *getData() { return _data; }
 
-	virtual bool seek(int32 offs, int whence = SEEK_SET) override {
+	bool seek(int64 offs, int whence = SEEK_SET) override {
 		// Pre-Condition
 		assert(_pos <= _size);
 		switch (whence) {
@@ -315,7 +324,7 @@ public:
 		return dataSize;
 	}
 
-	virtual uint32 read(void *dataPtr, uint32 dataSize) override {
+	uint32 read(void *dataPtr, uint32 dataSize) override {
 		if (_length < dataSize) {
 			dataSize = _length;
 			_eos = true;
@@ -333,11 +342,33 @@ public:
 		return dataSize;
 	}
 
-	virtual int32 pos() const override { return _pos - _length; }
-	virtual int32 size() const override { return _size; }
-	virtual bool seek(int32, int) override { return false; }
-	virtual bool eos() const override { return _eos; }
-	virtual void clearErr() override { _eos = false; }
+	bool seek(int64 offset, int whence) override {
+		switch (whence) {
+		case SEEK_END:
+			// SEEK_END works just like SEEK_SET, only 'reversed',
+			// i.e. from the end.
+			offset = size() + offset;
+			// Fall through
+		case SEEK_SET:
+			// Fall through
+		default:
+			_writePos = offset;
+			_readPos = offset;
+			break;
+		case SEEK_CUR:
+			// Not supported
+			return false;
+		}
+
+		// Post-Condition
+		_eos = (int64)_readPos >= size();
+		return true;
+	}
+
+	int64 pos() const override { return _pos - _length; }
+	int64 size() const override { return _size; }
+	bool eos() const override { return _eos; }
+	void clearErr() override { _eos = false; }
 
 	byte *getData() { return _data; }
 };
@@ -378,8 +409,8 @@ public:
 		return dataSize;
 	}
 
-	int32 pos() const override { return _pos; }
-	int32 size() const override { return _bufSize; }
+	int64 pos() const override { return _pos; }
+	int64 size() const override { return _bufSize; }
 
 	bool eos() const override { return _eos; }
 
@@ -412,7 +443,7 @@ public:
 		return dataSize;
 	}
 
-	bool seek(int32 offset, int whence = SEEK_SET) override {
+	bool seek(int64 offset, int whence = SEEK_SET) override {
 		switch (whence) {
 		case SEEK_END:
 			// SEEK_END works just like SEEK_SET, only 'reversed',

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -35,7 +34,7 @@
 #include "common/system.h"
 #include "gui/ThemeEval.h"
 #include "gui/gui-manager.h"
-#include "recorderdialog.h"
+#include "gui/recorderdialog.h"
 
 #define MAX_RECORDS_NAMES 0xFF
 
@@ -168,7 +167,7 @@ void RecorderDialog::handleCommand(CommandSender *sender, uint32 cmd, uint32 dat
 		TimeDate t;
 		QualifiedGameDescriptor desc = EngineMan.findTarget(_target);
 		g_system->getTimeAndDate(t);
-		EditRecordDialog editDlg(_("Unknown Author"), Common::String::format("%.2d.%.2d.%.4d ", t.tm_mday, t.tm_mon, 1900 + t.tm_year) + desc.description, "");
+		EditRecordDialog editDlg(_("Unknown Author"), Common::String::format("%.2d.%.2d.%.4d ", t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year) + desc.description, "");
 		if (editDlg.runModal() != kOKCmd) {
 			return;
 		}
@@ -201,6 +200,7 @@ void RecorderDialog::updateList() {
 	Common::StringArray files = saveFileMan->listSavefiles(pattern);
 	Common::PlaybackFile file;
 	Common::U32StringArray namesList;
+	Common::sort(files.begin(), files.end());
 	_fileHeaders.clear();
 	for (Common::StringArray::iterator i = files.begin(); i != files.end(); ++i) {
 		if (file.openRead(*i)) {

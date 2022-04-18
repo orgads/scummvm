@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -58,6 +57,8 @@ public:
 	bool    CreateTransparent(int width, int height, int color_depth = 0);
 	// Allow this object to share existing bitmap data
 	bool    CreateSubBitmap(Bitmap *src, const Rect &rc);
+	// Resizes existing sub-bitmap within the borders of its parent
+	bool    ResizeSubBitmap(int width, int height);
 	// Create a copy of given bitmap
 	bool    CreateCopy(Bitmap *src, int color_depth = 0);
 	// TODO: a temporary solution for plugin support
@@ -69,6 +70,7 @@ public:
 		return LoadFromFile(filename.GetCStr());
 	}
 	bool    LoadFromFile(const char *filename);
+	bool    LoadFromFile(PACKFILE *pf);
 	bool    SaveToFile(const String &filename, const void *palette) {
 		return SaveToFile(filename.GetCStr(), palette);
 	}
@@ -168,6 +170,7 @@ public:
 	// Clipping
 	//=========================================================================
 	void    SetClip(const Rect &rc);
+	void    ResetClip();
 	Rect    GetClip() const;
 
 	//=========================================================================
@@ -176,7 +179,9 @@ public:
 	// Draw other bitmap over current one
 	void    Blit(Bitmap *src, int dst_x = 0, int dst_y = 0, BitmapMaskOption mask = kBitmap_Copy);
 	void    Blit(Bitmap *src, int src_x, int src_y, int dst_x, int dst_y, int width, int height, BitmapMaskOption mask = kBitmap_Copy);
-	// Copy other bitmap, stretching or shrinking its size to given values
+	// Draw other bitmap in a masked mode (kBitmap_Transparency)
+	void    MaskedBlit(Bitmap *src, int dst_x, int dst_y);
+	// Draw other bitmap, stretching or shrinking its size to given values
 	void    StretchBlt(Bitmap *src, const Rect &dst_rc, BitmapMaskOption mask = kBitmap_Copy);
 	void    StretchBlt(Bitmap *src, const Rect &src_rc, const Rect &dst_rc, BitmapMaskOption mask = kBitmap_Copy);
 	// Antia-aliased stretch-blit

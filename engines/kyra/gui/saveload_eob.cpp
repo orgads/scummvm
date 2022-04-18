@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -594,7 +593,7 @@ bool EoBCoreEngine::importOriginalSaveFile(int destSlot, const char *sourceFile)
 
 				delete fs;
 				::GUI::MessageDialog dialog(Common::U32String::format(_("The following original saved game file has been found in your game path:\n\n%s %s\n\nDo you wish to use this saved game file with ScummVM?\n\n"), temp.c_str(), dsc.c_str()), _("Yes"), _("No"));
-				if (dialog.runModal())
+				if (dialog.runModal() == ::GUI::kMessageOK)
 					origFiles.push_back(temp);
 			}
 		}
@@ -627,7 +626,7 @@ bool EoBCoreEngine::importOriginalSaveFile(int destSlot, const char *sourceFile)
 	if (destSlot != -1) {
 		if (Common::find(_gui->_saveSlots.begin(), _gui->_saveSlots.end(), destSlot) != _gui->_saveSlots.end()) {
 			::GUI::MessageDialog dialog(Common::U32String::format(_("A saved game file was found in the specified slot %d. Overwrite?\n\n"), destSlot), _("Yes"), _("No"));
-			if (!dialog.runModal())
+			if (dialog.runModal() != ::GUI::kMessageOK)
 				return false;
 		}
 	}
@@ -856,14 +855,11 @@ Common::String EoBCoreEngine::readOriginalSaveFile(Common::String &file) {
 		l->wallsXorData = new uint8[4096];
 		l->flags = new uint16[1024];
 		memset(l->flags, 0, 1024 * sizeof(uint16));
-		EoBMonsterInPlay *lm = new EoBMonsterInPlay[30];
-		memset(lm, 0, 30 * sizeof(EoBMonsterInPlay));
+		EoBMonsterInPlay *lm = new EoBMonsterInPlay[30]();
 		l->monsters = lm;
-		EoBFlyingObject *lf = new EoBFlyingObject[_numFlyingObjects];
-		memset(lf, 0, _numFlyingObjects * sizeof(EoBFlyingObject));
+		EoBFlyingObject *lf = new EoBFlyingObject[_numFlyingObjects]();
 		l->flyingObjects = lf;
-		WallOfForce *lw = new WallOfForce[5];
-		memset(lw, 0, 5 * sizeof(WallOfForce));
+		WallOfForce *lw = new WallOfForce[5]();
 		l->wallsOfForce = lw;
 
 		if (sourcePlatform == Common::kPlatformFMTowns) {

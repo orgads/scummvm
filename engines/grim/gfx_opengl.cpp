@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
+ * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -24,10 +23,9 @@
 #include "common/system.h"
 #include "common/config-manager.h"
 
-#if defined(USE_OPENGL_GAME) && !defined(USE_GLES2)
+#if defined(USE_OPENGL_GAME)
 
 #include "graphics/surface.h"
-#include "graphics/pixelbuffer.h"
 
 #include "math/glmath.h"
 
@@ -46,19 +44,6 @@
 #include "engines/grim/remastered/overlay.h"
 #include "engines/grim/registry.h"
 
-#if defined (SDL_BACKEND) && defined(GL_ARB_fragment_program) && !defined(USE_GLEW)
-
-// We need SDL.h for SDL_GL_GetProcAddress.
-#include "backends/platform/sdl/sdl-sys.h"
-
-// Extension functions needed for fragment programs.
-PFNGLGENPROGRAMSARBPROC glGenProgramsARB;
-PFNGLBINDPROGRAMARBPROC glBindProgramARB;
-PFNGLPROGRAMSTRINGARBPROC glProgramStringARB;
-PFNGLDELETEPROGRAMSARBPROC glDeleteProgramsARB;
-PFNGLPROGRAMLOCALPARAMETER4FARBPROC glProgramLocalParameter4fARB;
-
-#endif
 
 namespace Grim {
 
@@ -138,8 +123,7 @@ void GfxOpenGL::setupScreen(int screenW, int screenH) {
 	g_system->showMouse(false);
 
 	int screenSize = _screenWidth * _screenHeight * 4;
-	_storedDisplay = new byte[screenSize];
-	memset(_storedDisplay, 0, screenSize);
+	_storedDisplay = new byte[screenSize]();
 	_smushNumTex = 0;
 
 	_currentShadowArray = nullptr;
@@ -149,6 +133,8 @@ void GfxOpenGL::setupScreen(int screenW, int screenH) {
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientSource);
 	GLfloat diffuseReflectance[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuseReflectance);
+
+	glClearStencil(~0);
 
 	if (g_grim->getGameType() == GType_GRIM) {
 		glPolygonOffset(-6.0, -6.0);
@@ -163,27 +149,7 @@ void GfxOpenGL::initExtensions() {
 		return;
 	}
 
-#if defined (SDL_BACKEND) && defined(GL_ARB_fragment_program)
-#ifndef USE_GLEW
-	union {
-		void *obj_ptr;
-		void (APIENTRY *func_ptr)();
-	} u;
-	// We're casting from an object pointer to a function pointer, the
-	// sizes need to be the same for this to work.
-	assert(sizeof(u.obj_ptr) == sizeof(u.func_ptr));
-	u.obj_ptr = SDL_GL_GetProcAddress("glGenProgramsARB");
-	glGenProgramsARB = (PFNGLGENPROGRAMSARBPROC)u.func_ptr;
-	u.obj_ptr = SDL_GL_GetProcAddress("glBindProgramARB");
-	glBindProgramARB = (PFNGLBINDPROGRAMARBPROC)u.func_ptr;
-	u.obj_ptr = SDL_GL_GetProcAddress("glProgramStringARB");
-	glProgramStringARB = (PFNGLPROGRAMSTRINGARBPROC)u.func_ptr;
-	u.obj_ptr = SDL_GL_GetProcAddress("glDeleteProgramsARB");
-	glDeleteProgramsARB = (PFNGLDELETEPROGRAMSARBPROC)u.func_ptr;
-	u.obj_ptr = SDL_GL_GetProcAddress("glProgramLocalParameter4fARB");
-	glProgramLocalParameter4fARB = (PFNGLPROGRAMLOCALPARAMETER4FARBPROC)u.func_ptr;
-#endif
-
+#ifdef GL_ARB_fragment_program
 	const char *extensions = (const char *)glGetString(GL_EXTENSIONS);
 	if (extensions && strstr(extensions, "ARB_fragment_program")) {
 		_useDepthShader = true;
@@ -201,11 +167,13 @@ void GfxOpenGL::initExtensions() {
 			warning("Error compiling depth fragment program:\n%s", glGetString(GL_PROGRAM_ERROR_STRING_ARB));
 			_useDepthShader = false;
 		}
+	}
 
-
+	if (_useDimShader) {
 		glGenProgramsARB(1, &_dimFragProgram);
 		glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, _dimFragProgram);
 
+		GLint errorPos;
 		glProgramStringARB(GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, strlen(dimFragSrc), dimFragSrc);
 		glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
 		if (errorPos != -1) {
@@ -245,7 +213,7 @@ void GfxOpenGL::positionCamera(const Math::Vector3d &pos, const Math::Vector3d &
 }
 
 void GfxOpenGL::positionCamera(const Math::Vector3d &pos, const Math::Matrix4 &rot) {
-	glScaled(1, 1, -1);
+	glScaled(1.0f, 1.0f, -1.0f);
 	_currentPos = pos;
 	_currentRot = rot;
 }
@@ -298,7 +266,7 @@ bool GfxOpenGL::supportsShaders() {
 	return false;
 }
 
-static void glShadowProjection(const Math::Vector3d &light, const Math::Vector3d &plane, const Math::Vector3d &normal, bool dontNegate) {
+static void shadowProjection(const Math::Vector3d &light, const Math::Vector3d &plane, const Math::Vector3d &normal, bool dontNegate) {
 	// Based on GPL shadow projection example by
 	// (c) 2002-2003 Phaetos <phaetos@gaffga.de>
 	float d, c;
@@ -498,6 +466,8 @@ void GfxOpenGL::getActorScreenBBox(const Actor *actor, Common::Point &p1, Common
 	// Set up the camera coordinate system
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
+
+	// Apply the view transform.
 	Math::Matrix4 worldRot = _currentRot;
 	glMultMatrixf(worldRot.getData());
 	glTranslatef(-_currentPos.x(), -_currentPos.y(), -_currentPos.z());
@@ -563,23 +533,18 @@ void GfxOpenGL::startActorDraw(const Actor *actor) {
 	}
 
 	if (_currentShadowArray) {
-		// TODO find out why shadowMask at device in woods is null
-		if (!_currentShadowArray->shadowMask) {
-			_currentShadowArray->shadowMask = new byte[_screenWidth * _screenHeight];
-			_currentShadowArray->shadowMaskSize = _screenWidth * _screenHeight;
-		}
 		Sector *shadowSector = _currentShadowArray->planeList.front().sector;
 		glDepthMask(GL_FALSE);
 		glEnable(GL_POLYGON_OFFSET_FILL);
 		glDisable(GL_LIGHTING);
 		glDisable(GL_TEXTURE_2D);
-// 		glColor3f(0.0f, 1.0f, 0.0f); // debug draw color
+		// glColor3f(0.0f, 1.0f, 0.0f); // debug draw color
 		if (g_grim->getGameType() == GType_GRIM) {
 			glColor3ub(_shadowColorR, _shadowColorG, _shadowColorB);
 		} else {
 			glColor3ub(_currentShadowArray->color.getRed(), _currentShadowArray->color.getGreen(), _currentShadowArray->color.getBlue());
 		}
-		glShadowProjection(_currentShadowArray->pos, shadowSector->getVertices()[0], shadowSector->getNormal(), _currentShadowArray->dontNegate);
+		shadowProjection(_currentShadowArray->pos, shadowSector->getVertices()[0], shadowSector->getNormal(), _currentShadowArray->dontNegate);
 	}
 
 	const float alpha = actor->getEffectiveAlpha();
@@ -648,12 +613,7 @@ void GfxOpenGL::finishActorDraw() {
 		glDisable(GL_CULL_FACE);
 	}
 
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	_currentActor = nullptr;
-}
-
-void GfxOpenGL::setShadow(Shadow *shadow) {
-	_currentShadowArray = shadow;
 }
 
 void GfxOpenGL::drawShadowPlanes() {
@@ -677,18 +637,17 @@ void GfxOpenGL::drawShadowPlanes() {
 		glTranslatef(-_currentPos.x(), -_currentPos.y(), -_currentPos.z());
 	}
 
-
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 	glDepthMask(GL_FALSE);
-	glClearStencil(~0);
-	glClear(GL_STENCIL_BUFFER_BIT);
 
+	glClear(GL_STENCIL_BUFFER_BIT);
 	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_ALWAYS, 1, (GLuint)~0);
 	glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+
 	glDisable(GL_LIGHTING);
 	glDisable(GL_TEXTURE_2D);
-	glColor4f(1, 1, 1, 1);
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 	for (SectorListType::iterator i = _currentShadowArray->planeList.begin(); i != _currentShadowArray->planeList.end(); ++i) {
 		Sector *shadowSector = i->sector;
 		glBegin(GL_POLYGON);
@@ -703,6 +662,10 @@ void GfxOpenGL::drawShadowPlanes() {
 	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
 	glPopMatrix();
+}
+
+void GfxOpenGL::setShadow(Shadow *shadow) {
+	_currentShadowArray = shadow;
 }
 
 void GfxOpenGL::setShadowMode() {
@@ -859,7 +822,7 @@ void GfxOpenGL::drawSprite(const Sprite *sprite) {
 	if (g_grim->getGameType() == GType_GRIM) {
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GEQUAL, 0.5f);
-	}  else if (sprite->_flags2 & Sprite::AlphaTest) {
+	} else if (sprite->_flags2 & Sprite::AlphaTest) {
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GEQUAL, 0.1f);
 	} else {
@@ -891,8 +854,8 @@ void GfxOpenGL::drawSprite(const Sprite *sprite) {
 			glTexCoord2f(sprite->_texCoordX[i], sprite->_texCoordY[i]);
 			glVertex3f(vertexX[i] * halfWidth, vertexY[i] * halfHeight, 0.0f);
 		}
-		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 		glEnd();
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 	} else {
 		// In Grim, the bottom edge of the sprite is at y=0 and
 		// the texture is flipped along the X-axis.
@@ -1062,7 +1025,7 @@ void GfxOpenGL::createBitmap(BitmapData *bitmap) {
 
 	if (bitmap->_format != 1) {
 		for (int pic = 0; pic < bitmap->_numImages; pic++) {
-			uint16 *zbufPtr = reinterpret_cast<uint16 *>(bitmap->getImageData(pic).getRawBuffer());
+			uint16 *zbufPtr = reinterpret_cast<uint16 *>(const_cast<void  *>(bitmap->getImageData(pic).getPixels()));
 			for (int i = 0; i < (bitmap->_width * bitmap->_height); i++) {
 				uint16 val = READ_LE_UINT16(zbufPtr + i);
 				// fix the value if it is incorrectly set to the bitmap transparency color
@@ -1115,7 +1078,7 @@ void GfxOpenGL::createBitmap(BitmapData *bitmap) {
 					texData = new byte[bytes * bitmap->_width * bitmap->_height];
 				// Convert data to 32-bit RGBA format
 				byte *texDataPtr = texData;
-				uint16 *bitmapData = reinterpret_cast<uint16 *>(bitmap->getImageData(pic).getRawBuffer());
+				uint16 *bitmapData = (uint16 *)const_cast<void *>(bitmap->getImageData(pic).getPixels());
 				for (int i = 0; i < bitmap->_width * bitmap->_height; i++, texDataPtr += bytes, bitmapData++) {
 					uint16 pixel = *bitmapData;
 					int r = pixel >> 11;
@@ -1134,9 +1097,9 @@ void GfxOpenGL::createBitmap(BitmapData *bitmap) {
 				texOut = texData;
 			} else if (bitmap->_format == 1 && bitmap->_colorFormat == BM_RGB1555) {
 				bitmap->convertToColorFormat(pic, Graphics::PixelFormat(4, 8, 8, 8, 8, 0, 8, 16, 24));
-				texOut = (byte *)bitmap->getImageData(pic).getRawBuffer();
+				texOut = (byte *)const_cast<void *>(bitmap->getImageData(pic).getPixels());
 			} else {
-				texOut = (byte *)bitmap->getImageData(pic).getRawBuffer();
+				texOut = (byte *)const_cast<void *>(bitmap->getImageData(pic).getPixels());
 			}
 
 			bool smooth = bitmap->_smoothInterpolation && (_scaleW != 1 || _scaleH != 1);
@@ -1191,7 +1154,7 @@ void GfxOpenGL::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, f
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 
-	        glColor3f(1.0f, 1.0f, 1.0f);
+		glColor3f(1.0f, 1.0f, 1.0f);
 
 		BitmapData *data = bitmap->_data;
 		GLuint *textures = (GLuint *)bitmap->getTexIds();
@@ -1254,7 +1217,7 @@ void GfxOpenGL::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, f
 	if (bitmap->getFormat() == 5 && !_useDepthShader) {
 		// Only draw the manual zbuffer when enabled
 		if (bitmap->getActiveImage() - 1 < bitmap->getNumImages()) {
-			drawDepthBitmap(dx, dy, bitmap->getWidth(), bitmap->getHeight(), (char *)bitmap->getData(bitmap->getActiveImage() - 1).getRawBuffer());
+			drawDepthBitmap(dx, dy, bitmap->getWidth(), bitmap->getHeight(), (const char *)bitmap->getData(bitmap->getActiveImage() - 1).getPixels());
 		} else {
 			warning("zbuffer image has index out of bounds! %d/%d", bitmap->getActiveImage(), bitmap->getNumImages());
 		}
@@ -1370,11 +1333,9 @@ void GfxOpenGL::createFont(Font *font) {
 		size = 64;
 
 	uint arraySize = size * size * bpp * charsWide * charsHigh;
-	byte *temp = new byte[arraySize];
+	byte *temp = new byte[arraySize]();
 	if (!temp)
 		error("Could not allocate %d bytes", arraySize);
-
-	memset(temp, 0, arraySize);
 
 	FontUserData *userData = new FontUserData;
 	font->setUserData(userData);
@@ -1430,7 +1391,7 @@ struct TextObjectUserData {
 };
 
 void GfxOpenGL::createTextObject(TextObject *text) {
-	if (g_grim->getGameType() != GType_GRIM || !(g_grim->getGameFlags() & ADGF_REMASTERED))
+	if (g_grim->getGameType() != GType_GRIM || !g_grim->isRemastered())
 		return;
 
 #ifdef USE_FREETYPE2
@@ -1493,7 +1454,7 @@ void GfxOpenGL::drawTextObject(const TextObject *text) {
 	glColor3ub(color.getRed(), color.getGreen(), color.getBlue());
 	const FontUserData *userData = (const FontUserData *)font->getUserData();
 	if (!userData) {
-		if (g_grim->getGameType() != GType_GRIM || !(g_grim->getGameFlags() & ADGF_REMASTERED))
+		if (g_grim->getGameType() != GType_GRIM || !g_grim->isRemastered())
 			error("Could not get font userdata");
 #ifdef USE_FREETYPE2
 		const FontTTF *f = static_cast<const FontTTF *>(font);
@@ -1595,7 +1556,7 @@ void GfxOpenGL::drawTextObject(const TextObject *text) {
 }
 
 void GfxOpenGL::destroyTextObject(TextObject *text) {
-	if (g_grim->getGameType() != GType_GRIM || !(g_grim->getGameFlags() & ADGF_REMASTERED))
+	if (g_grim->getGameType() != GType_GRIM || !g_grim->isRemastered())
 		return;
 
 	TextObjectUserData *ud = (TextObjectUserData *)const_cast<void *>(text->getUserData());
@@ -1628,32 +1589,7 @@ void GfxOpenGL::createTexture(Texture *texture, const uint8 *data, const CMap *c
 			}
 		}
 	} else {
-#ifdef SCUMM_BIG_ENDIAN
-		// Copy and swap
-		for (int y = 0; y < texture->_height; y++) {
-			for (int x = 0; x < texture->_width; x++) {
-				uint32 pixel = (y * texture->_width + x) * texture->_bpp;
-				for (int b = 0; b < texture->_bpp; b++) {
-					texdata[pixel + b] = data[pixel + (texture->_bpp - 1) - b];
-				}
-			}
-		}
-#else
 		memcpy(texdata, data, texture->_width * texture->_height * texture->_bpp);
-#endif
-	}
-
-	GLuint format = 0;
-	GLuint internalFormat = 0;
-	if (texture->_colorFormat == BM_RGBA) {
-		format = GL_RGBA;
-		internalFormat = GL_RGBA;
-	} else if (texture->_colorFormat == BM_BGRA) {
-		format = GL_BGRA;
-		internalFormat = GL_RGBA;
-	} else {    // The only other colorFormat we load right now is BGR
-		format = GL_BGR;
-		internalFormat = GL_RGB;
 	}
 
 	GLuint *textures = (GLuint *)texture->_texture;
@@ -1670,7 +1606,7 @@ void GfxOpenGL::createTexture(Texture *texture, const uint8 *data, const CMap *c
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, texture->_width, texture->_height, 0, format, GL_UNSIGNED_BYTE, texdata);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->_width, texture->_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texdata);
 	delete[] texdata;
 }
 
@@ -1698,7 +1634,7 @@ void GfxOpenGL::destroyTexture(Texture *texture) {
 	}
 }
 
-void GfxOpenGL::drawDepthBitmap(int x, int y, int w, int h, char *data) {
+void GfxOpenGL::drawDepthBitmap(int x, int y, int w, int h, const char *data) {
 	//if (num != 0) {
 	//  warning("Animation not handled yet in GL texture path");
 	//}
@@ -1925,13 +1861,16 @@ void GfxOpenGL::drawEmergString(int x, int y, const char *text, const Color &fgC
 }
 
 Bitmap *GfxOpenGL::getScreenshot(int w, int h, bool useStored) {
-	Graphics::PixelBuffer src(Graphics::PixelFormat(4, 8, 8, 8, 8, 0, 8, 16, 24), _screenWidth * _screenHeight, DisposeAfterUse::YES);
+	Graphics::Surface src;
+	src.create(_screenWidth, _screenHeight, Graphics::PixelFormat(4, 8, 8, 8, 8, 0, 8, 16, 24));
 	if (useStored) {
-		memcpy(src.getRawBuffer(), _storedDisplay, _screenWidth * _screenHeight * 4);
+		memcpy(src.getPixels(), _storedDisplay, _screenWidth * _screenHeight * 4);
 	} else {
-		glReadPixels(0, 0, _screenWidth, _screenHeight, GL_RGBA, GL_UNSIGNED_BYTE, src.getRawBuffer());
+		glReadPixels(0, 0, _screenWidth, _screenHeight, GL_RGBA, GL_UNSIGNED_BYTE, src.getPixels());
 	}
-	return createScreenshotBitmap(src, w, h, false);
+	Bitmap *bmp = createScreenshotBitmap(&src, w, h, false);
+	src.free();
+	return bmp;
 }
 
 void GfxOpenGL::storeDisplay() {

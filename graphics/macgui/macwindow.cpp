@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -89,7 +88,7 @@ void MacWindow::setActive(bool active) {
 	_borderIsDirty = true;
 }
 
-bool MacWindow::isActive() { return _active; }
+bool MacWindow::isActive() const { return _active; }
 
 void MacWindow::resize(int w, int h, bool inner) {
 	if (_composeSurface->w == w && _composeSurface->h == h)
@@ -178,7 +177,7 @@ void MacWindow::blit(ManagedSurface *g, Common::Rect &dest) {
 	g->transBlitFrom(*_composeSurface, _composeSurface->getBounds(), dest, transcolor);
 }
 
-uint32 MacWindow::getBorderFlags() {
+uint32 MacWindow::getBorderFlags() const {
 	uint32 flags = 0;
 	if (_active)
 		flags |= kWindowBorderActive;
@@ -343,7 +342,7 @@ void MacWindow::fillRect(ManagedSurface *g, int x, int y, int w, int h, int colo
 	g->fillRect(r, color);
 }
 
-WindowClick MacWindow::isInBorder(int x, int y) {
+WindowClick MacWindow::isInBorder(int x, int y) const {
 	if (_innerDims.contains(x, y))
 		return kBorderInner;
 
@@ -360,7 +359,7 @@ WindowClick MacWindow::isInBorder(int x, int y) {
 	return kBorderBorder;
 }
 
-bool MacWindow::isInCloseButton(int x, int y) {
+bool MacWindow::isInCloseButton(int x, int y) const {
 	int bLeft = kBorderWidth;
 	int bTop = kBorderWidth;
 	if (_macBorder.hasOffsets()) {
@@ -370,7 +369,7 @@ bool MacWindow::isInCloseButton(int x, int y) {
 	return (x >= _innerDims.left - bLeft && x < _innerDims.left && y >= _innerDims.top - bTop && y < _innerDims.top);
 }
 
-bool MacWindow::isInResizeButton(int x, int y) {
+bool MacWindow::isInResizeButton(int x, int y) const {
 	int bRight = kBorderWidth;
 	int bBottom = kBorderWidth;
 	if (_macBorder.hasOffsets()) {
@@ -380,7 +379,7 @@ bool MacWindow::isInResizeButton(int x, int y) {
 	return (x >= _innerDims.right && x < _innerDims.right + bRight && y >= _innerDims.bottom && y < _innerDims.bottom + bBottom);
 }
 
-WindowClick MacWindow::isInScroll(int x, int y) {
+WindowClick MacWindow::isInScroll(int x, int y) const {
 	int bTop = kBorderWidth;
 	int bRight = kBorderWidth;
 	int bBottom = kBorderWidth;

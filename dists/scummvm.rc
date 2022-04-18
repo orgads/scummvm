@@ -24,6 +24,7 @@ scummclassic.zip       FILE    "gui/themes/scummclassic.zip"
 scummmodern.zip        FILE    "gui/themes/scummmodern.zip"
 scummremastered.zip    FILE    "gui/themes/scummremastered.zip"
 residualvm.zip         FILE    "gui/themes/residualvm.zip"
+gui-icons.dat          FILE    "gui/themes/gui-icons.dat"
 achievements.dat       FILE    "dists/engine-data/achievements.dat"
 encoding.dat           FILE    "dists/engine-data/encoding.dat"
 
@@ -114,7 +115,7 @@ xeen.ccs               FILE    "dists/engine-data/xeen.ccs"
 #if PLUGIN_ENABLED_STATIC(AGI)
 pred.dic               FILE    "dists/pred.dic"
 #endif
-#if defined(USE_OPENGL_SHADERS) || defined(USE_GLES2)
+#if defined(USE_OPENGL_SHADERS)
 #if PLUGIN_ENABLED_STATIC(GRIM)
 shaders/grim_dim.fragment            FILE    "engines/grim/shaders/grim_dim.fragment"
 shaders/grim_dim.vertex              FILE    "engines/grim/shaders/grim_dim.vertex"
@@ -168,10 +169,10 @@ shaders/stark_shadow.vertex          FILE    "engines/stark/shaders/stark_shadow
 #if PLUGIN_ENABLED_STATIC(WINTERMUTE)
 shaders/wme_fade.fragment               FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_fade.fragment"
 shaders/wme_fade.vertex                 FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_fade.vertex"
-shaders/wme_flat_shadow_mask.fragment   FILE "engines/wintermute/base/gfx/opengl/shaders/wme_flat_shadow_mask.fragment"
-shaders/wme_flat_shadow_mask.vertex     FILE "engines/wintermute/base/gfx/opengl/shaders/wme_flat_shadow_mask.vertex"
-shaders/wme_flat_shadow_modelx.fragment FILE "engines/wintermute/base/gfx/opengl/shaders/wme_flat_shadow_modelx.fragment"
-shaders/wme_flat_shadow_modelx.vertex   FILE "engines/wintermute/base/gfx/opengl/shaders/wme_flat_shadow_modelx.vertex"
+shaders/wme_flat_shadow_mask.fragment   FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_flat_shadow_mask.fragment"
+shaders/wme_flat_shadow_mask.vertex     FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_flat_shadow_mask.vertex"
+shaders/wme_flat_shadow_modelx.fragment FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_flat_shadow_modelx.fragment"
+shaders/wme_flat_shadow_modelx.vertex   FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_flat_shadow_modelx.vertex"
 shaders/wme_geometry.fragment           FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_geometry.fragment"
 shaders/wme_geometry.vertex             FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_geometry.vertex"
 shaders/wme_line.fragment               FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_line.fragment"
@@ -184,6 +185,14 @@ shaders/wme_shadow_volume.fragment      FILE    "engines/wintermute/base/gfx/ope
 shaders/wme_shadow_volume.vertex        FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_shadow_volume.vertex"
 shaders/wme_sprite.fragment             FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_sprite.fragment"
 shaders/wme_sprite.vertex               FILE    "engines/wintermute/base/gfx/opengl/shaders/wme_sprite.vertex"
+#endif
+#if PLUGIN_ENABLED_STATIC(PLAYGROUND3D)
+shaders/playground3d_bitmap.fragment    FILE    "engines/playground3d/shaders/playground3d_bitmap.fragment"
+shaders/playground3d_bitmap.vertex      FILE    "engines/playground3d/shaders/playground3d_bitmap.vertex"
+shaders/playground3d_cube.fragment      FILE    "engines/playground3d/shaders/playground3d_cube.fragment"
+shaders/playground3d_cube.vertex        FILE    "engines/playground3d/shaders/playground3d_cube.vertex"
+shaders/playground3d_fade.fragment      FILE    "engines/playground3d/shaders/playground3d_fade.fragment"
+shaders/playground3d_fade.vertex        FILE    "engines/playground3d/shaders/playground3d_fade.vertex"
 #endif
 #endif
 #endif
@@ -210,7 +219,7 @@ BEGIN
             VALUE "FileDescription", "ScummVM: A free interpreter for numerous adventure games and role-playing games\0"
             VALUE "FileVersion", SCUMMVM_VERSION "\0"
             VALUE "InternalName", "scummvm\0"
-            VALUE "LegalCopyright", "Copyright \xA9 2001-2021 The ScummVM Team\0"
+            VALUE "LegalCopyright", "Copyright \xA9 2001-2022 The ScummVM Team\0"
             VALUE "LegalTrademarks", "'SCUMM', and all SCUMM games are a TM of LucasArts. Simon The Sorcerer is a TM of AdventureSoft. Beneath a Steel Sky and Broken Sword are a TM of Revolution. Flight of the Amazon Queen is a TM of John Passfield and Steve Stamatiadis. \0"
             VALUE "OriginalFilename", "scummvm.exe\0"
             VALUE "ProductName", "ScummVM\0"

@@ -1,22 +1,21 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
+ * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,10 +24,12 @@
 #include "engines/wintermute/ad/ad_walkplane.h"
 #include "engines/wintermute/base/base_game.h"
 #include "engines/wintermute/base/gfx/3ds/camera3d.h"
+
 #include "graphics/opengl/system_headers.h"
+
 #include "math/glmath.h"
 
-#if defined(USE_OPENGL_SHADERS) || defined(USE_GLES2)
+#if defined(USE_OPENGL_SHADERS)
 
 #include "engines/wintermute/base/gfx/opengl/base_render_opengl3d_shader.h"
 #include "engines/wintermute/base/gfx/opengl/base_surface_opengl3d.h"
@@ -37,11 +38,11 @@
 #include "engines/wintermute/base/gfx/opengl/shadow_volume_opengl_shader.h"
 
 namespace Wintermute {
+
 BaseRenderer3D *makeOpenGL3DShaderRenderer(BaseGame *inGame) {
 	return new BaseRenderOpenGL3DShader(inGame);
-}
 
-#include "common/pack-start.h"
+}
 
 struct SpriteVertexShader {
 	float x;
@@ -52,9 +53,7 @@ struct SpriteVertexShader {
 	float g;
 	float b;
 	float a;
-} PACKED_STRUCT;
-
-#include "common/pack-end.h"
+};
 
 BaseRenderOpenGL3DShader::BaseRenderOpenGL3DShader(BaseGame *inGame)
 	: BaseRenderer3D(inGame), _spriteBatchMode(false), _flatShadowMaskShader(nullptr) {
@@ -129,7 +128,9 @@ void BaseRenderOpenGL3DShader::disableLight(int index) {
 	_modelXShader->setUniform1f(uniform.c_str(), -1.0f);
 }
 
-void BaseRenderOpenGL3DShader::setLightParameters(int index, const Math::Vector3d &position, const Math::Vector3d &direction, const Math::Vector4d &diffuse, bool spotlight) {
+void BaseRenderOpenGL3DShader::setLightParameters(int index, const Math::Vector3d &position,
+                                                  const Math::Vector3d &direction,
+                                                  const Math::Vector4d &diffuse, bool spotlight) {
 	Math::Vector4d position4d;
 	position4d.x() = position.x();
 	position4d.y() = position.y();
@@ -370,7 +371,7 @@ void BaseRenderOpenGL3DShader::fadeToColor(byte r, byte g, byte b, byte a) {
 }
 
 bool BaseRenderOpenGL3DShader::fill(byte r, byte g, byte b, Common::Rect *rect) {
-	glClearColor(float(r) / 255.0f, float(g) / 255.0f, float(b) / 255.0f, 1.0f);
+	glClearColor(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	return true;
 }
@@ -425,9 +426,9 @@ bool BaseRenderOpenGL3DShader::setProjection() {
 	float viewportHeight = _viewportRect.bottom - _viewportRect.top;
 
 	float verticalViewAngle = _fov;
-	float aspectRatio = float(viewportWidth) / float(viewportHeight);
+	float aspectRatio = viewportWidth / viewportHeight;
 
-	float scaleMod = float(_height) / float(viewportHeight);
+	float scaleMod = _height / viewportHeight;
 
 	float top = _nearPlane * tanf(verticalViewAngle * 0.5f);
 
@@ -687,9 +688,10 @@ BaseSurface *Wintermute::BaseRenderOpenGL3DShader::createSurface() {
 }
 
 bool BaseRenderOpenGL3DShader::drawSpriteEx(BaseSurfaceOpenGL3D &tex, const Wintermute::Rect32 &rect,
-											const Wintermute::Vector2 &pos, const Wintermute::Vector2 &rot, const Wintermute::Vector2 &scale,
-											float angle, uint32 color, bool alphaDisable, Graphics::TSpriteBlendMode blendMode,
-											bool mirrorX, bool mirrorY) {
+	                                    const Wintermute::Vector2 &pos, const Wintermute::Vector2 &rot,
+	                                    const Wintermute::Vector2 &scale, float angle, uint32 color,
+	                                    bool alphaDisable, Graphics::TSpriteBlendMode blendMode,
+	                                    bool mirrorX, bool mirrorY) {
 	// original wme has a batch mode for sprites, we ignore this for the moment
 
 	if (_forceAlphaColor != 0) {
@@ -741,17 +743,17 @@ bool BaseRenderOpenGL3DShader::drawSpriteEx(BaseSurfaceOpenGL3D &tex, const Wint
 	vertices[3].v = texBottom;
 
 	// position coords
-	vertices[0].x = pos.x - 0.5f;
-	vertices[0].y = correctedYPos - 0.5f;
+	vertices[0].x = pos.x;
+	vertices[0].y = correctedYPos;
 
-	vertices[1].x = pos.x - 0.5f;
-	vertices[1].y = correctedYPos - height - 0.5f;
+	vertices[1].x = pos.x;
+	vertices[1].y = correctedYPos - height;
 
-	vertices[2].x = pos.x + width - 0.5f;
-	vertices[2].y = correctedYPos - 0.5f;
+	vertices[2].x = pos.x + width;
+	vertices[2].y = correctedYPos;
 
-	vertices[3].x = pos.x + width - 0.5f;
-	vertices[3].y = correctedYPos - height - 0.5;
+	vertices[3].x = pos.x + width;
+	vertices[3].y = correctedYPos - height;
 
 	// not exactly sure about the color format, but this seems to work
 	byte a = RGBCOLGetA(color);
@@ -791,11 +793,12 @@ bool BaseRenderOpenGL3DShader::drawSpriteEx(BaseSurfaceOpenGL3D &tex, const Wint
 }
 
 void BaseRenderOpenGL3DShader::renderSceneGeometry(const BaseArray<AdWalkplane *> &planes, const BaseArray<AdBlock *> &blocks,
-												   const BaseArray<AdGeneric *> &generics, const BaseArray<Light3D *> &lights, Camera3D *camera) {
+	                                           const BaseArray<AdGeneric *> &generics, const BaseArray<Light3D *> &lights, Camera3D *camera) {
 	// don't render scene geometry, as OpenGL ES 2 has no wireframe rendering and we don't have a shader alternative yet
 }
 
-void BaseRenderOpenGL3DShader::renderShadowGeometry(const BaseArray<AdWalkplane *> &planes, const BaseArray<AdBlock *> &blocks, const BaseArray<AdGeneric *> &generics, Camera3D *camera) {
+void BaseRenderOpenGL3DShader::renderShadowGeometry(const BaseArray<AdWalkplane *> &planes, const BaseArray<AdBlock *> &blocks,
+                                                    const BaseArray<AdGeneric *> &generics, Camera3D *camera) {
 	setup3D(camera, true);
 
 	// disable color write
@@ -842,4 +845,4 @@ ShadowVolume *BaseRenderOpenGL3DShader::createShadowVolume() {
 
 } // namespace Wintermute
 
-#endif // defined(USE_GLES2) || defined(USE_OPENGL_SHADERS)
+#endif // defined(USE_OPENGL_SHADERS)

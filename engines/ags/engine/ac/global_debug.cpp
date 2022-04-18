@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -57,19 +56,19 @@ String GetRuntimeInfo() {
 	Rect render_frame = _G(gfxDriver)->GetRenderDestination();
 	PGfxFilter filter = _G(gfxDriver)->GetGraphicsFilter();
 	String runtimeInfo = String::FromFormat(
-	                         "Adventure Game Studio run-time engine[ACI version %s"
-	                         "[Game resolution %d x %d (%d-bit)"
-	                         "[Running %d x %d at %d-bit%s%s[GFX: %s; %s[Draw frame %d x %d["
-	                         "Sprite cache size: %d KB (limit %d KB; %d locked)",
-	                         _G(EngineVersion).LongString.GetCStr(), _GP(game).GetGameRes().Width, _GP(game).GetGameRes().Height, _GP(game).GetColorDepth(),
-	                         mode.Width, mode.Height, mode.ColorDepth, (_G(convert_16bit_bgr)) ? " BGR" : "",
-	                         mode.Windowed ? " W" : "",
-	                         _G(gfxDriver)->GetDriverName(), filter->GetInfo().Name.GetCStr(),
-	                         render_frame.GetWidth(), render_frame.GetHeight(),
-	                         _GP(spriteset).GetCacheSize() / 1024, _GP(spriteset).GetMaxCacheSize() / 1024, _GP(spriteset).GetLockedSize() / 1024);
+		"Adventure Game Studio run-time engine[ACI version %s"
+		"[Game resolution %d x %d (%d-bit)"
+		"[Running %d x %d at %d-bit%s[GFX: %s; %s[Draw frame %d x %d["
+		"Sprite cache size: %d KB (limit %d KB; %d locked)",
+		_G(EngineVersion).LongString.GetCStr(), _GP(game).GetGameRes().Width, _GP(game).GetGameRes().Height, _GP(game).GetColorDepth(),
+		mode.Width, mode.Height, mode.ColorDepth,
+		mode.IsWindowed() ? " W" : "",
+		_G(gfxDriver)->GetDriverName(), filter->GetInfo().Name.GetCStr(),
+		render_frame.GetWidth(), render_frame.GetHeight(),
+		_GP(spriteset).GetCacheSize() / 1024, _GP(spriteset).GetMaxCacheSize() / 1024, _GP(spriteset).GetLockedSize() / 1024);
 	if (_GP(play).separate_music_lib)
 		runtimeInfo.Append("[AUDIO.VOX enabled");
-	if (_GP(play).want_speech >= 1)
+	if (_GP(play).voice_avail)
 		runtimeInfo.Append("[SPEECH.VOX enabled");
 	if (get_translation_tree().size() > 0) {
 		runtimeInfo.Append("[Using translation ");
@@ -92,7 +91,7 @@ void script_debug(int cmdd, int dataa) {
 		Display(toDisplay.GetCStr());
 		//    Display("shftR: %d  shftG: %d  shftB: %d", _G(_rgb_r_shift_16), _G(_rgb_g_shift_16), _G(_rgb_b_shift_16));
 		//    Display("Remaining memory: %d kb",_go32_dpmi_remaining_virtual_memory()/1024);
-		//Display("Play char bcd: %d",->GetColorDepth(_GP(spriteset)[_G(views)[_G(playerchar)->view].frames[_G(playerchar)->loop][_G(playerchar)->frame].pic]));
+		//Display("Play char bcd: %d",->GetColorDepth(_GP(spriteset)[_GP(views)[_G(playerchar)->view].frames[_G(playerchar)->loop][_G(playerchar)->frame].pic]));
 	} else if (cmdd == 2) {  // show walkable areas from here
 		// TODO: support multiple viewports?!
 		const int viewport_index = 0;

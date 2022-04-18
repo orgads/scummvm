@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -30,6 +29,7 @@
 #include "common/file.h"
 #include "common/savefile.h"
 #include "common/keyboard.h"
+#include "common/mutex.h"
 #include "common/random.h"
 #include "common/rect.h"
 #include "common/rendermode.h"
@@ -94,6 +94,7 @@ class ScummEngine;
 class ScummDebugger;
 class Sound;
 class Localizer;
+class GlyphRenderer_v7;
 
 struct Box;
 struct BoxCoords;
@@ -314,6 +315,8 @@ public:
 	/** Central resource data. */
 	ResourceManager *_res;
 
+	bool _enableEnhancements;
+
 protected:
 	VirtualMachineState vm;
 
@@ -380,7 +383,7 @@ public:
 protected:
 	virtual void parseEvent(Common::Event event);
 
-	void waitForTimer(int msec_delay);
+	int waitForTimer(int msec_delay);
 	virtual void processInput();
 	virtual void processKeyboard(Common::KeyState lastKeyHit);
 	virtual void clearClickedStatus();
@@ -675,6 +678,10 @@ public:
 	void ensureResourceLoaded(ResType type, ResId idx);
 
 protected:
+	Common::Mutex _resourceAccessMutex; // Used in getResourceSize(), getResourceAddress() and findResource()
+										// to avoid race conditions between the audio thread of Digital iMUSE
+										// and the main SCUMM thread
+
 	int readSoundResource(ResId idx);
 	int readSoundResourceSmallHeader(ResId idx);
 	bool isResourceInUse(ResType type, ResId idx) const;
@@ -699,6 +706,10 @@ public:
 	const byte *findResourceData(uint32 tag, const byte *ptr);
 	const byte *findResource(uint32 tag, const byte *ptr);
 	void applyWorkaroundIfNeeded(ResType type, int idx);
+	bool verifyMI2MacBootScript();
+	bool verifyMI2MacBootScript(byte *buf, int size);
+	bool tryPatchMI1CannibalScript(byte *buf, int size);
+
 	int getResourceDataSize(const byte *ptr) const;
 	void dumpResource(const char *tag, int index, const byte *ptr, int length = -1);
 
@@ -957,8 +968,11 @@ protected:
 	void updateDirtyScreen(VirtScreenNumber slot);
 	void drawStripToScreen(VirtScreen *vs, int x, int width, int top, int bottom);
 	void mac_drawStripToScreen(VirtScreen *vs, int top, int x, int y, int width, int height);
-	void mac_restoreCharsetBg();
 	void mac_drawLoomPracticeMode();
+	void mac_createIndy3TextBox(Actor *a);
+	void mac_drawIndy3TextBox();
+	void mac_undrawIndy3TextBox();
+	void mac_undrawIndy3CreditsText();
 
 	void ditherCGA(byte *dst, int dstPitch, int x, int y, int width, int height) const;
 
@@ -976,9 +990,15 @@ protected:
 	void dissolveEffect(int width, int height);
 	void scrollEffect(int dir);
 
+	void updateScreenShakeEffect();
+
 protected:
 	bool _shakeEnabled;
 	uint _shakeFrame;
+	uint32 _shakeNextTick;
+	uint32 _shakeTickCounter;
+	const uint32 _shakeTimerRate;
+
 	void setShake(int mode);
 
 	int _drawObjectQueNr;
@@ -1102,6 +1122,7 @@ public:
 	Graphics::Surface _textSurface;
 	int _textSurfaceMultiplier;
 	Graphics::Surface *_macScreen;
+	Graphics::Surface *_macIndy3TextBox;
 
 protected:
 	byte _charsetColor;
@@ -1129,7 +1150,7 @@ protected:
 	virtual void CHARSET_1();
 	bool newLine();
 	void drawString(int a, const byte *msg);
-	void fakeBidiString(byte *ltext, bool ignoreVerb);
+	void fakeBidiString(byte *ltext, bool ignoreVerb) const;
 	void debugMessage(const byte *msg);
 	void showMessageDialog(const byte *msg);
 
@@ -1144,6 +1165,10 @@ public:
 
 	// Used by class ScummDialog:
 	virtual void translateText(const byte *text, byte *trans_buff);
+	// Old Hebrew games require reversing the dialog text.
+	bool reverseIfNeeded(const byte *text, byte *reverseBuf) const;
+	// Returns codepage that matches the game for languages that require it.
+	Common::CodePage getDialogCodePage() const;
 
 	// Somewhat hackish stuff for 2 byte support (Chinese/Japanese/Korean)
 	bool _useCJKMode;
@@ -1193,6 +1218,8 @@ private:
 	Common::HashMap<byte, TranslationRoom> _roomIndex;
 
 	const byte *searchTranslatedLine(const byte *text, const TranslationRange &range, bool useIndex);
+
+	virtual void createTextRenderer(GlyphRenderer_v7 *gr) {}
 
 public:
 
@@ -1375,9 +1402,11 @@ protected:
 	int _numCyclRects;
 	int _scrollRequest;
 	int _scrollDeltaAdjust;
+	bool _scrollNeedDeltaAdjust;
 	int _refreshDuration[20];
 	int _refreshArrayPos;
 	bool _refreshNeedCatchUp;
+	bool _enableSmoothScrolling;
 	uint32 _scrollTimer;
 	uint32 _scrollDestOffset;
 	uint16 _scrollFeedStrips[3];

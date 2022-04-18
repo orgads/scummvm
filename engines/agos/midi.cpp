@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -53,12 +52,12 @@ MidiPlayer::MidiPlayer() {
 	// Since initialize() is called every time the music changes,
 	// this is where we'll initialize stuff that must persist
 	// between songs.
-	_driver = 0;
+	_driver = nullptr;
 	_map_mt32_to_gm = false;
 
 	_adLibMusic = false;
 	_enable_sfx = true;
-	_current = 0;
+	_current = nullptr;
 
 	_musicVolume = 255;
 	_sfxVolume = 255;
@@ -78,11 +77,11 @@ MidiPlayer::~MidiPlayer() {
 	stop();
 
 	if (_driver) {
-		_driver->setTimerCallback(0, 0);
+		_driver->setTimerCallback(nullptr, nullptr);
 		_driver->close();
 		delete _driver;
 	}
-	_driver = NULL;
+	_driver = nullptr;
 
 	Common::StackLock lock(_mutex);
 	clearConstructs();
@@ -431,7 +430,7 @@ void MidiPlayer::onTimer(void *data) {
 		p->_current = &p->_sfx;
 		p->_sfx.parser->onTimer();
 	}
-	p->_current = 0;
+	p->_current = nullptr;
 }
 
 void MidiPlayer::startTrack(int track) {
@@ -447,8 +446,8 @@ void MidiPlayer::startTrack(int track) {
 		if (_music.parser) {
 			_current = &_music;
 			delete _music.parser;
-			_current = 0;
-			_music.parser = 0;
+			_current = nullptr;
+			_music.parser = nullptr;
 		}
 
 		MidiParser *parser = MidiParser::createParser_SMF();
@@ -458,7 +457,7 @@ void MidiPlayer::startTrack(int track) {
 		if (!parser->loadMusic(_music.songs[track], _music.song_sizes[track])) {
 			warning("Error reading track %d", track);
 			delete parser;
-			parser = 0;
+			parser = nullptr;
 		}
 
 		_currentTrack = (byte)track;
@@ -470,7 +469,7 @@ void MidiPlayer::startTrack(int track) {
 		_currentTrack = (byte)track;
 		_current = &_music;
 		_music.parser->jumpToTick(0);
-		_current = 0;
+		_current = nullptr;
 	}
 }
 
@@ -481,7 +480,7 @@ void MidiPlayer::stop() {
 		_current = &_music;
 		_music.parser->jumpToTick(0);
 	}
-	_current = 0;
+	_current = nullptr;
 	_currentTrack = 255;
 }
 
@@ -493,7 +492,7 @@ void MidiPlayer::pause(bool b) {
 	Common::StackLock lock(_mutex);
 	// if using the driver Accolade_AdLib call setVolume() to turn off\on the volume on all channels
 	if (musicType == MT_ADLIB && _musicMode == kMusicModeAccolade) {
-		static_cast <MidiDriver_Accolade_AdLib*> (_driver)->setVolume(_paused ? 0 : 128);
+		static_cast <MidiDriver_Accolade_AdLib*> (_driver)->setVolume(_paused ? 0 : ConfMan.getInt("music_volume"));
 	} else if (_musicMode == kMusicModePC98) {
 		_driver->property(0x30, _paused ? 1 : 0);
 	}
@@ -519,6 +518,8 @@ void MidiPlayer::setVolume(int musicVol, int sfxVol) {
 	if (_musicMode == kMusicModePC98) {
 		_driver->property(0x10, _musicVolume);
 		_driver->property(0x20, _sfxVolume);
+	} else if (_musicMode == kMusicModeAccolade && musicType == MT_ADLIB) {
+		static_cast <MidiDriver_Accolade_AdLib*> (_driver)->setVolume(_musicVolume);
 	}
 
 	// Now tell all the channels this.
@@ -566,10 +567,10 @@ void MidiPlayer::clearConstructs(MusicInfo &info) {
 	}
 
 	free(info.data);
-	info.data = 0;
+	info.data = nullptr;
 
 	delete info.parser;
-	info.parser = 0;
+	info.parser = nullptr;
 
 	if (_driver) {
 		for (i = 0; i < 16; ++i) {
@@ -677,7 +678,7 @@ void MidiPlayer::loadSMF(Common::SeekableReadStream *in, int song, bool sfx) {
 	if (!parser->loadMusic(p->data, size)) {
 		warning("Error reading track");
 		delete parser;
-		parser = 0;
+		parser = nullptr;
 	}
 
 	if (!sfx) {
@@ -776,7 +777,7 @@ void MidiPlayer::loadXMIDI(Common::SeekableReadStream *in, bool sfx) {
 	// of XMIDI callback controller events. As far as we know, they aren't
 	// actually used, so we disable the callback handler explicitly.
 
-	MidiParser *parser = MidiParser::createParser_XMIDI(NULL);
+	MidiParser *parser = MidiParser::createParser_XMIDI(nullptr);
 	parser->setMidiDriver(this);
 	parser->setTimerRate(_driver->getBaseTempo());
 	if (!parser->loadMusic(p->data, size))

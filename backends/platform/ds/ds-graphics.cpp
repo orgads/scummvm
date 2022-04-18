@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -149,6 +148,7 @@ void initHardware() {
 	videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
 	vramSetBankA(VRAM_A_MAIN_BG_0x06000000);
 	vramSetBankB(VRAM_B_MAIN_BG_0x06020000);
+	vramSetBankC(VRAM_C_SUB_BG_0x06200000);
 	vramSetBankD(VRAM_D_MAIN_BG_0x06040000);
 	vramSetBankE(VRAM_E_MAIN_SPRITE);
 
@@ -159,19 +159,15 @@ void initHardware() {
 	subScTargetX = 0;
 	subScTargetY = 0;
 
-	lcdMainOnBottom();
-
 	//irqs are nice
 	irqSet(IRQ_VBLANK, VBlankHandler);
 	irqEnable(IRQ_VBLANK);
 
 #ifndef DISABLE_TEXT_CONSOLE
-	videoSetModeSub(MODE_0_2D | DISPLAY_BG0_ACTIVE);
-	vramSetBankH(VRAM_H_SUB_BG);
-	consoleInit(NULL, 0, BgType_Text4bpp, BgSize_T_256x256, 15, 0, false, true);
+	videoSetModeSub(MODE_0_2D);
+	consoleInit(NULL, 1, BgType_Text4bpp, BgSize_T_256x256, 30, 0, false, true);
 #else
 	videoSetModeSub(MODE_3_2D | DISPLAY_BG3_ACTIVE);
-	vramSetBankC(VRAM_C_SUB_BG_0x06200000);
 #endif
 }
 
@@ -180,10 +176,17 @@ void initHardware() {
 void OSystem_DS::initGraphics() {
 	DS::initHardware();
 
+	setSwapLCDs(false);
+
 	oamInit(&oamMain, SpriteMapping_Bmp_1D_128, false);
 	_cursorSprite = oamAllocateGfx(&oamMain, SpriteSize_64x64, SpriteColorFormat_Bmp);
 
 	_overlay.create(256, 192, true, 2, false, 0, false);
+
+	_keyboard = new DS::Keyboard(_eventManager->getEventDispatcher());
+#ifndef DISABLE_TEXT_CONSOLE
+	_keyboard->init(0, 34, 1, false);
+#endif
 }
 
 void OSystem_DS::setMainScreen(int32 x, int32 y, int32 sx, int32 sy) {
@@ -199,20 +202,54 @@ void OSystem_DS::setSubScreen(int32 x, int32 y, int32 sx, int32 sy) {
 }
 
 bool OSystem_DS::hasFeature(Feature f) {
-	return (f == kFeatureCursorPalette) || (f == kFeatureStretchMode);
+	return (f == kFeatureCursorPalette) || (f == kFeatureStretchMode) || (f == kFeatureVirtualKeyboard);
 }
 
 void OSystem_DS::setFeatureState(Feature f, bool enable) {
 	if (f == kFeatureCursorPalette) {
 		_disableCursorPalette = !enable;
 		_cursorDirty = true;
+	} else if (f == kFeatureVirtualKeyboard) {
+		if (enable) {
+			setSwapLCDs(true);
+#ifdef DISABLE_TEXT_CONSOLE
+			if (_subScreenActive) {
+				_subScreenActive = false;
+				_subScreen.hide();
+				_subScreen.reset();
+				_keyboard->init(0, 34, 1, false);
+			}
+#endif
+			_keyboard->show();
+		} else {
+			_keyboard->hide();
+#ifdef DISABLE_TEXT_CONSOLE
+			_subScreen.reset();
+			_subScreen.show();
+			_subScreenActive = true;
+			_paletteDirty = true;
+#endif
+			setSwapLCDs(false);
+		}
 	}
 }
 
 bool OSystem_DS::getFeatureState(Feature f) {
 	if (f == kFeatureCursorPalette)
 		return !_disableCursorPalette;
+	else if (f == kFeatureVirtualKeyboard)
+		return _keyboard->isVisible();
 	return false;
+}
+
+void OSystem_DS::setSwapLCDs(bool swap) {
+	if (swap) {
+		lcdMainOnTop();
+		_eventSource->handleTouch(false);
+	} else {
+		lcdMainOnBottom();
+		_eventSource->handleTouch(true);
+	}
 }
 
 static const OSystem::GraphicsMode graphicsModes[] = {
@@ -301,7 +338,8 @@ void OSystem_DS::initSize(uint width, uint height, const Graphics::PixelFormat *
 	if (_framebuffer.getRequiredVRAM(width, height, isRGB, false) > 0x20000) {
 		_subScreen.init(&_framebuffer);
 	} else {
-		_subScreen.reset();
+		if (_subScreenActive)
+			_subScreen.reset();
 		_subScreen.init(&_framebuffer, 3, true, 0, false);
 	}
 #endif
@@ -377,14 +415,16 @@ void OSystem_DS::updateScreen() {
 		if (_paletteDirty) {
 			dmaCopyHalfWords(3, _palette, BG_PALETTE, 256 * 2);
 #ifdef DISABLE_TEXT_CONSOLE
-			dmaCopyHalfWords(3, _palette, BG_PALETTE_SUB, 256 * 2);
+			if (_subScreenActive)
+				dmaCopyHalfWords(3, _palette, BG_PALETTE_SUB, 256 * 2);
 #endif
 			_paletteDirty = false;
 		}
 
 		_framebuffer.update();
 #ifdef DISABLE_TEXT_CONSOLE
-		_subScreen.update();
+		if (_subScreenActive)
+			_subScreen.update();
 #endif
 	}
 }
@@ -411,6 +451,9 @@ void OSystem_DS::clearOverlay() {
 }
 
 void OSystem_DS::grabOverlay(Graphics::Surface &surface) {
+	assert(surface.w >= _overlay.w);
+	assert(surface.h >= _overlay.h);
+	assert(surface.format.bytesPerPixel == _overlay.format.bytesPerPixel);
 	_overlay.grab((byte *)surface.getPixels(), surface.pitch);
 }
 
@@ -455,7 +498,7 @@ void OSystem_DS::setMouseCursor(const void *buf, uint w, uint h, int hotspotX, i
 		return;
 
 	Graphics::PixelFormat actualFormat = format ? *format : _pfCLUT8;
-	if (_cursor.w != w || _cursor.h != h || _cursor.format != actualFormat)
+	if (_cursor.w != (int16)w || _cursor.h != (int16)h || _cursor.format != actualFormat)
 		_cursor.create(w, h, actualFormat);
 	_cursor.copyRectToSurface(buf, w * actualFormat.bytesPerPixel, 0, 0, w, h);
 	_cursorHotX = hotspotX;

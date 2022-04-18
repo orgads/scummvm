@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,6 +30,7 @@
 namespace AGS3 {
 
 ScriptDrawingSurface *Room_GetDrawingSurfaceForBackground(int backgroundNumber);
+ScriptDrawingSurface *Room_GetDrawingSurfaceForMask(RoomAreaMask mask);
 int Room_GetObjectCount();
 int Room_GetWidth();
 int Room_GetHeight();
@@ -43,6 +43,7 @@ int Room_GetMusicOnLoad();
 const char *Room_GetTextProperty(const char *property);
 int Room_GetProperty(const char *property);
 const char *Room_GetMessages(int index);
+bool Room_Exists(int room);
 RuntimeScriptValue Sc_Room_GetProperty(const RuntimeScriptValue *params, int32_t param_count);
 
 //=============================================================================
@@ -51,6 +52,9 @@ void  save_room_data_segment();
 void  unload_old_room();
 void  load_new_room(int newnum, CharacterInfo *forchar);
 void  new_room(int newnum, CharacterInfo *forchar);
+// Sets up a placeholder room object; this is used to avoid occasional crashes
+// in case an API function was called that needs to access a room, while no real room is loaded
+void  set_room_placeholder();
 int   find_highest_room_entered();
 void  first_room_initialization();
 void  check_new_room();

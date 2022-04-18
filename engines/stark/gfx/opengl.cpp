@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -36,13 +35,13 @@
 #include "engines/stark/scene.h"
 #include "engines/stark/services/services.h"
 
-#include "graphics/pixelbuffer.h"
 #include "graphics/surface.h"
 
 namespace Stark {
 namespace Gfx {
 
 OpenGLDriver::OpenGLDriver() {
+	_computeLights = true;
 }
 
 OpenGLDriver::~OpenGLDriver() {
@@ -51,15 +50,11 @@ OpenGLDriver::~OpenGLDriver() {
 void OpenGLDriver::init() {
 	computeScreenViewport();
 
-#if defined(USE_OPENGL_SHADERS)
-	// The ShaderSurfaceRenderer sets an array buffer which conflict with fixed pipeline rendering
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif // defined(USE_OPENGL_SHADERS)
-
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+	glDisable(GL_LIGHTING);
 }
 
 void OpenGLDriver::setScreenViewport(bool noScaling) {
@@ -108,7 +103,6 @@ void OpenGLDriver::setupLights(const LightEntryArray &lights) {
 	assert(ambient->type == LightEntry::kAmbient); // The first light must be the ambient light
 
 	Math::Matrix4 viewMatrix = StarkScene->getViewMatrix();
-	Math::Matrix3 viewMatrixRot = viewMatrix.getRotation();
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -121,6 +115,7 @@ void OpenGLDriver::setupLights(const LightEntryArray &lights) {
 		GLfloat lightDir[] = { 0.0f, 0.0f, -1.0f };
 		GLfloat cutoff = 180.0f;
 		GLfloat spotExp = 0.0f;
+		GLfloat c_attenuation = 1.0f;
 		GLfloat l_attenuation = 0.0f;
 		GLfloat q_attenuation = 0.0f;
 
@@ -133,10 +128,9 @@ void OpenGLDriver::setupLights(const LightEntryArray &lights) {
 		Math::Vector4d eyePosition = viewMatrix * worldPosition;
 
 		Math::Vector3d worldDirection = l->direction;
-		Math::Vector3d eyeDirection = viewMatrixRot * worldDirection;
+		Math::Vector3d eyeDirection = viewMatrix.getRotation() * worldDirection;
 		eyeDirection.normalize();
 
-		glDisable(GL_LIGHT0 + i);
 		switch (l->type) {
 			case LightEntry::kPoint:
 				lightColor[0] = (GLfloat)l->color.x();
@@ -150,9 +144,9 @@ void OpenGLDriver::setupLights(const LightEntryArray &lights) {
 				lightColor[0] = (GLfloat)l->color.x();
 				lightColor[1] = (GLfloat)l->color.y();
 				lightColor[2] = (GLfloat)l->color.z();
-				lightPos[0] = -(GLfloat)eyeDirection.x();
-				lightPos[1] = -(GLfloat)eyeDirection.y();
-				lightPos[2] = -(GLfloat)eyeDirection.z();
+				lightPos[0] = (GLfloat)-eyeDirection.x();
+				lightPos[1] = (GLfloat)-eyeDirection.y();
+				lightPos[2] = (GLfloat)-eyeDirection.z();
 				lightPos[3] = 0;
 				break;
 			case LightEntry::kSpot:
@@ -162,19 +156,15 @@ void OpenGLDriver::setupLights(const LightEntryArray &lights) {
 				lightPos[0] = (GLfloat)eyePosition.x();
 				lightPos[1] = (GLfloat)eyePosition.y();
 				lightPos[2] = (GLfloat)eyePosition.z();
-				lightDir[0] = -(GLfloat)eyeDirection.x();
-				lightDir[1] = -(GLfloat)eyeDirection.y();
-				lightDir[2] = -(GLfloat)eyeDirection.z();
-				// FIXME
-				l_attenuation = 0.0000001f;
-				q_attenuation = 0.0000001f;
-				//spotExp = 0.0f;
-				//cutoff = (l->outerConeAngle.getDegrees() + l->innerConeAngle.getDegrees()) / 2.0f;
+				lightDir[0] = (GLfloat)eyeDirection.x();
+				lightDir[1] = (GLfloat)eyeDirection.y();
+				lightDir[2] = (GLfloat)eyeDirection.z();
+				cutoff = (l->outerConeAngle.getDegrees() + l->innerConeAngle.getDegrees()) / 2.26f;
 				break;
 			case LightEntry::kAmbient:
-				ambientColor[0] = (GLfloat)l->color.x();
-				ambientColor[1] = (GLfloat)l->color.y();
-				ambientColor[2] = (GLfloat)l->color.z();
+				lightColor[0] = (GLfloat)l->color.x();
+				lightColor[1] = (GLfloat)l->color.y();
+				lightColor[2] = (GLfloat)l->color.z();
 				break;
 			default:
 				break;
@@ -186,6 +176,7 @@ void OpenGLDriver::setupLights(const LightEntryArray &lights) {
 		glLightfv(GL_LIGHT0 + i, GL_SPOT_DIRECTION, lightDir);
 		glLightf(GL_LIGHT0 + i, GL_SPOT_EXPONENT, spotExp);
 		glLightf(GL_LIGHT0 + i, GL_SPOT_CUTOFF, cutoff);
+		glLightf(GL_LIGHT0 + i, GL_CONSTANT_ATTENUATION, c_attenuation);
 		glLightf(GL_LIGHT0 + i, GL_LINEAR_ATTENUATION, l_attenuation);
 		glLightf(GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION, q_attenuation);
 		glEnable(GL_LIGHT0 + i);
@@ -205,6 +196,10 @@ Texture *OpenGLDriver::createTexture(const Graphics::Surface *surface, const byt
 	}
 
 	return texture;
+}
+
+Texture *OpenGLDriver::createBitmap(const Graphics::Surface *surface, const byte *palette) {
+	return createTexture(surface, palette);
 }
 
 VisualActor *OpenGLDriver::createActorRenderer() {
@@ -235,7 +230,8 @@ void OpenGLDriver::start2DMode() {
 
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
-	glDisable(GL_LIGHTING);
+	if (!_computeLights)
+		glDisable(GL_LIGHTING);
 }
 
 void OpenGLDriver::end2DMode() {
@@ -244,7 +240,6 @@ void OpenGLDriver::end2DMode() {
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
-	glEnable(GL_LIGHTING);
 }
 
 void OpenGLDriver::set3DMode() {
@@ -256,6 +251,13 @@ void OpenGLDriver::set3DMode() {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glStencilFunc(GL_EQUAL, 0, 0xFF);
 	glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
+
+	if (!_computeLights)
+		glEnable(GL_LIGHTING);
+}
+
+bool OpenGLDriver::computeLightsEnabled() {
+	return _computeLights;
 }
 
 Common::Rect OpenGLDriver::getViewport() const {

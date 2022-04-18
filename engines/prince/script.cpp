@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -1025,7 +1024,11 @@ void Interpreter::O_GETMOBTEXT() {
 	int32 mob = readScriptFlagValue();
 	debugInterpreter("O_GETMOBTEXT mob %d", mob);
 	_currentString = _vm->_locationNr * 100 + mob + 60001;
-	strncpy((char *)_stringBuf, _vm->_mobList[mob]._examText.c_str(), 1023);
+	// Use memcpy() instead of strncpy() because the examination text can contain
+	// different phrases separated by '\0' characters, followed by an ID.
+	// The examination text ends for a mob if the ID is 0xFF.
+	// Strings are properly extracted by the interpreter in that format.
+	memcpy((char *)_stringBuf, _vm->_mobList[mob]._examText.c_str(), MIN<int>(_vm->_mobList[mob]._examText.size(), 1023));
 	_string = _stringBuf;
 }
 
@@ -1533,8 +1536,8 @@ void Interpreter::O_INITDIALOG() {
 		_string = string + adressOfFirstSequence;
 
 		for (int i = 0; i < 32; i++) {
-			_vm->_dialogBoxAddr[i] = 0;
-			_vm->_dialogOptAddr[i] = 0;
+			_vm->_dialogBoxAddr[i] = nullptr;
+			_vm->_dialogOptAddr[i] = nullptr;
 		}
 
 		for (int i = 0; i < 4 * 32; i++) {
@@ -1570,7 +1573,7 @@ void Interpreter::O_INITDIALOG() {
 
 		int freeHSlot = 0;
 		for (int i = 31; i >= 0; i--) {
-			if (_vm->_dialogOptAddr[i] != 0) {
+			if (_vm->_dialogOptAddr[i] != nullptr) {
 				i++;
 				freeHSlot = i;
 				_flags->setFlagValue(Flags::VOICE_H_LINE, i);

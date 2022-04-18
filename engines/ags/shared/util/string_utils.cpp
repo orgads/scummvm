@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,27 +15,21 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
-#include "ags/shared/core/platform.h"
-#include "ags/shared/util/math.h"
 #include "ags/shared/util/string_utils.h"
+#include "ags/shared/util/utf8.h"
+#include "ags/shared/core/platform.h"
+#include "ags/lib/std/regex.h"
+#include "ags/shared/util/math.h"
 #include "ags/shared/util/stream.h"
 #include "ags/globals.h"
 
 namespace AGS3 {
 
 using namespace AGS::Shared;
-
-String cbuf_to_string_and_free(char *char_buf) {
-	String s = char_buf;
-	free(char_buf);
-	return s;
-}
-
 
 namespace AGS {
 namespace Shared {
@@ -98,8 +92,20 @@ String StrUtil::Unescape(const String &s) {
 	}
 	*pb = 0;
 	String dst(buf);
-	delete buf;
+	delete[] buf;
 	return dst;
+}
+
+String StrUtil::WildcardToRegex(const String &wildcard) {
+	// https://stackoverflow.com/questions/40195412/c11-regex-search-for-exact-string-escape
+	// matches any characters that need to be escaped in RegEx
+	std::regex esc{ R"([-[\]{}()*+?.,\^$|#\s])" };
+	Common::String sanitized = std::regex_replace(wildcard.GetCStr(), esc, R"(\$&)");
+	// convert (now escaped) wildcard "\\*" and "\\?" into ".*" and "." respectively
+	String pattern(sanitized.c_str());
+	pattern.Replace("\\*", ".*");
+	pattern.Replace("\\?", ".");
+	return pattern;
 }
 
 String StrUtil::ReadString(Stream *in) {
@@ -196,6 +202,64 @@ void StrUtil::WriteCStr(const char *cstr, Stream *out) {
 
 void StrUtil::WriteCStr(const String &s, Stream *out) {
 	out->Write(s.GetCStr(), s.GetLength() + 1);
+}
+
+void StrUtil::ReadStringMap(StringMap &map, Stream *in) {
+	size_t count = in->ReadInt32();
+	for (size_t i = 0; i < count; ++i) {
+		String key = StrUtil::ReadString(in);
+		String value = StrUtil::ReadString(in);
+		map.insert(std::make_pair(key, value));
+	}
+}
+
+void StrUtil::WriteStringMap(const StringMap &map, Stream *out) {
+	out->WriteInt32(map.size());
+	for (const auto &kv : map) {
+		StrUtil::WriteString(kv._key, out);
+		StrUtil::WriteString(kv._value, out);
+	}
+}
+
+size_t StrUtil::ConvertUtf8ToAscii(const char *mbstr, const char *loc_name, char *out_cstr, size_t out_sz) {
+	// TODO: later consider using C++11 conversion methods
+	// First convert utf-8 string into widestring;
+	std::vector<wchar_t> wcsbuf; // widechar buffer
+	wcsbuf.resize(Utf8::GetLength(mbstr) + 1);
+	// NOTE: we don't use mbstowcs, because unfortunately ".utf-8" locale
+	// is not normally supported on all systems (e.g. Windows 7 and earlier)
+	for (size_t at = 0, chr_sz = 0; *mbstr; mbstr += chr_sz, ++at) {
+		Utf8::Rune r;
+		chr_sz = Utf8::GetChar(mbstr, Utf8::UtfSz, &r);
+		wcsbuf[at] = static_cast<wchar_t>(r);
+	}
+	// Then convert widestring to single-byte string using specified locale
+	setlocale(LC_CTYPE, loc_name);
+	size_t res_sz = wcstombs(out_cstr, &wcsbuf[0], out_sz);
+	setlocale(LC_CTYPE, "");
+	return res_sz;
+}
+
+size_t StrUtil::ConvertUtf8ToWstr(const char *mbstr, wchar_t *out_wcstr, size_t out_sz) {
+	size_t len = 0;
+	for (size_t mb_sz = 1; *mbstr && (mb_sz > 0) && (len < out_sz);
+		mbstr += mb_sz, ++out_wcstr, ++len) {
+		Utf8::Rune r;
+		mb_sz = Utf8::GetChar(mbstr, Utf8::UtfSz, &r);
+		*out_wcstr = static_cast<wchar_t>(r);
+	}
+	*out_wcstr = 0;
+	return len;
+}
+
+size_t StrUtil::ConvertWstrToUtf8(const wchar_t *wcstr, char *out_mbstr, size_t out_sz) {
+	size_t len = 0;
+	for (size_t mb_sz = 1; *wcstr && (mb_sz > 0) && (len + mb_sz < out_sz);
+		++wcstr, out_mbstr += mb_sz, len += mb_sz) {
+		mb_sz = Utf8::SetChar(*wcstr, out_mbstr, out_sz - len);
+	}
+	*out_mbstr = 0;
+	return len;
 }
 
 } // namespace Shared

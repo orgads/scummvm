@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,10 +32,12 @@
 #include "engines/wintermute/base/gfx/osystem/base_render_osystem.h"
 #include "engines/wintermute/base/gfx/base_image.h"
 #include "engines/wintermute/platform_osystem.h"
+
 #include "graphics/transparent_surface.h"
 #include "graphics/transform_tools.h"
 #include "graphics/pixelformat.h"
 #include "graphics/surface.h"
+
 #include "common/stream.h"
 #include "common/system.h"
 
@@ -160,22 +161,27 @@ bool BaseSurfaceOSystem::finishLoad() {
 			error("Missing palette while loading 8bit image %s", _filename.c_str());
 		}
 		_surface = image->getSurface()->convertTo(g_system->getScreenFormat(), image->getPalette());
-		needsColorKey = true;
+	} else if (image->getSurface()->format != g_system->getScreenFormat()) {
+		_surface = image->getSurface()->convertTo(g_system->getScreenFormat());
 	} else {
-		if (image->getSurface()->format != g_system->getScreenFormat()) {
-			_surface = image->getSurface()->convertTo(g_system->getScreenFormat());
-		} else {
-			_surface = new Graphics::Surface();
-			_surface->copyFrom(*image->getSurface());
-		}
+		_surface = new Graphics::Surface();
+		_surface->copyFrom(*image->getSurface());
+	}
 
-		if (_filename.hasSuffix(".bmp") && image->getSurface()->format.bytesPerPixel == 4) {
-			// 32 bpp BMPs have nothing useful in their alpha-channel -> color-key
-			needsColorKey = true;
-			replaceAlpha = false;
-		} else if (image->getSurface()->format.aBits() == 0) {
-			needsColorKey = true;
-		}
+	if (BaseEngine::instance().getTargetExecutable() < WME_LITE) {
+		// WME 1.x always use colorkey, even for images with transparency
+		needsColorKey = true;
+		replaceAlpha = false;
+	} else if (BaseEngine::instance().isFoxTail()) {
+		// FoxTail does not use colorkey
+		needsColorKey = false;
+	} else if (_filename.hasSuffix(".bmp")) {
+		// generic WME Lite ignores alpha channel for BMPs
+		needsColorKey = true;
+		replaceAlpha = false;
+	} else if (image->getSurface()->format.aBits() == 0) {
+		// generic WME Lite does not use colorkey for non-BMPs with transparency
+		needsColorKey = true;
 	}
 
 	if (needsColorKey) {
@@ -348,13 +354,11 @@ bool BaseSurfaceOSystem::endPixelOp() {
 	return STATUS_OK;
 }
 
-
 //////////////////////////////////////////////////////////////////////////
 bool BaseSurfaceOSystem::display(int x, int y, Rect32 rect, Graphics::TSpriteBlendMode blendMode, bool mirrorX, bool mirrorY) {
 	_rotation = 0;
 	return drawSprite(x, y, &rect, nullptr, Graphics::TransformStruct(Graphics::kDefaultZoomX, Graphics::kDefaultZoomY,  mirrorX, mirrorY));
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 bool BaseSurfaceOSystem::displayTrans(int x, int y, Rect32 rect, uint32 alpha, Graphics::TSpriteBlendMode blendMode, bool mirrorX, bool mirrorY, int offsetX, int offsetY) {
@@ -367,7 +371,6 @@ bool BaseSurfaceOSystem::displayTransZoom(int x, int y, Rect32 rect, float zoomX
 	_rotation = 0;
 	return drawSprite(x, y, &rect, nullptr, Graphics::TransformStruct((int32)zoomX, (int32)zoomY, blendMode, TS_COLOR(alpha), mirrorX, mirrorY));
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 bool BaseSurfaceOSystem::displayTransRotate(int x, int y, uint32 angle, int32 hotspotX, int32 hotspotY, Rect32 rect, float zoomX, float zoomY, uint32 alpha, Graphics::TSpriteBlendMode blendMode, bool mirrorX, bool mirrorY) {
@@ -394,7 +397,6 @@ bool BaseSurfaceOSystem::displayTiled(int x, int y, Rect32 rect, int numTimesX, 
 	Graphics::TransformStruct transform(numTimesX, numTimesY);
 	return drawSprite(x, y, &rect, nullptr, transform);
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 bool BaseSurfaceOSystem::drawSprite(int x, int y, Rect32 *rect, Rect32 *newRect, Graphics::TransformStruct transform) {

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -68,8 +67,7 @@ static const SherlockGameDescription gameDescriptions[] = {
 		{
 			"scalpel",
 			0,
-			AD_ENTRY2s("talk.lib",  "40a5f9f37c0e0d2ad48d8f44d8e393c9", 284278,
-					   "music.lib", "68ae2f7684ecf903bd60a00bb6bae195", 366465),
+			AD_ENTRY1s("talk.lib", "40a5f9f37c0e0d2ad48d8f44d8e393c9", 284278),
 			Common::DE_DEU,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
@@ -85,8 +83,7 @@ static const SherlockGameDescription gameDescriptions[] = {
 		{
 			"scalpel",
 			0,
-			AD_ENTRY2s("talk.lib",  "44652e54172e13b1b075b1ef7d89de24", 284043,
-					   "music.lib", "68ae2f7684ecf903bd60a00bb6bae195", 366465),
+			AD_ENTRY1s("talk.lib", "44652e54172e13b1b075b1ef7d89de24", 284043),
 			Common::DE_DEU,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
@@ -97,13 +94,12 @@ static const SherlockGameDescription gameDescriptions[] = {
 	},
 
 	{
-		// Case of the Serrated Scalpel - German
+		// Case of the Serrated Scalpel - German Floppy
 		// Provided by max565
 		{
 			"scalpel",
 			0,
-			AD_ENTRY2s("talk.lib",  "3d813fd8505b391a1f8b3a16b1aa7f2e", 284195,
-					   "music.lib", "68ae2f7684ecf903bd60a00bb6bae195", 366465),
+			AD_ENTRY1s("talk.lib", "3d813fd8505b391a1f8b3a16b1aa7f2e", 284195),
 			Common::DE_DEU,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
@@ -119,8 +115,7 @@ static const SherlockGameDescription gameDescriptions[] = {
 		{
 			"scalpel",
 			0,
-			AD_ENTRY2s("talk.lib",  "27697804b637a7f3b77234bf16f15dce", 171419,
-					   "music.lib", "68ae2f7684ecf903bd60a00bb6bae195", 366465),
+			AD_ENTRY1s("talk.lib", "27697804b637a7f3b77234bf16f15dce", 171419),
 			Common::ES_ESP,
 			Common::kPlatformDOS,
 			ADGF_NO_FLAGS,
@@ -147,12 +142,26 @@ static const SherlockGameDescription gameDescriptions[] = {
 	},
 
 	{
-		// Case of the Serrated Scalpel - Italian fan translation
+		// Case of the Serrated Scalpel - Italian fan translation (v1.0a)
 		{
 			"scalpel",
 			0,
-			AD_ENTRY2s("talk.lib",  "1a547f96476a3a50cf6f0d599a4f5bcc", 247406,
-					   "music.lib", "68ae2f7684ecf903bd60a00bb6bae195", 366465),
+			AD_ENTRY1s("talk.lib", "1a15e358c0ac7bd81c0b86276f2cd1a2", 247606),
+			Common::IT_ITA,
+			Common::kPlatformDOS,
+			ADGF_UNSTABLE,
+			GUIO6(GUIO_NOSPEECH, GAMEOPTION_ORIGINAL_SAVES, GAMEOPTION_FADE_STYLE, GAMEOPTION_HELP_STYLE,
+				GAMEOPTION_PORTRAITS_ON, GAMEOPTION_WINDOW_STYLE)
+		},
+		GType_SerratedScalpel,
+	},
+
+	{
+		// Case of the Serrated Scalpel - Italian fan translation (v2.0)
+		{
+			"scalpel",
+			0,
+			AD_ENTRY1s("talk.lib", "1a547f96476a3a50cf6f0d599a4f5bcc", 247406),
 			Common::IT_ITA,
 			Common::kPlatformDOS,
 			ADGF_UNSTABLE,
@@ -196,7 +205,7 @@ static const SherlockGameDescription gameDescriptions[] = {
 		// Provided by Strangerke
 		{
 			"scalpel",
-			"Non Interactive Demo",
+			"Non-Interactive Demo",
 			AD_ENTRY1s("music.lib", "ec19a09b7fef6fd90b1ab812ce6e9739", 38563),
 			Common::EN_ANY,
 			Common::kPlatformDOS,

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -135,8 +134,9 @@ int CSCIWaitMessage(CSCIMessage *cscim) {
 		cscim->id = -1;
 		cscim->code = 0;
 		_G(smcode) = 0;
-		int keywas;
-		if (run_service_key_controls(keywas) && !_GP(play).IsIgnoringInput()) {
+		KeyInput ki;
+		if (run_service_key_controls(ki) && !_GP(play).IsIgnoringInput()) {
+			int keywas = ki.Key;
 			if (keywas == eAGSKeyCodeReturn) {
 				cscim->id = finddefaultcontrol(CNF_DEFAULT);
 				cscim->code = CM_COMMAND;
@@ -193,7 +193,7 @@ int CSCICreateControl(int typeandflags, int xx, int yy, int wii, int hii, const 
 	int type = typeandflags & 0x00ff;     // 256 control types
 	if (type == CNT_PUSHBUTTON) {
 		if (wii == -1)
-			wii = wgettextwidth(title, _G(cbuttfont)) + 20;
+			wii = get_text_width(title, _G(cbuttfont)) + 20;
 
 		_G(vobjs)[usec] = new MyPushButton(xx, yy, wii, hii, title);
 

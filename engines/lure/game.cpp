@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -35,10 +34,10 @@
 
 namespace Lure {
 
-static Game *int_game = NULL;
+static Game *int_game = nullptr;
 
 bool Game::isCreated() {
-	return int_game != NULL;
+	return int_game != nullptr;
 }
 
 Game &Game::getReference() {
@@ -208,7 +207,7 @@ void Game::execute() {
 					case Common::KEYCODE_KP_PLUS:
 						if (_debugFlag) {
 							while (++roomNum <= 51)
-								if (res.getRoom(roomNum) != NULL) break;
+								if (res.getRoom(roomNum) != nullptr) break;
 							if (roomNum == 52) roomNum = 1;
 							room.setRoomNumber(roomNum);
 						}
@@ -217,7 +216,7 @@ void Game::execute() {
 					case Common::KEYCODE_KP_MINUS:
 						if (_debugFlag) {
 							if (roomNum == 1) roomNum = 55;
-							while (res.getRoom(--roomNum) == NULL)
+							while (res.getRoom(--roomNum) == nullptr)
 								;
 							room.setRoomNumber(roomNum);
 						}
@@ -401,12 +400,12 @@ void Game::displayChuteAnimation() {
 	Sound.killSounds();
 
 	AnimationSequence *anim = new AnimationSequence(CHUTE_ANIM_ID, palette, true);
-	Sound.musicInterface_Play(0x40, 0, true);
+	Sound.musicInterface_Play(0x40, true);
 	AnimAbortType result = anim->show();
 	delete anim;
 
 	if (result != ABORT_END_INTRO) {
-		anim = new AnimationSequence(CHUTE2_ANIM_ID, palette, true, 5, NULL, 4);
+		anim = new AnimationSequence(CHUTE2_ANIM_ID, palette, true, 5, nullptr, 4);
 		result = anim->show();
 		delete anim;
 	}
@@ -446,7 +445,7 @@ void Game::displayBarrelAnimation() {
 	mouse.cursorOff();
 
 	Sound.killSounds();
-	Sound.musicInterface_Play(0x3B, 0, true);
+	Sound.musicInterface_Play(0x3B, true);
 
 	AnimationSequence *anim = new AnimationSequence(BARREL_ANIM_ID, palette, true);
 	anim->show();
@@ -539,7 +538,7 @@ void Game::handleRightClickMenu() {
 		actions &= 0xFF7FFFFF;
 
 	action = NONE;
-	hotspot = NULL;
+	hotspot = nullptr;
 
 	bool breakFlag = false;
 	while (!breakFlag) {
@@ -627,14 +626,14 @@ void Game::handleRightClickMenu() {
 	if (action != NONE) {
 		player->stopWalking();
 
-		if (hotspot == NULL) {
+		if (hotspot == nullptr) {
 			doAction(action, 0, itemId);
 		} else {
 			if (action != TELL) {
 				// Add the hotspot name to the status line and then go do the action
 				if ((itemId != 0xffff) && (action != GIVE) && (action != USE)) {
 					HotspotData *itemHotspot = res.getHotspot(itemId);
-					if (itemHotspot != NULL)
+					if (itemHotspot != nullptr)
 						strings.getString(itemHotspot->nameId, statusLine);
 				}
 				else

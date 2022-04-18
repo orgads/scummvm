@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -114,6 +113,12 @@ Font custom line spacing.
 Sprites have "real" resolution. Expanded FontInfo data format.
 Option to allow legacy relative asset resolutions.
 
+3.6.0 :
+Format value is defined as AGS version represented as NN,NN,NN,NN.
+Fonts have adjustable outline
+3.6.0.11:
+New font load flags, control backward compatible font behavior
+
 */
 
 enum GameDataVersion {
@@ -146,7 +151,10 @@ enum GameDataVersion {
 	kGameVersion_341 = 48,
 	kGameVersion_341_2 = 49,
 	kGameVersion_350 = 50,
-	kGameVersion_Current = kGameVersion_350
+	kGameVersion_360 = 3060000,
+	kGameVersion_360_11 = 3060011,
+	kGameVersion_360_16 = 3060016,
+	kGameVersion_Current = kGameVersion_360_16
 };
 
 } // namespace AGS3

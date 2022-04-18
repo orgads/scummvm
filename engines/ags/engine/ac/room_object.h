@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,6 +30,7 @@
 
 #include "ags/shared/core/types.h"
 #include "ags/shared/ac/common_defines.h"
+#include "ags/shared/util/string.h"
 
 namespace AGS3 {
 
@@ -51,17 +51,19 @@ struct RoomObject {
 	short tint_r, tint_g;   // specific object tint
 	short tint_b, tint_level;
 	short tint_light;
-	short last_zoom;      // zoom level last time
+	short zoom;           // zoom level, either manual or from the current area
 	short last_width, last_height;   // width/height last time drawn
 	uint16_t num;            // sprite slot number
 	short baseline;       // <=0 to use Y co-ordinate; >0 for specific baseline
 	uint16_t view, loop, frame; // only used to track animation - 'num' holds the current sprite
 	short wait, moving;
-	char  cycling;        // is it currently animating?
-	char  overall_speed;
-	char  on;
-	char  flags;
+	int8  cycling;        // is it currently animating?
+	int8  overall_speed;
+	int8  on;
+	int8  flags;
+	// Down to here is a part of the plugin API
 	short blocking_width, blocking_height;
+	Shared::String name;
 
 	RoomObject();
 
@@ -80,8 +82,8 @@ struct RoomObject {
 	void update_cycle_view_forwards();
 	void update_cycle_view_backwards();
 
-	void ReadFromFile(Shared::Stream *in);
-	void WriteToFile(Shared::Stream *out) const;
+	void ReadFromSavegame(Shared::Stream *in, int save_ver);
+	void WriteToSavegame(Shared::Stream *out) const;
 };
 
 } // namespace AGS3

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -53,6 +52,7 @@ Debugger::Debugger() {
 	_frameCountdown = 0;
 	_isActive = false;
 	_firstTime = true;
+	_defaultCommandProcessor = nullptr;
 #ifndef USE_TEXT_CONSOLE_FOR_DEBUGGER
 	_debuggerDialog = new GUI::ConsoleDialog(1.0f, 0.67f);
 	_debuggerDialog->setInputCallback(debuggerInputCallback, this);
@@ -296,6 +296,9 @@ bool Debugger::parseCommand(const char *inputOrig) {
 	int num_params = 0;
 	const char *param[256];
 
+	if (_defaultCommandProcessor)
+		return (*_defaultCommandProcessor)(inputOrig);
+
 	// Parse out any params
 	Common::String input(inputOrig);
 	splitCommand(input, num_params, &param[0]);
@@ -324,6 +327,10 @@ bool Debugger::parseCommand(const char *inputOrig) {
 				case DVAR_INT:
 					*(int32 *)_vars[i].variable = atoi(param[1]);
 					debugPrintf("(int)%s = %d\n", param[0], *(int32 *)_vars[i].variable);
+					break;
+				case DVAR_FLOAT:
+					*(float *)_vars[i].variable = (float)atof(param[1]);
+					debugPrintf("(float)%s = %f\n", param[0], *(float *)_vars[i].variable);
 					break;
 				case DVAR_BOOL:
 					if (Common::parseBool(param[1], *(bool *)_vars[i].variable))
@@ -361,6 +368,9 @@ bool Debugger::parseCommand(const char *inputOrig) {
 					break;
 				case DVAR_INT:
 					debugPrintf("(int)%s = %d\n", param[0], *(const int32 *)_vars[i].variable);
+					break;
+				case DVAR_FLOAT:
+					debugPrintf("(float)%s = %f\n", param[0], *(const float *)_vars[i].variable);
 					break;
 				case DVAR_BOOL:
 					debugPrintf("(bool)%s = %s\n", param[0], *(const bool *)_vars[i].variable ? "true" : "false");
@@ -617,7 +627,7 @@ bool Debugger::cmdOpenLog(int argc, const char **argv) {
 #ifndef DISABLE_MD5
 struct ArchiveMemberLess {
 	bool operator()(const Common::ArchiveMemberPtr &x, const Common::ArchiveMemberPtr &y) const {
-		return (*x).getDisplayName().compareToIgnoreCase((*y).getDisplayName()) < 0;
+		return (*x).getName().compareToIgnoreCase((*y).getName()) < 0;
 	}
 };
 
@@ -625,8 +635,9 @@ bool Debugger::cmdMd5(int argc, const char **argv) {
 	if (argc < 2) {
 		debugPrintf("md5 [-n length] <filename | pattern>\n");
 	} else {
-		uint32 length = 0;
+		int32 length = 0;
 		uint paramOffset = 0;
+		bool tail = false;
 
 		// If the user supplied an -n parameter, set the bytes to read
 		if (!strcmp(argv[1], "-n")) {
@@ -636,6 +647,10 @@ bool Debugger::cmdMd5(int argc, const char **argv) {
 				return true;
 			}
 			length = atoi(argv[2]);
+			if (length < 0) {
+				length = -length;
+				tail = true;
+			}
 			paramOffset = 2;
 		}
 
@@ -652,8 +667,12 @@ bool Debugger::cmdMd5(int argc, const char **argv) {
 			sort(list.begin(), list.end(), ArchiveMemberLess());
 			for (Common::ArchiveMemberList::iterator iter = list.begin(); iter != list.end(); ++iter) {
 				Common::SeekableReadStream *stream = (*iter)->createReadStream();
+				if (tail && stream->size() > length)
+					stream->seek(-length, SEEK_END);
 				Common::String md5 = Common::computeStreamMD5AsString(*stream, length);
-				debugPrintf("%s  %s  %d\n", md5.c_str(), (*iter)->getDisplayName().c_str(), stream->size());
+				if (length != 0 && length < stream->size())
+					md5 += Common::String::format(" (%s %d bytes)", tail ? "last" : "first", length);
+				debugPrintf("%s: %s, %llu bytes\n", (*iter)->getName().c_str(), md5.c_str(), (unsigned long long)stream->size());
 				delete stream;
 			}
 		}
@@ -665,8 +684,9 @@ bool Debugger::cmdMd5Mac(int argc, const char **argv) {
 	if (argc < 2) {
 		debugPrintf("md5mac [-n length] <base filename>\n");
 	} else {
-		uint32 length = 0;
+		int32 length = 0;
 		uint paramOffset = 0;
+		bool tail = false;
 
 		// If the user supplied an -n parameter, set the bytes to read
 		if (!strcmp(argv[1], "-n")) {
@@ -676,6 +696,10 @@ bool Debugger::cmdMd5Mac(int argc, const char **argv) {
 				return true;
 			}
 			length = atoi(argv[2]);
+			if (length < 0) {
+				length = -length;
+				tail = true;
+			}
 			paramOffset = 2;
 		}
 
@@ -693,17 +717,23 @@ bool Debugger::cmdMd5Mac(int argc, const char **argv) {
 			debugPrintf("Resource file '%s' not found\n", filename.c_str());
 		} else {
 			if (!macResMan.hasResFork() && !macResMan.hasDataFork()) {
-				debugPrintf("'%s' has neither data not resource fork\n", macResMan.getBaseFileName().c_str());
+				debugPrintf("'%s' has neither data not resource fork\n", macResMan.getBaseFileName().toString().c_str());
 			} else {
 				// The resource fork is probably the most relevant one.
 				if (macResMan.hasResFork()) {
-					Common::String md5 = macResMan.computeResForkMD5AsString(length);
-					debugPrintf("%s  %s (resource)  %d\n", md5.c_str(), macResMan.getBaseFileName().c_str(), macResMan.getResForkDataSize());
+					Common::String md5 = macResMan.computeResForkMD5AsString(length, tail);
+					if (length != 0 && length < (int32)macResMan.getResForkDataSize())
+						md5 += Common::String::format(" (%s %d bytes)", tail ? "last" : "first", length);
+					debugPrintf("%s (resource): %s, %llu bytes\n", macResMan.getBaseFileName().toString().c_str(), md5.c_str(), (unsigned long long)macResMan.getResForkDataSize());
 				}
 				if (macResMan.hasDataFork()) {
 					Common::SeekableReadStream *stream = macResMan.getDataFork();
+					if (tail && stream->size() > length)
+						stream->seek(-length, SEEK_END);
 					Common::String md5 = Common::computeStreamMD5AsString(*stream, length);
-					debugPrintf("%s  %s (data)  %d\n", md5.c_str(), macResMan.getBaseFileName().c_str(), stream->size());
+					if (length != 0 && length < stream->size())
+						md5 += Common::String::format(" (%s %d bytes)", tail ? "last" : "first", length);
+					debugPrintf("%s (data): %s, %llu bytes\n", macResMan.getBaseFileName().toString().c_str(), md5.c_str(), (unsigned long long)stream->size());
 				}
 			}
 			macResMan.close();

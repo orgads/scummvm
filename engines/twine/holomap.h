@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,23 +15,31 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #ifndef TWINE_HOLOMAP_H
 #define TWINE_HOLOMAP_H
 
-#include "twine/renderer/renderer.h"
+#include "twine/shared.h"
 #include "common/scummsys.h"
-#include "twine/twine.h"
+
+#define NUM_HOLOMAPCOLORS 32
+#define HOLOMAP_PALETTE_INDEX 192
+
+namespace Common {
+class SeekableReadStream;
+}
 
 namespace TwinE {
 
-#define NUM_LOCATIONS 150
-
 class TwinEEngine;
+class BodyData;
+class AnimData;
+struct ActorMoveStruct;
+struct Vertex;
+struct AnimTimerDataStruct;
 
 /**
  * The Holomap shows the hero position. The arrows (@c RESSHQR_HOLOARROWMDL) represent important places in your quest - they automatically disappear once that part of
@@ -45,7 +53,9 @@ private:
 	bool isTriangleVisible(const Vertex *vertices) const;
 
 	struct Location {
-		IVec3 angle;
+		int16 angleX;
+		int16 angleY;
+		int16 size;
 		TextId textIndex = TextId::kNone;
 		char name[30] = "";
 	};
@@ -60,13 +70,14 @@ private:
 	HolomapSort _holomapSort[512];
 
 	struct HolomapProjectedPos {
-		int16 x = 0;
-		int16 y = 0;
-		int16 unk1 = 0;
-		int16 unk2 = 0;
+		int16 x1 = 0;
+		int16 y1 = 0;
+		int16 x2 = 0;
+		int16 y2 = 0;
 	};
 	HolomapProjectedPos _projectedSurfacePositions[561];
 	int _projectedSurfaceIndex = 0;
+	//float _distanceModifier = 1.0f;
 
 	int32 _numLocations = 0;
 	Location _locations[NUM_LOCATIONS];
@@ -79,12 +90,21 @@ private:
 
 	void renderLocations(int xRot, int yRot, int zRot, bool lower);
 
-	void renderHolomapModel(const BodyData &bodyData, int32 x, int32 y, int32 zPos);
-
-	void prepareHolomapSurface();
+	/**
+	 * Renders a holomap path with single path points appearing slowly one after another
+	 */
+	void renderHolomapPointModel(const IVec3 &angle, int32 x, int32 y);
+	void prepareHolomapSurface(Common::SeekableReadStream *holomapSurfaceStream);
 	void prepareHolomapProjectedPositions();
 	void prepareHolomapPolygons();
-	void renderHolomapSurfacePolygons();
+	void renderHolomapSurfacePolygons(uint8 *holomapImage, uint32 holomapImageSize);
+	void renderHolomapVehicle(uint &frameNumber, ActorMoveStruct &move, AnimTimerDataStruct &animTimerData, BodyData &bodyData, AnimData &animData);
+
+	/**
+	 * Controls the size/zoom of the holomap planet
+	 */
+	int32 distance(float distance) const;
+	int32 scale(float val) const;
 
 public:
 	Holomap(TwinEEngine *engine);
@@ -113,11 +133,6 @@ public:
 	/** Main holomap process loop */
 	void processHolomap();
 };
-
-inline const char *Holomap::getLocationName(int index) const {
-	assert(index >= 0 && index <= ARRAYSIZE(_locations));
-	return _locations[index].name;
-}
 
 } // namespace TwinE
 

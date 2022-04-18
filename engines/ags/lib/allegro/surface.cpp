@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -34,7 +33,7 @@ BITMAP::BITMAP(Graphics::ManagedSurface *owner) : _owner(owner),
 	w(owner->w), h(owner->h), pitch(owner->pitch), format(owner->format),
 	clip(true), ct(0), cl(0), cr(owner->w), cb(owner->h) {
 	line.resize(h);
-	for (uint y = 0; y < h; ++y)
+	for (int y = 0; y < h; ++y)
 		line[y] = (byte *)_owner->getBasePtr(0, y);
 }
 
@@ -120,8 +119,14 @@ void BITMAP::draw(const BITMAP *srcBitmap, const Common::Rect &srcRect,
 	if (cr <= cl || cb <= ct)
 		return;
 
+	// Ensure the src rect is constrained to the source bitmap
+	Common::Rect srcArea = srcRect;
+	srcArea.clip(Common::Rect(0, 0, srcBitmap->w, srcBitmap->h));
+	if (srcArea.isEmpty())
+		return;
+
 	// Figure out the dest area that will be updated
-	Common::Rect dstRect(dstX, dstY, dstX + srcRect.width(), dstY + srcRect.height());
+	Common::Rect dstRect(dstX, dstY, dstX + srcArea.width(), dstY + srcArea.height());
 	Common::Rect destRect = dstRect.findIntersectingRect(
 	                            Common::Rect(cl, ct, cr, cb));
 	if (destRect.isEmpty())
@@ -166,9 +171,9 @@ void BITMAP::draw(const BITMAP *srcBitmap, const Common::Rect &srcRect,
 			continue;
 		byte *destP = (byte *)destArea.getBasePtr(0, destY);
 		const byte *srcP = (const byte *)src.getBasePtr(
-		                       horizFlip ? srcRect.right - 1 : srcRect.left,
-		                       vertFlip ? srcRect.bottom - 1 - yCtr :
-		                       srcRect.top + yCtr);
+		                       horizFlip ? srcArea.right - 1 : srcArea.left,
+		                       vertFlip ? srcArea.bottom - 1 - yCtr :
+		                       srcArea.top + yCtr);
 
 		// Loop through the pixels of the row
 		for (int destX = xStart, xCtr = 0, xCtrBpp = 0; xCtr < dstRect.width(); ++destX, ++xCtr, xCtrBpp += src.format.bytesPerPixel) {

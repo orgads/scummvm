@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -284,7 +283,7 @@ int KyraEngine_MR::o3_updateScore(EMCState *script) {
 
 int KyraEngine_MR::o3_makeSecondChanceSave(EMCState *script) {
 	debugC(3, kDebugLevelScriptFuncs, "KyraEngine_MR::o3_makeSecondChanceSave(%p) ()", (const void *)script);
-	saveGameStateIntern(999, "Autosave", 0);
+	saveGameStateIntern(999, "Autosave", nullptr);
 	return 0;
 }
 
@@ -776,7 +775,7 @@ int KyraEngine_MR::o3_daggerWarning(EMCState *script) {
 		y += yInc;
 	}
 
-	const char *str = 0;
+	const char *str = nullptr;
 	int x = 0;
 
 	str = (const char *)getTableEntry(_cCodeFile, 120);
@@ -798,7 +797,7 @@ int KyraEngine_MR::o3_daggerWarning(EMCState *script) {
 	_screen->showMouse();
 
 	while (!shouldQuit()) {
-		int keys = checkInput(0);
+		int keys = checkInput(nullptr);
 		removeInputTop();
 
 		if (keys == 198 || keys == 199) {
@@ -886,7 +885,7 @@ int KyraEngine_MR::o3_defineSceneAnim(EMCState *script) {
 		strcpy(anim.filename, filename);
 
 	if (flags & 8) {
-		_sceneAnimMovie[animId]->open(filename, 1, 0);
+		_sceneAnimMovie[animId]->open(filename, 1, nullptr);
 		if (_sceneAnimMovie[animId]->opened()) {
 			anim.wsaFlag = 1;
 			if (x2 == -1)
@@ -1150,7 +1149,7 @@ typedef Common::Functor1Mem<EMCState *, int, KyraEngine_MR> OpcodeV3;
 #define Opcode(x) table->push_back(new OpcodeV3(this, &KyraEngine_MR::x))
 #define OpcodeUnImpl() table->push_back(new OpcodeV3(this, 0))
 void KyraEngine_MR::setupOpcodeTable() {
-	Common::Array<const Opcode *> *table = 0;
+	Common::Array<const Opcode *> *table = nullptr;
 
 	_opcodes.reserve(176);
 	SetOpcodeTable(_opcodes);

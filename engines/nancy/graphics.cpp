@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -163,13 +162,13 @@ void GraphicsManager::copyToManaged(const Graphics::Surface &src, Graphics::Mana
 		return;
 	}
 
-	for (uint y = 0; y < src.h; ++y) {
+	for (int y = 0; y < src.h; ++y) {
 		if (!doubleSize) {
 			// Copy single line bottom to top
 			memcpy(dst.getBasePtr(0, y), src.getBasePtr(0, src.h - y - 1), src.w * src.format.bytesPerPixel);
 		} else {
 			// Make four copies of each source pixel
-			for (uint x = 0; x < src.w; ++x) {
+			for (int x = 0; x < src.w; ++x) {
 				switch (src.format.bytesPerPixel) {
 				case 1: {
 					const byte *srcP = (const byte *)src.getBasePtr(x, y);

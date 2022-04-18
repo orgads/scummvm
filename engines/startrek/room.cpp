@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -74,7 +73,7 @@ Room::Room(StarTrekEngine *vm, const Common::String &name) : _vm(vm), _awayMissi
 	ADD_ROOM(mudd1)
 	ADD_ROOM(mudd2)
 	ADD_ROOM(mudd3)
-	//ADD_ROOM(mudd4)
+	ADD_ROOM(mudd4)
 	ADD_ROOM(mudd5)
 	ADD_ROOM_COMMON(mudd)
 	ADD_ROOM(feather0)
@@ -100,12 +99,12 @@ Room::Room(StarTrekEngine *vm, const Common::String &name) : _vm(vm), _awayMissi
 	ADD_ROOM(veng0)
 	ADD_ROOM(veng1)
 	ADD_ROOM(veng2)
-	//ADD_ROOM(veng3)
-	//ADD_ROOM(veng4)
-	//ADD_ROOM(veng5)
-	//ADD_ROOM(veng6)
-	//ADD_ROOM(veng7)
-	//ADD_ROOM(veng8)
+	ADD_ROOM(veng3)
+	ADD_ROOM(veng4)
+	ADD_ROOM(veng5)
+	ADD_ROOM(veng6)
+	ADD_ROOM(veng7)
+	ADD_ROOM(veng8)
 	ADD_ROOM_COMMON(veng)
 
 	if (_roomActionList == nullptr) {
@@ -349,7 +348,12 @@ const char *Room::getText(uint16 textId) {
 		error("Missing text ID: %d", textId);
 
 	switch (_vm->getLanguage()) {
-		// TODO: Add non-English languages
+	case Common::FR_FRA:
+		offset = offsets->offsetFrenchCD;
+		break;
+	case Common::DE_DEU:
+		offset = offsets->offsetGermanCD;
+		break;
 	default:
 		offset = isCD ? offsets->offsetEnglishCD : offsets->offsetEnglishFloppy;
 		break;

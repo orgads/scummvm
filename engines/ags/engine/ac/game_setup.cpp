@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -41,14 +40,14 @@ GameSetup::GameSetup() {
 	mouse_speed_def = kMouseSpeed_CurrentDisplay;
 	RenderAtScreenRes = false;
 	Supersampling = 1;
+	clear_cache_on_room_change = false;
+	rotation = kScreenRotation_Unlocked;
 
-	Screen.DisplayMode.ScreenSize.MatchDeviceRatio = true;
-	Screen.DisplayMode.ScreenSize.SizeDef = kScreenDef_MaxDisplay;
-	Screen.DisplayMode.RefreshRate = 0;
-	Screen.DisplayMode.VSync = false;
-	Screen.DisplayMode.Windowed = false;
-	Screen.FsGameFrame = GameFrameSetup(kFrame_MaxProportional);
-	Screen.WinGameFrame = GameFrameSetup(kFrame_MaxRound);
+	Screen.Params.RefreshRate = 0;
+	Screen.Params.VSync = false;
+	Screen.Windowed = false;
+	Screen.FsGameFrame = kFrame_Proportional;
+	Screen.WinGameFrame = kFrame_Round;
 }
 
 } // namespace AGS3

@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the AUTHORS
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -43,7 +42,6 @@
 #include "engines/stark/services/gamechapter.h"
 #include "engines/stark/services/gamemessage.h"
 #include "engines/stark/gfx/driver.h"
-#include "engines/stark/gfx/framelimiter.h"
 
 #include "audio/mixer.h"
 #include "common/config-manager.h"
@@ -54,6 +52,10 @@
 #include "common/savefile.h"
 #include "common/system.h"
 #include "common/translation.h"
+#include "engines/advancedDetector.h"
+#include "graphics/renderer.h"
+#include "graphics/framelimiter.h"
+#include "gui/error.h"
 #include "gui/message.h"
 
 namespace Stark {
@@ -92,11 +94,17 @@ StarkEngine::~StarkEngine() {
 
 Common::Error StarkEngine::run() {
 	setDebugger(new Console());
-	_frameLimiter = new Gfx::FrameLimiter(_system, ConfMan.getInt("engine_speed"));
+	_frameLimiter = new Graphics::FrameLimiter(_system, ConfMan.getInt("engine_speed"));
 
 	// Get the screen prepared
 	Gfx::Driver *gfx = Gfx::Driver::create();
+	if (gfx == nullptr)
+		return Common::kNoError;
 	gfx->init();
+
+	if (StarkSettings->isAssetsModEnabled() && !gfx->supportsModdedAssets()) {
+		GUI::displayErrorDialog(_("Software renderer does not support modded assets"));
+	}
 
 	checkRecommendedDatafiles();
 
@@ -114,7 +122,7 @@ Common::Error StarkEngine::run() {
 	services.dialogPlayer = new DialogPlayer();
 	services.diary = new Diary();
 	services.gameInterface = new GameInterface();
-	services.userInterface = new UserInterface(services.gfx);
+	services.userInterface = new UserInterface(this, services.gfx);
 	services.settings = new Settings(_mixer, _gameDescription);
 	services.gameChapter = new GameChapter();
 	services.gameMessage = new GameMessage();
@@ -152,10 +160,8 @@ void StarkEngine::mainLoop() {
 
 		processEvents();
 
-		if (StarkUserInterface->shouldExit()) {
-			quitGame();
+		if (StarkUserInterface->shouldExit())
 			break;
-		}
 
 		if (StarkResourceProvider->hasLocationChangeRequest()) {
 			StarkGlobal->setNormalSpeed();
@@ -264,7 +270,8 @@ void StarkEngine::addModsToSearchPath() const {
 	const Common::FSNode modsDir = gameDataDir.getChild("mods");
 	if (modsDir.exists()) {
 		Common::FSList list;
-		modsDir.getChildren(list);
+		if (!modsDir.getChildren(list))
+			return;
 
 		Common::sort(list.begin(), list.end(), modsCompare);
 
@@ -327,10 +334,26 @@ void StarkEngine::checkRecommendedDatafiles() {
 }
 
 bool StarkEngine::hasFeature(EngineFeature f) const {
+	// The TinyGL renderer does not support arbitrary resolutions for now
+	Common::String rendererConfig = ConfMan.get("renderer");
+	Graphics::RendererType desiredRendererType = Graphics::Renderer::parseTypeCode(rendererConfig);
+	Graphics::RendererType matchingRendererType = Graphics::Renderer::getBestMatchingAvailableType(desiredRendererType,
+#if defined(USE_OPENGL_GAME)
+			Graphics::kRendererTypeOpenGL |
+#endif
+#if defined(USE_OPENGL_SHADERS)
+			Graphics::kRendererTypeOpenGLShaders |
+#endif
+#if defined(USE_TINYGL)
+			Graphics::kRendererTypeTinyGL |
+#endif
+			0);
+	bool softRenderer = matchingRendererType == Graphics::kRendererTypeTinyGL;
+
 	return
 		(f == kSupportsLoadingDuringRuntime) ||
 		(f == kSupportsSavingDuringRuntime) ||
-		(f == kSupportsArbitraryResolutions) ||
+		(f == kSupportsArbitraryResolutions && !softRenderer) ||
 		(f == kSupportsReturnToLauncher);
 }
 
@@ -385,7 +408,7 @@ Common::Error StarkEngine::loadGameState(int slot) {
 	}
 
 	if (stream.err()) {
-		warning("An error occured when reading '%s'", filename.c_str());
+		warning("An error occurred when reading '%s'", filename.c_str());
 		return Common::kReadingFailed;
 	}
 
@@ -454,7 +477,7 @@ Common::Error StarkEngine::saveGameState(int slot, const Common::String &desc, b
 	}
 
 	if (save->err()) {
-		warning("An error occured when writing '%s'", filename.c_str());
+		warning("An error occurred when writing '%s'", filename.c_str());
 		delete save;
 		return Common::kWritingFailed;
 	}
@@ -522,5 +545,7 @@ void StarkEngine::onScreenChanged() const {
 		StarkUserInterface->onScreenChanged();
 	}
 }
+
+uint32 StarkEngine::getGameFlags() const { return _gameDescription->flags; }
 
 } // End of namespace Stark

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -28,32 +27,42 @@
 
 class OSystem_Win32 final : public OSystem_SDL {
 public:
-	virtual void init() override;
-	virtual void initBackend() override;
+	OSystem_Win32();
 
-	virtual void addSysArchivesToSearchSet(Common::SearchSet &s, int priority = 0) override;
+	void init() override;
+	void initBackend() override;
 
-	virtual bool hasFeature(Feature f) override;
+#ifdef USE_OPENGL
+	GraphicsManagerType getDefaultGraphicsManager() const override;
+#endif
 
-	virtual bool displayLogFile() override;
+	void addSysArchivesToSearchSet(Common::SearchSet &s, int priority = 0) override;
 
-	virtual bool openUrl(const Common::String &url) override;
+	bool hasFeature(Feature f) override;
 
-	virtual void logMessage(LogMessageType::Type type, const char *message) override;
+	bool displayLogFile() override;
 
-	virtual Common::String getSystemLanguage() const override;
+	bool openUrl(const Common::String &url) override;
 
-	virtual Common::String getScreenshotsPath() override;
+	void logMessage(LogMessageType::Type type, const char *message) override;
+
+	Common::String getSystemLanguage() const override;
+
+	Common::String getScreenshotsPath() override;
 
 protected:
-	virtual Common::String getDefaultConfigFileName() override;
-	virtual Common::String getDefaultLogFileName() override;
+	Common::String getDefaultConfigFileName() override;
+	Common::String getDefaultLogFileName() override;
 
 	// Override createAudioCDManager() to get our Windows-specific
 	// version.
-	virtual AudioCDManager *createAudioCDManager() override;
+	AudioCDManager *createAudioCDManager() override;
 
 	HWND getHwnd() { return ((SdlWindow_Win32*)_window)->getHwnd(); }
+
+private:
+	bool _isPortable;
+	bool detectPortableConfigFile();
 };
 
 #endif

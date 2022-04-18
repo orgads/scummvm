@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -93,6 +92,14 @@ bool ActorAnimProcess::init() {
 	if (!actor->hasFlags(Item::FLG_FASTAREA)) {
 		// not in the fast area? Can't play an animation then.
 		// (If we do, the actor will likely fall because the floor is gone.)
+
+#ifdef WATCHACTOR
+	if (_itemNum == watchactor)
+		pout << "Animation [" << Kernel::get_instance()->getFrameNum()
+			 << "] ActorAnimProcess " << getPid() << " init failed "
+			 << "(actor " << _itemNum << "not fast)" << Std::endl;
+#endif
+
 		return false;
 	}
 
@@ -113,6 +120,14 @@ bool ActorAnimProcess::init() {
 	if (!_tracker->init(actor, _action, _dir)) {
 		delete _tracker;
 		_tracker = nullptr;
+
+#ifdef WATCHACTOR
+	if (_itemNum == watchactor)
+		pout << "Animation [" << Kernel::get_instance()->getFrameNum()
+			 << "] ActorAnimProcess " << getPid() << " init failed "
+			 << "(tracker init failed)" << Std::endl;
+#endif
+
 		return false;
 	}
 
@@ -655,7 +670,7 @@ void ActorAnimProcess::terminate() {
 	if (_itemNum == watchactor)
 		pout << "Animation ["
 		     << Kernel::get_instance()->getFrameNum()
-		     << "] ActorAnimProcess terminating"
+		     << "] ActorAnimProcess " << getPid() << " terminating"
 		     << Std::endl;
 #endif
 

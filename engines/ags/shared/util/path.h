@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,6 +30,8 @@
 
 #include "ags/shared/util/string.h"
 
+#define PATH_ALT_SEPARATOR ('\\')
+
 namespace AGS3 {
 namespace AGS {
 namespace Shared {
@@ -42,14 +43,11 @@ String get_filename(const String &path);
 // Get an extension from a filename
 String get_extension(const String &path);
 
-// Tells if the given path is a directory
-bool    IsDirectory(const String &directory);
-// Tells if the given path is a file
-bool    IsFile(const String &filename);
-// Tells if the given path is file or directory;
-// may be used to check if it's valid to use
-bool    IsFileOrDir(const String &filename);
-// Returns filename part out of the longer path
+// Returns parent directory of the given path;
+// returns "." (current dir) if the path does not contain a parent segment
+String  GetParent(const String &path);
+// Returns parent directory of the given path;
+// returns "." (current dir) if the path does not contain a parent segment
 String  GetFilename(const String &path);
 // Returns file's extension; file may be a fully qualified path too
 String  GetFileExtension(const String &path);
@@ -86,6 +84,7 @@ String  MakeAbsolutePath(const String &path);
 String  MakeRelativePath(const String &base, const String &path);
 // Concatenates parent and relative paths
 String  ConcatPaths(const String &parent, const String &child);
+String  ConcatPaths(String &buf, const String &parent, const String &child);
 // Creates path by combining directory, file name and extension
 String  MakePath(const String &parent, const String &filename, const String &ext);
 // Splits path into components, divided by path separator

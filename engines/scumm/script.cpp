@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -429,7 +428,7 @@ void ScummEngine::getScriptBaseAddress() {
 	}
 
 	// The following fixes bug #2028. Confirmed against disasm.
-	if (_game.version <= 2 && _scriptOrgPointer == NULL) {
+	if (_game.version <= 2 && _scriptOrgPointer == nullptr) {
 		ss->status = ssDead;
 		_currentScript = 0xFF;
 	}
@@ -925,7 +924,7 @@ void ScummEngine::runAllScripts() {
 
 void ScummEngine::runExitScript() {
 	if (VAR_EXIT_SCRIPT != 0xFF && VAR(VAR_EXIT_SCRIPT))
-		runScript(VAR(VAR_EXIT_SCRIPT), 0, 0, 0);
+		runScript(VAR(VAR_EXIT_SCRIPT), 0, 0, nullptr);
 	if (_EXCD_offs) {
 		int slot = getScriptSlot();
 		vm.slot[slot].status = ssRunning;
@@ -950,11 +949,11 @@ void ScummEngine::runExitScript() {
 			}
 		}
 
-		initializeLocals(slot, 0);
+		initializeLocals(slot, nullptr);
 		runScriptNested(slot);
 	}
 	if (VAR_EXIT_SCRIPT2 != 0xFF && VAR(VAR_EXIT_SCRIPT2))
-		runScript(VAR(VAR_EXIT_SCRIPT2), 0, 0, 0);
+		runScript(VAR(VAR_EXIT_SCRIPT2), 0, 0, nullptr);
 
 #ifdef ENABLE_SCUMM_7_8
 	// WORKAROUND: The spider lair (room 44) will optionally play the sound
@@ -970,7 +969,7 @@ void ScummEngine::runExitScript() {
 
 void ScummEngine::runEntryScript() {
 	if (VAR_ENTRY_SCRIPT != 0xFF && VAR(VAR_ENTRY_SCRIPT))
-		runScript(VAR(VAR_ENTRY_SCRIPT), 0, 0, 0);
+		runScript(VAR(VAR_ENTRY_SCRIPT), 0, 0, nullptr);
 	if (_ENCD_offs) {
 		int slot = getScriptSlot();
 		vm.slot[slot].status = ssRunning;
@@ -982,11 +981,11 @@ void ScummEngine::runEntryScript() {
 		vm.slot[slot].freezeCount = 0;
 		vm.slot[slot].delayFrameCount = 0;
 		vm.slot[slot].cycle = 1;
-		initializeLocals(slot, 0);
+		initializeLocals(slot, nullptr);
 		runScriptNested(slot);
 	}
 	if (VAR_ENTRY_SCRIPT2 != 0xFF && VAR(VAR_ENTRY_SCRIPT2))
-		runScript(VAR(VAR_ENTRY_SCRIPT2), 0, 0, 0);
+		runScript(VAR(VAR_ENTRY_SCRIPT2), 0, 0, nullptr);
 }
 
 void ScummEngine::runQuitScript() {
@@ -1320,7 +1319,7 @@ void ScummEngine_v0::runSentenceScript() {
 		// do not read in the dark
 		if (!(_cmdVerb == kVerbRead && _currentLights == 0)) {
 			VAR(VAR_ACTIVE_OBJECT2) = OBJECT_V0_ID(_cmdObject2);
-			runObjectScript(_cmdObject, _cmdVerb, false, false, NULL);
+			runObjectScript(_cmdObject, _cmdVerb, false, false, nullptr);
 			return;
 		}
 	} else {
@@ -1336,7 +1335,7 @@ void ScummEngine_v0::runSentenceScript() {
 	if (_cmdVerb != kVerbWalkTo) {
 		// perform verb's fallback action
 		VAR(VAR_ACTIVE_VERB) = _cmdVerb;
-		runScript(3, 0, 0, 0);
+		runScript(3, 0, 0, nullptr);
 	}
 }
 
@@ -1412,8 +1411,26 @@ void ScummEngine::runInputScript(int clickArea, int val, int mode) {
 		_lastInputScriptTime = time;
 	}
 
-	if (verbScript)
-		runScript(verbScript, 0, 0, args);
+	if (verbScript) {
+		// It seems that script 18 expects to be called twice: Once
+		// with parameter 1 (kVerbClickArea) to clear all the verbs,
+		// and once with 3 (kInventoryClickArea) to print the "Take
+		// this <something>" message.
+		//
+		// In the 256-color DOS version, this is all done in the same
+		// call to the script.
+		//
+		// Should this workaround apply to other input scripts
+		// as well? I don't know.
+		if (_game.id == GID_INDY3 && _game.platform == Common::kPlatformMacintosh && verbScript == 18 && val >= 101 && val <= 106) {
+			args[0] = kVerbClickArea;
+			runScript(verbScript, 0, 0, args);
+
+			args[0] = kInventoryClickArea;
+			runScript(verbScript, 0, 0, args);
+		} else
+			runScript(verbScript, 0, 0, args);
+	}
 }
 
 void ScummEngine::decreaseScriptDelay(int amount) {
@@ -1423,6 +1440,20 @@ void ScummEngine::decreaseScriptDelay(int amount) {
 		if (ss->status == ssPaused) {
 			ss->delay -= amount;
 			if (ss->delay < 0) {
+				if (_game.id == GID_INDY3 && _game.platform == Common::kPlatformMacintosh && ss->number == 134) {
+					// Unlike the DOS version, there doesn't
+					// appear to be anything in the credits
+					// script to clear the credits between
+					// the text screens. I don't know how
+					// the original did it, but the only
+					// reliable way I can think of is to
+					// trigger on the end of each delay
+					// throughout the script.
+					//
+					// Since this is at the very end of the
+					// game, it should be safe enough.
+					mac_undrawIndy3CreditsText();
+				}
 				ss->status = ssRunning;
 				ss->delay = 0;
 			}
@@ -1475,7 +1506,7 @@ void ScummEngine::copyScriptString(byte *dst) {
 int ScummEngine::resStrLen(const byte *src) {
 	int num = 0;
 	byte chr;
-	if (src == NULL) {
+	if (src == nullptr) {
 		refreshScriptPointer();
 		src = _scriptPointer;
 	}

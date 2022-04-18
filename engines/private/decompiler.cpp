@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 // Heavily based on code by jdieguez
@@ -129,7 +128,6 @@ Decompiler::Decompiler(char *buf, uint32 fileSize, bool mac) {
 	Common::String firstBytes((const char *)array.begin(), (const char *)array.begin() + kHeaderSize);
 
 	if (firstBytes != kHeader) {
-		debug("Not a precompiled game matrix");
 		_result = Common::String(buf);
 		return;
 	}
@@ -170,6 +168,7 @@ void Decompiler::decompile(Common::Array<byte> &buffer, bool mac) {
 			inDefineRects = false;
 		}
 	}
+	ss += "\ndefine locations { k0, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13, k14 }";
 	_result = ss;
 }
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -34,7 +33,7 @@
 
 namespace Asylum {
 
-Speech::Speech(AsylumEngine *engine): _vm(engine), _textData(0), _textDataPos(0) {
+Speech::Speech(AsylumEngine *engine): _vm(engine), _textData(nullptr), _textDataPos(nullptr) {
 	_tick            = _vm->getTick();
 	_soundResourceId = kResourceNone;
 	_textResourceId  = kResourceNone;
@@ -56,10 +55,20 @@ ResourceId Speech::play(ResourceId soundResourceId, ResourceId textResourceId) {
 ResourceId Speech::playIndexed(int32 index) {
 	int processedIndex;
 
-	if (getWorld()->actorType || index != -1) {
+	if (_vm->checkGameVersion("Demo")) {
+		switch (index) {
+		default:
+		case 1:
+			processedIndex = 43 + _vm->getRandom(5);
+			break;
+		case 3:
+			processedIndex = 58 + _vm->getRandom(5);
+			break;
+		}
+	} else if (getWorld()->actorType || index != -1) {
 		processedIndex = (int)speechIndex[index + 5 * getWorld()->actorType] + (int)rnd(speechIndexRandom[index + 5 * getWorld()->actorType]);
 	} else {
-		switch(_vm->getRandom(3)) {
+		switch (_vm->getRandom(3)) {
 		default:
 		case 0:
 			processedIndex = 23;
@@ -87,7 +96,10 @@ ResourceId Speech::playIndexed(int32 index) {
 		break;
 
 	case kActorMax:
-		return play(MAKE_RESOURCE(kResourcePackSpeech, processedIndex), MAKE_RESOURCE(kResourcePackText, processedIndex + 83));
+		if (_vm->checkGameVersion("Demo"))
+			return play(MAKE_RESOURCE(kResourcePackSharedSound, processedIndex), MAKE_RESOURCE(kResourcePackText, processedIndex - 1));
+		else
+			return play(MAKE_RESOURCE(kResourcePackSpeech, processedIndex), MAKE_RESOURCE(kResourcePackText, processedIndex + 83));
 
 	case kActorSarah:
 		return play(MAKE_RESOURCE(kResourcePackSharedSound, processedIndex + 1927), MAKE_RESOURCE(kResourcePackText, processedIndex + 586));
@@ -186,9 +198,14 @@ ResourceId Speech::playPlayer(int32 index) {
 			textResourceIndex -= 9;
 		}
 
-		ResourceId soundResourceId = MAKE_RESOURCE(kResourcePackSpeech, soundResourceIndex);
-
-		return play(soundResourceId, MAKE_RESOURCE(kResourcePackText, textResourceIndex + 83));
+		ResourceId soundResourceId;
+		if (_vm->checkGameVersion("Demo")) {
+			soundResourceId = MAKE_RESOURCE(kResourcePackSharedSound, soundResourceIndex + 21 + 7 * _vm->isAltDemo());
+			return play(soundResourceId, MAKE_RESOURCE(kResourcePackText, textResourceIndex + 20));
+		} else {
+			soundResourceId = MAKE_RESOURCE(kResourcePackSpeech, soundResourceIndex);
+			return play(soundResourceId, MAKE_RESOURCE(kResourcePackText, textResourceIndex + 83));
+		}
 		}
 
 	case kActorSarah:
@@ -210,8 +227,8 @@ void Speech::resetResourceIds() {
 }
 
 void Speech::resetTextData() {
-	_textData = NULL;
-	_textDataPos = NULL;
+	_textData = nullptr;
+	_textDataPos = nullptr;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -246,16 +263,16 @@ void Speech::process() {
 
 	if (*(txt + strlen((const char *)txt) - 2) == 1) {
 		_textResourceId = kResourceNone;
-		_textData = 0;
-		_textDataPos = 0;
+		_textData = nullptr;
+		_textDataPos = nullptr;
 	} else if (*txt == '{') {
 		_textData = txt + 3;
-		_textDataPos = 0;
+		_textDataPos = nullptr;
 
 		getText()->loadFont(getWorld()->font1);
 		getSound()->playSound(_soundResourceId, false, Config.voiceVolume, 0);
 	} else {
-		_textData = 0;
+		_textData = nullptr;
 		_textDataPos = txt;
 
 		if (*txt == '/') {

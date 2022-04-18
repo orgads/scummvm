@@ -14,6 +14,8 @@ ifdef MACOSX
 MODULE_OBJS += \
 	macosx/macosx-main.o \
 	macosx/macosx.o \
+	macosx/macosx-touchbar.o \
+	macosx/macosx-window.o \
 	macosx/macosx_wrapper.o \
 	macosx/appmenu_osx.o
 endif
@@ -43,6 +45,12 @@ ifdef MORPHOS
 MODULE_OBJS += \
 	morphos/morphos-main.o \
 	morphos/morphos.o
+endif
+
+ifdef OPENDINGUX
+MODULE_OBJS += \
+	opendingux/opendingux-main.o \
+	opendingux/opendingux.o
 endif
 
 ifdef PLAYSTATION3

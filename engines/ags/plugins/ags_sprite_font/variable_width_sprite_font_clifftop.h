@@ -5,9 +5,9 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
  * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -16,8 +16,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -31,15 +30,15 @@ namespace Plugins {
 namespace AGSSpriteFont {
 
 class VariableWidthSpriteFontRendererClifftop : public VariableWidthSpriteFontRenderer {
-public:
-VariableWidthSpriteFontRendererClifftop(IAGSEngine *engine);
-virtual ~VariableWidthSpriteFontRendererClifftop(void);
-
-int GetTextHeight(const char *text, int fontNumber) override;
-void RenderText(const char *text, int fontNumber, BITMAP *destination, int x, int y, int colour) override;
-
 private:
-void Draw(BITMAP *src, BITMAP *dest, int destx, int desty, int srcx, int srcy, int width, int height, int colour);
+	void Draw(BITMAP *src, BITMAP *dest, int destx, int desty, int srcx, int srcy, int width, int height, int colour);
+
+public:
+	VariableWidthSpriteFontRendererClifftop(IAGSEngine *engine);
+	virtual ~VariableWidthSpriteFontRendererClifftop(void);
+
+	int GetTextHeight(const char *text, int fontNumber) override;
+	void RenderText(const char *text, int fontNumber, BITMAP *destination, int x, int y, int colour) override;
 };
 
 } // namespace AGSSpriteFont

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * Glitter library functions.
  *
@@ -53,7 +52,7 @@
 #include "tinsel/pid.h"
 #include "tinsel/play.h"
 #include "tinsel/polygons.h"
-#include "tinsel/rince.h"
+#include "tinsel/movers.h"
 #include "tinsel/savescn.h"
 #include "tinsel/sched.h"
 #include "tinsel/scn.h"
@@ -153,7 +152,7 @@ enum MASTER_LIB_CODES {
 	TRYPLAYSAMPLE, UNDIMMUSIC, UNHOOKSCENE, UNTAGACTOR, VIBRATE, WAITFRAME, WAITKEY,
 	WAITSCROLL, WAITTIME, WALK, WALKED, WALKEDPOLY, WALKEDTAG, WALKINGACTOR, WALKPOLY,
 	WALKTAG, WALKXPOS, WALKYPOS, WHICHCD, WHICHINVENTORY, ZZZZZZ, DEC3D, DECINVMAIN,
-	ADDNOTEBOOK, ADDINV3, ADDCONV, SET3DTEXTURE, FADEMUSIC, VOICEOVER, HIGHEST_LIBCODE
+	ADDNOTEBOOK, ADDINV3, ADDCONV, SET3DTEXTURE, FADEMUSIC, VOICEOVER, SETVIEW, HIGHEST_LIBCODE
 };
 
 static const MASTER_LIB_CODES DW1DEMO_CODES[] = {
@@ -393,7 +392,6 @@ struct SCROLL_MONITOR {
 	int	thisScroll;
 	int	myEscape;
 };
-typedef SCROLL_MONITOR *PSCROLL_MONITOR;
 
 /**
  * Monitor a scrolling, allowing Escape to interrupt it
@@ -455,7 +453,7 @@ static int TextTime(char *pTstring) {
 /**
  * KeepOnScreen
  */
-void KeepOnScreen(POBJECT pText, int *pTextX, int *pTextY) {
+void KeepOnScreen(OBJECT * pText, int *pTextX, int *pTextY) {
 	int	shift;
 
 	// Not off the left
@@ -541,7 +539,7 @@ static void ActorAttr(int actor, int r1, int g1, int b1) {
  * Behave as if actor has walked into a polygon with given brughtness.
  */
 void ActorBrightness(int actor, int brightness) {
-	PMOVER pMover = GetMover(actor);
+	MOVER *pMover = GetMover(actor);
 
 	assert(pMover != NULL);
 	assert(brightness >= 0 && brightness <= 10);
@@ -553,7 +551,7 @@ void ActorBrightness(int actor, int brightness) {
  * Return a moving actor's current direction.
  */
 static int ActorDirection(int actor) {
-	PMOVER pMover = GetMover(actor);
+	MOVER *pMover = GetMover(actor);
 	assert(pMover);
 
 	return (int)GetMoverDirection(pMover);
@@ -563,7 +561,7 @@ static int ActorDirection(int actor) {
  * Set actor's palette details for path brightnesses
  */
 void ActorPalette(int actor, int startColor, int length) {
-	PMOVER pMover = GetMover(actor);
+	MOVER *pMover = GetMover(actor);
 	assert(pMover);
 
 	StoreMoverPalette(pMover, startColor, length);
@@ -587,7 +585,7 @@ static void ActorRGB(int actor, COLORREF color) {
  * Return the actor's scale.
  */
 static int ActorScale(int actor) {
-	PMOVER pMover = GetMover(actor);
+	MOVER *pMover = GetMover(actor);
 	assert(pMover);
 
 	return (int)GetMoverScale(pMover);
@@ -631,7 +629,7 @@ static void AddInv(int invno, int object) {
  * Define an actor's walk and stand reels for an auxilliary scale.
  */
 static void AuxScale(int actor, int scale, SCNHANDLE *rp) {
-	PMOVER pMover = GetMover(actor);
+	MOVER *pMover = GetMover(actor);
 	assert(pMover);
 
 	int j;
@@ -695,7 +693,7 @@ void CdDoChange(CORO_PARAM) {
  * CdEndActor("actor")
  */
 void CdEndActor(int	actor, int	myEscape) {
-	PMOVER	pMover;			// for if it's a moving actor
+	MOVER *pMover;			// for if it's a moving actor
 
 	// Only do it if escaped!
 	if (myEscape && myEscape != GetEscEvents()) {
@@ -907,6 +905,26 @@ static int CursorPos(int xory) {
 }
 
 /**
+ * Declare 3d model for an actor.
+ */
+void Dec3D(int ano, SCNHANDLE hModelName, SCNHANDLE hTextureName) {
+	MOVER* pMover = GetMover(ano);
+	assert(pMover != nullptr);
+
+	pMover->type = MOVER_3D;
+	pMover->hModelName = hModelName;
+	pMover->hTextureName = hTextureName;
+
+	// if (_hModelNameLoaded == 0) {
+	// 	_hModelNameLoaded = hModelName;
+	// 	const char* modelName = (const char *)_vm->_handle->LockMem(hModelName);
+	// 	const char* textureName = (const char *)_vm->_handle->LockMem(hTextureName);
+	// 	LoadModels(modelName, textureName);
+	// }
+	//assert(_hModelNameLoaded == hModelName);
+}
+
+/**
  * Declare conversation window.
  */
 static void DecConvW(SCNHANDLE text, int MaxContents, int MinWidth, int MinHeight,
@@ -979,7 +997,7 @@ static void DeclareLanguage(int languageId, SCNHANDLE hDescription, SCNHANDLE hF
  * @param text		Tag text (v1 only)
  */
 static void DecLead(uint32 id, SCNHANDLE *rp = 0, SCNHANDLE text = 0) {
-	PMOVER	pMover;		// Moving actor structure
+	MOVER *pMover;		// Moving actor structure
 
 	if (TinselV2) {
 		// Tinsel 2 only specifies the lead actor Id
@@ -1025,7 +1043,7 @@ static void DecScale(int actor, int scale,
 		SCNHANDLE wkl, SCNHANDLE wkr, SCNHANDLE wkf, SCNHANDLE wka,
 		SCNHANDLE stl, SCNHANDLE str, SCNHANDLE stf, SCNHANDLE sta,
 		SCNHANDLE tal, SCNHANDLE tar, SCNHANDLE taf, SCNHANDLE taa) {
-	PMOVER pMover = GetMover(actor);
+	MOVER *pMover = GetMover(actor);
 	assert(pMover);
 
 	SetWalkReels(pMover, scale, wkl, wkr, wkf, wka);
@@ -1099,7 +1117,7 @@ static void EndActor(int actor) {
  * If the actor is at the tag, do a StandTag().
  */
 static void FaceTag(int actor, HPOLYGON hp) {
-	PMOVER	pMover;		// Moving actor structure
+	MOVER *pMover;		// Moving actor structure
 	int	nowx, nowy;
 	int	nodex, nodey;
 
@@ -2886,7 +2904,7 @@ static void SPlay(CORO_PARAM, int sf, SCNHANDLE film, int x, int y, bool complet
  */
 void Stand(CORO_PARAM, int actor, int x, int y, SCNHANDLE hFilm) {
 	CORO_BEGIN_CONTEXT;
-		PMOVER pMover;		// Moving actor structure
+		MOVER *pMover;		// Moving actor structure
 	CORO_END_CONTEXT(_ctx);
 
 	CORO_BEGIN_CODE(_ctx);
@@ -3061,7 +3079,7 @@ void StopSample(int sample) {
  * Kill a moving actor's walk.
  */
 static void StopWalk(int actor) {
-	PMOVER pMover;
+	MOVER *pMover;
 
 	pMover = GetMover(actor);
 	assert(pMover);
@@ -3146,7 +3164,7 @@ static void Swalk(CORO_PARAM, int actor, int x1, int y1, int x2, int y2, SCNHAND
 		}
 
 		if (TinselV2 && (zOverride != -1)) {
-			PMOVER pMover = GetMover(actor);
+			MOVER *pMover = GetMover(actor);
 			assert(pMover);
 
 			SetMoverZ(pMover, y1, zOverride);
@@ -3203,7 +3221,7 @@ static int TagPos(MASTER_LIB_CODES operand, int tagno, HPOLYGON hp) {
 /**
  * Text goes over actor's head while actor plays the talk reel.
  */
-static void FinishTalkingReel(CORO_PARAM, PMOVER pMover, int actor) {
+static void FinishTalkingReel(CORO_PARAM, MOVER *pMover, int actor) {
 	CORO_BEGIN_CONTEXT;
 	CORO_END_CONTEXT(_ctx);
 
@@ -3225,7 +3243,7 @@ static void TalkOrSay(CORO_PARAM, SPEECH_TYPE speechType, SCNHANDLE hText, int x
 	CORO_BEGIN_CONTEXT;
 		int		Loffset, Toffset;	// Top left of display
 		int		actor;			// The speaking actor
-		PMOVER	pActor;			// For moving actors
+		MOVER  *pActor;			// For moving actors
 		int		myLeftEvent;
 		int		escEvents;
 		int		ticks;
@@ -3391,18 +3409,24 @@ static void TalkOrSay(CORO_PARAM, SPEECH_TYPE speechType, SCNHANDLE hText, int x
 			if ((_ctx->whatSort == IS_SAY) || (_ctx->whatSort == IS_TALK))
 				_vm->_actor->GetActorMidTop(_ctx->actor, &_ctx->x, &_ctx->y);
 
-			if (!TinselV0)
+			if (!TinselV0 && !TinselV3) {
 				SetTextPal(_vm->_actor->GetActorRGB(_ctx->actor));
-			if (TinselV2)
+			}
+			if (TinselV2) {
 				LoadSubString(hText, _ctx->sub, _vm->_font->TextBufferAddr(), TBUFSZ);
-			else {
+			} else {
 				LoadStringRes(hText, _vm->_font->TextBufferAddr(), TBUFSZ);
 
 				_ctx->y -= _ctx->Toffset;
 			}
 
+			int color = 0;
+			if (TinselV3) {
+				color = _vm->_actor->GetActorRGB(_ctx->actor);
+			}
+
 			_ctx->pText = ObjectTextOut(_vm->_bg->GetPlayfieldList(FIELD_STATUS),
-					_vm->_font->TextBufferAddr(), 0, _ctx->x - _ctx->Loffset, _ctx->y - _ctx->Toffset,
+					_vm->_font->TextBufferAddr(), color, _ctx->x - _ctx->Loffset, _ctx->y - _ctx->Toffset,
 					_vm->_font->GetTalkFontHandle(), TXT_CENTER);
 			assert(_ctx->pText); // talk() string produced NULL text;
 
@@ -3878,7 +3902,7 @@ void Walk(CORO_PARAM, int actor, int x, int y, SCNHANDLE hFilm, int hold, bool i
 	CORO_END_CONTEXT(_ctx);
 
 	bool bQuick = hold != 0;
-	PMOVER pMover = GetMover(actor);
+	MOVER *pMover = GetMover(actor);
 
 	assert(pMover); // Can't walk a non-moving actor
 
@@ -3966,7 +3990,7 @@ static void Walked(CORO_PARAM, int actor, int x, int y, SCNHANDLE film, bool esc
 		int	thisWalk;
 	CORO_END_CONTEXT(_ctx);
 
-	PMOVER pMover = GetMover(actor);
+	MOVER *pMover = GetMover(actor);
 	assert(pMover); // Can't walk a non-moving actor
 
 	CORO_BEGIN_CODE(_ctx);
@@ -4027,7 +4051,7 @@ static void Walked(CORO_PARAM, int actor, int x, int y, SCNHANDLE film, bool esc
  * Declare a moving actor.
  */
 static void WalkingActor(uint32 id, SCNHANDLE *rp = NULL) {
-	PMOVER	pActor;		// Moving actor structure
+	MOVER *pActor;		// Moving actor structure
 
 	if (TinselVersion == TINSEL_V2) {
 		RegisterMover(id);
@@ -4069,7 +4093,7 @@ static void WalkPoly(CORO_PARAM, int actor, SCNHANDLE film, HPOLYGON hp, bool es
 	CORO_END_CONTEXT(_ctx);
 
 	assert(hp != NOPOLY); // WalkPoly() may only be called from a polygon code block
-	PMOVER pMover = GetMover(actor);
+	MOVER *pMover = GetMover(actor);
 	assert(pMover); // Can't walk a non-moving actor
 
 	CORO_BEGIN_CODE(_ctx);
@@ -4127,7 +4151,7 @@ static void WalkTag(CORO_PARAM, int actor, SCNHANDLE film, HPOLYGON hp, bool esc
 		int thisWalk;
 	CORO_END_CONTEXT(_ctx);
 
-	PMOVER pMover = GetMover(actor);
+	MOVER *pMover = GetMover(actor);
 	assert(pMover); // Can't walk a non-moving actor
 
 	CORO_BEGIN_CODE(_ctx);
@@ -4250,15 +4274,42 @@ NoirMapping translateNoirLibCode(int libCode, int32 *pp) {
 	// this is convenient for debug.
 	NoirMapping mapping;
 	switch (libCode) {
+	case 0:
+		error("NoFunction isn't a real function");
+		break;
+	case 1:
+		mapping = NoirMapping{"ACTORBRIGHTNESS", ACTORBRIGHTNESS, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 2:
+		mapping = NoirMapping{"ACTORDIRECTION", ACTORDIRECTION, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
 	case 3:
 		mapping = NoirMapping{"ACTORPRIORITY", ACTORPRIORITY, 2};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d, 0x%08X)", mapping.name, pp[0], pp[1]);
 		break;
+	case 4:
+		mapping = NoirMapping{"ACTORREF", ACTORREF, 0};
+		debug(7, "%s()", mapping.name);
+		break;
 	case 5:
 		mapping = NoirMapping{"ACTORRGB", ACTORRGB, 2};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 6:
+		mapping = NoirMapping{"ACTORXPOS", ACTORXPOS, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 7:
+		mapping = NoirMapping{"ACTORYPOS", ACTORYPOS, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
 	case 8:
 		mapping = NoirMapping{"ADDNOTEBOOK", ADDNOTEBOOK, 1};
@@ -4270,13 +4321,34 @@ NoirMapping translateNoirLibCode(int libCode, int32 *pp) {
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
+	case 10:
+		mapping = NoirMapping{"ADDHIGHLIGHT", ADDHIGHLIGHT, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 11:
+		error("Unsupported libCode %d ADDINV 8", libCode);
 	case 12:
 		mapping = NoirMapping{"ADDINV1", ADDINV1, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
+	case 13:
+		mapping = NoirMapping{"ADDINV2", ADDINV2, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 14:
+		error("Unsupported libCode %d ADDINV 7", libCode);
+	case 15:
+		error("Unsupported libCode %d ADDINV 4", libCode);
 	case 16:
 		mapping = NoirMapping{"ADDINV3", ADDINV3, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%08X)", mapping.name, pp[0]);
+		break;
+	case 17:
+		mapping = NoirMapping{"ADDTOPIC", ADDTOPIC, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%08X)", mapping.name, pp[0]);
 		break;
@@ -4285,20 +4357,96 @@ NoirMapping translateNoirLibCode(int libCode, int32 *pp) {
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
-	case 37:
-		mapping = NoirMapping{"CONTROL", CONTROL, 1};
+	case 19: // 1 param, calls SetSysVar(ISV_NO_BLOCKING_T3, param == 0)
+		error("Unsupported libCode %d set_isv_blocking", libCode);
+	case 20: // 3 params, assigns values to three globals
+		error("Unsupported libCode %d", libCode);
+	case 21:
+		mapping = NoirMapping{"CALLACTOR", CALLACTOR, 2};
 		pp -= mapping.numArgs - 1;
-		debug(7, "%s(%08X)", mapping.name, pp[0]);
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 22:
+		mapping = NoirMapping{"CALLGLOBALPROCESS", CALLGLOBALPROCESS, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 23:
+		mapping = NoirMapping{"CALLOBJECT", CALLOBJECT, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 24:
+		mapping = NoirMapping{"CALLPROCESS", CALLPROCESS, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 25:
+		mapping = NoirMapping{"CALLSCENE", CALLSCENE, 0};
+		debug(7, "%s()", mapping.name);
 		break;
 	case 26:
 		mapping = NoirMapping{"CALLTAG", CALLTAG, 2};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
 		break;
+	case 27:
+		mapping = NoirMapping{"CAMERA", CAMERA, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
 	case 28:
 		mapping = NoirMapping{"CDCHANGESCENE", CDCHANGESCENE, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 29:
+		mapping = NoirMapping{"CDDOCHANGE", CDDOCHANGE, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 30:
+		mapping = NoirMapping{"CDENDACTOR", CDENDACTOR, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 31:
+		mapping = NoirMapping{"CDLOAD", CDLOAD, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 32:
+		mapping = NoirMapping{"CDPLAY", CDPLAY, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 33: // Disassembly just returns -1 for this opcode, so map it to ZZZZZZ
+		mapping = NoirMapping{"OP33_NOP", ZZZZZZ, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 34:
+		mapping = NoirMapping{"CLEARHOOKSCENE", CLEARHOOKSCENE, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 35: // 0 params, closes open inventory if it is 1 or 2
+		error("Unsupported libCode %d to close inventory", libCode);
+	case 36: // 0 params, closes open inventory if it is 3
+		error("Unsupported libCode %d to close inventory", libCode);
+	case 37:
+		mapping = NoirMapping{"CONTROL", CONTROL, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%08X)", mapping.name, pp[0]);
+		break;
+	case 38:
+		mapping = NoirMapping{"CONVERSATION", CONVERSATION, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%08X)", mapping.name, pp[0]);
+		break;
+	case 39: // 1 param
+		error("Unsupported libCode %d to set_notebook _entry_bool", libCode);
+	case 40:
+		mapping = NoirMapping{"CURSOR", CURSOR, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%08X)", mapping.name, pp[0]);
 		break;
 	case 41:
 		mapping = NoirMapping{"CURSORXPOS", CURSORXPOS, 0};
@@ -4314,6 +4462,7 @@ NoirMapping translateNoirLibCode(int libCode, int32 *pp) {
 		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4], pp[5], pp[6], pp[7]);
 		break;
 	case 44: // Changed in Noir
+		warning("TODO: Implement DECINV2 v3");
 		mapping = NoirMapping{"DECINV2", DECINV2, 8};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4], pp[5], pp[6], pp[7]);
@@ -4343,13 +4492,61 @@ NoirMapping translateNoirLibCode(int libCode, int32 *pp) {
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
+	case 50: // 1 parameter, calls RemFromInventory variant of TinselV1
+		error("Unsupported libCode %d del_inv3_item", libCode);
+	case 51: // 1 parameter
+		error("Unsupported libCode %d DELTOPIC variant", libCode);
+	case 52:
+		mapping = NoirMapping{"DIMMUSIC", DIMMUSIC, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 53:
+		mapping = NoirMapping{"DROP", DROP, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 54:
+		mapping = NoirMapping{"DROPEVERYTHING", DROPEVERYTHING, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 55:
+		mapping = NoirMapping{"DROPOUT", DROPOUT, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 56:
+		mapping = NoirMapping{"EFFECTACTOR", EFFECTACTOR, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 57:
+		mapping = NoirMapping{"ENABLEMENU", ENABLEMENU, 0};
+		debug(7, "%s()", mapping.name);
+		break;
 	case 58:
 		mapping = NoirMapping{"ENDACTOR", ENDACTOR, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
+	case 59:
+		mapping = NoirMapping{"ESCAPEOFF", ESCAPEOFF, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 60:
+		mapping = NoirMapping{"ESCAPEON", ESCAPEON, 0};
+		debug(7, "%s()", mapping.name);
+		break;
 	case 61:
 		mapping = NoirMapping{"EVENT", EVENT, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 62:
+		mapping = NoirMapping{"FACETAG", FACETAG, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 63:
+		mapping = NoirMapping{"FADEIN", FADEIN, 0};
 		debug(7, "%s()", mapping.name);
 		break;
 	case 64:
@@ -4357,40 +4554,189 @@ NoirMapping translateNoirLibCode(int libCode, int32 *pp) {
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%08X, %d)", mapping.name, pp[0], pp[1]);
 		break;
+	case 65:
+		mapping = NoirMapping{"FADEOUT", FADEOUT, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 66: // Disassembly just returns -1 for this opcode, so map it to ZZZZZZ
+		mapping = NoirMapping{"OP66_NOP", ZZZZZZ, 1};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 67:
+		mapping = NoirMapping{"FREEZECURSOR", FREEZECURSOR, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 68:
+		mapping = NoirMapping{"GETINVLIMIT", GETINVLIMIT, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 69:
+		mapping = NoirMapping{"GHOST", GHOST, 3};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2]);
+		break;
+	case 70:
+		mapping = NoirMapping{"GLOBALVAR", GLOBALVAR, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 71:
+		error("You'll have to ask John to put this back in!");
+	case 72:
+		mapping = NoirMapping{"HAILSCENE", HAILSCENE, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 73:
+		mapping = NoirMapping{"HASRESTARTED", HASRESTARTED, 0};
+		debug(7, "%s()", mapping.name);
+		break;
 	case 74:
 		mapping = NoirMapping{"HAVE", HAVE, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d)", mapping.name, pp[0]);
 		break;
+	case 75: // 0 parameters, returns icon of topic or held object
+		error("Unsupported libCode %d", libCode);
+	case 76: // 0 parameters, returns enum depending on a bitfield value on held object
+		error("Unsupported libCode %d", libCode);
 	case 77:
 		mapping = NoirMapping{"HIDEACTOR", HIDEACTOR, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d)", mapping.name, pp[0]);
 		break;
+	case 78:
+		mapping = NoirMapping{"HIDEBLOCK", HIDEBLOCK, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 79:
+		mapping = NoirMapping{"HIDEEFFECT", HIDEEFFECT, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 80:
+		mapping = NoirMapping{"HIDEPATH", HIDEPATH, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 81:
+		mapping = NoirMapping{"HIDEREFER", HIDEREFER, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 82: // hide poly type 6
+		error("Unsupported libCode %d hide_poly_type_6", libCode);
 	case 83:
 		mapping = NoirMapping{"HIDETAG", HIDETAG, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d)", mapping.name, pp[0]);
 		break;
-	case 86:
-		mapping = NoirMapping{"OP86", ZZZZZZ, 2};
+	case 84:
+		mapping = NoirMapping{"HOLD", HOLD, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 85:
+		mapping = NoirMapping{"HOOKSCENE", HOOKSCENE, 3};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2]);
+		break;
+	case 86: // 2 parameters
+		warning("TODO: Implement notebook_add_hyperlink");
+		mapping = NoirMapping{"NODEBOOKADDHYPERLINK", ZZZZZZ, 2};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+		break;
+	case 87:
+		mapping = NoirMapping{"IDLETIME", IDLETIME, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 88:
+		mapping = NoirMapping{"INSTANTSCROLL", INSTANTSCROLL, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 89:
+		mapping = NoirMapping{"INVENTORY", INVENTORY, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 90: // play anim based on item
+		error("Unsupported libCode %d", libCode);
+	case 91:
+		mapping = NoirMapping{"INWHICHINV", INWHICHINV, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 92:
+		mapping = NoirMapping{"KILLACTOR", KILLACTOR, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 93:
+		mapping = NoirMapping{"KILLGLOBALPROCESS", KILLGLOBALPROCESS, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
 		break;
 	case 94:
 		mapping = NoirMapping{"KILLPROCESS", KILLPROCESS, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
+	case 95:
+		mapping = NoirMapping{"LOCALVAR", LOCALVAR, 0};
+		debug(7, "%s()", mapping.name);
+		break;
 	case 96:
 		mapping = NoirMapping{"MOVECURSOR", MOVECURSOR, 2};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d, %d)", mapping.name, pp[0], pp[1]);
 		break;
+	case 97: // MoveTag with additional logic
+		error("Unsupported libCode %d MOVETAG variant", libCode);
+	case 98: // MoveTagTo with additional logic
+		error("Unsupported libCode %d MOVETAGTO variant", libCode);
 	case 99:
 		mapping = NoirMapping{"NEWSCENE", NEWSCENE, 3};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2]);
+		break;
+	case 100:
+		mapping = NoirMapping{"NOBLOCKING", NOBLOCKING, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 101:
+		mapping = NoirMapping{"NOPAUSE", NOPAUSE, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 102:
+		mapping = NoirMapping{"NOSCROLL", NOSCROLL, 4};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3]);
+		break;
+	case 103: // 0 parameters
+		error("Unsupported libCode %d open_notebook", libCode);
+	case 104: // 1 parameter
+		error("Unsupported libCode %d OFFSET variant", libCode);
+	case 105: // 0 parameters
+		error("Unsupported libCode %d INVENTORY4", libCode);
+	case 106: // 0 parameters
+		warning("TODO: Implement INVENTORY3");
+		mapping = NoirMapping{"INVENTORY3", ZZZZZZ, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 107:
+		mapping = NoirMapping{"OTHEROBJECT", OTHEROBJECT, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 108:
+		mapping = NoirMapping{"PAUSE", PAUSE, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 109:
+		mapping = NoirMapping{"OBJECTHELD", OBJECTHELD, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
 	case 110:
 		mapping = NoirMapping{"PLAY", PLAY, 2};
@@ -4407,20 +4753,176 @@ NoirMapping translateNoirLibCode(int libCode, int32 *pp) {
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3]);
 		break;
+	case 114:
+		mapping = NoirMapping{"POINTACTOR", POINTACTOR, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 115:
+		mapping = NoirMapping{"POINTTAG", POINTTAG, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 116:
+		mapping = NoirMapping{"POSTACTOR", POSTACTOR, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 117:
+		error("Unsupported libCode %d POSTPOLY", libCode);
+	case 118:
+		mapping = NoirMapping{"POSTGLOBALPROCESS", POSTGLOBALPROCESS, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 119:
+		mapping = NoirMapping{"POSTOBJECT", POSTOBJECT, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 120:
+		mapping = NoirMapping{"POSTPROCESS", POSTPROCESS, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
 	case 121:
 		mapping = NoirMapping{"POSTTAG", POSTTAG, 2};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
 		break;
+	case 122: // Something movie-related
+		error("Unsupported libCode %d, movie-related", libCode);
+	case 123:
+		mapping = NoirMapping{"PRINT", PRINT, 5};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4]);
+		break;
 	case 124:
+		mapping = NoirMapping{"PRINTCURSOR", PRINTCURSOR, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 125:
+		mapping = NoirMapping{"PRINTOBJ", PRINTOBJ, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 126:
 		mapping = NoirMapping{"PRINTTAG", PRINTTAG, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 127:
+		mapping = NoirMapping{"QUITGAME", QUITGAME, 0};
+		debug(7, "%s()", mapping.name);
 		break;
 	case 128:
 		mapping = NoirMapping{"RANDOM", RANDOM, 3};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d, %d, %d)", mapping.name, pp[0], pp[1], pp[2]);
+		break;
+	case 129:
+		mapping = NoirMapping{"RESETIDLETIME", RESETIDLETIME, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 130:
+		mapping = NoirMapping{"RESTARTGAME", RESTARTGAME, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 131:
+		mapping = NoirMapping{"RESTORESCENE", RESTORESCENE, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 132:
+		mapping = NoirMapping{"RESUMELASTGAME", RESUMELASTGAME, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 133:
+		mapping = NoirMapping{"RUNMODE", RUNMODE, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 134:
+		mapping = NoirMapping{"SAVESCENE", SAVESCENE, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 135:
+	case 221:
+	case 222:
+	case 223:
+		mapping = NoirMapping{"SAY", SAY, 2};
+		pp -= mapping.numArgs - 2;
+		debug(7, "%s_%2Xh(%d, %d)", mapping.name, libCode, pp[0], pp[1]);
+		break;
+	case 136:
+		mapping = NoirMapping{"SAYAT", SAYAT, 5};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4]);
+		break;
+	case 137:
+		mapping = NoirMapping{"SCREENXPOS", SCREENXPOS, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 138:
+		mapping = NoirMapping{"SCREENYPOS", SCREENYPOS, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 139: // new scroll with 1, 3 or 5 parameters
+		error("Unsupported libCode %d SCROLL variant", libCode);
+	case 140:
+		mapping = NoirMapping{"SCROLLPARAMETERS", SCROLLPARAMETERS, 7};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4], pp[5], pp[6]);
+		break;
+	case 141:
+		mapping = NoirMapping{"SENDACTOR", SENDACTOR, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 142:
+		mapping = NoirMapping{"SENDGLOBALPROCESS", SENDGLOBALPROCESS, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 143:
+		mapping = NoirMapping{"SENDOBJECT", SENDOBJECT, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 144:
+		mapping = NoirMapping{"SENDPROCESS", SENDPROCESS, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 145:
+		mapping = NoirMapping{"SENDTAG", SENDTAG, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 146: //calls function which is a nop
+		mapping = NoirMapping{"OP146_NOP", ZZZZZZ, 3};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2]);
+		break;
+	case 147:
+		mapping = NoirMapping{"SETINVLIMIT", SETINVLIMIT, 2};
+		pp -= mapping.numArgs - 2;
+		debug(7, "%s_%2Xh(%d, %d)", mapping.name, libCode, pp[0], pp[1]);
+		break;
+	case 148:
+		mapping = NoirMapping{"SETINVSIZE", SETINVSIZE, 7};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4], pp[5], pp[6]);
+		break;
+	case 149:
+		mapping = NoirMapping{"SETLANGUAGE", SETLANGUAGE, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 150: // 3 parameters, calls function calling GetEscEvents not changing state
+		mapping = NoirMapping{"OP150_NOP", ZZZZZZ, 3};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2]);
 		break;
 	case 151:
 		mapping = NoirMapping{"SETSYSTEMREEL", SETSYSTEMREEL, 2};
@@ -4437,8 +4939,27 @@ NoirMapping translateNoirLibCode(int libCode, int32 *pp) {
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d, 0x%08X)", mapping.name, pp[0], pp[1]);
 		break;
+	case 154:
+		mapping = NoirMapping{"SETVIEW", SETVIEW, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 155:
+		mapping = NoirMapping{"SHELL", SHELL, 0};
+		debug(7, "%s()", mapping.name);
+		break;
 	case 156:
 		mapping = NoirMapping{"SHOWACTOR", SHOWACTOR, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 157:
+		mapping = NoirMapping{"SHOWBLOCK", SHOWBLOCK, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 158:
+		mapping = NoirMapping{"SHOWEFFECT", SHOWEFFECT, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d)", mapping.name, pp[0]);
 		break;
@@ -4446,6 +4967,18 @@ NoirMapping translateNoirLibCode(int libCode, int32 *pp) {
 		mapping = NoirMapping{"SHOWMENU", SHOWMENU, 0};
 		debug(7, "%s()", mapping.name);
 		break;
+	case 160:
+		mapping = NoirMapping{"SHOWPATH", SHOWPATH, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 161:
+		mapping = NoirMapping{"SHOWREFER", SHOWREFER, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 162: // show poly type 6
+		error("Unsupported libCode %d show_poly_type_6", libCode);
 	case 163:
 		mapping = NoirMapping{"SHOWTAG", SHOWTAG, 1};
 		pp -= mapping.numArgs - 1;
@@ -4456,44 +4989,230 @@ NoirMapping translateNoirLibCode(int libCode, int32 *pp) {
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3]);
 		break;
+	case 165:
+		mapping = NoirMapping{"STANDTAG", STANDTAG, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 166:
+		mapping = NoirMapping{"STARTGLOBALPROCESS", STARTGLOBALPROCESS, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
 	case 167:
 		mapping = NoirMapping{"STARTPROCESS", STARTPROCESS, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
+	case 168:
+		mapping = NoirMapping{"STARTTIMER", STARTTIMER, 4};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3]);
+		break;
+	case 169: // 0 parameters, passes
+		error("Unsupported libCode %d audio-related", libCode);
+	case 170:
+		mapping = NoirMapping{"STOPSAMPLE", STOPSAMPLE, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 171:
+		mapping = NoirMapping{"STOPWALK", STOPWALK, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 172:
+		mapping = NoirMapping{"SUBTITLES", SUBTITLES, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 173:
+		mapping = NoirMapping{"SWALK", SWALK, 6};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4], pp[5]);
+		break;
+	case 174:
+		mapping = NoirMapping{"SWALKZ", SWALKZ, 7};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4], pp[5], pp[6]);
+		break;
 	case 175:
 		mapping = NoirMapping{"SYSTEMVAR", SYSTEMVAR, 0};
 		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	// These 4 are a fallthrough in the disassembly
+	// Assume they still have the same order for clarity of log output
+	case 176:
+		mapping = NoirMapping{"TAGTAGXPOS", TAGTAGXPOS, 0};
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 177:
+		mapping = NoirMapping{"TAGTAGYPOS", TAGTAGYPOS, 0};
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 178:
+		mapping = NoirMapping{"TAGWALKXPOS", TAGWALKXPOS, 0};
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 179:
+		mapping = NoirMapping{"TAGWALKYPOS", TAGWALKYPOS, 0};
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 180: // 2 parameters, talkorsay has been modified vor v3
+	case 218:
+	case 219:
+	case 220:
+		error("Unsupported libCode %d TALK with unsupported speech type", libCode);
+	case 181: // talkorsay has been modified vor v3
+		warning("TODO: Implement TalkOrSay v3");
+		mapping = NoirMapping{"TALKAT", TALKAT, 5};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4]);
+		break;
+	case 182:
+		mapping = NoirMapping{"TALKRGB", TALKRGB, 3};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2]);
 		break;
 	case 183:
 		mapping = NoirMapping{"TALKVIA", TALKVIA, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d)", mapping.name, pp[0]);
 		break;
+	case 184:
+		mapping = NoirMapping{"TEMPTAGFONT", TEMPTAGFONT, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 185:
+		mapping = NoirMapping{"TEMPTALKFONT", TEMPTALKFONT, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 186:
+		mapping = NoirMapping{"THISOBJECT", THISOBJECT, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 187:
+		mapping = NoirMapping{"THISTAG", THISTAG, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 188:
+		mapping = NoirMapping{"TIMER", TIMER, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 189:
+		mapping = NoirMapping{"TOPIC", TOPIC, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 190:
+		mapping = NoirMapping{"TOPPLAY", TOPPLAY, 4};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3]);
+		break;
+	case 191:
+		mapping = NoirMapping{"TOPWINDOW", TOPWINDOW, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d)", mapping.name, pp[0]);
+		break;
+	case 192:
+		mapping = NoirMapping{"UNDIMMUSIC", UNDIMMUSIC, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 193:
+		mapping = NoirMapping{"UNHOOKSCENE", UNHOOKSCENE, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 194:
+		mapping = NoirMapping{"WAITFRAME", WAITFRAME, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(%d, %d)", mapping.name, pp[0], pp[1]);
+		break;
+	case 195:
+		mapping = NoirMapping{"WAITKEY", WAITKEY, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 196:
+		mapping = NoirMapping{"WAITSCROLL", WAITSCROLL, 0};
+		debug(7, "%s()", mapping.name);
+		break;
 	case 197:
 		mapping = NoirMapping{"WAITTIME", WAITTIME, 2};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(%d, %d)", mapping.name, pp[0], pp[1]);
 		break;
+	case 198:
+		mapping = NoirMapping{"WALK", WALK, 5};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4]);
+		break;
+	case 199:
+		mapping = NoirMapping{"WALKED", WALKED, 3};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2]);
+		break;
+	case 200:
+		mapping = NoirMapping{"OP200_NOP", ZZZZZZ, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 201:
+		mapping = NoirMapping{"OP201_NOP", ZZZZZZ, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 202:
+		mapping = NoirMapping{"WALKINGACTOR", WALKINGACTOR, 1};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
+		break;
+	case 203:
+		mapping = NoirMapping{"WALKPOLY", WALKPOLY, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 204:
+		mapping = NoirMapping{"WALKTAG", WALKTAG, 2};
+		pp -= mapping.numArgs - 1;
+		debug(7, "%s(0x%08X, 0x%08X)", mapping.name, pp[0], pp[1]);
+		break;
+	case 205:
+		mapping = NoirMapping{"WALKXPOS", WALKXPOS, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 206:
+		mapping = NoirMapping{"WALKYPOS", WALKYPOS, 0};
+		debug(7, "%s()", mapping.name);
+		break;
 	case 207:
 		mapping = NoirMapping{"WHICHCD", WHICHCD, 0};
 		debug(7, "%s()", mapping.name);
 		break;
-	case 208:
+	case 208: // WhichInventory is implemented differently in v3, checking notebookstate
+		warning("TODO: Implement WHICHINVENTORY v3");
 		mapping = NoirMapping{"WHICHINVENTORY", WHICHINVENTORY, 0};
 		debug(7, "%s()", mapping.name);
 		break;
+	case 209:
+		mapping = NoirMapping{"ZZZZZZ", ZZZZZZ, 0};
+		debug(7, "%s()", mapping.name);
+		break;
 	case 210: // STUBBED
+		warning("TODO: Implement OP210");
 		mapping = NoirMapping{"OP210", ZZZZZZ, 8};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4], pp[5], pp[6], pp[7]);
 		break;
+	case 211: // 4 parameters
+		error("Unsupported libCode %d PLAYSEQUENCE", libCode);
 	case 212: // STUBBED
+		warning("TODO: Implement OP212");
 		mapping = NoirMapping{"OP212", ZZZZZZ, 8};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4], pp[5], pp[6], pp[7]);
 		break;
 	case 213: // STUBBED
+		warning("TODO: Implement OP213");
 		mapping = NoirMapping{"OP213", ZZZZZZ, 8};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", mapping.name, pp[0], pp[1], pp[2], pp[3], pp[4], pp[5], pp[6], pp[7]);
@@ -4503,21 +5222,42 @@ NoirMapping translateNoirLibCode(int libCode, int32 *pp) {
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
+	case 215: // this case produces "Unsupported library function" error,
+			  // followed by "You cant possibly get here", so map it to an invalid value
+		mapping = NoirMapping{"OP215_USUPPORTED", -1, 0};
+		debug(7, "%s()", mapping.name);
+		break;
+	case 216: // 2 parameters
+		mapping = NoirMapping{"OP216_NOP", ZZZZZZ, 2};
+		debug(7, "%s()", mapping.name);
+		break;
 	case 217:
 		mapping = NoirMapping{"VOICEOVER", VOICEOVER, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
-	case 225: // STUBBED
+	case 224: // 1 parameter, child function reads model data
+		error("Unsupported libCode %d", libCode);
+	case 111: // no hold frame
+	case 225: // hold frame
 		mapping = NoirMapping{"PLAYMOVIE", PLAYMOVIE, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
-	case 228: // STUBBED
+	case 226: // 1 parameter, waits until arg matches an spr related global
+		error("Unsupported libCode %d", libCode);
+	case 227: // 1 parameter, removes icon
+		error("Unsupported libCode %d remoce_conversation_icon", libCode);
+	case 228: // STUBBED, PCM related
+		warning("TODO: Implement OP228, PCM related");
 		mapping = NoirMapping{"OP228", ZZZZZZ, 1};
 		pp -= mapping.numArgs - 1;
 		debug(7, "%s(0x%08X)", mapping.name, pp[0]);
 		break;
+	case 229: // 0 parameters
+		error("Unsupported libCode %d close_notebook", libCode);
+	case 230: // 1 parameter, sets multiobject anim and z
+		error("Unsupported libCode %d", libCode);
 	default:
 		error("Unmapped libCode %d", libCode);
 	}
@@ -4840,7 +5580,8 @@ int CallLibraryRoutine(CORO_PARAM, int operand, int32 *pp, const INT_CONTEXT *pi
 
 	case DEC3D:
 		// Noir only
-		warning("TODO: Implement DEC3D");
+		pp -= 2;
+		Dec3D(pp[0], pp[1], pp[2]);
 		return -3;
 
 	case DECCONVW:
@@ -5333,7 +6074,7 @@ int CallLibraryRoutine(CORO_PARAM, int operand, int32 *pp, const INT_CONTEXT *pi
 
 	case PLAYSAMPLE:
 		// Common to DW1 / DW2 / Noir
-		if (TinselV2 || TinselV3) {
+		if (TinselV2) {
 			pp -= 3;			// 4 parameters
 			PlaySample(coroParam, pp[0], pp[1], pp[2], pp[3], pic->myEscape);
 			return -4;
@@ -5403,7 +6144,7 @@ int CallLibraryRoutine(CORO_PARAM, int operand, int32 *pp, const INT_CONTEXT *pi
 		}
 
 	case PRINTCURSOR:
-		// DW2 only
+		// DW2 / Noir only
 		PrintTag(pic->hPoly, pp[0], pic->idActor, true);
 		return -1;
 
@@ -5414,7 +6155,7 @@ int CallLibraryRoutine(CORO_PARAM, int operand, int32 *pp, const INT_CONTEXT *pi
 
 	case PRINTTAG:
 		// Common to DW1 / DW2 / Noir
-		PrintTag(pic->hPoly, pp[0], TinselV2 ? pic->idActor : 0,  TinselV3 ? true : false);
+		PrintTag(pic->hPoly, pp[0], TinselV2 ? pic->idActor : 0, false);
 		return -1;
 
 	case QUITGAME:
@@ -5635,6 +6376,12 @@ int CallLibraryRoutine(CORO_PARAM, int operand, int32 *pp, const INT_CONTEXT *pi
 		pp -= 3;			// 4 parameters
 		SetTimer(pp[0], pp[1], pp[2], pp[3]);
 		return -4;
+
+	case SETVIEW:
+		// Noir only
+		pp -= 1;
+		warning("TODO: Implement SETVIEW(0x%08X, %i)", pp[0], pp[1]);
+		return -2;
 
 	case SHELL:
 		// DW2 only

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,14 +15,14 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
 #include "common/config-manager.h"
 
 #include "trecision/actor.h"
+#include "trecision/animmanager.h"
 #include "trecision/defines.h"
 #include "trecision/dialog.h"
 #include "trecision/graphics.h"
@@ -300,19 +300,22 @@ void LogicManager::startCharacterAnimations() {
 		_vm->startCharacterAction(a186GUARDAPIAZZA, 0, 0, 0);
 	} else if (_vm->_curRoom == kRoom1A && _vm->_oldRoom == kRoom18 && _vm->_room[kRoom1A].isDone()) {
 		_vm->startCharacterAction(a1A5ENTRA, 0, 0, 0);
-		_vm->_animMgr->_animTab[aBKG1A]._flag |= SMKANIM_OFF1;
+		_vm->_animMgr->_animTab[aBKG1A].toggleAnimArea(1, false);
 	} else if (_vm->_curRoom == kRoom1D && _vm->_oldRoom == kRoom1B) {
 		const uint16 cellarAction = _vm->isObjectVisible(oDONNA1D) ? a1D1SCENDESCALE : a1D12SCENDESCALA;
 		_vm->startCharacterAction(cellarAction, 0, 1, 0);
-		_vm->_actor->_lim[0] = 60;
-		_vm->_actor->_lim[2] = 240;
-	} else if (_vm->_curRoom == kRoom1B && _vm->_oldRoom == kRoom18 && (_vm->_animMgr->_animTab[aBKG1B]._flag & SMKANIM_OFF1))
+		_vm->_actor->_area[0] = 60;
+		_vm->_actor->_area[2] = 240;
+	} else if (_vm->_curRoom == kRoom1B && _vm->_oldRoom == kRoom18 && _vm->_animMgr->_animTab[aBKG1B].isAnimAreaShown(1))
 		_vm->startCharacterAction(a1B12SCAPPATOPO, 0, 0, 0);
-	else if (_vm->_curRoom == kRoom2B && (_vm->_oldRoom == kRoom2A))
+	else if (_vm->_curRoom == kRoom2B && _vm->_oldRoom == kRoom2A)
 		_vm->startCharacterAction(a2B2ESCEPOZZO, 0, 2, 0);
-	else if (_vm->_curRoom == kRoom23A && (_vm->_oldRoom == kRoom21) && _vm->_room[kRoom23A].isDone())
-		_vm->startCharacterAction(aWALKIN, 0, 0, _vm->_room[kRoom23A].isDone() ? 0 : 361);
-	else if (_vm->_curRoom == kRoom33 && _vm->_oldRoom == kRoom32) {
+	else if (_vm->_curRoom == kRoom23A && _vm->_oldRoom == kRoom21) {
+		if (_vm->_room[kRoom23A].isDone())
+			_vm->startCharacterAction(aWALKIN, 0, 0, 0);
+		else
+			_vm->_flagShowCharacter = false;
+	} else if (_vm->_curRoom == kRoom33 && _vm->_oldRoom == kRoom32) {
 		const uint16 roofAction = _vm->isObjectVisible(oBRUCIATURA33) ? a3311SALESCALE : a3313CHIUDEBOTOLA;
 		_vm->startCharacterAction(roofAction, 0, 0, 0);
 	} else if (_vm->_curRoom == kRoom54 && (_vm->_oldRoom == kRoom53)) {
@@ -375,57 +378,51 @@ bool LogicManager::startPlayDialog() {
 	return dialogHandled;
 }
 
+void LogicManager::handleChangeRoomObjects() {
+	switch (_vm->_curRoom) {
+	case kRoom2E:
+		if (_vm->isObjectVisible(oPULSANTEADS2D) || _vm->isObjectVisible(oPULSANTEADA2D)) {
+			const bool flag = _vm->isObjectVisible(oPULSANTEADS2D);
+			_vm->_animMgr->_animTab[aBKG2E].toggleAnimArea(1, !flag);
+			_vm->setObjectVisible(oCAMPO2E, !flag);
+			_vm->setObjectVisible(oCARTELLOA2E, !flag);
+			_vm->setObjectVisible(oCARTELLOS2E, flag);
+		}
+		break;
+	case kRoom2C:
+		if (_vm->isObjectVisible(oPULSANTEACS2D) || _vm->isObjectVisible(oPULSANTEACA2D)) {
+			const bool flag = _vm->isObjectVisible(oPULSANTEACS2D);
+			_vm->_animMgr->_animTab[aBKG2C].toggleAnimArea(1, !flag);
+			_vm->setObjectVisible(oCAMPO2C, !flag);
+			_vm->setObjectVisible(oCARTELLOA2C, !flag);
+			_vm->setObjectVisible(oCARTELLOS2C, flag);
+		}
+		break;
+	case kRoom28:
+		if (_vm->isObjectVisible(oPULSANTEBBS2D) || _vm->isObjectVisible(oPULSANTEBBA2D)) {
+			const bool flag = _vm->isObjectVisible(oPULSANTEBBS2D);
+			_vm->_animMgr->_animTab[aBKG28].toggleAnimArea(2, !flag);
+			_vm->setObjectAnim(oCESPUGLIO28, flag ? a283 : a282);
+			_vm->setObjectVisible(oSERPENTETM28, flag);
+			_vm->setObjectVisible(oSERPENTEAM28, flag);
+		}
+
+		if (_vm->isObjectVisible(oPULSANTEABS2D) || _vm->isObjectVisible(oPULSANTEABA2D)) {
+			const bool flag = _vm->isObjectVisible(oPULSANTEABS2D);
+			_vm->_animMgr->_animTab[aBKG28].toggleAnimArea(1, !flag);
+			_vm->_animMgr->_animTab[aBKG28].toggleAnimArea(3, !flag);
+			_vm->setObjectVisible(oCAMPO28, !flag);
+			_vm->setObjectVisible(oCARTELLOA28, !flag);
+			_vm->setObjectVisible(oCARTELLOS28, flag);
+			if (flag)
+				_vm->read3D("282.3d");
+		}
+		break;
+	}
+}
+
 void LogicManager::endChangeRoom() {
-	//	Specific management of magnetic fields
-	if (_vm->_curRoom == kRoom2E && _vm->isObjectVisible(oPULSANTEADS2D)) {
-		_vm->_animMgr->_animTab[aBKG2E]._flag |= SMKANIM_OFF1;
-		_vm->setObjectVisible(oCAMPO2E, false);
-		_vm->setObjectVisible(oCARTELLOA2E, false);
-		_vm->setObjectVisible(oCARTELLOS2E, true);
-	} else if (_vm->_curRoom == kRoom2E && _vm->isObjectVisible(oPULSANTEADA2D)) {
-		_vm->_animMgr->_animTab[aBKG2E]._flag &= ~SMKANIM_OFF1;
-		_vm->setObjectVisible(oCAMPO2E, true);
-		_vm->setObjectVisible(oCARTELLOA2E, true);
-		_vm->setObjectVisible(oCARTELLOS2E, false);
-	}
-
-	if (_vm->_curRoom == kRoom2C && _vm->isObjectVisible(oPULSANTEACS2D)) {
-		_vm->_animMgr->_animTab[aBKG2C]._flag |= SMKANIM_OFF1;
-		_vm->setObjectVisible(oCAMPO2C, false);
-		_vm->setObjectVisible(oCARTELLOA2C, false);
-		_vm->setObjectVisible(oCARTELLOS2C, true);
-	} else if (_vm->_curRoom == kRoom2C && _vm->isObjectVisible(oPULSANTEACA2D)) {
-		_vm->_animMgr->_animTab[aBKG2C]._flag &= ~SMKANIM_OFF1;
-		_vm->setObjectVisible(oCAMPO2C, true);
-		_vm->setObjectVisible(oCARTELLOS2C, false);
-		_vm->setObjectVisible(oCARTELLOA2C, true);
-	}
-
-	if (_vm->_curRoom == kRoom28 && _vm->isObjectVisible(oPULSANTEBBS2D)) {
-		_vm->_animMgr->_animTab[aBKG28]._flag |= SMKANIM_OFF2;
-		_vm->setObjectAnim(oCESPUGLIO28, a283);
-		_vm->setObjectVisible(oSERPENTETM28, true);
-		_vm->setObjectVisible(oSERPENTEAM28, true);
-	} else if (_vm->_curRoom == kRoom28 && _vm->isObjectVisible(oPULSANTEBBA2D)) {
-		_vm->_animMgr->_animTab[aBKG28]._flag &= ~SMKANIM_OFF2;
-		_vm->setObjectAnim(oCESPUGLIO28, a282);
-		_vm->setObjectVisible(oSERPENTETM28, false);
-		_vm->setObjectVisible(oSERPENTEAM28, false);
-	}
-
-	if (_vm->_curRoom == kRoom28 && _vm->isObjectVisible(oPULSANTEABS2D)) {
-		_vm->_animMgr->_animTab[aBKG28]._flag |= (SMKANIM_OFF1 | SMKANIM_OFF3);
-		_vm->setObjectVisible(oCAMPO28, false);
-		_vm->setObjectVisible(oCARTELLOA28, false);
-		_vm->setObjectVisible(oCARTELLOS28, true);
-		_vm->read3D("282.3d");
-	} else if (_vm->_curRoom == kRoom28 && _vm->isObjectVisible(oPULSANTEABA2D)) {
-		_vm->_animMgr->_animTab[aBKG28]._flag &= ~(SMKANIM_OFF1 | SMKANIM_OFF3);
-		_vm->setObjectVisible(oCAMPO28, true);
-		_vm->setObjectVisible(oCARTELLOA28, true);
-		_vm->setObjectVisible(oCARTELLOS28, false);
-	}
-	// End of specific management for the magnetic fields
+	handleChangeRoomObjects();
 
 	// Actions
 	startCharacterAnimations();
@@ -467,6 +464,9 @@ void LogicManager::endChangeRoom() {
 	} else if (_vm->_curRoom == kRoom13CU) {
 		const uint16 closeupObjectId = _vm->isObjectVisible(oLETTERA13) ? oLETTERA13 : oPENPADA13;
 		_vm->_textMgr->characterSay(_vm->_obj[closeupObjectId]._examine);
+	} else if (_vm->_curRoom == kRoom23A && _vm->_oldRoom == kRoom21 && !_vm->_room[kRoom23A].isDone()) {
+		_vm->_flagShowCharacter = true;
+		_vm->startCharacterAction(aWALKIN, 0, 0, 361);
 	} else if (_vm->_curRoom == kRoom24 && !_vm->_room[kRoom24].isDone())
 		_vm->_textMgr->characterSay(381);
 	else if (_vm->_curRoom == kRoom2G && !_vm->_room[kRoom2G].isDone())
@@ -1169,14 +1169,14 @@ void LogicManager::useInventoryWithScreen() {
 		break;
 
 	case kItemRatOnSkate:
-		if ((_vm->_useWith[WITH] == oDONNA1D) && (_vm->_mousePos.x >= _vm->_obj[oDONNA1D]._lim.left && (_vm->_mousePos.x >= _vm->_obj[oDONNA1D]._lim.top + TOP) && (_vm->_mousePos.x <= _vm->_obj[oDONNA1D]._lim.right) && (_vm->_mousePos.y <= _vm->_obj[oDONNA1D]._lim.bottom + TOP))) {
+		if ((_vm->_useWith[WITH] == oDONNA1D) && (_vm->_mousePos.x >= _vm->_obj[oDONNA1D]._area.left && (_vm->_mousePos.x >= _vm->_obj[oDONNA1D]._area.top + TOP) && (_vm->_mousePos.x <= _vm->_obj[oDONNA1D]._area.right) && (_vm->_mousePos.y <= _vm->_obj[oDONNA1D]._area.bottom + TOP))) {
+			_vm->_animMgr->_animTab[aBKG1D].toggleAnimArea(1, false);
 			_vm->_dialogMgr->playDialog(dF1D1);
 			updateInventory = false;
 			_vm->removeIcon(kItemRatOnSkate);
 			_vm->read3D("1d2.3d"); // after skate
 			_vm->setObjectVisible(oDONNA1D, false);
 			_vm->_room[_vm->_curRoom].setExtra(true);
-			_vm->_animMgr->_animTab[aBKG1D]._flag |= SMKANIM_OFF1;
 			printSentence = false;
 		}
 		break;
@@ -1351,10 +1351,10 @@ void LogicManager::useInventoryWithScreen() {
 
 	case kItemMicrowaveGun:
 		if (_vm->_useWith[WITH] == oDINOSAURO2E) {
+			_vm->_animMgr->_animTab[aBKG2E].toggleAnimArea(2, false);
 			_vm->_dialogMgr->playDialog(dF2E2);
 			_vm->setObjectVisible(oDINOSAURO2E, false);
 			_vm->setObjectAnim(oCATWALKA2E, a2E2PRIMAPALLONTANANDO);
-			_vm->_animMgr->_animTab[aBKG2E]._flag |= SMKANIM_OFF2;
 			printSentence = false;
 		}
 		break;
@@ -1649,7 +1649,7 @@ void LogicManager::useInventoryWithScreen() {
 	case kItemMatchInPacket:
 		if (_vm->_useWith[WITH] == oTORCHS48) {
 			_vm->_scheduler->doEvent(MC_CHARACTER, ME_CHARACTERACTION, MP_DEFAULT, a4812, 0, 0, _vm->_useWith[WITH]);
-			_vm->_obj[oTORCHS48]._lim = Common::Rect(0, 0, 0, 0);
+			_vm->_obj[oTORCHS48]._area = Common::Rect(0, 0, 0, 0);
 			printSentence = false;
 		}
 		break;
@@ -1670,7 +1670,7 @@ void LogicManager::useInventoryWithScreen() {
 			_vm->setObjectVisible(oSANGUE4P, true);
 			_vm->_room[kRoom4P].setExtra(true);
 			_vm->read3D("4p2.3d"); // after werewolf
-			_vm->_animMgr->_animTab[aBKG4P]._flag |= SMKANIM_OFF1;
+			_vm->_animMgr->_animTab[aBKG4P].toggleAnimArea(1, false);
 			_vm->_dialogMgr->playDialog(dF4P2);
 			printSentence = false;
 		} else if (_vm->_useWith[WITH] == oLICANTROPO4P) {
@@ -1904,9 +1904,9 @@ bool LogicManager::useScreenWithScreen() {
 	switch (_vm->_useWith[USED]) {
 	case oRAMPINO21:
 		if (_vm->_useWith[WITH] == oTUBO21) {
+			_vm->_animMgr->_animTab[aBKG21].toggleAnimArea(1, true);
 			_vm->_dialogMgr->playDialog(dF211);
 			_vm->_logicMgr->setupAltRoom(kRoom21, true);
-			_vm->_animMgr->_animTab[aBKG21]._flag &= ~SMKANIM_OFF1;
 			_vm->setObjectVisible(oRAMPINO21, false);
 			_vm->setObjectVisible(oTUBO21, false);
 			_vm->setObjectVisible(oCHAIN21, true);
@@ -2609,6 +2609,7 @@ bool LogicManager::mouseOperate(uint16 curObj) {
 
 	case oPANELM2G:
 		if (!_vm->_obj[oPANELM2G].isFlagExtra()) {
+			_vm->_animMgr->_animTab[aBKG2G].toggleAnimArea(1, false);
 			_vm->_dialogMgr->playDialog(dF2G1);
 			_vm->setObjectVisible(oCOPERCHIO2G, false);
 			_vm->setObjectVisible(oSERBATOIOC2G, false);
@@ -2617,7 +2618,6 @@ bool LogicManager::mouseOperate(uint16 curObj) {
 			_vm->setObjectVisible(oSERBATOIOA2G, true);
 			_vm->setObjectVisible(oPANNELLOE2G, true);
 			_vm->_obj[oPANELM2G].setFlagExtra(true);
-			_vm->_animMgr->_animTab[aBKG2G]._flag |= SMKANIM_OFF1;
 			retVal = false;
 		} else
 			retVal = true;
@@ -2627,7 +2627,7 @@ bool LogicManager::mouseOperate(uint16 curObj) {
 	case oWHEELS2C:
 		if (!_vm->isObjectVisible(od2CTO2D)) {
 			_vm->_animMgr->smkStop(kSmackerBackground);
-			_vm->_animMgr->_animTab[aBKG2C]._flag |= SMKANIM_OFF1;
+			_vm->_animMgr->_animTab[aBKG2C].toggleAnimArea(1, false);
 			_vm->setObjectVisible(oBASEWHEELS2C, true);
 			_vm->setObjectVisible(omWHEELS2C, true);
 			_vm->setObjectVisible(oPULSANTE2C, true);
@@ -2653,10 +2653,10 @@ bool LogicManager::mouseOperate(uint16 curObj) {
 
 	case oCATWALKA2E:
 		if (!_vm->_obj[oCATWALKA2E].isFlagExtra()) {
+			_vm->_animMgr->_animTab[aBKG2E].toggleAnimArea(2, true);
 			_vm->_dialogMgr->playDialog(dF2E1);
 			_vm->setObjectVisible(oDINOSAURO2E, true);
 			_vm->_obj[oCATWALKA2E].setFlagExtra(true);
-			_vm->_animMgr->_animTab[aBKG2E]._flag &= ~SMKANIM_OFF2;
 			retVal = false;
 		} else if (_vm->_obj[curObj]._anim) {
 			_vm->_scheduler->doEvent(MC_CHARACTER, ME_CHARACTERACTION, MP_DEFAULT, _vm->_obj[curObj]._anim, 0, 0, curObj);
@@ -2729,7 +2729,7 @@ bool LogicManager::mouseOperate(uint16 curObj) {
 		_vm->_obj[oASCENSORE35].setFlagRoomOut(true);
 		_vm->setObjectAnim(oASCENSORE35, a3514ENTRAASCENSORE);
 
-		_vm->_animMgr->_animTab[aBKG35]._flag |= SMKANIM_OFF1;
+		_vm->_animMgr->_animTab[aBKG35].toggleAnimArea(1, false);
 		_vm->_dialogMgr->playDialog(dF351);
 		_vm->_pathFind->setPosition(7);
 		break;
@@ -2778,8 +2778,8 @@ bool LogicManager::mouseOperate(uint16 curObj) {
 				_vm->setObjectAnim(oDOORMC36, a3610APREPORTA);
 				_vm->setObjectAnim(oSCAFFALE36, a3615APRENDESCAFFALE);
 
-				_vm->_animMgr->_animTab[aBKG36]._flag |= SMKANIM_OFF2;
-				_vm->_animMgr->_animTab[aBKG36]._flag |= SMKANIM_OFF3;
+				_vm->_animMgr->_animTab[aBKG36].toggleAnimArea(2, false);
+				_vm->_animMgr->_animTab[aBKG36].toggleAnimArea(3, false);
 				_vm->setObjectVisible(oSCANNERLA36, false);
 				_vm->setObjectVisible(oSCANNERLS36, true);
 				_vm->setObjectVisible(oSCANNERMA36, false);
@@ -3619,7 +3619,7 @@ void LogicManager::handleClickSphinxPuzzle() {
 				_vm->_scheduler->mouseExamine(_vm->_curObj);
 				return;
 			}
-			_vm->_animMgr->_animTab[aBKG2C]._flag &= ~SMKANIM_OFF1;
+			_vm->_animMgr->_animTab[aBKG2C].toggleAnimArea(1, true);
 			_vm->setObjectVisible(oBASEWHEELS2C, false);
 			_vm->setObjectVisible(omWHEELS2C, false);
 			_vm->setObjectVisible(oPULSANTE2C, false);
@@ -3717,9 +3717,9 @@ void LogicManager::handleClickGameArea() {
 	int pmousey = _vm->_curMessage->_u16Param2;
 	if (!_vm->_logicMgr->mouseClick(_vm->_curObj)) {
 		if (_vm->checkMask(_vm->_mousePos)) {
-			if ((_vm->_obj[_vm->_curObj]._lim.right - _vm->_obj[_vm->_curObj]._lim.left) < MAXX / 7) {
-				pmousex = (_vm->_obj[_vm->_curObj]._lim.left + _vm->_obj[_vm->_curObj]._lim.right) / 2;
-				pmousey = ((_vm->_obj[_vm->_curObj]._lim.top + _vm->_obj[_vm->_curObj]._lim.bottom) / 2) + TOP;
+			if ((_vm->_obj[_vm->_curObj]._area.right - _vm->_obj[_vm->_curObj]._area.left) < MAXX / 7) {
+				pmousex = (_vm->_obj[_vm->_curObj]._area.left + _vm->_obj[_vm->_curObj]._area.right) / 2;
+				pmousey = ((_vm->_obj[_vm->_curObj]._area.top + _vm->_obj[_vm->_curObj]._area.bottom) / 2) + TOP;
 			}
 		}
 		_vm->_pathFind->whereIs(pmousex, pmousey);
@@ -3898,7 +3898,7 @@ void LogicManager::doSystemChangeRoom(uint16 room) {
 	}
 
 	if (_vm->_curRoom == kRoom12 && _vm->_oldRoom == kRoom11)
-		_vm->_animMgr->_animTab[aBKG11]._flag |= SMKANIM_OFF1;
+		_vm->_animMgr->_animTab[aBKG11].toggleAnimArea(1, false);
 	else if (_vm->_oldRoom == kRoom2BL || _vm->_oldRoom == kRoom36F)
 		_vm->_oldRoom = _vm->_curRoom;
 	else if (_vm->_curRoom == kRoomControlPanel)

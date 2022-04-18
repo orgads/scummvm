@@ -1,13 +1,13 @@
-/* ResidualVM - A 3D game interpreter
+/* ScummVM - Graphic Adventure Engine
  *
- * ResidualVM is the legal property of its developers, whose names
+ * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -40,8 +39,9 @@
 #include "engines/grim/savegame.h"
 #include "engines/grim/bitmap.h"
 #include "engines/grim/grim.h"
-
 #include "engines/grim/model.h"
+
+#include "graphics/surface.h"
 
 namespace Grim {
 
@@ -109,13 +109,6 @@ void GfxBase::drawMesh(const Mesh *mesh) {
 		mesh->_faces[i].draw(mesh);
 }
 
-#ifndef USE_OPENGL_GAME
-// Allow CreateGfxOpenGL to be called even if OpenGL isn't included
-GfxBase *CreateGfxOpenGL() {
-	return CreateGfxTinyGL();
-}
-#endif // USE_OPENGL_GAME
-
 Math::Matrix4 GfxBase::makeLookMatrix(const Math::Vector3d& pos, const Math::Vector3d& interest, const Math::Vector3d& up) {
 	Math::Vector3d f = (interest - pos).getNormalized();
 	Math::Vector3d u = up.getNormalized();
@@ -160,7 +153,6 @@ Math::Matrix4 GfxBase::makeProjMatrix(float fov, float nclip, float fclip) {
 	return proj;
 }
 
-
 void GfxBase::createSpecialtyTexture(uint id, const uint8 *data, int width, int height) {
 	if (id >= _numSpecialtyTextures)
 		return;
@@ -175,42 +167,49 @@ void GfxBase::createSpecialtyTexture(uint id, const uint8 *data, int width, int 
 	createTexture(&_specialtyTextures[id], data, nullptr, true);
 }
 
-Bitmap *GfxBase::createScreenshotBitmap(const Graphics::PixelBuffer src, int w, int h, bool flipOrientation) {
-		Graphics::PixelBuffer buffer = Graphics::PixelBuffer::createBuffer<565>(w * h, DisposeAfterUse::YES);
+Bitmap *GfxBase::createScreenshotBitmap(Graphics::Surface *src, int w, int h, bool flipOrientation) {
+	Graphics::Surface buffer;
+	buffer.create(w, h, Graphics::PixelFormat(2, 5, 6, 5, 0, 11, 5, 0, 0));
+	Common::Rect rec(0, 0, buffer.w, buffer.h);
+	buffer.fillRect(rec, 0);
 
-		int i1 = (_screenWidth * w - 1) / _screenWidth + 1;
-		int j1 = (_screenHeight * h - 1) / _screenHeight + 1;
+	int i1 = (_screenWidth * w - 1) / _screenWidth + 1;
+	int j1 = (_screenHeight * h - 1) / _screenHeight + 1;
 
-		for (int j = 0; j < j1; j++) {
-				for (int i = 0; i < i1; i++) {
-						int x0 = i * _screenWidth / w;
-						int x1 = ((i + 1) * _screenWidth - 1) / w + 1;
-						int y0 = j * _screenHeight / h;
-						int y1 = ((j + 1) * _screenHeight - 1) / h + 1;
-						uint16 sr = 0, sg = 0, sb = 0;
-						for (int y = y0; y < y1; y++) {
-								for (int x = x0; x < x1; x++) {
-										uint8 r, g, b;
-										src.getRGBAt(y * _screenWidth + x, r, g, b);
-										sr += r;
-										sg += g;
-										sb += b;
-								}
-						}
-						sr /= (x1 - x0) * (y1 - y0);
-						sg /= (x1 - x0) * (y1 - y0);
-						sb /= (x1 - x0) * (y1 - y0);
-						if (g_grim->getGameType() == GType_MONKEY4) {
-								buffer.setPixelAt( (flipOrientation ? j : (h - j - 1) ) * w + i, sr, sg, sb);
-						} else {
-								uint32 color = (sr + sg + sb) / 3;
-								buffer.setPixelAt( (flipOrientation ? j : (h - j - 1) ) * w + i, color, color, color);
-						}
+	for (int j = 0; j < j1; j++) {
+		for (int i = 0; i < i1; i++) {
+			int x0 = i * _screenWidth / w;
+			int x1 = ((i + 1) * _screenWidth - 1) / w + 1;
+			int y0 = j * _screenHeight / h;
+			int y1 = ((j + 1) * _screenHeight - 1) / h + 1;
+			uint16 sr = 0, sg = 0, sb = 0;
+			for (int y = y0; y < y1; y++) {
+				for (int x = x0; x < x1; x++) {
+					uint8 r, g, b;
+					uint32 pixel = src->getPixel(x, y);
+					src->format.colorToRGB(pixel, r, g, b);
+					sr += r;
+					sg += g;
+					sb += b;
 				}
+			}
+			uint32 pixel;
+			sr /= (x1 - x0) * (y1 - y0);
+			sg /= (x1 - x0) * (y1 - y0);
+			sb /= (x1 - x0) * (y1 - y0);
+			if (g_grim->getGameType() == GType_MONKEY4) {
+				pixel = buffer.format.RGBToColor(sr, sg, sb);
+			} else {
+				uint32 color = (sr + sg + sb) / 3;
+				pixel = buffer.format.RGBToColor(color, color, color);
+			}
+			buffer.setPixel(i, (flipOrientation ? j : (h - j - 1)), pixel);
 		}
+	}
 
-		Bitmap *screenshot = new Bitmap(buffer, w, h, "screenshot");
-		return screenshot;
+	Bitmap *screenshot = new Bitmap(buffer, w, h, "screenshot");
+	buffer.free();
+	return screenshot;
 }
 
 void GfxBase::makeScreenTextures() {

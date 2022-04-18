@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -30,6 +29,7 @@
 #include "saga/render.h"
 
 #include "graphics/sjis.h"
+#include "common/unicode-bidi.h"
 
 namespace Saga {
 
@@ -216,7 +216,7 @@ void DefaultFont::textDrawRect(FontId fontId, const char *text, const Common::Re
 
 	for (;;) {
 		foundPointer = strchr(searchPointer, ' ');
-		if (foundPointer == NULL) {
+		if (foundPointer == nullptr) {
 			// Ran to the end of the buffer
 			len = endPointer - measurePointer;
 		} else {
@@ -267,7 +267,7 @@ void DefaultFont::textDrawRect(FontId fontId, const char *text, const Common::Re
 			w_total += w;
 			len_total += len;
 			wc++;
-			if (foundPointer == NULL) {
+			if (foundPointer == nullptr) {
 				// Since word hit NULL but fit, we are done
 				textPoint2.x = textPoint.x - (w_total / 2);
 				textPoint2.y = textPoint.y;
@@ -281,7 +281,7 @@ void DefaultFont::textDrawRect(FontId fontId, const char *text, const Common::Re
 }
 
 int DefaultFont::translateChar(int charId) {
-	if (charId <= 127 || (_vm->getLanguage() == Common::RU_RUS && charId <= 255))
+	if (charId <= 127 || (_vm->getLanguage() == Common::RU_RUS && charId <= 255) || (_vm->getLanguage() == Common::HE_ISR && charId <= 255))
 		return charId;					// normal character
 	else
 		return _charMap[charId - 128];	// extended character
@@ -327,7 +327,6 @@ int DefaultFont::getHeight(FontId fontId, const char *text, int width, FontEffec
 	int h;
 	int wc;
 	int w_total;
-	int len_total;
 	Common::Point textPoint;
 
 	textLength = getStringLength(text);
@@ -344,7 +343,6 @@ int DefaultFont::getHeight(FontId fontId, const char *text, int width, FontEffec
 
 	// String won't fit on one line
 	w_total = 0;
-	len_total = 0;
 	wc = 0;
 
 	measurePointer = text;
@@ -353,7 +351,7 @@ int DefaultFont::getHeight(FontId fontId, const char *text, int width, FontEffec
 
 	for (;;) {
 		foundPointer = strchr(searchPointer, ' ');
-		if (foundPointer == NULL) {
+		if (foundPointer == nullptr) {
 			// Ran to the end of the buffer
 			len = endPointer - measurePointer;
 		} else {
@@ -371,20 +369,18 @@ int DefaultFont::getHeight(FontId fontId, const char *text, int width, FontEffec
 			}
 			// Wrap what we've got and restart
 			textPoint.y += h + TEXT_LINESPACING;
-			if (foundPointer == NULL) {
+			if (foundPointer == nullptr) {
 				// Since word hit NULL but fit, we are done
 				return textPoint.y + h;
 			}
 			w_total = 0;
-			len_total = 0;
 			wc = 0;
 			measurePointer = searchPointer;
 		} else {
 			// Word will fit ok
 			w_total += w;
-			len_total += len;
 			wc++;
-			if (foundPointer == NULL) {
+			if (foundPointer == nullptr) {
 				// Since word hit NULL but fit, we are done
 				return textPoint.y + h;
 			}
@@ -398,6 +394,11 @@ void DefaultFont::draw(FontId fontId, const char *text, size_t count, const Comm
 
 	Point offsetPoint(point);
 	FontData *font = getFont(fontId);
+
+	if (_vm->getLanguage() == Common::HE_ISR) {
+		Common::String textstr(text, count);
+		text = Common::convertBiDiString(textstr, Common::kWindows1255).c_str();
+	}
 
 	if (flags & kFontOutline) {
 		offsetPoint.x--;
@@ -541,7 +542,7 @@ void DefaultFont::loadFont(FontData *font, uint32 fontResourceId) {
 	debug(1, "Font::loadFont(): Reading fontResourceId %d...", fontResourceId);
 
 	fontContext = _vm->_resource->getContext(GAME_RESOURCEFILE);
-	if (fontContext == NULL) {
+	if (fontContext == nullptr) {
 		error("DefaultFont::Font() resource context not found");
 	}
 
@@ -696,7 +697,7 @@ void DefaultFont::createOutline(FontData *font) {
 	}
 }
 
-SJISFont::SJISFont(SagaEngine *vm) : Font(vm), _font(0) {
+SJISFont::SJISFont(SagaEngine *vm) : Font(vm), _font(nullptr) {
 	_font = Graphics::FontSJIS::createFont(vm->getPlatform());
 	assert(_font);
 }
@@ -710,7 +711,7 @@ void SJISFont::textDrawRect(FontId fontId, const char *text, const Common::Rect 
 	int curW = 0;
 	int numChar = 0;
 	const char *pos = text;
-	const char *last = 0;
+	const char *last = nullptr;
 	int checkWidth = (rect.width() - 16) & ~7;
 
 	for (uint16 c = fetchChar(pos); c; c = fetchChar(pos)) {
@@ -727,7 +728,7 @@ void SJISFont::textDrawRect(FontId fontId, const char *text, const Common::Rect 
 			if (c == (uint16)'\r' || c == (uint16)'\n')
 				last++;
 			pos = text = last;
-			last = 0;
+			last = nullptr;
 			curW = 0;
 		} else {
 			numChar++;

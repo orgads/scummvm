@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -29,7 +28,7 @@
 
 #include "scumm/actor.h"
 #include "scumm/charset.h"
-#include "scumm/imuse_digi/dimuse.h"
+#include "scumm/imuse_digi/dimuse_engine.h"
 #include "scumm/imuse/imuse.h"
 #include "scumm/players/player_towns.h"
 #include "scumm/he/intern_he.h"
@@ -68,7 +67,7 @@ struct SaveInfoSection {
 
 #define SaveInfoSectionSize (4+4+4 + 4+4 + 4+2)
 
-#define CURRENT_VER 100
+#define CURRENT_VER 104
 #define INFOSECTION_VERSION 2
 
 #pragma mark -
@@ -126,12 +125,17 @@ bool ScummEngine::canSaveGameStateCurrently() {
 	if (_game.heversion >= 62)
 		return false;
 
+#ifdef ENABLE_SCUMM_7_8
 	// COMI always disables saving/loading (to tell the truth:
 	// the main menu) via its scripts, thus we need to make an
 	// exception here. This the same forced overwriting of the
 	// script decisions as in ScummEngine::processKeyboard.
+	// Also, disable saving when a SAN video is playing.
+	if (_game.version >= 7 && ((ScummEngine_v7 *)this)->isSmushActive())
+		return false;
 	if (_game.id == GID_CMI)
 		return true;
+#endif
 
 	// SCUMM v4+ doesn't allow saving in room 0 or if
 	// VAR(VAR_MAINMENU_KEY) to set to zero.
@@ -186,7 +190,7 @@ bool ScummEngine::saveState(Common::WriteStream *out, bool writeHeader) {
 #endif
 	saveInfos(out);
 
-	Common::Serializer ser(0, out);
+	Common::Serializer ser(nullptr, out);
 	ser.setVersion(CURRENT_VER);
 	saveLoadWithSerializer(ser);
 	return true;
@@ -225,7 +229,7 @@ void ScummEngine_v4::prepareSavegame() {
 
 	// free memory of the last prepared savegame
 	delete _savePreparedSavegame;
-	_savePreparedSavegame = NULL;
+	_savePreparedSavegame = nullptr;
 
 	// store headerless savegame in a compressed memory stream
 	memStream = new Common::MemoryWriteStreamDynamic(DisposeAfterUse::NO);
@@ -252,7 +256,7 @@ bool ScummEngine_v4::savePreparedSavegame(int slot, char *desc) {
 	SaveGameHeader hdr;
 	uint32 nread, nwritten;
 
-	out = 0;
+	out = nullptr;
 	success = true;
 
 	// check if savegame was successfully stored in memory
@@ -410,7 +414,6 @@ bool ScummEngine::loadState(int slot, bool compat, Common::String &filename) {
 #ifdef ENABLE_SCUMM_7_8
 	if (_imuseDigital) {
 		_imuseDigital->stopAllSounds();
-		_imuseDigital->resetState();
 	}
 #endif
 
@@ -442,7 +445,7 @@ bool ScummEngine::loadState(int slot, bool compat, Common::String &filename) {
 	//
 	// Now do the actual loading
 	//
-	Common::Serializer ser(in, 0);
+	Common::Serializer ser(in, nullptr);
 	ser.setVersion(hdr.ver);
 	saveLoadWithSerializer(ser);
 	delete in;
@@ -559,7 +562,7 @@ bool ScummEngine::loadState(int slot, bool compat, Common::String &filename) {
 		_macScreen->fillRect(Common::Rect(_macScreen->w, _macScreen->h), 0);
 	clearTextSurface();
 
-	_lastCodePtr = NULL;
+	_lastCodePtr = nullptr;
 	_drawObjectQueNr = 0;
 	_verbMouseOver = 0;
 
@@ -584,12 +587,14 @@ bool ScummEngine::loadState(int slot, bool compat, Common::String &filename) {
 	//
 	// Fixes bug #3362: MANIACNES: Music Doesn't Start On Load Game
 	if (_game.platform == Common::kPlatformNES) {
-		runScript(5, 0, 0, 0);
+		runScript(5, 0, 0, nullptr);
 
 		if (VAR(224)) {
 			_sound->addSoundToQueue(VAR(224));
 		}
 	}
+
+	_sound->restoreAfterLoad();
 
 	return true;
 }
@@ -628,7 +633,7 @@ void ScummEngine::listSavegames(bool *marks, int num) {
 bool getSavegameName(Common::InSaveFile *in, Common::String &desc, int heversion);
 
 bool ScummEngine::getSavegameName(int slot, Common::String &desc) {
-	Common::InSaveFile *in = 0;
+	Common::InSaveFile *in = nullptr;
 	bool result = false;
 
 	desc.clear();
@@ -816,8 +821,8 @@ static void syncWithSerializer(Common::Serializer &s, ObjectData &od) {
 	s.syncAsByte(od.flags, VER(46));
 }
 
-static void syncWithSerializer(Common::Serializer &s, VerbSlot &vs, bool isISR) {
-	s.syncAsSint16LE(!isISR ? vs.curRect.left : vs.origLeft, VER(8));
+static void syncWithSerializer(Common::Serializer &s, VerbSlot &vs, bool isV7orISR) {
+	s.syncAsSint16LE(!isV7orISR ? vs.curRect.left : vs.origLeft, VER(8));
 	s.syncAsSint16LE(vs.curRect.top, VER(8));
 	s.syncAsSint16LE(vs.curRect.right, VER(8));
 	s.syncAsSint16LE(vs.curRect.bottom, VER(8));
@@ -839,15 +844,15 @@ static void syncWithSerializer(Common::Serializer &s, VerbSlot &vs, bool isISR) 
 	s.syncAsByte(vs.center, VER(8));
 	s.syncAsByte(vs.prep, VER(8));
 	s.syncAsUint16LE(vs.imgindex, VER(8));
-	if (isISR && s.isLoading() && s.getVersion() >= 8)
+	if (isV7orISR && s.isLoading() && s.getVersion() >= 8)
 		vs.curRect.left = vs.origLeft;
 }
 
-static void syncWithSerializerNonISR(Common::Serializer &s, VerbSlot &vs) {
+static void syncWithSerializerDef(Common::Serializer &s, VerbSlot &vs) {
 	syncWithSerializer(s, vs, false);
 }
 
-static void syncWithSerializerISR(Common::Serializer &s, VerbSlot &vs) {
+static void syncWithSerializerV7orISR(Common::Serializer &s, VerbSlot &vs) {
 	syncWithSerializer(s, vs, true);
 }
 
@@ -1234,7 +1239,7 @@ void ScummEngine::saveLoadWithSerializer(Common::Serializer &s) {
 	//
 	// Save/load misc stuff
 	//
-	s.syncArray(_verbs, _numVerbs, _language != Common::HE_ISR ? syncWithSerializerNonISR : syncWithSerializerISR);
+	s.syncArray(_verbs, _numVerbs, (_game.version < 7 && _language != Common::HE_ISR) ? syncWithSerializerDef : syncWithSerializerV7orISR);
 	s.syncArray(vm.nest, 16, syncWithSerializer);
 	s.syncArray(_sentence, 6, syncWithSerializer);
 	s.syncArray(_string, 6, syncWithSerializer);
@@ -1572,6 +1577,15 @@ void ScummEngine_v5::saveLoadWithSerializer(Common::Serializer &s) {
 			redefineBuiltinCursorHotspot(1, 0, 0);
 		} else {
 			resetCursors();
+		}
+	}
+
+	// Reset Mac cursors for Loom and Indy 3, otherwise the cursor will be
+	// invisible after loading.
+
+	if (s.isLoading() && _game.platform == Common::kPlatformMacintosh) {
+		if ((_game.id == GID_LOOM && !_macCursorFile.empty()) || (_game.id == GID_INDY3 && _macScreen)) {
+			setBuiltinCursor(0);
 		}
 	}
 

@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -43,8 +42,8 @@
 #if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_5
 typedef unsigned long NSUInteger;
 
-// Those are not defined in the 10.4 SDK, but they are defined when targetting
-// Mac OS X 10.4 or above in the 10.5 SDK. So hopfully that means it works with 10.4 as well.
+// Those are not defined in the 10.4 SDK, but they are defined when targeting
+// Mac OS X 10.4 or above in the 10.5 SDK. So hopefully that means it works with 10.4 as well.
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_4
 enum {
 	NSUTF32StringEncoding = 0x8c000100,
@@ -84,7 +83,7 @@ static void openFromBundle(NSString *file) {
 	if (path) {
 		// RTF and HTML files are widely recognized and we can rely on the default
 		// file association working for those. For the other ones this might not be
-		// the case so we explicitely indicate they should be open with TextEdit.
+		// the case so we explicitly indicate they should be open with TextEdit.
 		if ([path hasSuffix:@".html"] || [path hasSuffix:@".rtf"])
 			[[NSWorkspace sharedWorkspace] openFile:path];
 		else
@@ -135,7 +134,22 @@ static void openFromBundle(NSString *file) {
 }
 
 - (void)openUserManual {
-	[[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"https://www.scummvm.org/documentation"]];
+	// If present locally in the bundle, open that file.
+	if ([[NSFileManager defaultManager] respondsToSelector:@selector(contentsOfDirectoryAtPath:error:)]) {
+		NSString *bundlePath = [[NSBundle mainBundle] resourcePath];
+		NSArray *dirContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:bundlePath error:nil];
+		NSEnumerator *dirEnum = [dirContents objectEnumerator];
+		NSString *file;
+		while (file = [dirEnum nextObject]) {
+			if ([file hasPrefix:@"ScummVM Manual"] && [file hasSuffix:@".pdf"]) {
+				[[NSWorkspace sharedWorkspace] openFile:[bundlePath stringByAppendingPathComponent:file]];
+				return;
+			}
+		}
+	}
+
+	// Otherwise try to access the only version.
+	[[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"https://docs.scummvm.org/"]];
 }
 
 - (void)openCredits {

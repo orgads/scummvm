@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -25,6 +24,7 @@
 
 #include "common/scummsys.h"
 #include "common/rect.h"
+#include "twine/shared.h"
 
 namespace TwinE {
 
@@ -55,13 +55,17 @@ struct OverlayListStruct {
 };
 
 struct DrawListStruct {
+	// DrawActorSprites, DrawShadows, DrawExtras
 	int16 posValue = 0; // sorting value
 	uint32 type = 0;
 	uint16 actorIdx = 0;
+
+	// DrawShadows
 	uint16 x = 0;
 	uint16 y = 0;
 	uint16 z = 0;
 	uint16 offset = 0;
+
 	uint16 field_C = 0;
 	uint16 field_E = 0;
 	uint16 field_10 = 0;
@@ -75,26 +79,45 @@ struct DrawListStruct {
 	}
 };
 
+#define TYPE_OBJ_SHIFT (10)
+#define TYPE_OBJ_FIRST (1 << TYPE_OBJ_SHIFT) // 1024
+#define NUM_OBJ_MASK (TYPE_OBJ_FIRST - 1)
+
 class TwinEEngine;
 class Redraw {
 private:
 	TwinEEngine *_engine;
 	enum DrawListType {
-		DrawActorSprites = 0x1000,
-		DrawExtras = 0x1800,
-		DrawShadows = 0xC00
+		DrawObject3D = (0 << TYPE_OBJ_SHIFT),
+		DrawFlagRed = (1 << TYPE_OBJ_SHIFT),
+		DrawFlagYellow = (2 << TYPE_OBJ_SHIFT),
+		DrawShadows = (3 << TYPE_OBJ_SHIFT),
+		DrawActorSprites = (4 << TYPE_OBJ_SHIFT),
+		DrawZoneDec = (5 << TYPE_OBJ_SHIFT),
+		DrawExtras = (6 << TYPE_OBJ_SHIFT),
+		DrawPrimitive = (7 << TYPE_OBJ_SHIFT)
 	};
 
 	Common::Rect _currentRedrawList[300];
 	Common::Rect _nextRedrawList[300];
 
 	int16 _overlayRotation = 0;
+
+	/** Save last actor that bubble dialog icon */
+	int32 _bubbleActor = -1;
+	int32 _bubbleSpriteIndex;
+
+	IVec3 _projPosScreen;
+
 	/**
 	 * Add a certain region to the current redraw list array
 	 * @param redrawArea redraw the region
 	 */
 	void addRedrawCurrentArea(const Common::Rect &redrawArea);
-	/** Move next regions to the current redraw list */
+	/**
+	 * Move next regions to the current redraw list,
+	 * setup the redraw areas for next display
+	 */
 	void moveNextAreas();
 	void updateOverlayTypePosition(int16 x1, int16 y1, int16 x2, int16 y2);
 
@@ -103,33 +126,30 @@ private:
 	void processDrawListActorSprites(const DrawListStruct& drawCmd, bool bgRedraw);
 	void processDrawListExtras(const DrawListStruct& drawCmd);
 
-	int32 fillActorDrawingList(bool bgRedraw);
-	int32 fillExtraDrawingList(int32 drawListPos);
-	void processDrawList(int32 drawListPos, bool bgRedraw);
+	int32 fillActorDrawingList(DrawListStruct *drawList, bool bgRedraw);
+	int32 fillExtraDrawingList(DrawListStruct *drawList, int32 drawListPos);
+	void processDrawList(DrawListStruct *drawList, int32 drawListPos, bool bgRedraw);
 	void renderOverlays();
 
 public:
-	Redraw(TwinEEngine *engine) : _engine(engine) {}
+	Redraw(TwinEEngine *engine);
 
-	/** Auxiliar object render position on screen */
-	Common::Rect renderRect { 0, 0, 0, 0 };
-
-	bool inSceneryView = false;
+	bool _inSceneryView = false;
 
 	/** Request background redraw */
-	bool reqBgRedraw = false;
+	bool _reqBgRedraw = false;
 
 	/** Current number of redraw regions in the screen */
-	int32 currNumOfRedrawBox = 0; // fullRedrawVar8
+	int32 _currNumOfRedrawBox = 0; // fullRedrawVar8
 	/** Number of redraw regions in the screen */
-	int32 numOfRedrawBox = 0;
+	int32 _numOfRedrawBox = 0;
 
-	/** Save last actor that bubble dialog icon */
-	int32 bubbleActor = -1;
-	int32 bubbleSpriteIndex = 0;
+	int _sceneryViewX = 0;
+	int _sceneryViewY = 0;
 
 	OverlayListStruct overlayList[OVERLAY_MAX_ENTRIES];
 
+	// InitIncrustDisp
 	void addOverlay(OverlayType type, int16 info0, int16 x, int16 y, int16 info1, OverlayPosType posType, int16 lifeTime);
 
 	/**
@@ -165,18 +185,12 @@ public:
 	 * @param list drawing list variable which contains information of the drawing objects
 	 * @param listSize number of drawing objects in the list
 	 */
-	void sortDrawingList(DrawListStruct *list, int32 listSize);
-
-	int _sceneryViewX = 0;
-	int _sceneryViewY = 0;
+	void sortDrawingList(DrawListStruct *list, int32 listSize) const;
 
 	/**
 	 * Zooms the area around the scenery view focus positions
 	 */
 	void zoomScreenScale();
-
-	/** Draw list array to grab the necessary */
-	DrawListStruct drawList[150];
 };
 
 } // namespace TwinE

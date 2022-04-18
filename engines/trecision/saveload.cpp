@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -26,6 +25,7 @@
 #include "common/translation.h"
 
 #include "trecision/actor.h"
+#include "trecision/animmanager.h"
 #include "trecision/dialog.h"
 #include "trecision/graphics.h"
 #include "trecision/logic.h"
@@ -259,7 +259,8 @@ bool TrecisionEngine::dataLoad() {
 		eventLoop();
 		_mouseLeftBtn = _mouseRightBtn = false;
 
-		performLoad(saveSlot - 1, skipLoad);
+		if (!skipLoad)
+			loadGameState(saveSlot);
 
 		return !skipLoad;
 	}
@@ -292,8 +293,8 @@ bool TrecisionEngine::dataLoad() {
 	loadSaveSlots(saveNames);
 
 	bool skipLoad = false;
-	int8 CurPos = -1;
-	int8 OldPos = -1;
+	int8 curPos = -1;
+	int8 oldPos = -1;
 
 	for (;;) {
 		checkSystem();
@@ -303,14 +304,14 @@ bool TrecisionEngine::dataLoad() {
 			_mousePos.y < (FIRSTLINE + ICONDY) &&
 			_mousePos.x >= ICONMARGSX &&
 			(_mousePos.x < (MAXX - ICONMARGDX))) {
-			OldPos = CurPos;
-			CurPos = (_mousePos.x - ICONMARGSX) / ICONDX;
+			oldPos = curPos;
+			curPos = (_mousePos.x - ICONMARGSX) / ICONDX;
 
-			if (OldPos != CurPos) {
+			if (oldPos != curPos) {
 				_graphicsMgr->clearScreenBufferSaveSlotDescriptions();
 
-				uint16 posX = ICONMARGSX + ((CurPos) * (ICONDX)) + ICONDX / 2;
-				uint16 lenText = textLength(saveNames[CurPos]);
+				uint16 posX = ICONMARGSX + ((curPos) * (ICONDX)) + ICONDX / 2;
+				uint16 lenText = textLength(saveNames[curPos]);
 				if (posX - (lenText / 2) < 2)
 					posX = 2;
 				else
@@ -322,24 +323,24 @@ bool TrecisionEngine::dataLoad() {
 					Common::Rect(posX, FIRSTLINE + ICONDY + 10, lenText + posX, CARHEI + (FIRSTLINE + ICONDY + 10)),
 					Common::Rect(0, 0, lenText, CARHEI),
 					MOUSECOL,
-					saveNames[CurPos].c_str());
+					saveNames[curPos].c_str());
 				drawText.draw(this);
 
 				_graphicsMgr->copyToScreen(0, FIRSTLINE + ICONDY + 10, MAXX, CARHEI);
 			}
 
-			if (_mouseLeftBtn && (_inventory[CurPos] != EMPTYSLOT)) {
+			if (_mouseLeftBtn && (_inventory[curPos] != EMPTYSLOT)) {
 				_mouseLeftBtn = false;
 				break;
 			}
 		} else {
-			if (OldPos != -1) {
+			if (oldPos != -1) {
 				_graphicsMgr->clearScreenBufferSaveSlotDescriptions();
 				_graphicsMgr->copyToScreen(0, FIRSTLINE + ICONDY + 10, MAXX, CARHEI);
 			}
 
-			OldPos = -1;
-			CurPos = -1;
+			oldPos = -1;
+			curPos = -1;
 
 			if (_mouseLeftBtn || _mouseRightBtn) {
 				_mouseLeftBtn = _mouseRightBtn = false;
@@ -350,9 +351,23 @@ bool TrecisionEngine::dataLoad() {
 		}
 	}
 
-	performLoad(CurPos, skipLoad);
+	if (!skipLoad) {
+		loadGameState(curPos + 1);
+	} else {
+		_actor->actorStop();
+		_pathFind->nextStep();
+		checkSystem();
 
-	if (skipLoad) {
+		_graphicsMgr->clearScreenBufferInventory();
+		_graphicsMgr->copyToScreen(0, FIRSTLINE, MAXX, TOP);
+
+		_graphicsMgr->clearScreenBufferTop();
+		_graphicsMgr->copyToScreen(0, 0, MAXX, TOP);
+
+		if (_flagScriptActive) {
+			_graphicsMgr->hideCursor();
+		}
+
 		// Restore the inventory
 		_inventory = savedInventory;
 		_curInventory = 0;
@@ -367,6 +382,30 @@ Common::Error TrecisionEngine::loadGameStream(Common::SeekableReadStream *stream
 	Common::Serializer ser(stream, nullptr);
 	ser.setVersion(version);
 	syncGameStream(ser);
+
+	_graphicsMgr->clearScreenBufferInventory();
+
+	_flagNoPaintScreen = true;
+	_curStack = 0;
+	_flagScriptActive = false;
+
+	_oldRoom = _curRoom;
+	changeRoom(_curRoom);
+
+	_actor->actorStop();
+	_pathFind->nextStep();
+	checkSystem();
+
+	_graphicsMgr->clearScreenBufferInventory();
+	_graphicsMgr->copyToScreen(0, FIRSTLINE, MAXX, TOP);
+
+	_graphicsMgr->clearScreenBufferTop();
+	_graphicsMgr->copyToScreen(0, 0, MAXX, TOP);
+
+	if (_flagScriptActive) {
+		_graphicsMgr->hideCursor();
+	}
+
 	return Common::kNoError;
 }
 
@@ -423,35 +462,6 @@ bool TrecisionEngine::syncGameStream(Common::Serializer &ser) {
 	_logicMgr->syncGameStream(ser);
 
 	return true;
-}
-
-void TrecisionEngine::performLoad(int slot, bool skipLoad) {
-	if (!skipLoad) {
-		_graphicsMgr->clearScreenBufferInventory();
-
-		loadGameState(slot + 1);
-
-		_flagNoPaintScreen = true;
-		_curStack = 0;
-		_flagScriptActive = false;
-
-		_oldRoom = _curRoom;
-		changeRoom(_curRoom);
-	}
-
-	_actor->actorStop();
-	_pathFind->nextStep();
-	checkSystem();
-
-	_graphicsMgr->clearScreenBufferInventory();
-	_graphicsMgr->copyToScreen(0, FIRSTLINE, MAXX, TOP);
-
-	_graphicsMgr->clearScreenBufferTop();
-	_graphicsMgr->copyToScreen(0, 0, MAXX, TOP);
-
-	if (_flagScriptActive) {
-		_graphicsMgr->hideCursor();
-	}
 }
 
 } // End of namespace Trecision

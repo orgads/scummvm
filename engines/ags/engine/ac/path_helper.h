@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -33,7 +32,7 @@
 #ifndef AGS_ENGINE_AC_PATH_HELPER_H
 #define AGS_ENGINE_AC_PATH_HELPER_H
 
-#include "ags/shared/util/string.h"
+#include "ags/shared/util/path.h"
 
 namespace AGS3 {
 
@@ -48,23 +47,38 @@ extern const char *DefaultConfigFileName;
 // Subsitutes illegal characters with '_'. This function uses illegal chars array
 // specific to current platform.
 void FixupFilename(char *filename);
-// Tests the input path, if it's an absolute path then returns it unchanged;
-// if it's a relative path then resolves it into absolute, using install dir as a base.
-String PathFromInstallDir(const String &path);
 
 // FSLocation describes a file system location defined by two parts:
 // a secure path that engine does not own, and sub-path that it owns.
 // The meaning of this is that engine is only allowed to create
 // sub-path subdirectories, and only if secure path exists.
 struct FSLocation {
-	String BaseDir; // parent part of the full path that is not our responsibility
-	String FullDir; // full path to the directory
+	String BaseDir; // base directory, which we assume already exists; not our responsibility
+	String SubDir;  // sub-directory, relative to BaseDir
+	String FullDir; // full path to location
 	FSLocation() {}
 	FSLocation(const String &base) : BaseDir(base), FullDir(base) {
 	}
-	FSLocation(const String &base, const String &full) : BaseDir(base), FullDir(full) {
+	FSLocation(const String &base, const String &subdir)
+		: BaseDir(base), SubDir(subdir),
+		FullDir(AGS::Shared::Path::ConcatPaths(base, subdir)) {
+	}
+	inline bool IsValid() const {
+		return !FullDir.IsEmpty();
+	}
+	// Concats the given path to the existing full dir
+	inline FSLocation Concat(const String &path) const {
+		return FSLocation(BaseDir, AGS::Shared::Path::ConcatPaths(FullDir, path));
+	}
+	// Sets full path as a relative to the existing base dir
+	inline FSLocation Rebase(const String &path) const {
+		return FSLocation(BaseDir, AGS::Shared::Path::ConcatPaths(BaseDir, path));
 	}
 };
+// Tests the input path, if it's an absolute path then returns it unchanged;
+// if it's a relative path then resolves it into absolute, using install dir as a base.
+String PathFromInstallDir(const String &path);
+FSLocation PathFromInstallDir(const FSLocation &fsloc);
 // Makes sure that given system location is available, makes directories if have to (and if it's allowed to)
 // Returns full file path on success, empty string on failure.
 String PreparePathForWriting(const FSLocation &fsloc, const String &filename);
@@ -81,9 +95,17 @@ FSLocation GetGameUserDataDir();
 
 // ResolvedPath describes an actual location pointed by a user path (e.g. from script)
 struct ResolvedPath {
-	String BaseDir;  // base directory, which we assume already exists
+	FSLocation Loc;  // location (directory)
 	String FullPath; // full path, including filename
-	String AltPath;  // alternative full path, for backwards compatibility
+	String AltPath;  // alternative read-only full path, for backwards compatibility
+	bool AssetMgr = false; // file is to be accessed through the asset manager
+	ResolvedPath() = default;
+	ResolvedPath(const String & file, const String & alt = "")
+		: FullPath(file), AltPath(alt) {
+	}
+	ResolvedPath(const FSLocation & loc, const String & file, const String & alt = "")
+		: Loc(loc), FullPath(AGS::Shared::Path::ConcatPaths(loc.FullDir, file)), AltPath(alt) {
+	}
 };
 // Resolves a file path provided by user (e.g. script) into actual file path,
 // by substituting special keywords with actual platform-specific directory names.
@@ -96,6 +118,8 @@ bool ResolveScriptPath(const String &sc_path, bool read_only, ResolvedPath &rp);
 // Returns 'true' on success, and 'false' if either path is impossible to resolve,
 // forbidden for writing, or if failed to create any subdirectories.
 bool ResolveWritePathAndCreateDirs(const String &sc_path, ResolvedPath &rp);
+// Creates all necessary subdirectories inside the safe parent location.
+bool CreateFSDirs(const FSLocation &fs);
 
 } // namespace AGS3
 

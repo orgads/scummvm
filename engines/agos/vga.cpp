@@ -4,10 +4,10 @@
  * are too numerous to list here. Please refer to the COPYRIGHT
  * file distributed with this source distribution.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,8 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -184,7 +183,7 @@ bool AGOSEngine::ifObjectHere(uint16 a) {
 	CHECK_BOUNDS(a, _objectArray);
 
 	item = _objectArray[a];
-	if (item == NULL)
+	if (item == nullptr)
 		return true;
 
 	return me()->parent == item->parent;
@@ -199,7 +198,7 @@ bool AGOSEngine::ifObjectAt(uint16 a, uint16 b) {
 	item_a = _objectArray[a];
 	item_b = _objectArray[b];
 
-	if (item_a == NULL || item_b == NULL)
+	if (item_a == nullptr || item_b == nullptr)
 		return true;
 
 	return derefItem(item_a->parent) == item_b;
@@ -211,7 +210,7 @@ bool AGOSEngine::ifObjectState(uint16 a, int16 b) {
 	CHECK_BOUNDS(a, _objectArray);
 
 	item = _objectArray[a];
-	if (item == NULL)
+	if (item == nullptr)
 		return true;
 	return item->state == b;
 }
@@ -1140,7 +1139,7 @@ void AGOSEngine::vc27_resetSprite() {
 	if (_videoLockOut & 0x20) {
 		AnimTable *animTable = _screenAnim1;
 		while (animTable->srcPtr) {
-			animTable->srcPtr = 0;
+			animTable->srcPtr = nullptr;
 			animTable++;
 		}
 	}
@@ -1359,7 +1358,7 @@ void AGOSEngine::vc40_scrollRight() {
 			_scrollCount = 0;
 			if (value - _scrollX >= 30) {
 				_scrollCount = MIN(20, _scrollXMax - _scrollX);
-				addVgaEvent(6, SCROLL_EVENT, NULL, 0, 0);
+				addVgaEvent(6, SCROLL_EVENT, nullptr, 0, 0);
 			}
 		}
 	}
@@ -1376,7 +1375,7 @@ void AGOSEngine::vc41_scrollLeft() {
 			_scrollCount = 0;
 			if ((uint16)(value - _scrollX) < 11) {
 				_scrollCount = -MIN(20, (int)_scrollX);
-				addVgaEvent(6, SCROLL_EVENT, NULL, 0, 0);
+				addVgaEvent(6, SCROLL_EVENT, nullptr, 0, 0);
 			}
 		}
 	}
