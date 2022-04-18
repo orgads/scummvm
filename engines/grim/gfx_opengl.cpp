@@ -2070,16 +2070,16 @@ void GfxOpenGL::blackbox(int x0, int y0, int x1, int y1, float opacity) {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glColor4f(0,0,0, opacity);
+	glColor4f(0, 0, 0, opacity);
 
 	glBegin(GL_QUADS);
-	glVertex2f(x0 * _scaleW,y0 * _scaleH);
-	glVertex2f(x1 * _scaleW,y0 * _scaleH);
-	glVertex2f(x1 * _scaleW,y1 * _scaleH);
-	glVertex2f(x0 * _scaleW,y1 * _scaleH);
+	glVertex2f(x0 * _scaleW, y0 * _scaleH);
+	glVertex2f(x1 * _scaleW, y0 * _scaleH);
+	glVertex2f(x1 * _scaleW, y1 * _scaleH);
+	glVertex2f(x0 * _scaleW, y1 * _scaleH);
 	glEnd();
 
-	glColor4f(1,1,1,1);
+	glColor4f(1, 1, 1, 1);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
@@ -2261,8 +2261,9 @@ void GfxOpenGL::setBlendMode(bool additive) {
 	}
 }
 
-bool GfxOpenGL::worldToScreen(const Math::Vector3d &vec, int& x, int &y) {
-	if (_currentShadowArray) return false;
+bool GfxOpenGL::worldToScreen(const Math::Vector3d &vec, int &x, int &y) {
+	if (_currentShadowArray)
+		return false;
 
 	GLdouble modelView[16], projection[16];
 	GLint viewPort[4];
@@ -2283,7 +2284,7 @@ bool GfxOpenGL::worldToScreen(const Math::Vector3d &vec, int& x, int &y) {
 	else if (win.y() >= _gameHeight)
 		y = _gameHeight - 1;
 
-	return x>0 && y>0 && x<_gameWidth-1 && y<_gameHeight-1;
+	return x > 0 && y > 0 && x < _gameWidth - 1 && y < _gameHeight - 1;
 }
 
 bool GfxOpenGL::raycast(int x, int y, Math::Vector3d &r0, Math::Vector3d &r1) {

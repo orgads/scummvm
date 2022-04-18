@@ -378,6 +378,7 @@ Common::List<Math::Line3d> Sector::getBridgesTo(Sector *sector) const {
 			bool b2_out = cross_b2.dotProduct(_normal) < -1e-7;
 
 			bool useXZ = (g_grim->getGameType() == GType_MONKEY4);
+
 			if (b1_out && b2_out) {
 				// Both points are outside.
 				it = bridges.erase(it);
@@ -418,17 +419,6 @@ Common::List<Math::Line3d> Sector::getBridgesTo(Sector *sector) const {
 		} else {
 			if (fabs(getProjectionToPlane((*it).begin()).z() - sector->getProjectionToPlane((*it).begin()).z()) > 0.01f ||
 					fabs(getProjectionToPlane((*it).end()).z() - sector->getProjectionToPlane((*it).end()).z()) > 0.01f) {
-
-				/*warning("disable %s -> %s: %g %g, %g %g",getName().c_str(),sector->getName().c_str(),
-				getProjectionToPlane((*it).begin()).z(),
-				getProjectionToPlane((*it).end()).z(),
-				sector->getProjectionToPlane((*it).begin()).z(),
-				sector->getProjectionToPlane((*it).end()).z());
-				warning("normal %g %g %g",_normal.x(),_normal.y(),_normal.z());
-				warning("vertices[0] %g %g %g",_vertices[0].x(),_vertices[0].y(),_vertices[0].z());
-				warning("line0 %g %g %g",(*it).begin().x(),(*it).begin().y(),(*it).begin().z());
-				warning("line1 %g %g %g",(*it).end().x(),(*it).end().y(),(*it).end().z());
-				*/
 				it = bridges.erase(it);
 				continue;
 			}
@@ -492,7 +482,7 @@ Math::Vector3d Sector::getClosestPoint(const Math::Vector3d &point) const {
 
 Math::Vector3d Sector::raycast(const Math::Vector3d &v0, const Math::Vector3d &v1) const {
 	if (_normal.getMagnitude() == 0)
-		error("Sector normal is (0,0,0)");
+		error("Sector normal is (0, 0, 0)");
 
 	double div = _normal.dotProduct(v1);
 	if (div == 0)

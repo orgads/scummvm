@@ -94,7 +94,7 @@ private:
 			float number;
 			const PoolObjectBase *object;
 			const char *string;
-			const float* array;
+			const float *array;
 		} _value;
 		int _elements;
 	};
@@ -130,7 +130,7 @@ public:
 	// Force the demo flag
 	virtual void forceDemo();
 
-	int queryVariable(const Common::String& name, bool direct);
+	int queryVariable(const Common::String &name, bool direct);
 
 	/**
 	 * Call a Lua function in the system table.

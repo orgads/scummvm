@@ -175,4 +175,4 @@ void Cursor::draw() {
 			_data[_persistentCursor[i]]->draw(_persistentPosition[i]);
 }
 
-} /* namespace Grim */
+} // namespace Grim

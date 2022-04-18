@@ -473,8 +473,7 @@ void Lua_V1::KillPrimitive() {
 		return;
 
 	PrimitiveObject *prim = getprimitive(primObj);
-	if (prim)
-		delete prim;
+	delete prim;
 }
 
 void Lua_V1::DimScreen() {

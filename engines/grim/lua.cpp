@@ -92,7 +92,7 @@ void LuaObjects::addNil() {
 	_objects.push_back(obj);
 }
 
-void LuaObjects::add(const float* ar, int len) {
+void LuaObjects::add(const float *ar, int len) {
 	Obj obj;
 	obj._type = Obj::Array;
 	obj._elements = len;
@@ -119,7 +119,7 @@ void LuaObjects::pushObjects() const {
 			case Obj::Array:
 				lua_pushnumber(o._elements);
 				lua_Object tbl = lua_createtable();
-				for (int k=0; k<o._elements; k++) {
+				for (int k = 0; k < o._elements; ++k) {
 					lua_pushobject(tbl);
 					lua_pushnumber(k);
 					lua_pushnumber(o._value.array[k]);
@@ -366,13 +366,13 @@ bool LuaBase::callback(const char *name) {
 	return callback(name, o);
 }
 
-int LuaBase::queryVariable(const Common::String& name, bool direct) {
+int LuaBase::queryVariable(const Common::String &name, bool direct) {
 	int num = -1;
 	lua_beginblock();
 	if (direct) {
 		num = lua_getnumber(lua_getglobal(name.c_str()));
 	} else {
-		lua_dostring(("return "+name).c_str());
+		lua_dostring(("return " + name).c_str());
 		num = lua_getnumber(lua_getresult(1));
 	}
 	lua_endblock();

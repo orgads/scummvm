@@ -39,7 +39,7 @@ void Lua_V1::RegisterHotspot() {
 						lua_getnumber(lua_getparam(3)),
 						lua_getnumber(lua_getparam(4)));
 	Common::String scene = lua_getstring(lua_getparam(5));
-	int n = g_grim->getHotspotMan()->addHotspot(lua_getstring(lua_getparam(1)),pos, scene);
+	int n = g_grim->getHotspotMan()->addHotspot(lua_getstring(lua_getparam(1)), pos, scene);
 	lua_pushnumber(n);
 }
 
@@ -48,7 +48,7 @@ void Lua_V1::ActivateHotspot() {
 	if (num < 0) {
 		g_grim->getHotspotMan()->disableAll();
 	} else {
-		HotObject& hs = g_grim->getHotspotMan()->getObject(num);
+		HotObject &hs = g_grim->getHotspotMan()->getObject(num);
 		hs._active = getbool(2);
 	}
 }
@@ -59,28 +59,30 @@ void Lua_V1::UpdateHotspot() {
 						lua_getnumber(lua_getparam(3)),
 						lua_getnumber(lua_getparam(4)));
 	int visible = lua_getnumber(lua_getparam(5));
-	g_grim->getHotspotMan()->updateHotspot(id,pos,visible);
+	g_grim->getHotspotMan()->updateHotspot(id, pos, visible);
 }
 
 void Lua_V1::SwitchControlMode() {
 	int mode = lua_getnumber(lua_getparam(1));
 	g_grim->getHotspotMan()->switchMode(mode);
 	if (mode == 1 || mode == 5) {
-		if (!lua_isnumber(lua_getparam(2))) return;
+		if (!lua_isnumber(lua_getparam(2)))
+			return;
 		int lines = lua_getnumber(lua_getparam(2));
 		int x0 = lua_getnumber(lua_getparam(3));
 		int y0 = lua_getnumber(lua_getparam(4));
 		int width = lua_getnumber(lua_getparam(5));
 		int height = lua_getnumber(lua_getparam(6));
-		g_grim->getHotspotMan()->setupDialog(x0,y0,width,height,lines,1);
+		g_grim->getHotspotMan()->setupDialog(x0, y0, width, height, lines, 1);
 	} else if (mode == 3) {
-		if (!lua_isnumber(lua_getparam(2))) return;
+		if (!lua_isnumber(lua_getparam(2)))
+			return;
 		Math::Vector3d axis(lua_getnumber(lua_getparam(2)),
 							lua_getnumber(lua_getparam(3)),
 							lua_getnumber(lua_getparam(4)));
 		g_grim->getHotspotMan()->setAxis(axis, lua_getnumber(lua_getparam(5)));
 	} else if (mode == 4) {
-		g_grim->getHotspotMan()->setupDialog(20,40,100,100,4,6);
+		g_grim->getHotspotMan()->setupDialog(20, 40, 100, 100, 4, 6);
 	}
 }
 
@@ -91,11 +93,11 @@ void Lua_V1::NotifyWalk() {
 
 void Lua_V1::RegisterInventory() {
 	Common::String id = lua_getstring(lua_getparam(1));
-	if (id=="reset")
+	if (id == "reset") {
 		g_grim->getHotspotMan()->resetInventory();
-	else {
+	} else {
 		Common::String pic = lua_getstring(lua_getparam(2));
-		g_grim->getHotspotMan()->addInventory(id,pic);
+		g_grim->getHotspotMan()->addInventory(id, pic);
 	}
 }
 
@@ -111,7 +113,7 @@ void Lua_V1::InteractMode() {
 void Lua_V1::RenameHotspot() {
 	int id = lua_getnumber(lua_getparam(1));
 	Common::String name = lua_getstring(lua_getparam(2));
-	g_grim->getHotspotMan()->renameHotspot(id,name);
+	g_grim->getHotspotMan()->renameHotspot(id, name);
 }
 
 void Lua_V1::GetControlMode() {

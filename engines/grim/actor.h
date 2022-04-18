@@ -146,7 +146,7 @@ public:
 	 * @param position The position.
 	 * @see getPos
 	 */
-	void setPos(const Math::Vector3d &position, int xnum=0);
+	void setPos(const Math::Vector3d &position, int xnum = 0);
 	/**
 	 * Returns the position of the actor on the 3D scene.
 	 *
@@ -164,7 +164,7 @@ public:
 	 * @see stopWalking
 	 * @see isWalking
 	 */
-	void walkTo(const Math::Vector3d &position, bool force_walk);
+	void walkTo(const Math::Vector3d &position, bool forceWalk);
 	/**
 	 * Stops immediately the actor's walk.
 	 *

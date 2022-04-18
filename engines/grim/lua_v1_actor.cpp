@@ -127,7 +127,7 @@ void Lua_V1::SetActorWalkChore() {
 	lua_Object actorObj = lua_getparam(1);
 	lua_Object choreObj = lua_getparam(2);
 	lua_Object costumeObj = lua_getparam(3);
-	lua_Object walk_bwd = lua_getparam(4);
+	lua_Object walkBwd = lua_getparam(4);
 	Costume *costume;
 	int chore;
 
@@ -146,7 +146,7 @@ void Lua_V1::SetActorWalkChore() {
 	if (!findCostume(costumeObj, actor, &costume))
 		return;
 
-	actor->setWalkBwd(lua_isnumber(walk_bwd) && lua_getnumber(walk_bwd) != 0);
+	actor->setWalkBwd(lua_isnumber(walkBwd) && lua_getnumber(walkBwd) != 0);
 
 	actor->setWalkChore(chore, costume);
 }
@@ -590,7 +590,7 @@ void Lua_V1::WalkActorTo() {
 
 	bool force = true;
 	lua_Object forceObj = lua_getparam(8);
-	if (lua_isnumber(forceObj) && lua_getnumber(forceObj)==0)
+	if (lua_isnumber(forceObj) && lua_getnumber(forceObj) == 0)
 		force = false;
 
 	actor->walkTo(destVec, force);

@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef CURSOR_H_
-#define CURSOR_H_
+#ifndef GRIM_CURSOR_H_
+#define GRIM_CURSOR_H_
 
 #include "common/rect.h"
 #include "common/array.h"
@@ -72,5 +72,6 @@ private:
 	CursorData** _data;
 };
 
-} /* namespace  */
-#endif /* CURSOR_H_ */
+} // namespace Grim
+
+#endif

@@ -505,7 +505,7 @@ void Actor::setRot(const Math::Angle &pitchParam, const Math::Angle &yawParam, c
 }
 
 void Actor::setPos(const Math::Vector3d &position, int xnum) {
-	if (xnum==0)
+	if (xnum == 0)
 		_walking = false;
 	_pos = position;
 
@@ -591,7 +591,7 @@ void Actor::turnTo(const Math::Angle &pitchParam, const Math::Angle &yawParam, c
 		_turning = false;
 }
 
-void Actor::walkTo(const Math::Vector3d &p, bool force_walk) {
+void Actor::walkTo(const Math::Vector3d &p, bool forceWalk) {
 	if (p == _pos)
 		_walking = false;
 	else {
@@ -654,7 +654,7 @@ void Actor::walkTo(const Math::Vector3d &p, bool force_walk) {
 					pathFound = true;
 					break;
 				}
-				//warning("cs %s",sector->getName().c_str());
+
 				for (Common::List<Sector *>::iterator i = sectors.begin(); i != sectors.end(); ++i) {
 					Sector *s = *i;
 					bool inClosed = false;
@@ -745,7 +745,7 @@ void Actor::walkTo(const Math::Vector3d &p, bool force_walk) {
 					_walking = false;
 					return;
 				}
-				if (!force_walk && getName() == "Manny") {
+				if (!forceWalk && !g_grim->isRemastered() && getName() == "Manny") {
 					_walking = false;
 					return;
 				}

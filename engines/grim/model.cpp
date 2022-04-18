@@ -19,10 +19,6 @@
  *
  */
 
-
-//#define FORBIDDEN_SYMBOL_ALLOW_ALL
-//#define DUMP_MODEL
-
 #include "common/algorithm.h"
 #include "common/endian.h"
 #include "common/func.h"

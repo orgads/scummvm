@@ -2305,15 +2305,16 @@ void GfxOpenGLS::blackbox(int x0, int y0, int x1, int y1, float opacity) {
 
 	_primitiveProgram->enableVertexAttribute("position", prim, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
 	_primitiveProgram->use(true);
-	_primitiveProgram->setUniform("color", Math::Vector4d(0,0,0,opacity));
+	_primitiveProgram->setUniform("color", Math::Vector4d(0, 0, 0, opacity));
 	_primitiveProgram->setUniform("scaleWH", Math::Vector2d(1.f / _gameWidth, 1.f / _gameHeight));
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-bool GfxOpenGLS::worldToScreen(const Math::Vector3d &vec, int& x, int &y) {
-	if (_currentShadowArray) return false;
+bool GfxOpenGLS::worldToScreen(const Math::Vector3d &vec, int &x, int &y) {
+	if (_currentShadowArray)
+		return false;
 
 	Math::Vector3d win;
 
@@ -2322,7 +2323,7 @@ bool GfxOpenGLS::worldToScreen(const Math::Vector3d &vec, int& x, int &y) {
 	Math::Matrix4 view(_viewMatrix);
 	view.transpose();
 
-	const int viewPort[4] = {0,0,_gameWidth,_gameHeight};
+	const int viewPort[4] = {0, 0, _gameWidth, _gameHeight};
 	Graphics::project(vec, view, proj, viewPort, win);
 
 	win.y() = _gameHeight - win.y();
@@ -2338,7 +2339,7 @@ bool GfxOpenGLS::worldToScreen(const Math::Vector3d &vec, int& x, int &y) {
 
 	x = (int)win.x();
 	y = (int)win.y();
-	return x>0 && y>0 && x<_gameWidth-1 && y<_gameHeight-1;
+	return x > 0 && y > 0 && x < _gameWidth - 1 && y < _gameHeight - 1;
 }
 
 bool GfxOpenGLS::raycast(int x, int y, Math::Vector3d &r0, Math::Vector3d &r1) {

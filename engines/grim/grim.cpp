@@ -1049,8 +1049,6 @@ void GrimEngine::mainLoop() {
 			setMode(mode);
 		}
 
-		//_hotspotManager->update();
-
 		g_sound->flushTracks();
 		if (g_imuse) {
 			g_imuse->refreshScripts();
@@ -1060,13 +1058,13 @@ void GrimEngine::mainLoop() {
 		Common::Event event;
 		while (g_system->getEventManager()->pollEvent(event)) {
 			// Handle any buttons, keys and joystick operations
-			Common::EventType& type = event.type;
+			Common::EventType type = event.type;
 
 			bool doubleClick = false;
 			// parse special gestures
-			static unsigned int _lastClick=0;
+			static uint32 _lastClick = 0;
 			if (type == Common::EVENT_LBUTTONDOWN) {
-				unsigned int currentTime = g_system->getMillis();
+				uint32 currentTime = g_system->getMillis();
 				doubleClick = (currentTime - _lastClick) < 500;
 				_lastClick = currentTime;
 			}
@@ -1127,8 +1125,6 @@ void GrimEngine::mainLoop() {
 					} else if (_devMode && _opMode > 0 && event.kbd.keycode == Common::KEYCODE_ESCAPE) {
 						_hotspotManager->cancel();
 						break;
-
-
 					} else {
 						handleChars(type, event.kbd);
 					}
@@ -1796,6 +1792,5 @@ void GrimEngine::setSaveMetaData(const char *meta1, int meta2, const char *meta3
 	_saveMeta2 = meta2;
 	_saveMeta3 = meta3;
 }
-
 
 } // end of namespace Grim

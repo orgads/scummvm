@@ -275,7 +275,7 @@ public:
 
 	/* add-in functionality for mouse support */
 	virtual void blackbox(int x0, int y0, int x1, int y1, float opacity) {};
-	virtual bool worldToScreen(const Math::Vector3d &vec, int& x, int &y) { return false; }
+	virtual bool worldToScreen(const Math::Vector3d &vec, int &x, int &y) { return false; }
 	virtual bool raycast(int x, int y, Math::Vector3d &r0, Math::Vector3d &r1) { return false; }
 	virtual void setBlendMode(bool additive) = 0;
 protected:

@@ -126,7 +126,7 @@ public:
 	void setBlendMode(bool additive) override;
 
 	// special
-	bool worldToScreen(const Math::Vector3d &vec, int& x, int &y) override;
+	bool worldToScreen(const Math::Vector3d &vec, int &x, int &y) override;
 	bool raycast(int x, int y, Math::Vector3d &r0, Math::Vector3d &r1) override;
 	void blackbox(int x0, int y0, int x1, int y1, float opacity) override;
 protected:

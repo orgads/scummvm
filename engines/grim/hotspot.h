@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef HOTSPOT_H_
-#define HOTSPOT_H_
+#ifndef GRIM_HOTSPOT_H_
+#define GRIM_HOTSPOT_H_
 
 #include "common/array.h"
 #include "common/events.h"
@@ -33,6 +33,7 @@
 
 namespace Grim {
 
+class Bitmap;
 class GrimEngine;
 class Cursor;
 class SaveGame;
@@ -73,14 +74,16 @@ public:
 	HotspotMan();
 	virtual ~HotspotMan();
 
-	enum ControlMode { Normal = 0,
-		               Dialog = 1,
-		               Special = 2,
-		               Linear = 3,
-		               Inventory = 4,
-		               NoWalk = 5,
-		               Options = 6,
-		               Passive = 10 };
+	enum ControlMode {
+		Normal = 0,
+		Dialog = 1,
+		Special = 2,
+		Linear = 3,
+		Inventory = 4,
+		NoWalk = 5,
+		Options = 6,
+		Passive = 10
+	};
 
 	int addHotspot(const Common::String &name, const Math::Vector3d &pos, const Common::String &scene);
 	void disableAll();
@@ -130,9 +133,7 @@ protected:
 	void freeClick(const Common::Point &cursor, int button, bool doubleClick, bool climbing);
 	void loadFlashBitmaps();
 	void restoreCursor();
-	Common::String active_set();
-
-	int _cutScene;
+	Common::String activeSet();
 
 	// dialog support
 	int _ctrlMode, _rows, _cols;
@@ -152,10 +153,11 @@ protected:
 	Common::String _curScene, _curOption;
 	Common::Array<HotObject> _hotobject;
 	Common::Point _lastCursor;
+	int _cutScene;
 
 	// hotspot display
 	bool _flashHS;
-	unsigned int _flashStart;
+	uint32 _flashStart;
 	Bitmap *_flashBitmaps[8];
 
 	// hotspot editing
@@ -169,4 +171,5 @@ protected:
 };
 
 } // namespace Grim
-#endif /* HOTSPOT_H_ */
+
+#endif

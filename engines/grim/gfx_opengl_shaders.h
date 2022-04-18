@@ -208,7 +208,8 @@ public:
 	void destroyEMIModel(EMIModel *model) override;
 
 	void setBlendMode(bool additive) override;
-	bool worldToScreen(const Math::Vector3d &vec, int& x, int &y) override;
+
+	bool worldToScreen(const Math::Vector3d &vec, int &x, int &y) override;
 	bool raycast(int x, int y, Math::Vector3d &r0, Math::Vector3d &r1) override;
 	void blackbox(int x0, int y0, int x1, int y1, float opacity) override;
 protected:
@@ -232,7 +233,7 @@ private:
 	OpenGL::ShaderGL* _dimPlaneProgram;
 	OpenGL::ShaderGL* _dimRegionProgram;
 	OpenGL::ShaderGL* _smushProgram;
-	GLuint _smushVBO, _quadEBO, _quadEBO99;
+	GLuint _smushVBO, _quadEBO;
 	OpenGL::ShaderGL* _textProgram;
 	OpenGL::ShaderGL* _primitiveProgram;
 	OpenGL::ShaderGL* _irisProgram;
@@ -253,27 +254,10 @@ private:
 	float _fov;
 	float _nclip;
 	float _fclip;
-
-private:
-
-	/*
-	 * Note: rows and colums of _projMatrix, _viewMatrix and _mvpMatrix
-	 * are swapped (transposed), so the internal float-array (\ref Matrix::getData())
-	 * is compatible with OpenGL's column major layout.
-	 */
-
-	/**
-	 * Projection Matrix (equals GL_PROJECTION_MATRIX).
-	 */
 	Math::Matrix4 _projMatrix;
-
-	/**
-	 * View Matrix (equals GL_MODELVIEW_MATRIX)
-	 */
 	Math::Matrix4 _viewMatrix;
 	Math::Matrix4 _mvpMatrix;
 	Math::Matrix4 _overworldProjMatrix;
-private:
 
 	void setupTexturedCenteredQuad();
 
