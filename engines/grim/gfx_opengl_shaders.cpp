@@ -1400,7 +1400,7 @@ void GfxOpenGLS::createBitmap(BitmapData *bitmap) {
 			delete[] texData;
 		bitmap->freeData();
 
-		OpenGL::ShaderGL *shader = bitmap->_canRotate ? _rotProgram->clone() : _backgroundProgram->clone();
+		OpenGL::ShaderGL *shader = _backgroundProgram->clone();
 		bitmap->_userData = shader;
 
 		if (g_grim->getGameType() == GType_MONKEY4) {
@@ -1415,7 +1415,7 @@ void GfxOpenGLS::createBitmap(BitmapData *bitmap) {
 	}
 }
 
-void GfxOpenGLS::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, float rot) {
+void GfxOpenGLS::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer) {
 	if (g_grim->getGameType() == GType_MONKEY4 && bitmap->_data && bitmap->_data->_texc) {
 		BitmapData *data = bitmap->_data;
 		OpenGL::ShaderGL *shader = (OpenGL::ShaderGL *)data->_userData;
@@ -1467,14 +1467,6 @@ void GfxOpenGLS::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, 
 		shader->setUniform("offsetXY", Math::Vector2d(float(dx) / _gameWidth, float(dy) / _gameHeight));
 		shader->setUniform("sizeWH", Math::Vector2d(width / _gameWidth, height / _gameHeight));
 		shader->setUniform("texcrop", Math::Vector2d(width / nextHigher2((int)width), height / nextHigher2((int)height)));
-		if (bitmap->_data->_canRotate) {
-			float c = cos(rot), s = sin(rot);
-			Math::Matrix3 M;
-			M.getRow(0) << c << -s << 0;
-			M.getRow(1) << s << c << 0;
-			M.getRow(2) << 0 << 0 << 0;
-			shader->setUniform("rot", M);
-		}
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, nullptr);
 
 		glDisable(GL_BLEND);

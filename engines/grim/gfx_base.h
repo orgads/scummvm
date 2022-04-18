@@ -94,8 +94,6 @@ public:
 
 	virtual uint getScreenWidth() { return _screenWidth; }
 	virtual uint getScreenHeight() { return _screenHeight; }
-	virtual float getScaleW() { return _scaleW; }
-	virtual float getScaleH() { return _scaleH; }
 
 	virtual void setupCameraFrustum(float fov, float nclip, float fclip) = 0;
 	virtual void positionCamera(const Math::Vector3d &pos, const Math::Vector3d &interest, float roll) = 0;
@@ -177,7 +175,7 @@ public:
 	 * @see createBitmap
 	 * @see destroyBitmap
 	 */
-	virtual void drawBitmap(const Bitmap *bitmap, int x, int y, uint32 layer = 0, float rot = 0) = 0;
+	virtual void drawBitmap(const Bitmap *bitmap, int x, int y, uint32 layer = 0) = 0;
 
 	/**
 	 * Deletes any internal references and representations of a bitmap

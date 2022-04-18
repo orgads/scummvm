@@ -126,7 +126,7 @@ public:
 	 * @see createBitmap
 	 * @see destroyBitmap
 	 */
-	void drawBitmap(const Bitmap *bitmap, int x, int y, uint32 layer = 0, float rot = 0) override;
+	void drawBitmap(const Bitmap *bitmap, int x, int y, uint32 layer = 0) override;
 
 	/**
 	 * Deletes any internal references and representations of a bitmap

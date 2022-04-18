@@ -1102,13 +1102,12 @@ void GfxOpenGL::createBitmap(BitmapData *bitmap) {
 				texOut = (byte *)const_cast<void *>(bitmap->getImageData(pic).getPixels());
 			}
 
-			bool smooth = bitmap->_smoothInterpolation && (_scaleW != 1 || _scaleH != 1);
 			for (int i = 0; i < bitmap->_numTex; i++) {
 				glBindTexture(GL_TEXTURE_2D, textures[bitmap->_numTex * pic + i]);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, smooth ? GL_LINEAR : GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, smooth ? GL_LINEAR : GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 				glTexImage2D(GL_TEXTURE_2D, 0, format, BITMAP_TEXTURE_SIZE, BITMAP_TEXTURE_SIZE, 0, format, type, nullptr);
 			}
 
@@ -1133,7 +1132,7 @@ void GfxOpenGL::createBitmap(BitmapData *bitmap) {
 	}
 }
 
-void GfxOpenGL::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, float rot) {
+void GfxOpenGL::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer) {
 	// The PS2 version of EMI uses a TGA for it's splash-screen
 	// avoid using the TIL-code below for that, by checking
 	// for texture coordinates set by BitmapData::loadTile
@@ -1239,12 +1238,8 @@ void GfxOpenGL::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, f
 #endif
 	}
 
-	bool smooth = bitmap->_data->_smoothInterpolation && (_scaleW != 1 || _scaleH != 1);
-	int scaledWidth = (int)((bitmap->getWidth()) * _scaleW);
-	int scaledHeight = (int)((bitmap->getHeight()) * _scaleH);
-	float upper = smooth ? 0.999f: 1.0f;
 	glEnable(GL_SCISSOR_TEST);
-	glScissor((int)(dx * _scaleW), _screenHeight - (int)(((dy + bitmap->getHeight())) * _scaleH), scaledWidth, scaledHeight);
+	glScissor((int)(dx * _scaleW), _screenHeight - (int)(((dy + bitmap->getHeight())) * _scaleH), (int)(bitmap->getWidth() * _scaleW), (int)(bitmap->getHeight() * _scaleH));
 	int cur_tex_idx = bitmap->getNumTex() * (bitmap->getActiveImage() - 1);
 	for (int y = dy; y < (dy + bitmap->getHeight()); y += BITMAP_TEXTURE_SIZE) {
 		for (int x = dx; x < (dx + bitmap->getWidth()); x += BITMAP_TEXTURE_SIZE) {
@@ -1253,11 +1248,11 @@ void GfxOpenGL::drawBitmap(const Bitmap *bitmap, int dx, int dy, uint32 layer, f
 			glBegin(GL_QUADS);
 			glTexCoord2f(0.0f, 0.0f);
 			glVertex2f(x * _scaleW, y * _scaleH);
-			glTexCoord2f(upper, 0.0f);
+			glTexCoord2f(1.0f, 0.0f);
 			glVertex2f((x + BITMAP_TEXTURE_SIZE) * _scaleW, y * _scaleH);
-			glTexCoord2f(upper,upper);
+			glTexCoord2f(1.0f, 1.0f);
 			glVertex2f((x + BITMAP_TEXTURE_SIZE) * _scaleW, (y + BITMAP_TEXTURE_SIZE)  * _scaleH);
-			glTexCoord2f(0.0f, upper);
+			glTexCoord2f(0.0f, 1.0f);
 			glVertex2f(x * _scaleW, (y + BITMAP_TEXTURE_SIZE) * _scaleH);
 			glEnd();
 			cur_tex_idx++;

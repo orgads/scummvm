@@ -98,8 +98,6 @@ public:
 	bool _hasTransparency;
 	bool _loaded;
 	bool _keepData;
-	bool _smoothInterpolation;
-	bool _canRotate;
 
 	int _refCount;
 
