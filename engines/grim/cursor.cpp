@@ -32,13 +32,8 @@
 
 const static int numCursors = 9;
 static const char * const cursorName[] =
-#ifdef ANDROID
-	{"", "redcircle", "bluecircle", "cursor3", "cursor4", "cursor5",
-	 "cursor6", "hourglass", "wave" };
-#else
 	{"cursor0", "cursor1", "cursor2", "cursor3", "cursor4", "cursor5",
 	"cursor6", "cursor7", "" };
-#endif
 
 namespace Grim {
 

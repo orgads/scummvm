@@ -22,10 +22,7 @@
 
 #define FORBIDDEN_SYMBOL_ALLOW_ALL
 
-#ifndef ANDROID
 #include "engines/grim/gfx_opengl.h"
-#endif
-
 #include "engines/grim/bitmap.h"
 #include "common/foreach.h"
 #include "engines/grim/hotspot.h"
@@ -93,16 +90,6 @@ void Polygon::fixBorders() {
 		if (p.y <= FIX_BORDER && p.y < c.y) p.y = 0;
 		if (p.y >= 480-FIX_BORDER && p.y > c.y) p.y = 480;
 	}
-#ifdef ANDROID
-	const int WIDEN_BORDERS = 22;
-	for (size_t i=0; i<_pnts.size(); i++) {
-		Common::Point& p = _pnts[i];
-		if (c.x <= WIDEN_BORDERS && p.x > c.x) p.x = max(p.x, c.x+WIDEN_BORDERS);
-		if (c.x >= 640-WIDEN_BORDERS && p.x < c.x) p.x = min(p.x, c.x-WIDEN_BORDERS);
-		if (c.y <= WIDEN_BORDERS && p.y > c.y) p.y = max(p.y, c.y+WIDEN_BORDERS);
-		if (c.y >= 480-WIDEN_BORDERS && p.y < c.y) p.y = min(p.y, c.y-WIDEN_BORDERS);
-	}
-#endif
 }
 
 inline Actor* getManny() {
@@ -310,22 +297,6 @@ void HotspotMan::updatePerspective() {
 }
 
 void HotspotMan::notifyWalk(int id) {
-	/*if (_selectMode < 0)
-		okKey(false);*/
-
-#ifdef ANDROID
-	Common::Array<Hotspot>& hotspots = _hotspots[active_set()];
-	int setup = g_grim->getCurrSet()->getSetup();
-	for (size_t i=0; i<hotspots.size(); i++) {
-		Hotspot& hs = hotspots[i];
-		if (hs._setup == setup && hs._objId == id) {
-			Common::Point pnt = hs._region.center();
-			g_grim->getCursor()->setPersistent(1, 1, pnt.x, pnt.y);
-			_activeHS = &hs;
-			return;
-		}
-	}
-#endif
 }
 
 void HotspotMan::debug(int num) {
@@ -528,10 +499,6 @@ void HotspotMan::event(const Common::Point& cursor, const Common::Event& ev, int
 		button = 2;
 	else if (ev.type == Common::EVENT_MBUTTONDOWN)
 		button = 3;
-	else if (ev.type == Common::EVENT_SCROLL_UP)
-		button = 4;
-	else if (ev.type == Common::EVENT_SCROLL)
-		button = 4;
 	if (ev.kbd.hasFlags(Common::KBD_ALT))
 		button = 2;
 	if (ev.kbd.hasFlags(Common::KBD_CTRL))
@@ -553,12 +520,6 @@ void HotspotMan::event(const Common::Point& cursor, const Common::Event& ev, int
 	}
 
 	_lastCursor = cursor;
-#ifdef ANDROID
-	restoreCursor();
-	if (_cutScene == 0 && _ctrlMode == Normal && ev.type != Common::EVENT_SCROLL) {
-		g_grim->getCursor()->setPersistent(0, 8, cursor.x, cursor.y);
-	}
-#endif
 
 	if (_ctrlMode == Dialog && button > 0) {
 		// dialog mode
@@ -715,11 +676,7 @@ void HotspotMan::hover(const Common::Point& pos) {
 	cursor->setCursor(0);
 
 	if (_cutScene > 0 && _ctrlMode != Dialog && _ctrlMode != Options) {
-#ifdef ANDROID
-		cursor->setPersistent(0, 7, 320, 240);
-#else
 		cursor->setCursor(7);
-#endif
 		return;
 	}
 
@@ -1005,15 +962,7 @@ void HotspotMan::cutSceneMode(int mode) {
 void HotspotMan::restoreCursor() {
 	_activeHS = nullptr;
 	g_grim->getCursor()->setPersistent(1, -1);
-#ifdef ANDROID
-	g_grim->getCursor()->setCursor(-1);
-	if (_cutScene > 0 && _ctrlMode != Dialog && _ctrlMode != Options)
-		g_grim->getCursor()->setPersistent(0, 7, 320, 240);
-	else
-		g_grim->getCursor()->setPersistent(0, -1);
-#else
 	hover(_lastCursor);
-#endif
 }
 
 void HotspotMan::renameHotspot(int num, const Common::String& name) {

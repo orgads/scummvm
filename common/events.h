@@ -118,13 +118,6 @@ enum EventType {
 	/** ScummVM has gained or lost focus. */
 	EVENT_FOCUS_GAINED = 36,
 	EVENT_FOCUS_LOST = 37
-
-	,
-	// special events for touch interaction
-	EVENT_DOUBLETAP = 100,
-	EVENT_SCROLL = 101,
-	EVENT_SCROLL_UP = 102,
-	EVENT_SCROLL_MOVE = 103
 };
 
 const int16 JOYAXIS_MIN = -32768;
@@ -237,7 +230,6 @@ struct Event {
 	 * Mouse movement since the last mouse movement event.
 	 */
 	Common::Point relMouse;
-	Common::Point origin;
 
 	/**
 	 * Joystick data; only valid for joystick events (EVENT_JOYAXIS_MOTION,

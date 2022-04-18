@@ -392,11 +392,7 @@ Common::Error GrimEngine::run() {
 	} else if (ConfMan.hasKey("gameWidth") && ConfMan.hasKey("gameHeight")) {
 		g_driver->setupScreen(ConfMan.getInt("gameWidth"), ConfMan.getInt("gameHeight"));
 	} else {
-#ifdef ANDROID
-		g_driver->setupScreen(1024, 768);
-#else
 		g_driver = createRenderer(640, 480);
-#endif
 	}
 	_system->showMouse(false);
 	_system->lockMouse(false);
@@ -1056,70 +1052,13 @@ void GrimEngine::mainLoop() {
 			Common::EventType& type = event.type;
 
 			bool doubleClick = false;
-			if (type == Common::EVENT_DOUBLETAP) {
-				doubleClick = true;
-				type = Common::EVENT_LBUTTONDOWN;
-			}
-
 			// parse special gestures
-#ifdef ANDROID
-			static int swipeCount = 0;
-			static bool wasChecked = false, moveSwipe = false;
-			const float D = (float)g_driver->getScreenWidth() / 640.0f;
-			// catch inventory gestures
-			if (type == Common::EVENT_SCROLL_UP) {
-				int topInv0 = 110 * D, topInv1 = 150 * D;
-				int deltaX = 80 * D, deltaY = 120 * D;
-				Common::Point source = event.origin, dest = event.mouse;
-
-				//warning("%d %d -> %d %d",(int)(source.x/d),(int)(source.y/d),(int)(dest.x/d),(int)(dest.y/d));
-				if (source.y < topInv0 && (dest.y-source.y) > deltaY && fabs(dest.x-source.x) < deltaX) {
-					if (_hotspotManager->getCtrlMode() == HotspotMan::Normal) {
-						type = Common::EVENT_KEYDOWN;
-						event.kbd.keycode = Common::KEYCODE_i;
-					}
-				} else if (source.y > topInv1 && (dest.y-source.y) < -deltaY && fabs(dest.x-source.x) < deltaX) {
-					if (_hotspotManager->getCtrlMode() == HotspotMan::Inventory) {
-						type = Common::EVENT_KEYDOWN;
-						event.kbd.keycode = Common::KEYCODE_i;
-					}
-				}
-				swipeCount = 0;
-				wasChecked = false;
-			}
-
-			// are we on a move swipe ?
-			if (type == Common::EVENT_SCROLL_MOVE) {
-				if (!wasChecked) {
-					Common::Point mp = _hotspotManager->mannyPos2D(0),
-								  mp2 = _hotspotManager->mannyPos2D(0.25);
-					moveSwipe = (dist(Common::Point(D*mp.x,D*mp.y), event.origin) < D*50) ||
-								(dist(Common::Point(D*mp2.x,D*mp2.y), event.origin) < D*50);
-					wasChecked = true;
-				}
-				swipeCount = (swipeCount + 1) % 16;
-				type = (swipeCount == 0 && moveSwipe) ?
-					Common::EVENT_SCROLL : Common::EVENT_MOUSEMOVE;
-			}
-
-			// convert skip gestures
-			if (doubleClick && _mode == SmushMode) {
-				type = Common::EVENT_KEYDOWN;
-				event.kbd.keycode = Common::KEYCODE_ESCAPE;
-			}
-			// convert line skip gestures
-			if (type == Common::EVENT_LBUTTONDOWN && _hotspotManager->isDialog()) {
-				type = Common::EVENT_KEYDOWN;
-				event.kbd.keycode = Common::KEYCODE_PERIOD;
-			}
-#else
 			static unsigned int _lastClick=0;
 			if (type == Common::EVENT_LBUTTONDOWN) {
 				unsigned int currentTime = g_system->getMillis();
 				doubleClick = (currentTime - _lastClick) < 500;
 				_lastClick = currentTime;
 			}
-#endif
 			if (type == Common::EVENT_MOUSEMOVE) {
 				_cursor->updatePosition(event.mouse);
 				_hotspotManager->hover(_cursor->getPosition());
@@ -1128,10 +1067,7 @@ void GrimEngine::mainLoop() {
 				Common::KeyState kbd(Common::KEYCODE_i);
 				handleChars(Common::EVENT_KEYDOWN, kbd);
 				handleControls(Common::EVENT_KEYDOWN, kbd);
-			} else if (type == Common::EVENT_LBUTTONDOWN ||
-			           type == Common::EVENT_RBUTTONDOWN ||
-			           type == Common::EVENT_SCROLL ||
-			           type == Common::EVENT_SCROLL_UP) {
+			} else if (type == Common::EVENT_LBUTTONDOWN || type == Common::EVENT_RBUTTONDOWN) {
 				_hotspotManager->event(_cursor->getPosition(), event, _opMode, doubleClick);
 			} else if (type == Common::EVENT_KEYDOWN || type == Common::EVENT_KEYUP) {
 				if (type == Common::EVENT_KEYDOWN) {
