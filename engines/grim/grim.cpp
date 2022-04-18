@@ -1071,7 +1071,7 @@ void GrimEngine::mainLoop() {
 				_hotspotManager->event(_cursor->getPosition(), event, doubleClick);
 			} else if (type == Common::EVENT_KEYDOWN || type == Common::EVENT_KEYUP) {
 				if (type == Common::EVENT_KEYDOWN) {
-					const bool nmode = _mode != DrawMode && _hotspotManager->getCtrlMode() == 0;
+					const bool nmode = _mode != DrawMode && _hotspotManager->getCtrlMode() == HotspotMan::Normal;
 					// Ignore everything but ESC when movies are playing
 					// This matches the retail and demo versions of EMI
 					// This also allows the PS2 version to skip movies

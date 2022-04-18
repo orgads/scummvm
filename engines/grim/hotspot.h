@@ -96,7 +96,7 @@ public:
 	void drawActive();
 	bool restoreState(SaveGame *savedState);
 	void saveState(SaveGame *savedState);
-	void switchMode(int ctrlMode) { _ctrlMode = ctrlMode; }
+	void switchMode(ControlMode ctrlMode) { _ctrlMode = ctrlMode; }
 	void setupDialog(int x0, int y0, int w, int h, int rows, int cols) {
 		_x0 = x0;
 		_y0 = y0;
@@ -109,7 +109,7 @@ public:
 	void resetInventory();
 	void addInventory(const Common::String &id, const Common::String &pic);
 	void updateHotspot(const Common::String &id, const Math::Vector3d &pos, int vis);
-	int getCtrlMode() { return _ctrlMode; }
+	ControlMode getCtrlMode() { return _ctrlMode; }
 	bool isDialog() { return _cutScene > 0 || _ctrlMode == Dialog || _ctrlMode == Passive; }
 	void setAxis(const Math::Vector3d &a, float offset) {
 		_axis = a;
@@ -129,7 +129,8 @@ protected:
 	Common::String activeSet();
 
 	// dialog support
-	int _ctrlMode, _rows, _cols;
+	ControlMode _ctrlMode;
+	int _rows, _cols;
 	int _x0, _y0, _w, _h;
 
 	// inventory

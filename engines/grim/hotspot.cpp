@@ -95,7 +95,7 @@ static Actor *getManny() {
 	return nullptr;
 }
 
-HotspotMan::HotspotMan() : _initialized(false), _ctrlMode(0), _cutScene(0),
+HotspotMan::HotspotMan() : _initialized(false), _ctrlMode(Normal), _cutScene(0),
 						   _flashHS(false) {
 }
 
@@ -542,7 +542,7 @@ void HotspotMan::freeClick(const Common::Point &cursor, int button, bool doubleC
 
 bool HotspotMan::restoreState(SaveGame *savedState) {
 	savedState->beginSection('HOTM');
-	_ctrlMode = savedState->readLESint32();
+	_ctrlMode = ControlMode(savedState->readLESint32());
 	_rows = savedState->readLESint32();
 	_cols = savedState->readLESint32();
 	_x0 = savedState->readLESint32();

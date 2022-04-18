@@ -63,9 +63,11 @@ void Lua_V1::UpdateHotspot() {
 }
 
 void Lua_V1::SwitchControlMode() {
-	int mode = lua_getnumber(lua_getparam(1));
+	HotspotMan::ControlMode mode = HotspotMan::ControlMode(lua_getnumber(lua_getparam(1)));
 	g_grim->getHotspotMan()->switchMode(mode);
-	if (mode == 1 || mode == 5) {
+	switch (mode) {
+	case HotspotMan::Dialog:
+	case HotspotMan::NoWalk: {
 		if (!lua_isnumber(lua_getparam(2)))
 			return;
 		int lines = lua_getnumber(lua_getparam(2));
@@ -74,15 +76,22 @@ void Lua_V1::SwitchControlMode() {
 		int width = lua_getnumber(lua_getparam(5));
 		int height = lua_getnumber(lua_getparam(6));
 		g_grim->getHotspotMan()->setupDialog(x0, y0, width, height, lines, 1);
-	} else if (mode == 3) {
+		break;
+	}
+	case HotspotMan::Linear: {
 		if (!lua_isnumber(lua_getparam(2)))
 			return;
 		Math::Vector3d axis(lua_getnumber(lua_getparam(2)),
 							lua_getnumber(lua_getparam(3)),
 							lua_getnumber(lua_getparam(4)));
 		g_grim->getHotspotMan()->setAxis(axis, lua_getnumber(lua_getparam(5)));
-	} else if (mode == 4) {
+		break;
+	}
+	case HotspotMan::Inventory:
 		g_grim->getHotspotMan()->setupDialog(20, 40, 100, 100, 4, 6);
+		break;
+	default:
+		break;
 	}
 }
 
@@ -108,8 +117,7 @@ void Lua_V1::RenameHotspot() {
 }
 
 void Lua_V1::GetControlMode() {
-	int mode = g_grim->getHotspotMan()->getCtrlMode();
-	lua_pushnumber(mode);
+	lua_pushnumber(g_grim->getHotspotMan()->getCtrlMode());
 }
 
 void Lua_V1::SetOptionMode() {
