@@ -1809,7 +1809,7 @@ void GfxOpenGLS::dimRegion(int xin, int yReal, int w, int h, float level) {
 
 void GfxOpenGLS::irisAroundRegion(int x1, int y1, int x2, int y2) {
 	_irisProgram->use();
-	_irisProgram->setUniform("color", Math::Vector4d(0.0f, 0.0f, 0.0f, 1.0f));
+	_irisProgram->setUniform("color", Math::Vector3d(0.0f, 0.0f, 0.0f));
 	_irisProgram->setUniform("scaleWH", Math::Vector2d(1.f / _gameWidth, 1.f / _gameHeight));
 
 	float fx1 = x1;
@@ -1901,8 +1901,8 @@ void GfxOpenGLS::loadEmergFont() {
 
 void GfxOpenGLS::drawGenericPrimitive(const float *vertices, uint32 numVertices, const PrimitiveObject *primitive) {
 	const Color color(primitive->getColor());
-	const Math::Vector4d colorV =
-	  Math::Vector4d(color.getRed(), color.getGreen(), color.getBlue(), 255.f) / 255.f;
+	const Math::Vector3d colorV =
+	  Math::Vector3d(color.getRed(), color.getGreen(), color.getBlue()) / 255.f;
 
 	GLuint prim = nextPrimitive();
 	glBindBuffer(GL_ARRAY_BUFFER, prim);
