@@ -1146,10 +1146,6 @@ Math::Angle Actor::getYawTo(const Math::Vector3d &p) const {
 }
 
 void Actor::sayLine(const char *msgId, bool background, float x, float y) {
-	if (!msgId) {
-		warning("zero pointer in message encountered");
-		return;
-	}
 	assert(msgId);
 
 	if (msgId[0] == 0) {
