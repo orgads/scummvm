@@ -24,28 +24,11 @@
 #define GRIM_CURSOR_H_
 
 #include "common/rect.h"
-#include "common/array.h"
 
 namespace Grim {
 
 class GrimEngine;
 class Bitmap;
-
-class CursorData {
-public:
-	CursorData(const Common::String& name);
-	~CursorData();
-	void draw(const Common::Point& pos);
-	void reset();
-
-private:
-	Bitmap* load(const Common::String& name);
-	Bitmap** _anim;
-	unsigned _frameTick, _rotTick;
-	int _frame, _frames;
-	bool _repeat;
-	float _rot, _rotDelta;
-};
 
 class Cursor {
 public:
@@ -53,23 +36,22 @@ public:
 	~Cursor();
 
 	Common::Point getPosition() { return _position; }
-	void updatePosition(Common::Point &mouse);
-	void setCursor(int id);
+	void updatePosition(Common::Point &mouse) { _position = mouse; }
+	void setCursor(int id) { _curCursor = id; }
 	void reload();
-	void setPersistent(int pc, int id, int x=-1, int y=-1);
+	void setPersistent(int id, int x=-1, int y=-1);
 
 	void draw();
 private:
 
-	float _scaleX, _scaleY;
-	int _curCursor;
-	int _persistentCursor[2];
+	int _hotspotx, _hotspoty;
+	int _curCursor, _persistentCursor;
 
 	Common::Point _position;
-	Common::Point _persistentPosition[2];
+	Common::Point _persistentPosition;
 
 	void loadAvailableCursors();
-	CursorData** _data;
+	Bitmap** _bitmaps;
 };
 
 } // namespace Grim
