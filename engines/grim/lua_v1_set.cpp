@@ -253,7 +253,8 @@ void Lua_V1::MakeCurrentSet() {
 	const char *name = lua_getstring(nameObj);
 	Debug::debug(Debug::Engine, "Entered new scene '%s'.", name);
 	g_grim->setSet(name);
-	g_grim->getHotspotMan()->updatePerspective();
+	if (!g_grim->isRemastered())
+		g_grim->getHotspotMan()->updatePerspective();
 }
 
 void Lua_V1::MakeCurrentSetup() {

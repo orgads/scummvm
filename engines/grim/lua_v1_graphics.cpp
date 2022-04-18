@@ -522,7 +522,8 @@ void Lua_V1::SetGamma() {
 }
 
 void Lua_V1::Display() {
-	g_grim->drawCursor();
+	if (!g_grim->isRemastered())
+		g_grim->drawCursor();
 	if (g_grim->getFlipEnable()) {
 		g_driver->flipBuffer();
 	}
