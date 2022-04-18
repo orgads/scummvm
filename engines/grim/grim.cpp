@@ -352,7 +352,7 @@ Common::Error GrimEngine::run() {
 	}
 
 	ConfMan.registerDefault("check_gamedata", true);
-	if (ConfMan.getBool("check_gamedata") && !isRemastered() && false) { // HACK
+	if (ConfMan.getBool("check_gamedata") && !isRemastered()) {
 		MD5CheckDialog d;
 		if (!d.runModal()) {
 			Common::U32String confirmString = Common::U32String::format(_(
