@@ -79,11 +79,6 @@ MODULE_OBJS += \
 	tinygl/zdirtyrect.o
 endif
 
-ifdef USE_OPENGL_SHADERS
-MODULE_OBJS += \
-	projection.o
-endif
-
 ifdef USE_ASPECT
 MODULE_OBJS += \
 	scaler/aspect.o

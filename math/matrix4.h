@@ -72,10 +72,6 @@ public:
 	*/
 	void invertAffineOrthonormal();
 
-	/**
-	 * Inverts a matrix.
-	 */
-	bool invert();
 	void transpose();
 
 	inline Matrix<4, 4> operator*(const Matrix<4, 4> &m2) const {

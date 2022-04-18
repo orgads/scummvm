@@ -45,7 +45,7 @@
 
 #include "graphics/surface.h"
 #include "graphics/opengl/context.h"
-#include "graphics/projection.h"
+#include "math/glmath.h"
 
 #include "engines/grim/actor.h"
 #include "engines/grim/bitmap.h"
@@ -2316,7 +2316,7 @@ bool GfxOpenGLS::worldToScreen(const Math::Vector3d &vec, int &x, int &y) {
 	view.transpose();
 
 	const int viewPort[4] = {0, 0, _gameWidth, _gameHeight};
-	Graphics::project(vec, view, proj, viewPort, win);
+	Math::gluMathProject(vec, view.getData(), proj.getData(), viewPort, win);
 
 	win.y() = _gameHeight - win.y();
 
@@ -2337,7 +2337,7 @@ bool GfxOpenGLS::worldToScreen(const Math::Vector3d &vec, int &x, int &y) {
 bool GfxOpenGLS::raycast(int x, int y, Math::Vector3d &r0, Math::Vector3d &r1) {
 	Math::Vector3d p0, p1;
 
-	const int viewPort[4] = {0,0,_gameWidth,_gameHeight};
+	const Common::Rect viewPort(0, 0, _gameWidth, _gameHeight);
 
 	const Math::Vector3d winPos0(x, _gameHeight - y, 0.0);
 	const Math::Vector3d winPos1(x, _gameHeight - y, 1.0);
@@ -2347,8 +2347,9 @@ bool GfxOpenGLS::raycast(int x, int y, Math::Vector3d &r0, Math::Vector3d &r1) {
 	Math::Matrix4 view(_viewMatrix);
 	view.transpose();
 
-	Graphics::unProject(winPos0, view, proj, viewPort, p0);
-	Graphics::unProject(winPos1, view, proj, viewPort, p1);
+	const Math::Matrix4 mvp = view * proj;
+	Math::gluMathUnProject(winPos0, mvp, viewPort, p0);
+	Math::gluMathUnProject(winPos1, mvp, viewPort, p1);
 
 	r0 = p0;
 	r1 = p1 - r0;
