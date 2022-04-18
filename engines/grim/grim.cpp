@@ -1075,10 +1075,11 @@ void GrimEngine::mainLoop() {
 				_hotspotManager->event(_cursor->getPosition(), event, doubleClick);
 			} else if (type == Common::EVENT_KEYDOWN || type == Common::EVENT_KEYUP) {
 				if (type == Common::EVENT_KEYDOWN) {
-					bool nmode = _mode != DrawMode && _hotspotManager->getCtrlMode() == 0;
-
-					// Allow us to disgracefully skip movies in the PS2-version:
-					if (_mode == SmushMode && getGamePlatform() == Common::kPlatformPS2) {
+					const bool nmode = _mode != DrawMode && _hotspotManager->getCtrlMode() == 0;
+					// Ignore everything but ESC when movies are playing
+					// This matches the retail and demo versions of EMI
+					// This also allows the PS2 version to skip movies
+					if (_mode == SmushMode && g_grim->getGameType() == GType_MONKEY4) {
 						if (event.kbd.keycode == Common::KEYCODE_ESCAPE) {
 							g_movie->stop();
 							break;
