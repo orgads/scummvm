@@ -396,13 +396,9 @@ Common::Error GrimEngine::run() {
 
 	if (getGameType() == GType_GRIM && g_grim->isRemastered()) {
 		g_driver = createRenderer(1600, 900);
-	} else if (ConfMan.hasKey("gameWidth") && ConfMan.hasKey("gameHeight")) {
-		g_driver->setupScreen(ConfMan.getInt("gameWidth"), ConfMan.getInt("gameHeight"));
 	} else {
 		g_driver = createRenderer(640, 480);
 	}
-	_system->showMouse(false);
-	_system->lockMouse(false);
 
 	if (getGameType() == GType_MONKEY4 && SearchMan.hasFile("AMWI.m4b")) {
 		// Play EMI Mac Aspyr logo
