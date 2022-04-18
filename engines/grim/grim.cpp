@@ -93,7 +93,7 @@ GfxBase *g_driver = nullptr;
 int g_imuseState = -1;
 
 GrimEngine::GrimEngine(OSystem *syst, uint32 gameFlags, GrimGameType gameType, Common::Platform platform, Common::Language language) :
-		Engine(syst), _currSet(nullptr), _selectedActor(nullptr), _pauseStartTime(0), _opMode(0), _devMode(false), _language(0) {
+		Engine(syst), _currSet(nullptr), _selectedActor(nullptr), _pauseStartTime(0), _language(0) {
 	g_grim = this;
 
 	setDebugger(new Debugger());
@@ -959,7 +959,7 @@ void GrimEngine::drawNormalMode() {
 }
 
 void GrimEngine::drawCursor() {
-	_hotspotManager->drawActive(_opMode);
+	_hotspotManager->drawActive();
 	_cursor->draw();
 }
 
@@ -984,10 +984,6 @@ void GrimEngine::doFlip() {
 			_lastFrameTime = currentTime;
 		}
 	}
-}
-
-inline float dist(const Common::Point& a, const Common::Point& b) {
-	return sqrt( (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y) );
 }
 
 void GrimEngine::mainLoop() {
@@ -1071,13 +1067,12 @@ void GrimEngine::mainLoop() {
 			if (type == Common::EVENT_MOUSEMOVE) {
 				_cursor->updatePosition(event.mouse);
 				_hotspotManager->hover(_cursor->getPosition());
-			} else if (type == Common::EVENT_MBUTTONDOWN ||
-			           (type == Common::EVENT_LBUTTONDOWN && event.kbd.hasFlags(Common::KBD_CTRL))) {
+			} else if (type == Common::EVENT_MBUTTONDOWN) {
 				Common::KeyState kbd(Common::KEYCODE_i);
 				handleChars(Common::EVENT_KEYDOWN, kbd);
 				handleControls(Common::EVENT_KEYDOWN, kbd);
 			} else if (type == Common::EVENT_LBUTTONDOWN || type == Common::EVENT_RBUTTONDOWN) {
-				_hotspotManager->event(_cursor->getPosition(), event, _opMode, doubleClick);
+				_hotspotManager->event(_cursor->getPosition(), event, doubleClick);
 			} else if (type == Common::EVENT_KEYDOWN || type == Common::EVENT_KEYUP) {
 				if (type == Common::EVENT_KEYDOWN) {
 					bool nmode = _mode != DrawMode && _hotspotManager->getCtrlMode() == 0;
@@ -1098,32 +1093,6 @@ void GrimEngine::mainLoop() {
 					// mouse additions
 					} else if (nmode && event.kbd.keycode == Common::KEYCODE_SPACE) {
 						_hotspotManager->flashHotspots();
-						break;
-					} else if (nmode && event.kbd.keycode == Common::KEYCODE_z && event.kbd.hasFlags(Common::KBD_SHIFT)) {
-						_devMode = !_devMode;
-						handleChars(type, event.kbd);
-					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_h) {
-						_hotspotManager->getName(_cursor->getPosition());
-						break;
-					} else if (_devMode && _opMode > 0 && event.kbd.keycode == Common::KEYCODE_RETURN) {
-						_hotspotManager->okKey(event.kbd.hasFlags(Common::KBD_SHIFT));
-						break;
-					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_LEFTBRACKET) {
-						_opMode = (_opMode+1) % 3;
-						_hotspotManager->cancel();
-						warning("set opMode %d %d",_opMode,_hotspotManager->getCtrlMode());
-					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_RIGHTBRACKET) {
-						_opMode = (_opMode-1+3) % 3;
-						_hotspotManager->cancel();
-						warning("set opMode %d %d",_opMode,_hotspotManager->getCtrlMode());
-					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_F5) {
-						_hotspotManager->initialize();
-					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_F6) {
-						_hotspotManager->debug(1);
-					} else if (_devMode && event.kbd.keycode == Common::KEYCODE_F7) {
-						_hotspotManager->debug(2);
-					} else if (_devMode && _opMode > 0 && event.kbd.keycode == Common::KEYCODE_ESCAPE) {
-						_hotspotManager->cancel();
 						break;
 					} else {
 						handleChars(type, event.kbd);

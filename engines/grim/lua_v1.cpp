@@ -785,6 +785,8 @@ STUB_FUNC(Lua_V1::GetCameraRoll)
 STUB_FUNC(Lua_V1::GetMemoryUsage)
 STUB_FUNC(Lua_V1::GetFontDimensions)
 STUB_FUNC(Lua_V1::PurgeText)
+STUB_FUNC(Lua_V1::NotifyWalk)
+STUB_FUNC(Lua_V1::InteractMode)
 
 struct luaL_reg grimMainOpcodes[] = {
 	{ "EngineDisplay", LUA_OPCODE(Lua_V1, EngineDisplay) },

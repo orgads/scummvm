@@ -86,11 +86,6 @@ void Lua_V1::SwitchControlMode() {
 	}
 }
 
-void Lua_V1::NotifyWalk() {
-	int id = lua_getnumber(lua_getparam(1));
-	g_grim->getHotspotMan()->notifyWalk(id);
-}
-
 void Lua_V1::RegisterInventory() {
 	Common::String id = lua_getstring(lua_getparam(1));
 	if (id == "reset") {
@@ -104,10 +99,6 @@ void Lua_V1::RegisterInventory() {
 void Lua_V1::MouseDown() {
 	int state = g_grim->getEventManager()->getButtonState();
 	lua_pushnumber(state);
-}
-
-void Lua_V1::InteractMode() {
-
 }
 
 void Lua_V1::RenameHotspot() {

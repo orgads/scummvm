@@ -282,8 +282,6 @@ protected:
 
 	Cursor *_cursor;
 	HotspotMan *_hotspotManager;
-	int _opMode;
-	bool _devMode;
 
 	// Remastered;
 	uint32 _language;
