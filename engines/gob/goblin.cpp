@@ -98,36 +98,33 @@ Goblin::Goblin(GobEngine *vm) : _vm(vm) {
 }
 
 Goblin::~Goblin() {
-	int i, state, col;
-
 	if (_objList)
 		_vm->_util->deleteList(_objList);
 
-	for (i = 0; i < 4; i++) {
+	for (int i = 0; i < 4; i++) {
 		if (_goblins[i]) {
 			if (_goblins[i]->realStateMach) {
-				for (state = 0; state < (i == 3 ? 70 : 40); state++)
-					for (col = 0; col < 6; col++)
+				for (int state = 0; state < (i == 3 ? 70 : 40); state++)
+					for (int col = 0; col < 6; col++)
 						delete _goblins[i]->realStateMach[state][col];
 				delete[] _goblins[i]->realStateMach;
 			}
 			delete _goblins[i];
 		}
 	}
-	for (i = 0; i < 20; i++) {
+	for (int i = 0; i < 20; i++) {
 		if (_objects[i]) {
 			if (_objects[i]->realStateMach) {
-				for (state = 0; state < 40; state++)
-					for (col = 0; col < 6; col++)
-						if (_objects[i]->realStateMach[state][col])
-							delete _objects[i]->realStateMach[state][col];
+				for (int state = 0; state < 40; state++)
+					for (int col = 0; col < 6; col++)
+						delete _objects[i]->realStateMach[state][col];
 				delete[] _objects[i]->realStateMach;
 			}
 			delete _objects[i];
 		}
 	}
 
-	for (i = 0; i < 16; i++)
+	for (int i = 0; i < 16; i++)
 		_soundData[i].free();
 }
 
