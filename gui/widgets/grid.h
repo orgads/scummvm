@@ -67,6 +67,8 @@ struct GridItemInfo {
 		const Common::String &d, const Common::String &e, Common::Language l, Common::Platform p, bool v)
 		: entryID(id), gameid(gid), engineid(eid), title(t), description(d), extra(e), language(l), platform(p), validEntry(v), isHeader(false) {
 		thumbPath = Common::String::format("icons/%s-%s.png", engineid.c_str(), gameid.c_str());
+		if (!description.matchString(title + " (*"))
+			title = description;
 	}
 
 	GridItemInfo(const Common::String &groupHeader, int groupID) : title(groupHeader), description(groupHeader),
