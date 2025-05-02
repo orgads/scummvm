@@ -29,31 +29,169 @@
 
 namespace TinyGL {
 
-template <bool kDepthWrite>
-FORCEINLINE void FrameBuffer::putPixel(uint pixelOffset, int color, int x, int y, uint z) {
-	if (_clippingEnabled)
-		putPixel<kDepthWrite, true>(pixelOffset, color, x, y, z);
-	else
-		putPixel<kDepthWrite, false>(pixelOffset, color, x, y, z);
+FORCEINLINE void FrameBuffer::putPixel(uint pixelOffset, int color, int x, int y, uint z, bool depthWrite) {
+	putPixel(pixelOffset, color, x, y, z, depthWrite, _clippingEnabled);
 }
 
-template <bool kDepthWrite, bool kEnableScissor>
-FORCEINLINE void FrameBuffer::putPixel(uint pixelOffset, int color, int x, int y, uint z) {
-	if (kEnableScissor && scissorPixel(x, y)) {
+FORCEINLINE void FrameBuffer::putPixel(uint pixelOffset, int color, int x, int y, uint z, bool depthWrite, bool enableScissor) {
+	if (enableScissor && scissorPixel(x, y)) {
 		return;
 	}
 	uint *pz = _zbuf + pixelOffset;
 	if (compareDepth(z, *pz)) {
-		writePixel<true, true, kDepthWrite>(pixelOffset, color, z);
+		if (depthWrite) {
+			writePixel<true, true, true>(pixelOffset, color, z);
+		} else {
+			writePixel<true, true, false>(pixelOffset, color, z);
+		}
 	}
 }
 
-template <bool kEnableScissor>
-FORCEINLINE void FrameBuffer::putPixel(uint pixelOffset, int color, int x, int y) {
-	if (kEnableScissor && scissorPixel(x, y)) {
+FORCEINLINE void FrameBuffer::putPixel(uint pixelOffset, int color, int x, int y, bool enableScissor) {
+	if (enableScissor && scissorPixel(x, y)) {
 		return;
 	}
 	writePixel<true, true>(pixelOffset, color);
+}
+
+void FrameBuffer::writePixel(int pixel, byte aSrc, byte rSrc, byte gSrc, byte bSrc,
+	float z, uint fog, byte fog_r, byte fog_g, byte fog_b, const BaseRasterFlags &flags) {
+	if (flags.alphaTest) {
+		if (!checkAlphaTest(aSrc))
+			return;
+	}
+
+	if (flags.depthWrite) {
+		_zbuf[pixel] = z;
+	}
+
+	if (flags.fog) {
+		int oneMinusFog = (1 << ZB_FOG_BITS) - fog;
+		int finalR = (rSrc * fog + fog_r * oneMinusFog) >> ZB_FOG_BITS;
+		int finalG = (gSrc * fog + fog_g * oneMinusFog) >> ZB_FOG_BITS;
+		int finalB = (bSrc * fog + fog_b * oneMinusFog) >> ZB_FOG_BITS;
+		if (finalR > 255) {
+			rSrc = 255;
+		} else {
+			rSrc = finalR;
+		}
+		if (finalG > 255) {
+			gSrc = 255;
+		} else {
+			gSrc = finalG;
+		}
+		if (finalB > 255) {
+			bSrc = 255;
+		} else {
+			bSrc = finalB;
+		}
+	}
+
+	if (!flags.blending) {
+		setPixelAt(pixel, _pbufFormat.ARGBToColor(aSrc, rSrc, gSrc, bSrc));
+	} else {
+		byte rDst, gDst, bDst, aDst;
+		_pbufFormat.colorToARGB(getPixelAt(pixel), aDst, rDst, gDst, bDst);
+		switch (_sourceBlendingFactor) {
+		case TGL_ZERO:
+			rSrc = gSrc = bSrc = 0;
+			break;
+		case TGL_ONE:
+			break;
+		case TGL_DST_COLOR:
+			rSrc = (rDst * rSrc) >> 8;
+			gSrc = (gDst * gSrc) >> 8;
+			bSrc = (bDst * bSrc) >> 8;
+			break;
+		case TGL_ONE_MINUS_DST_COLOR:
+			rSrc = (rSrc * (255 - rDst)) >> 8;
+			gSrc = (gSrc * (255 - gDst)) >> 8;
+			bSrc = (bSrc * (255 - bDst)) >> 8;
+			break;
+		case TGL_SRC_ALPHA:
+			rSrc = (rSrc * aSrc) >> 8;
+			gSrc = (gSrc * aSrc) >> 8;
+			bSrc = (bSrc * aSrc) >> 8;
+			break;
+		case TGL_ONE_MINUS_SRC_ALPHA:
+			rSrc = (rSrc * (255 - aSrc)) >> 8;
+			gSrc = (gSrc * (255 - aSrc)) >> 8;
+			bSrc = (bSrc * (255 - aSrc)) >> 8;
+			break;
+		case TGL_DST_ALPHA:
+			rSrc = (rSrc * aDst) >> 8;
+			gSrc = (gSrc * aDst) >> 8;
+			bSrc = (bSrc * aDst) >> 8;
+			break;
+		case TGL_ONE_MINUS_DST_ALPHA:
+			rSrc = (rSrc * (255 - aDst)) >> 8;
+			gSrc = (gSrc * (255 - aDst)) >> 8;
+			bSrc = (bSrc * (255 - aDst)) >> 8;
+			break;
+		default:
+			break;
+		}
+
+		switch (_destinationBlendingFactor) {
+		case TGL_ZERO:
+			rDst = gDst = bDst = 0;
+			break;
+		case TGL_ONE:
+			break;
+		case TGL_DST_COLOR:
+			rDst = (rDst * rSrc) >> 8;
+			gDst = (gDst * gSrc) >> 8;
+			bDst = (bDst * bSrc) >> 8;
+			break;
+		case TGL_ONE_MINUS_DST_COLOR:
+			rDst = (rDst * (255 - rSrc)) >> 8;
+			gDst = (gDst * (255 - gSrc)) >> 8;
+			bDst = (bDst * (255 - bSrc)) >> 8;
+			break;
+		case TGL_SRC_ALPHA:
+			rDst = (rDst * aSrc) >> 8;
+			gDst = (gDst * aSrc) >> 8;
+			bDst = (bDst * aSrc) >> 8;
+			break;
+		case TGL_ONE_MINUS_SRC_ALPHA:
+			rDst = (rDst * (255 - aSrc)) >> 8;
+			gDst = (gDst * (255 - aSrc)) >> 8;
+			bDst = (bDst * (255 - aSrc)) >> 8;
+			break;
+		case TGL_DST_ALPHA:
+			rDst = (rDst * aDst) >> 8;
+			gDst = (gDst * aDst) >> 8;
+			bDst = (bDst * aDst) >> 8;
+			break;
+		case TGL_ONE_MINUS_DST_ALPHA:
+			rDst = (rDst * (255 - aDst)) >> 8;
+			gDst = (gDst * (255 - aDst)) >> 8;
+			bDst = (bDst * (255 - aDst)) >> 8;
+			break;
+		case TGL_SRC_ALPHA_SATURATE: {
+			int factor = aSrc < 1 - aDst ? aSrc : 1 - aDst;
+			rDst = (rDst * factor) >> 8;
+			gDst = (gDst * factor) >> 8;
+			bDst = (bDst * factor) >> 8;
+			}
+			break;
+		default:
+			break;
+		}
+		int finalR = rDst + rSrc;
+		int finalG = gDst + gSrc;
+		int finalB = bDst + bSrc;
+		if (finalR > 255) {
+			finalR = 255;
+		}
+		if (finalG > 255) {
+			finalG = 255;
+		}
+		if (finalB > 255) {
+			finalB = 255;
+		}
+		setPixelAt(pixel, _pbufFormat.RGBToColor(finalR, finalG, finalB));
+	}
 }
 
 template <bool kInterpRGB, bool kInterpZ, bool kDepthWrite>
@@ -65,7 +203,16 @@ void FrameBuffer::drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2) {
 }
 
 template <bool kInterpRGB, bool kInterpZ, bool kDepthWrite, bool kEnableScissor>
-void FrameBuffer::drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2) {
+FORCEINLINE void FrameBuffer::drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2) {
+	RasterFlags flags;
+	flags.interpRGB = kInterpRGB;
+	flags.interpZ = kInterpZ;
+	flags.depthWrite = kDepthWrite;
+	flags.scissor = kEnableScissor;
+	drawLine(p1, p2, flags);
+}
+
+void FrameBuffer::drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2, const RasterFlags &flags) {
 	// Based on Bresenham's line algorithm, as implemented in
 	// https://rosettacode.org/wiki/Bitmap/Bresenham%27s_line_algorithm#C
 	// with a loop exit condition based on the (unidimensional) taxicab
@@ -94,32 +241,32 @@ void FrameBuffer::drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2) {
 	int n = dx > dy ? dx : dy;
 
 	// kInterpZ
-	unsigned int z;
-	int sz;
+	unsigned int z = 0;
+	int sz = 0;
 
 	// kInterpRGB
 	int r = p1->r >> (ZB_POINT_RED_BITS - 8);
 	int g = p1->g >> (ZB_POINT_GREEN_BITS - 8);
 	int b = p1->b >> (ZB_POINT_BLUE_BITS - 8);
 	int color = RGB_TO_PIXEL(r, g, b);
-	int sr, sg, sb;
+	int sr = 0, sg = 0, sb = 0;
 
-	if (kInterpZ) {
+	if (flags.interpZ) {
 		if (n == 0)
 			return;
 		sz = (p2->z - p1->z) / n;
 		z = p1->z;
 	}
-	if (kInterpRGB) {
+	if (flags.interpRGB) {
 		sr = ((p2->r - p1->r) / n) >> (ZB_POINT_RED_BITS - 8);
 		sg = ((p2->g - p1->g) / n) >> (ZB_POINT_GREEN_BITS - 8);
 		sb = ((p2->b - p1->b) / n) >> (ZB_POINT_BLUE_BITS - 8);
 	}
 	while (n--) {
-		if (kInterpZ)
-			putPixel<kDepthWrite, kEnableScissor>(pixelOffset, color, x, y, z);
+		if (flags.interpZ)
+			putPixel(pixelOffset, color, x, y, z, flags.depthWrite, flags.scissor);
 		else
-			putPixel<kEnableScissor>(pixelOffset, color, x, y);
+			putPixel(pixelOffset, color, x, y, flags.scissor);
 		e2 = err;
 		if (e2 > -dx) {
 			err -= dy;
@@ -131,9 +278,9 @@ void FrameBuffer::drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2) {
 			pixelOffset += inc_y_pixel;
 			y += inc_y;
 		}
-		if (kInterpZ)
+		if (flags.interpZ)
 			z += sz;
-		if (kInterpRGB) {
+		if (flags.interpRGB) {
 			r += sr;
 			g += sg;
 			b += sb;
@@ -147,9 +294,9 @@ void FrameBuffer::plot(ZBufferPoint *p) {
 	const int col = RGB_TO_PIXEL(p->r, p->g, p->b);
 	const uint z = p->z;
 	if (_depthWrite && _depthTestEnabled)
-		putPixel<true>(pixelOffset, col, p->x, p->y, z);
+		putPixel(pixelOffset, col, p->x, p->y, z, true);
 	else
-		putPixel<false>(pixelOffset, col, p->x, p->y, z);
+		putPixel(pixelOffset, col, p->x, p->y, z, false);
 }
 
 void FrameBuffer::fillLineFlatZ(ZBufferPoint *p1, ZBufferPoint *p2) {

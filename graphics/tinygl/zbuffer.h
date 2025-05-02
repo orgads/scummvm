@@ -103,6 +103,27 @@ struct ZBufferPoint {
 	}
 };
 
+struct BaseRasterFlags {
+	bool alphaTest = false;
+	bool blending = false;
+	bool depthWrite = false;
+	bool fog = false;
+};
+
+struct RasterFlags : BaseRasterFlags {
+	bool depthTest = false;
+	bool scissor = false;
+	bool stipple = false;
+	bool stencil = false;
+	bool smooth = false;
+	bool perspective = false;
+
+	bool interpZ = false;
+	bool interpRGB = false;
+	bool interpST = false;
+	bool interpSTZ = false;
+};
+
 struct FrameBuffer {
 	FrameBuffer(int width, int height, const Graphics::PixelFormat &format, bool enableStencilBuffer);
 	~FrameBuffer();
@@ -356,22 +377,19 @@ private:
 		}
 	}
 
-	template <bool kDepthWrite, bool kSmoothMode, bool kFogMode, bool kEnableAlphaTest, bool kEnableScissor, bool kEnableBlending, bool kStencilEnabled, bool kStippleEnabled, bool kDepthTestEnabled>
 	void putPixelNoTexture(int fbOffset, uint *pz, byte *ps, int _a,
 	                       int x, int y, uint &z, uint &r, uint &g, uint &b, uint &a,
 	                       int &dzdx, int &drdx, int &dgdx, int &dbdx, uint dadx,
-	                       uint &fog, int fog_r, int fog_g, int fog_b, int &dfdx);
+	                       uint &fog, int fog_r, int fog_g, int fog_b, int &dfdx, const RasterFlags &flags);
 
-	template <bool kDepthWrite, bool kLightsMode, bool kSmoothMode, bool kFogMode, bool kEnableAlphaTest, bool kEnableScissor, bool kEnableBlending, bool kStencilEnabled, bool kDepthTestEnabled>
 	void putPixelTexture(int fbOffset, const TexelBuffer *texture,
 	                     uint wrap_s, uint wrap_t, uint *pz, byte *ps, int _a,
 	                     int x, int y, uint &z, int &t, int &s,
 	                     uint &r, uint &g, uint &b, uint &a,
 	                     int &dzdx, int &dsdx, int &dtdx, int &drdx, int &dgdx, int &dbdx, uint dadx,
-	                     uint &fog, int fog_r, int fog_g, int fog_b, int &dfdx);
+	                     uint &fog, int fog_r, int fog_g, int fog_b, int &dfdx, const RasterFlags &flags);
 
-	template <bool kDepthWrite, bool kEnableScissor, bool kStencilEnabled, bool StippleEnabled, bool kDepthTestEnabled>
-	void putPixelDepth(uint *pz, byte *ps, int _a, int x, int y, uint &z, int &dzdx);
+	void putPixelDepth(uint *pz, byte *ps, int _a, int x, int y, uint &z, int &dzdx, const RasterFlags &flags);
 
 
 	template <bool kEnableAlphaTest>
@@ -424,143 +442,16 @@ private:
 
 	template <bool kEnableAlphaTest, bool kBlendingEnabled, bool kDepthWrite, bool kFogMode>
 	FORCEINLINE void writePixel(int pixel, byte aSrc, byte rSrc, byte gSrc, byte bSrc, float z, uint fog, byte fog_r, byte fog_g, byte fog_b) {
-		if (kEnableAlphaTest) {
-			if (!checkAlphaTest(aSrc))
-				return;
-		}
-
-		if (kDepthWrite) {
-			_zbuf[pixel] = z;
-		}
-
-		if (kFogMode) {
-			int oneMinusFog = (1 << ZB_FOG_BITS) - fog;
-			int finalR = (rSrc * fog + fog_r * oneMinusFog) >> ZB_FOG_BITS;
-			int finalG = (gSrc * fog + fog_g * oneMinusFog) >> ZB_FOG_BITS;
-			int finalB = (bSrc * fog + fog_b * oneMinusFog) >> ZB_FOG_BITS;
-			if (finalR > 255) {
-				rSrc = 255;
-			} else {
-				rSrc = finalR;
-			}
-			if (finalG > 255) {
-				gSrc = 255;
-			} else {
-				gSrc = finalG;
-			}
-			if (finalB > 255) {
-				bSrc = 255;
-			} else {
-				bSrc = finalB;
-			}
-		}
-
-		if (!kBlendingEnabled) {
-			setPixelAt(pixel, _pbufFormat.ARGBToColor(aSrc, rSrc, gSrc, bSrc));
-		} else {
-			byte rDst, gDst, bDst, aDst;
-			_pbufFormat.colorToARGB(getPixelAt(pixel), aDst, rDst, gDst, bDst);
-			switch (_sourceBlendingFactor) {
-			case TGL_ZERO:
-				rSrc = gSrc = bSrc = 0;
-				break;
-			case TGL_ONE:
-				break;
-			case TGL_DST_COLOR:
-				rSrc = (rDst * rSrc) >> 8;
-				gSrc = (gDst * gSrc) >> 8;
-				bSrc = (bDst * bSrc) >> 8;
-				break;
-			case TGL_ONE_MINUS_DST_COLOR:
-				rSrc = (rSrc * (255 - rDst)) >> 8;
-				gSrc = (gSrc * (255 - gDst)) >> 8;
-				bSrc = (bSrc * (255 - bDst)) >> 8;
-				break;
-			case TGL_SRC_ALPHA:
-				rSrc = (rSrc * aSrc) >> 8;
-				gSrc = (gSrc * aSrc) >> 8;
-				bSrc = (bSrc * aSrc) >> 8;
-				break;
-			case TGL_ONE_MINUS_SRC_ALPHA:
-				rSrc = (rSrc * (255 - aSrc)) >> 8;
-				gSrc = (gSrc * (255 - aSrc)) >> 8;
-				bSrc = (bSrc * (255 - aSrc)) >> 8;
-				break;
-			case TGL_DST_ALPHA:
-				rSrc = (rSrc * aDst) >> 8;
-				gSrc = (gSrc * aDst) >> 8;
-				bSrc = (bSrc * aDst) >> 8;
-				break;
-			case TGL_ONE_MINUS_DST_ALPHA:
-				rSrc = (rSrc * (255 - aDst)) >> 8;
-				gSrc = (gSrc * (255 - aDst)) >> 8;
-				bSrc = (bSrc * (255 - aDst)) >> 8;
-				break;
-			default:
-				break;
-			}
-
-			switch (_destinationBlendingFactor) {
-			case TGL_ZERO:
-				rDst = gDst = bDst = 0;
-				break;
-			case TGL_ONE:
-				break;
-			case TGL_DST_COLOR:
-				rDst = (rDst * rSrc) >> 8;
-				gDst = (gDst * gSrc) >> 8;
-				bDst = (bDst * bSrc) >> 8;
-				break;
-			case TGL_ONE_MINUS_DST_COLOR:
-				rDst = (rDst * (255 - rSrc)) >> 8;
-				gDst = (gDst * (255 - gSrc)) >> 8;
-				bDst = (bDst * (255 - bSrc)) >> 8;
-				break;
-			case TGL_SRC_ALPHA:
-				rDst = (rDst * aSrc) >> 8;
-				gDst = (gDst * aSrc) >> 8;
-				bDst = (bDst * aSrc) >> 8;
-				break;
-			case TGL_ONE_MINUS_SRC_ALPHA:
-				rDst = (rDst * (255 - aSrc)) >> 8;
-				gDst = (gDst * (255 - aSrc)) >> 8;
-				bDst = (bDst * (255 - aSrc)) >> 8;
-				break;
-			case TGL_DST_ALPHA:
-				rDst = (rDst * aDst) >> 8;
-				gDst = (gDst * aDst) >> 8;
-				bDst = (bDst * aDst) >> 8;
-				break;
-			case TGL_ONE_MINUS_DST_ALPHA:
-				rDst = (rDst * (255 - aDst)) >> 8;
-				gDst = (gDst * (255 - aDst)) >> 8;
-				bDst = (bDst * (255 - aDst)) >> 8;
-				break;
-			case TGL_SRC_ALPHA_SATURATE: {
-				int factor = aSrc < 1 - aDst ? aSrc : 1 - aDst;
-				rDst = (rDst * factor) >> 8;
-				gDst = (gDst * factor) >> 8;
-				bDst = (bDst * factor) >> 8;
-				}
-				break;
-			default:
-				break;
-			}
-			int finalR = rDst + rSrc;
-			int finalG = gDst + gSrc;
-			int finalB = bDst + bSrc;
-			if (finalR > 255) {
-				finalR = 255;
-			}
-			if (finalG > 255) {
-				finalG = 255;
-			}
-			if (finalB > 255) {
-				finalB = 255;
-			}
-			setPixelAt(pixel, _pbufFormat.RGBToColor(finalR, finalG, finalB));
-		}
+		BaseRasterFlags flags;
+		flags.alphaTest = kEnableAlphaTest;
+		flags.blending = kBlendingEnabled;
+		flags.depthWrite = kDepthWrite;
+		flags.fog = kFogMode;
+		writePixel(pixel, aSrc, rSrc, gSrc, bSrc, z, fog, fog_r, fog_g, fog_b, flags);
 	}
+
+	void writePixel(int pixel, byte aSrc, byte rSrc, byte gSrc, byte bSrc,
+		float z, uint fog, byte fog_r, byte fog_g, byte fog_b, const BaseRasterFlags &flags);
 
 public:
 
@@ -701,10 +592,12 @@ private:
 	void selectOffscreenBuffer(Buffer *buffer);
 	void clearOffscreenBuffer(Buffer *buffer);
 
+	void fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2, const RasterFlags &flags);
+
 	template <bool kInterpRGB, bool kInterpZ, bool kInterpST, bool kInterpSTZ, bool kSmoothMode,
 	          bool kDepthWrite, bool kFogMode, bool kAlphaTestEnabled, bool kEnableScissor,
 	          bool kBlendingEnabled, bool kStencilEnabled, bool kStippleEnabled, bool kDepthTestEnabled>
-	void fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
+	FORCEINLINE void fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2);
 
 	template <bool kInterpRGB, bool kInterpZ, bool kInterpST, bool kInterpSTZ, bool kSmoothMode,
 	          bool kDepthWrite, bool kFogMode, bool kAlphaTestEnabled, bool kEnableScissor,
@@ -758,20 +651,17 @@ private:
 	void fillLineFlat(ZBufferPoint *p1, ZBufferPoint *p2);
 	void fillLineInterp(ZBufferPoint *p1, ZBufferPoint *p2);
 
-	template <bool kDepthWrite>
-	FORCEINLINE void putPixel(uint pixelOffset, int color, int x, int y, uint z);
-
-	template <bool kDepthWrite, bool kEnableScissor>
-	FORCEINLINE void putPixel(uint pixelOffset, int color, int x, int y, uint z);
-
-	template <bool kEnableScissor>
-	FORCEINLINE void putPixel(uint pixelOffset, int color, int x, int y);
+	FORCEINLINE void putPixel(uint pixelOffset, int color, int x, int y, uint z, bool depthWrite);
+	FORCEINLINE void putPixel(uint pixelOffset, int color, int x, int y, uint z, bool depthWrite, bool enableScissor);
+	FORCEINLINE void putPixel(uint pixelOffset, int color, int x, int y, bool enableScissor);
 
 	template <bool kInterpRGB, bool kInterpZ, bool kDepthWrite>
-	void drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2);
+	FORCEINLINE void drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2);
 
 	template <bool kInterpRGB, bool kInterpZ, bool kDepthWrite, bool kEnableScissor>
-	void drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2);
+	FORCEINLINE void drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2);
+
+	void drawLine(const ZBufferPoint *p1, const ZBufferPoint *p2, const RasterFlags &flags);
 
 	Buffer _offscreenBuffer;
 	byte *_pbuf;

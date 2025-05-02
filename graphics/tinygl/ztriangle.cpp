@@ -45,20 +45,20 @@ static bool applyStipplePattern(int x, int y, const byte *stipple) {
 	return (stipple[byteIndex] & bitmask);
 }
 
-template <bool kDepthWrite, bool kSmoothMode, bool kFogMode, bool kEnableAlphaTest, bool kEnableScissor, bool kEnableBlending, bool kStencilEnabled, bool kStippleEnabled, bool kDepthTestEnabled>
 void FrameBuffer::putPixelNoTexture(int fbOffset, uint *pz, byte *ps, int _a,
                                     int x, int y, uint &z, uint &r, uint &g, uint &b, uint &a,
                                     int &dzdx, int &drdx, int &dgdx, int &dbdx, uint dadx,
-                                    uint &fog, int fog_r, int fog_g, int fog_b, int &dfdx) {
-	if (kEnableScissor && scissorPixel(x + _a, y)) {
+                                    uint &fog, int fog_r, int fog_g, int fog_b, int &dfdx,
+                                    const RasterFlags &flags) {
+	if (flags.scissor && scissorPixel(x + _a, y)) {
 		goto end;
 	}
 
-	if (kStippleEnabled && !applyStipplePattern(x + _a, y, _polygonStipplePattern)) {
+	if (flags.stipple && !applyStipplePattern(x + _a, y, _polygonStipplePattern)) {
 		goto end;
 	}
 
-	if (kStencilEnabled) {
+	if (flags.stencil) {
 		bool stencilResult = stencilTest(ps[_a]);
 		if (!stencilResult) {
 			stencilOp(false, true, ps + _a);
@@ -66,25 +66,24 @@ void FrameBuffer::putPixelNoTexture(int fbOffset, uint *pz, byte *ps, int _a,
 		}
 	}
 	bool depthTestResult;
-	if (kDepthTestEnabled) {
+	if (flags.depthTest) {
 		depthTestResult = compareDepth(z, pz[_a]);
 	} else {
 		depthTestResult = true;
 	}
-	if (kStencilEnabled) {
+	if (flags.stencil) {
 		stencilOp(true, depthTestResult, ps + _a);
 	}
 	if (depthTestResult) {
-		writePixel<kEnableAlphaTest, kEnableBlending, kDepthWrite, kFogMode>
-		          (fbOffset + _a, a >> (ZB_POINT_ALPHA_BITS - 8), r >> (ZB_POINT_RED_BITS - 8), g >> (ZB_POINT_GREEN_BITS - 8), b >> (ZB_POINT_BLUE_BITS - 8),
-		          z, fog, fog_r, fog_g, fog_b);
+		writePixel(fbOffset + _a, a >> (ZB_POINT_ALPHA_BITS - 8), r >> (ZB_POINT_RED_BITS - 8), g >> (ZB_POINT_GREEN_BITS - 8), b >> (ZB_POINT_BLUE_BITS - 8),
+		           z, fog, fog_r, fog_g, fog_b, flags);
 	}
 end:
 	z += dzdx;
-	if (kFogMode) {
+	if (flags.fog) {
 		fog += dfdx;
 	}
-	if (kSmoothMode) {
+	if (flags.smooth) {
 		r += drdx;
 		g += dgdx;
 		b += dbdx;
@@ -92,18 +91,18 @@ end:
 	}
 }
 
-template <bool kDepthWrite, bool kLightsMode, bool kSmoothMode, bool kFogMode, bool kEnableAlphaTest, bool kEnableScissor, bool kEnableBlending, bool kStencilEnabled, bool kDepthTestEnabled>
 void FrameBuffer::putPixelTexture(int fbOffset, const TexelBuffer *texture,
                                   uint wrap_s, uint wrap_t, uint *pz, byte *ps, int _a,
                                   int x, int y, uint &z, int &t, int &s,
                                   uint &r, uint &g, uint &b, uint &a,
                                   int &dzdx, int &dsdx, int &dtdx, int &drdx, int &dgdx, int &dbdx, uint dadx,
-                                  uint &fog, int fog_r, int fog_g, int fog_b, int &dfdx) {
-	if (kEnableScissor && scissorPixel(x + _a, y)) {
+                                  uint &fog, int fog_r, int fog_g, int fog_b, int &dfdx,
+                                  const RasterFlags &flags) {
+	if (flags.scissor && scissorPixel(x + _a, y)) {
 		goto end;
 	}
 
-	if (kStencilEnabled) {
+	if (flags.stencil) {
 		bool stencilResult = stencilTest(ps[_a]);
 		if (!stencilResult) {
 			stencilOp(false, true, ps + _a);
@@ -111,18 +110,18 @@ void FrameBuffer::putPixelTexture(int fbOffset, const TexelBuffer *texture,
 		}
 	}
 	bool depthTestResult;
-	if (kDepthTestEnabled) {
+	if (flags.depthTest) {
 		depthTestResult = compareDepth(z, pz[_a]);
 	} else {
 		depthTestResult = true;
 	}
-	if (kStencilEnabled) {
+	if (flags.stencil) {
 		stencilOp(true, depthTestResult, ps + _a);
 	}
 	if (depthTestResult) {
 		uint8 c_a, c_r, c_g, c_b;
 		texture->getARGBAt(wrap_s, wrap_t, s, t, c_a, c_r, c_g, c_b);
-		if (kLightsMode) {
+		if (flags.interpRGB) {
 			uint l_a = (a >> (ZB_POINT_ALPHA_BITS - 8));
 			uint l_r = (r >> (ZB_POINT_RED_BITS - 8));
 			uint l_g = (g >> (ZB_POINT_GREEN_BITS - 8));
@@ -132,16 +131,16 @@ void FrameBuffer::putPixelTexture(int fbOffset, const TexelBuffer *texture,
 			c_g = (c_g * l_g) >> (ZB_POINT_GREEN_BITS - 8);
 			c_b = (c_b * l_b) >> (ZB_POINT_BLUE_BITS - 8);
 		}
-		writePixel<kEnableAlphaTest, kEnableBlending, kDepthWrite, kFogMode>(fbOffset + _a, c_a, c_r, c_g, c_b, z, fog, fog_r, fog_g, fog_b);
+		writePixel(fbOffset + _a, c_a, c_r, c_g, c_b, z, fog, fog_r, fog_g, fog_b, flags);
 	}
 end:
 	z += dzdx;
 	s += dsdx;
 	t += dtdx;
-	if (kFogMode) {
+	if (flags.fog) {
 		fog += dfdx;
 	}
-	if (kSmoothMode) {
+	if (flags.smooth) {
 		a += dadx;
 		r += drdx;
 		g += dgdx;
@@ -149,17 +148,16 @@ end:
 	}
 }
 
-template <bool kDepthWrite, bool kEnableScissor, bool kStencilEnabled, bool kStippleEnabled, bool kDepthTestEnabled>
-void FrameBuffer::putPixelDepth(uint *pz, byte *ps, int _a, int x, int y, uint &z, int &dzdx) {
-	if (kEnableScissor && scissorPixel(x + _a, y)) {
+void FrameBuffer::putPixelDepth(uint *pz, byte *ps, int _a, int x, int y, uint &z, int &dzdx, const RasterFlags &flags) {
+	if (flags.scissor && scissorPixel(x + _a, y)) {
 		goto end;
 	}
 
-	/*if (kStippleEnabled && !applyStipplePattern(x + _a, y, _polygonStipplePattern)) {
+	/*if (flags.stipple && !applyStipplePattern(x + _a, y, _polygonStipplePattern)) {
 		return;
 	}*/
 
-	if (kStencilEnabled) {
+	if (flags.stencil) {
 		bool stencilResult = stencilTest(ps[_a]);
 		if (!stencilResult) {
 			stencilOp(false, true, ps + _a);
@@ -167,15 +165,15 @@ void FrameBuffer::putPixelDepth(uint *pz, byte *ps, int _a, int x, int y, uint &
 		}
 	}
 	bool depthTestResult;
-	if (kDepthTestEnabled) {
+	if (flags.depthTest) {
 		depthTestResult = compareDepth(z, pz[_a]);
 	} else {
 		depthTestResult = true;
 	}
-	if (kStencilEnabled) {
+	if (flags.stencil) {
 		stencilOp(true, depthTestResult, ps + _a);
 	}
-	if (kDepthWrite && depthTestResult) {
+	if (flags.depthWrite && depthTestResult) {
 		pz[_a] = z;
 	}
 end:
@@ -185,8 +183,26 @@ end:
 template <bool kInterpRGB, bool kInterpZ, bool kInterpST, bool kInterpSTZ, bool kSmoothMode,
           bool kDepthWrite, bool kFogMode, bool kAlphaTestEnabled, bool kEnableScissor,
           bool kBlendingEnabled, bool kStencilEnabled, bool kStippleEnabled, bool kDepthTestEnabled>
-void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2) {
-	const TexelBuffer *texture;
+FORCEINLINE void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2) {
+	RasterFlags flags;
+	flags.interpRGB = kInterpRGB;
+	flags.interpZ = kInterpZ;
+	flags.interpST = kInterpST;
+	flags.interpSTZ = kInterpSTZ;
+	flags.smooth = kSmoothMode;
+	flags.depthWrite = kDepthWrite;
+	flags.fog = kFogMode;
+	flags.alphaTest = kAlphaTestEnabled;
+	flags.scissor = kEnableScissor;
+	flags.blending = kBlendingEnabled;
+	flags.stencil = kStencilEnabled;
+	flags.stipple = kStippleEnabled;
+	flags.depthTest = kDepthTestEnabled;
+	fillTriangle(p0, p1, p2, flags);
+}
+
+void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint *p2, const RasterFlags &flags) {
+	const TexelBuffer *texture = nullptr;
 	float fdzdx = 0, fndzdx = 0, ndszdx = 0, ndtzdx = 0;
 
 	ZBufferPoint *tp, *pr1 = 0, *pr2 = 0, *l1 = 0, *l2 = 0;
@@ -250,7 +266,7 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 	fdx2 *= fz0;
 	fdy2 *= fz0;
 
-	if (kInterpRGB && kFogMode) {
+	if (flags.interpRGB && flags.fog) {
 		fog_r = _fogColorR * 255;
 		fog_g = _fogColorG * 255;
 		fog_b = _fogColorB * 255;
@@ -260,14 +276,14 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 		dfdy = (int)(fdx1 * d2 - fdx2 * d1);
 	}
 
-	if (kInterpZ) {
+	if (flags.interpZ) {
 		d1 = (float)(p1->z - p0->z);
 		d2 = (float)(p2->z - p0->z);
 		dzdx = (int)(fdy2 * d1 - fdy1 * d2);
 		dzdy = (int)(fdx1 * d2 - fdx2 * d1);
 	}
 
-	if (kInterpRGB && kSmoothMode) {
+	if (flags.interpRGB && flags.smooth) {
 		d1 = (float)(p1->r - p0->r);
 		d2 = (float)(p2->r - p0->r);
 		drdx = (int)(fdy2 * d1 - fdy1 * d2);
@@ -289,8 +305,8 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 		dady = (int)(fdx1 * d2 - fdx2 * d1);
 	}
 
-	if (kInterpST || kInterpSTZ) {
-		if (kInterpSTZ) {
+	if (flags.interpST || flags.interpSTZ) {
+		if (flags.interpSTZ) {
 			float zz;
 			zz = (float)p0->z;
 			p0->sz = (float)p0->s * zz;
@@ -322,7 +338,7 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 	}
 
 	int polyOffset = 0;
-	if (kInterpZ && kInterpRGB && (_offsetStates & TGL_OFFSET_FILL)) {
+	if (flags.interpZ && flags.interpRGB && (_offsetStates & TGL_OFFSET_FILL)) {
 		int m = MAX(ABS(dzdx), ABS(dzdy));
 		polyOffset = -m * _offsetFactor + -_offsetUnits * (1 << 6);
 	}
@@ -331,18 +347,18 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 
 	int pp1 = _pbufWidth * p0->y;
 	pz1 = _zbuf + p0->y * _pbufWidth;
-	if (kStencilEnabled) {
+	if (flags.stencil) {
 		ps1 = _sbuf + p0->y * _pbufWidth;
 	}
 
-	if (kInterpRGB && !kSmoothMode) {
+	if (flags.interpRGB && !flags.smooth) {
 		r1 = p2->r;
 		g1 = p2->g;
 		b1 = p2->b;
 		a1 = p2->a;
 	}
 
-	if (kInterpRGB && (kInterpST || kInterpSTZ)) {
+	if (flags.interpRGB && (flags.interpST || flags.interpSTZ)) {
 		texture = _currentTexture;
 		fdzdx = (float)dzdx;
 		fndzdx = NB_INTERP * fdzdx;
@@ -393,19 +409,19 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 			dxdy_min = tmp >> 16;
 			dxdy_max = dxdy_min + 1;
 
-			if (kInterpRGB && kFogMode) {
+			if (flags.interpRGB && flags.fog) {
 				f1 = l1->f;
 				dfdl_min = (dfdy + dfdx * dxdy_min);
 				dfdl_max = dfdl_min + dfdx;
 			}
 
-			if (kInterpZ) {
+			if (flags.interpZ) {
 				z1 = l1->z + polyOffset;
 				dzdl_min = (dzdy + dzdx * dxdy_min);
 				dzdl_max = dzdl_min + dzdx;
 			}
 
-			if (kInterpRGB && kSmoothMode) {
+			if (flags.interpRGB && flags.smooth) {
 				r1 = l1->r;
 				drdl_min = (drdy + drdx * dxdy_min);
 				drdl_max = drdl_min + drdx;
@@ -423,7 +439,7 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 				dadl_max = dadl_min + dadx;
 			}
 
-			if (kInterpST || kInterpSTZ) {
+			if (flags.interpST || flags.interpSTZ) {
 				sz1 = l1->sz;
 				dszdl_min = (dszdy + dszdx * dxdy_min);
 				dszdl_max = dszdl_min + dszdx;
@@ -449,46 +465,46 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 		// we draw all the scan line of the part
 		while (nb_lines > 0) {
 			int x = x1;
-			if (!kInterpRGB) {
+			if (!flags.interpRGB) {
 				int n;
-				uint *pz;
+				uint *pz = nullptr;
 				byte *ps = nullptr;
 				uint z;
 				n = (x2 >> 16) - x1;
-				if (kInterpZ) {
+				if (flags.interpZ) {
 					pz = pz1 + x1;
 					z = z1;
 				}
-				if (kStencilEnabled) {
+				if (flags.stencil) {
 					ps = ps1 + x1;
 				}
 				while (n >= 3) {
-					putPixelDepth<kDepthWrite, kEnableScissor, kStencilEnabled, kStippleEnabled, kDepthTestEnabled>(pz, ps, 0, x, y, z, dzdx);
-					putPixelDepth<kDepthWrite, kEnableScissor, kStencilEnabled, kStippleEnabled, kDepthTestEnabled>(pz, ps, 1, x, y, z, dzdx);
-					putPixelDepth<kDepthWrite, kEnableScissor, kStencilEnabled, kStippleEnabled, kDepthTestEnabled>(pz, ps, 2, x, y, z, dzdx);
-					putPixelDepth<kDepthWrite, kEnableScissor, kStencilEnabled, kStippleEnabled, kDepthTestEnabled>(pz, ps, 3, x, y, z, dzdx);
-					if (kInterpZ) {
+					putPixelDepth(pz, ps, 0, x, y, z, dzdx, flags);
+					putPixelDepth(pz, ps, 1, x, y, z, dzdx, flags);
+					putPixelDepth(pz, ps, 2, x, y, z, dzdx, flags);
+					putPixelDepth(pz, ps, 3, x, y, z, dzdx, flags);
+					if (flags.interpZ) {
 						pz += 4;
 					}
-					if (kStencilEnabled) {
+					if (flags.stencil) {
 						ps += 4;
 					}
 					n -= 4;
 					x += 4;
 				}
 				while (n >= 0) {
-					putPixelDepth<kDepthWrite, kEnableScissor, kStencilEnabled, kStippleEnabled, kDepthTestEnabled>(pz, ps, 0, x, y, z, dzdx);
-					if (kInterpZ) {
+					putPixelDepth(pz, ps, 0, x, y, z, dzdx, flags);
+					if (flags.interpZ) {
 						pz += 1;
 					}
-					if (kStencilEnabled) {
+					if (flags.stencil) {
 						ps += 1;
 					}
 					n -= 1;
 					x += 1;
 				}
-			} else if (!(kInterpST || kInterpSTZ)) {
-				uint *pz;
+			} else if (!(flags.interpST || flags.interpSTZ)) {
+				uint *pz = nullptr;
 				byte *ps = nullptr;
 				int pp;
 				uint z, r, g, b, a, fog;
@@ -498,50 +514,45 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 				g = g1;
 				b = b1;
 				a = a1;
-				if (kFogMode) {
+				if (flags.fog) {
 					fog = f1;
 				}
-				if (kInterpZ) {
+				if (flags.interpZ) {
 					pz = pz1 + x1;
 					z = z1;
 				}
-				if (kStencilEnabled) {
+				if (flags.stencil) {
 					ps = ps1 + x1;
 				}
 				while (n >= 3) {
-					putPixelNoTexture<kDepthWrite, kSmoothMode, kFogMode, kAlphaTestEnabled, kEnableScissor, kBlendingEnabled, kStencilEnabled, kStippleEnabled, kDepthTestEnabled>
-					                 (pp, pz, ps, 0, x, y, z, r, g, b, a, dzdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx);
-					putPixelNoTexture<kDepthWrite, kSmoothMode, kFogMode, kAlphaTestEnabled, kEnableScissor, kBlendingEnabled, kStencilEnabled, kStippleEnabled, kDepthTestEnabled>
-					                 (pp, pz, ps, 1, x, y, z, r, g, b, a, dzdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx);
-					putPixelNoTexture<kDepthWrite, kSmoothMode, kFogMode, kAlphaTestEnabled, kEnableScissor, kBlendingEnabled, kStencilEnabled, kStippleEnabled, kDepthTestEnabled>
-					                 (pp, pz, ps, 2, x, y, z, r, g, b, a, dzdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx);
-					putPixelNoTexture<kDepthWrite, kSmoothMode, kFogMode, kAlphaTestEnabled, kEnableScissor, kBlendingEnabled, kStencilEnabled, kStippleEnabled, kDepthTestEnabled>
-					                 (pp, pz, ps, 3, x, y, z, r, g, b, a, dzdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx);
+					putPixelNoTexture(pp, pz, ps, 0, x, y, z, r, g, b, a, dzdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx, flags);
+					putPixelNoTexture(pp, pz, ps, 1, x, y, z, r, g, b, a, dzdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx, flags);
+					putPixelNoTexture(pp, pz, ps, 2, x, y, z, r, g, b, a, dzdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx, flags);
+					putPixelNoTexture(pp, pz, ps, 3, x, y, z, r, g, b, a, dzdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx, flags);
 					pp += 4;
-					if (kInterpZ) {
+					if (flags.interpZ) {
 						pz += 4;
 					}
-					if (kStencilEnabled) {
+					if (flags.stencil) {
 						ps += 4;
 					}
 					n -= 4;
 					x += 4;
 				}
 				while (n >= 0) {
-					putPixelNoTexture<kDepthWrite, kSmoothMode, kFogMode, kAlphaTestEnabled, kEnableScissor, kBlendingEnabled, kStencilEnabled, kStippleEnabled, kDepthTestEnabled>
-					                 (pp, pz, ps, 0, x, y, z, r, g, b, a, dzdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx);
+					putPixelNoTexture(pp, pz, ps, 0, x, y, z, r, g, b, a, dzdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx, flags);
 					pp += 1;
-					if (kInterpZ) {
+					if (flags.interpZ) {
 						pz += 1;
 					}
-					if (kStencilEnabled) {
+					if (flags.stencil) {
 						ps += 1;
 					}
 					n -= 1;
 					x += 1;
 				}
-			} else if (kInterpST || kInterpSTZ) {
-				uint *pz;
+			} else if (flags.interpST || flags.interpSTZ) {
+				uint *pz = nullptr;
 				byte *ps = nullptr;
 				int s, t;
 				uint z, r, g, b, a, fog;
@@ -554,14 +565,14 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 				zinv = (float)(1.0 / fz);
 
 				pp = pp1 + x1;
-				if (kFogMode) {
+				if (flags.fog) {
 					fog = f1;
 				}
-				if (kInterpZ) {
+				if (flags.interpZ) {
 					pz = pz1 + x1;
 					z = z1;
 				}
-				if (kStencilEnabled) {
+				if (flags.stencil) {
 					ps = ps1 + x1;
 				}
 				sz = sz1;
@@ -583,14 +594,13 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 						zinv = (float)(1.0 / fz);
 					}
 					for (int _a = 0; _a < NB_INTERP; _a++) {
-						putPixelTexture<kDepthWrite, kInterpRGB, kSmoothMode, kFogMode, kAlphaTestEnabled, kEnableScissor, kBlendingEnabled, kStencilEnabled, kDepthTestEnabled>
-						               (pp, texture, _wrapS, _wrapT, pz, ps, _a, x, y, z, t, s, r, g, b, a, dzdx, dsdx, dtdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx);
+						putPixelTexture(pp, texture, _wrapS, _wrapT, pz, ps, _a, x, y, z, t, s, r, g, b, a, dzdx, dsdx, dtdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx, flags);
 					}
 					pp += NB_INTERP;
-					if (kInterpZ) {
+					if (flags.interpZ) {
 						pz += NB_INTERP;
 					}
-					if (kStencilEnabled) {
+					if (flags.stencil) {
 						ps += NB_INTERP;
 					}
 					sz += ndszdx;
@@ -610,13 +620,12 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 				}
 
 				while (n >= 0) {
-					putPixelTexture<kDepthWrite, kInterpRGB, kSmoothMode, kFogMode, kAlphaTestEnabled, kEnableScissor, kBlendingEnabled, kStencilEnabled, kDepthTestEnabled>
-					               (pp, texture, _wrapS, _wrapT, pz, ps, 0, x, y, z, t, s, r, g, b, a, dzdx, dsdx, dtdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx);
+					putPixelTexture(pp, texture, _wrapS, _wrapT, pz, ps, 0, x, y, z, t, s, r, g, b, a, dzdx, dsdx, dtdx, drdx, dgdx, dbdx, dadx, fog, fog_r, fog_g, fog_b, dfdx, flags);
 					pp += 1;
-					if (kInterpZ) {
+					if (flags.interpZ) {
 						pz += 1;
 					}
-					if (kStencilEnabled) {
+					if (flags.stencil) {
 						ps += 1;
 					}
 					n -= 1;
@@ -629,37 +638,37 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 			if (error > 0) {
 				error -= 0x10000;
 				x1 += dxdy_max;
-				if (kInterpRGB && kFogMode) {
+				if (flags.interpRGB && flags.fog) {
 					f1 += dfdl_max;
 				}
-				if (kInterpZ) {
+				if (flags.interpZ) {
 					z1 += dzdl_max;
 				}
-				if (kInterpRGB && kSmoothMode) {
+				if (flags.interpRGB && flags.smooth) {
 					r1 += drdl_max;
 					g1 += dgdl_max;
 					b1 += dbdl_max;
 					a1 += dadl_max;
 				}
-				if (kInterpST || kInterpSTZ) {
+				if (flags.interpST || flags.interpSTZ) {
 					sz1 += dszdl_max;
 					tz1 += dtzdl_max;
 				}
 			} else {
 				x1 += dxdy_min;
-				if (kInterpRGB && kFogMode) {
+				if (flags.interpRGB && flags.fog) {
 					f1 += dfdl_min;
 				}
-				if (kInterpZ) {
+				if (flags.interpZ) {
 					z1 += dzdl_min;
 				}
-				if (kInterpRGB && kSmoothMode) {
+				if (flags.interpRGB && flags.smooth) {
 					r1 += drdl_min;
 					g1 += dgdl_min;
 					b1 += dbdl_min;
 					a1 += dadl_min;
 				}
-				if (kInterpST || kInterpSTZ) {
+				if (flags.interpST || flags.interpSTZ) {
 					sz1 += dszdl_min;
 					tz1 += dtzdl_min;
 				}
@@ -669,13 +678,13 @@ void FrameBuffer::fillTriangle(ZBufferPoint *p0, ZBufferPoint *p1, ZBufferPoint 
 			x2 += dx2dy2;
 
 			// screen coordinates
-			if (kInterpRGB) {
+			if (flags.interpRGB) {
 				pp1 += _pbufWidth;
 			}
-			if (kInterpZ) {
+			if (flags.interpZ) {
 				pz1 += _pbufWidth;
 			}
-			if (kStencilEnabled) {
+			if (flags.stencil) {
 				ps1 += _pbufWidth;
 			}
 
