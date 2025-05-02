@@ -75,6 +75,7 @@ ifdef USE_TINYGL
 MODULE_OBJS += \
 	tinygl/api.o \
 	tinygl/arrays.o \
+	tinygl/benchmark.o \
 	tinygl/clear.o \
 	tinygl/clip.o \
 	tinygl/fog.o \
